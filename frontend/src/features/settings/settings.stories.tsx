@@ -660,6 +660,12 @@ const SYSTEM_HEALTH_ROUTES: RouteMap = {
 const catalogRoutes = (page: SettingsPageId): RouteMap => ({
   ...(page === "system-health" ? SYSTEM_HEALTH_ROUTES : {}),
   ...UNUSED_INSTALLATION_ROUTES,
+  ...(page === "integrations"
+    ? {
+        "GET /messenger/service": () =>
+          jsonResponse({ active_provider: "slack", providers: ["slack"] }),
+      }
+    : {}),
   "GET /me": everyGrantMe,
 });
 

@@ -30,8 +30,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 367 |
-| Columns | 4483 |
+| Tables | 368 |
+| Columns | 4489 |
 | Foreign keys | 642 |
 | Owning areas | 40 |
 
@@ -106,7 +106,7 @@ erDiagram
 | [assurance](assurance.md) | 9 |
 | [automation](automation.md) | 3 |
 | [capture](capture.md) | 25 |
-| [chatlinks](chatlinks.md) | 10 |
+| [chatlinks](chatlinks.md) | 11 |
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
@@ -234,6 +234,7 @@ erDiagram
 | [`chat_post_item`](chatlinks.md#chat_post_item) | chatlinks | 15 | 0 |
 | [`chat_root`](chatlinks.md#chat_root) | chatlinks | 13 | 0 |
 | [`chat_send_attempt`](chatlinks.md#chat_send_attempt) | chatlinks | 17 | 0 |
+| [`chat_service`](chatlinks.md#chat_service) | chatlinks | 6 | 0 |
 | [`chat_team_installation`](chatlinks.md#chat_team_installation) | chatlinks | 11 | 1 |
 | [`chat_team_thread`](chatlinks.md#chat_team_thread) | chatlinks | 7 | 0 |
 | [`close_date_run`](deals.md#close_date_run) | deals | 12 | 2 |

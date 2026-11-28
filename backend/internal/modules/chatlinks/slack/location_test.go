@@ -26,9 +26,6 @@ func TestMessageLocationPinsTheChannelAndSelectsTheReply(t *testing.T) {
 	defer server.Close()
 	bot := fixtureBot(t, server.Client(), "synthetic-token")
 	bot.client.http.Base = server.URL
-	if bot.threadReader != nil {
-		bot.threadReader.http.Base = server.URL
-	}
 	for _, reference := range []string{"1700000000.000002", "https://fixture.slack.com/archives/C_ONE/p1700000000000002?thread_ts=1700000000.000001&cid=C_ONE"} {
 		location, err := bot.LocateMessage(context.Background(), "C_ONE", reference)
 		if err != nil || location.Message != "1700000000.000002" {

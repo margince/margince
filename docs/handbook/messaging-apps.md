@@ -2,7 +2,7 @@
 <!-- describes: frontend/src/components/messenger frontend/src/components/channelpanel.tsx frontend/src/components/channelsyncsettings.tsx frontend/src/features/settings/messagingproviders.tsx backend/internal/modules/chatlinks backend/internal/compose/chatsync -->
 # What you can do with messaging apps
 
-Margince connects to Dispact, Slack and Microsoft Teams. You can write messages from a record and connect a work channel to that record.
+Your workspace selects one team messaging service: Dispact, Slack or Microsoft Teams. You can write messages from a record and connect a work channel to that record.
 Each app has limits. Connecting an app does not turn on every feature or give everyone access to its conversations.
 
 ## Send a message or keep the record up to date?
@@ -27,23 +27,26 @@ Use a channel link when the team wants trial decisions saved on the deal over ti
 |---|---|---|---|
 | Write to a colleague or group from Messenger | After setup | After setup | After setup |
 | Open replies in Messenger | After setup | After setup | After setup |
-| Link an existing work channel to a company, deal or project | After setup | After setup | A normal Teams channel; private channel access needs a separate check |
-| Save clear channel summaries to History | Needs the updated Dispact connection | Needs a supported Slack connection; see below | A normal Teams channel after setup; private channels need the app added there too |
-| Send automatic CRM updates to the channel | After audience review | Private internal channels after audience review | A normal Teams channel after audience review |
+| Link an existing work channel to a company, deal or project | After setup | After setup | **Standard**, private or shared channels with checked app access |
+| Save clear channel summaries to History | Needs the updated Dispact connection | Needs a supported Slack connection; see below | After setup; private and shared channels need the app added there too |
+| Send automatic CRM updates to the channel | After audience review | Private internal channels after audience review | Supported internal channels after audience review |
 | Create a work channel from Margince | Available where setup allows it | Available where setup allows it | Cannot do this; create the channel in Teams, then link it |
 | Add colleagues to the linked channel from Margince | Available where setup allows it | Available where setup allows it | Cannot do this; manage members in Teams |
-| Link a Teams shared channel | — | — | Cannot do this |
+| Link a Teams shared channel | — | — | After the app is added there and access is checked |
 
 A normal Teams channel is open to the members of its team. Teams calls this a “standard” channel. A private channel is restricted to selected members of that team.
-A shared channel is a separate Teams channel type. It is outside the current Margince channel-link support.
+A shared channel can include members from other teams or companies. Margince checks its current audience before sending CRM information.
 
 Some limits come from the messaging app. Others are features Margince does not yet offer, such as creating Teams channels.
 You can use the app's other features when an action is blocked.
 
 ## What setup do I need?
 
-Your administrator connects the messaging app for shared channel work. You connect your own account to use Messenger as yourself.
+Your administrator chooses the service in **Settings**, **Integrations**, **Messaging accounts**, then connects it for shared channel work. Changing the service disconnects the old shared connection and personal accounts, and ends its channel links. History stays available. Link records to channels in the new service before enabling sync again. Colleagues connect their own accounts to the new service.
+
+You connect your own account to use Messenger as yourself.
 A shared connection does not let Margince send personal messages as you.
+
 
 Ask your administrator to check the shared connection before your team turns on automatic summaries or posts.
 Check the sender and recipient list before sending a personal message. Only colleagues found in the messaging app can be added.
@@ -69,23 +72,33 @@ Slack limits how quickly an app can read old messages and thread replies.
 Automatic summaries in Margince need either an app built for your own company or an app approved for the Slack app store.
 A commercial app without that approval can have lower limits. The current Margince connection cannot give automatic complete channel summaries under those limits.
 
-That restriction applies to automatic channel summaries. Personal Messenger and allowed CRM posts have separate access checks.
+Personal Messenger also follows the reading limits set by Slack. A lower-limit connection can read a small page and then must wait. It cannot prepare an immediate outcome draft; you can still write and save the outcome yourself. Allowed CRM posts have separate access checks.
+
+Your administrator records the way the app is shared in **Messaging accounts**, even when your team uses only personal Messenger. This is the way the app is shared, rather than your Slack subscription. Until confirmed, personal reading uses the lower limits.
+
+Already loaded messages stay visible while Slack asks Margince to wait.
 Ask your administrator whether the Slack connection supports automatic summaries before you use them.
 
-The shared Slack connection also needs permission to read the linked channel's replies.
-If the colleague who connected it loses channel access, incoming summaries pause. Another colleague's personal Messenger connection does not fix that shared connection.
+Existing private-channel bot connections can keep working. Connect the app again with the updated permissions to add public-channel reading.
+
+
+The shared Slack bot must be added to the linked channel. It reads replies using its own permissions; it does not depend on the colleague who connected it staying in that channel.
+Public Slack channels can be linked for reading. Automatic CRM posts remain limited to private internal channels.
 
 ## What is different about Teams?
 
 For Teams automatic channel work, the app must be added and allowed to access the selected team.
-A private channel needs the app added to that channel too. Adding it to the team alone does not grant private channel access.
-Private channel reading needs a check with the connected app before you use it.
+Private and shared channels need the app added to each channel too. Adding it to the team alone does not grant private channel access.
+The connection checks whether the app can read the selected channel. An administrator can approve several teams in the same company.
 
-Margince cannot send automatic CRM posts to private Teams channels. Shared Teams channels also cannot be linked.
+Automatic posts need an internal group whose members may read the CRM record. A private or shared channel needs checked app access and the same audience review. A channel with outside members cannot receive automatic CRM posts.
 Create channels and manage their members in Teams. Then use Margince to link a supported existing channel.
 
-You can still use personal Messenger for conversations your connected Teams account may open.
-Private chat messages and a private Teams channel are different things. The channel-posting limit does not turn off all private conversations.
+To stop access to one approved team, remove the app from that team in Teams. Other approved teams can keep working. Use **Disconnect service** in Margince to stop the whole service.
+After upgrading an older connection, relink a private or shared channel to check its current posting access before enabling CRM posts.
+
+You can still use personal Messenger for conversations your connected Teams account may open. Existing chats appear with channels. After reconnecting an account, choose a conversation again so Margince can check the current identity and recipients.
+Private chat messages and a private Teams channel are different things. Each has its own access check.
 
 ## Will I get a clear summary without opening the chat?
 

@@ -251,7 +251,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.chatSummary.sourceHelp":
     "Kết nối tài khoản nhắn tin của bạn qua Messenger trên bản ghi này, kiểm tra xem bạn có mở được kênh ở đó không, rồi kiểm tra lại quyền truy cập nguồn.",
   "channelInstall.slackReader":
-    "Bản cài đặt kênh dùng chung cũng yêu cầu tài khoản cài đặt cấp quyền chỉ đọc lịch sử kênh. Tài khoản đó phải là thành viên của các kênh riêng đã liên kết. Quyền này không bao gồm tin nhắn trực tiếp hoặc gửi tin cá nhân.",
+    "Bot Slack dùng chung đọc lịch sử kênh và trả lời bằng quyền riêng của bot. Thêm bot vào từng kênh được liên kết. Việc cấp quyền Messenger cá nhân là riêng biệt.",
   "channelProfile.distribution": "Cách phân phối ứng dụng Slack",
   "channelProfile.declaration":
     "Chọn cách phân phối ứng dụng này. Margince lưu thông tin bạn khai báo và giới hạn lịch sử được công bố khi cài đặt hoặc kết nối lại.",
@@ -263,9 +263,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "channelProfile.missing":
     "Chưa xác nhận giới hạn lịch sử cho bản cài đặt này.",
   "channelProfile.reconnect":
-    "Liên hệ quản trị viên để kết nối lại Slack trong Kết nối kênh dùng chung, xác nhận cách phân phối ứng dụng và cấp quyền chỉ đọc lịch sử kênh. Tài khoản cài đặt phải là thành viên của các kênh riêng đã liên kết. Bản tóm tắt đầy đủ vẫn tạm dừng cho đến khi xác nhận quyền truy cập và giới hạn.",
+    "Liên hệ quản trị viên để kết nối lại bot Slack dùng chung, xác nhận cách phân phối ứng dụng và duyệt các quyền bot được liệt kê. Thêm bot vào từng kênh được liên kết. Bản tóm tắt đầy đủ cần quyền truy cập đã xác nhận và giới hạn lịch sử được hỗ trợ.",
   "channelProfile.unsupported":
-    "Cách phân phối này chỉ cho phép một yêu cầu lịch sử và một yêu cầu chuỗi mỗi phút, với 15 tin nhắn mỗi trang. Không có bản tóm tắt kênh đầy đủ. Messenger cá nhân và cập nhật CRM gửi đến Slack vẫn hoạt động riêng.",
+    "Ứng dụng này có giới hạn lịch sử thấp hơn. Không có bản tóm tắt tự động đầy đủ hoặc bản nháp kết quả tức thì. Messenger cá nhân phải đợi giữa các yêu cầu đọc; vẫn có thể gửi khi được phép.",
   "channelProfile.limits":
     "Lịch sử: {history} yêu cầu/phút, {historyPage} tin nhắn/trang. Chuỗi: {replies} yêu cầu/phút, {repliesPage} tin nhắn/trang.",
   "channelProfile.provenance":
@@ -285,7 +285,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "channelInstall.adminRequired":
     "Quản trị viên có quyền kết nối kênh phải phê duyệt kết nối này.",
   "channelInstall.teamsSteps":
-    "Đăng ký bot Microsoft bằng địa chỉ sự kiện bên dưới. Tải gói ứng dụng lên Teams, thêm vào nhóm cần dùng và phê duyệt quyền của nhóm, sau đó làm mới và phê duyệt nhóm tại đây.",
+    "Đăng ký bot Microsoft với địa chỉ sự kiện bên dưới. Tải gói ứng dụng lên Teams, thêm vào từng nhóm cần dùng và duyệt quyền, rồi phê duyệt các nhóm tại đây. Thêm ứng dụng riêng vào từng kênh riêng tư hoặc kênh dùng chung cần liên kết.",
   "channelInstall.teamsApp":
     "Ứng dụng Microsoft {app}, đối tượng thuê {tenant}",
   "channelInstall.refresh": "Làm mới nhóm đã cài đặt",
@@ -293,7 +293,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có cài đặt nhóm đã xác minh. Kiểm tra đăng ký bot, thêm ứng dụng vào nhóm rồi làm mới.",
   "channelInstall.team": "Nhóm đã cài đặt và xác minh",
   "channelInstall.approval":
-    "Chỉ nhóm này sẽ được kết nối. Liên kết hiện có giữ nguyên đích; muốn kết nối nhóm khác, trước tiên hãy ngắt kết nối hiện tại.",
+    "Phê duyệt nhóm này cho kết nối Teams. Bạn có thể phê duyệt nhiều nhóm trong cùng tổ chức; các liên kết hiện có giữ nguyên đích đến.",
   "channelInstall.approve": "Phê duyệt kết nối nhóm",
   "channelInstall.connected":
     "Đã kết nối nhóm. Bạn có thể liên kết các kênh của nhóm từ công ty, giao dịch hoặc dự án.",
@@ -13583,7 +13583,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "channelLink.identityReviewBody":
     "Xác nhận lại kênh để liên kết danh tính cố định. Gỡ liên kết rồi chọn kênh từ danh sách. Lịch sử đã lưu vẫn nằm trong bản ghi.",
   "channelLink.privateTeamsReadOnly":
-    "Kênh riêng tư trong Teams hỗ trợ nhận bản tóm tắt. Hãy dùng kênh tiêu chuẩn để bot gửi cập nhật CRM.",
+    "Kênh này có thể lưu bản tóm tắt vào Lịch sử. Không thể đăng cập nhật CRM tự động vào kênh này.",
   "channelLink.chooseConversation": "Cuộc trò chuyện cần liên kết",
   "channelLink.specificConversation":
     "Liên kết một cuộc trò chuyện trong kênh dùng chung",
@@ -13591,6 +13591,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "channelLink.none": "Chưa có kênh",
   "channelLink.noneSub": "Kênh riêng để cả nhóm nắm tình hình hồ sơ này.",
+  "channelLink.createInTeams":
+    "Tạo kênh và quản lý thành viên trong Teams, sau đó liên kết tại đây.",
   "channelLink.create": "Tạo kênh",
   "channelLink.linkExisting": "Liên kết kênh có sẵn",
   "channelLink.linkCta": "Liên kết kênh",
@@ -15357,6 +15359,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.capture_personal_sweep": "Dọn thư riêng tư",
   "audit.kind.company_domain_disposition": "Quyết định về tên miền công ty",
   "audit.kind.capture_settings": "Cài đặt thu thập",
+  "audit.kind.chat_service": "Dịch vụ nhắn tin nhóm",
   "audit.kind.chat_link": "Liên kết trò chuyện",
   "audit.kind.commission": "Hoa hồng",
   "audit.kind.communication_instruction": "Chỉ dẫn liên lạc",
@@ -25230,9 +25233,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "messenger.dispactOpen": "Mở Dispact",
   "messenger.loadLater": "Tải câu trả lời tiếp theo",
   "messenger.verb": "Nhắn tin",
-  "messenger.provider": "Dịch vụ nhắn tin",
 
-  "messenger.channels": "Kênh",
+  "messenger.channels": "Cuộc trò chuyện",
   "messenger.people": "Mọi người",
 
   "messenger.change": "Đổi cuộc trò chuyện",
@@ -25257,10 +25259,43 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "messenger.loadEarlier": "Tải tin nhắn trước",
   "messenger.newMessages": "Đến tin nhắn mới nhất",
   "messenger.empty": "Cuộc trò chuyện chưa có tin nhắn.",
+  "messenger.incompleteContent":
+    "Một số nội dung hoặc nội dung tệp đính kèm chưa được đọc.",
+  "messenger.openSource": "Mở trong ứng dụng nhắn tin",
+  "messenger.replyCount_one": "Xem phản hồi ({count}+)",
+  "messenger.replyCount_other": "Xem phản hồi ({count}+)",
+  "messenger.serviceTitle": "Dịch vụ nhắn tin cho nhóm",
+  "messenger.oneService":
+    "Dùng một dịch vụ cho công ty: Dispact, Slack hoặc Teams. Messenger và liên kết kênh dùng cùng một dịch vụ.",
+  "messenger.chooseService":
+    "Quản trị viên chọn dịch vụ bên dưới. Messenger và liên kết kênh dùng lựa chọn đó.",
+  "messenger.serviceConflict":
+    "Vẫn còn các kết nối cũ đến nhiều dịch vụ. Xác nhận dịch vụ cần giữ; các tài khoản và liên kết kênh khác sẽ bị ngắt kết nối.",
+  "messenger.switchService": "Đổi dịch vụ",
+  "messenger.disconnectService": "Ngắt dịch vụ",
+  "messenger.switchServiceBody":
+    "Dùng {name} cho công ty. Các kết nối dùng chung và tài khoản cá nhân khác sẽ bị ngắt, liên kết kênh của chúng sẽ kết thúc. Lịch sử được giữ lại. Liên kết lại kênh từ hồ sơ và kết nối tài khoản cá nhân với dịch vụ này.",
+  "channelInstall.downloadSlack": "Tải cấu hình ứng dụng Slack",
+  "messenger.draftOutcome": "Soạn kết quả từ các tin nhắn này",
+  "messenger.draftLimited":
+    "Kết nối Slack này đọc lịch sử chậm. Hãy tự viết kết quả hoặc mở Slack để xem lại. Bản nháp kết quả tự động cần gói lịch sử được hỗ trợ.",
+  "messenger.draftConsent":
+    "Tối đa 100 tin nhắn đang hiển thị được gửi đến mô hình tóm tắt đã cấu hình. Tin nhắn riêng không vào Lịch sử cho đến khi bạn duyệt và lưu kết quả.",
+  "messenger.reviewOutcomeDraft":
+    "Duyệt và sửa bản nháp trước khi lưu. Kiểm tra quyết định, điều kiện, trách nhiệm và ngày tháng.",
+  "messenger.useService": "Dùng dịch vụ này",
   "messenger.reply": "Trả lời trong luồng",
   "messenger.back": "Về cuộc trò chuyện",
   "messenger.deleted": "Tin nhắn đã xóa",
   "messenger.edited": "Đã sửa",
+  "messenger.lastChecked": "Đã kiểm tra tin nhắn lúc {at}",
+  "messenger.failureAccess":
+    "Kiểm tra quyền truy cập cuộc trò chuyện và quyền ứng dụng. Quản trị viên có thể cần cấp lại sự đồng ý.",
+  "messenger.slackPlan":
+    "Xác nhận cách phân phối ứng dụng Slack. Gói đọc này cũng áp dụng cho Messenger cá nhân khi không có bot dùng chung.",
+  "messenger.chooseSlackPlan": "Chọn cách phân phối ứng dụng thực tế",
+  "messenger.disconnectServiceBody":
+    "Ngắt kết nối dịch vụ này và các tài khoản cá nhân, đồng thời kết thúc liên kết kênh. Lịch sử được giữ lại. Chọn dịch vụ trước khi kết nối lại.",
   "messenger.loading": "Đang tải cuộc trò chuyện…",
   "messenger.loadProblem": "Cuộc trò chuyện không khả dụng",
   "messenger.searchPeople": "Tìm người",
@@ -25317,7 +25352,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quản trị viên cần hoàn tất thiết lập ứng dụng trước khi kết nối tài khoản.",
   "messenger.participantScopes": "Quyền cần thiết của người tham gia",
   "messenger.teamsTenant":
-    "Ghim ứng dụng Microsoft vào ID thư mục và cấp các quyền ủy quyền được liệt kê trong Entra.",
+    "Gắn ứng dụng Microsoft với ID thư mục của bạn. Quản trị viên thư mục phải cấp các quyền được ủy quyền trong Entra trước khi đồng nghiệp kết nối.",
   "messenger.editDraft": "Sửa bản nháp",
   "messenger.reviewDelivery": "Kiểm tra việc gửi trước khi sửa",
   "messenger.checkedConversation": "Đã kiểm tra cuộc trò chuyện",

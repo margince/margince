@@ -196,3 +196,75 @@ it("loads later thread replies in order and advances the returned cursor on ever
   ).toBeNull();
   client.clear();
 });
+
+it.each([
+  [429, "messenger_rate_limited", true],
+  [403, "messenger_access_denied", false],
+])(
+  "handles a background %s without hiding quota-limited content or retaining denied content",
+  async (status, code, retained) => {
+    let failed = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname;
+        const json = (body: unknown, status = 200) =>
+          new Response(JSON.stringify(body), {
+            status,
+            headers: { "Content-Type": "application/json" },
+          });
+        if (path === "/v1/me")
+          return json(meFixture({ allow: {}, seat: "full" }));
+        if (path.endsWith("/conversation")) return json(messengerContext);
+        if (path.endsWith("/messages"))
+          return failed
+            ? json(
+                { status, code, title: "Reading is temporarily unavailable" },
+                status,
+              )
+            : json({
+                messages: [
+                  {
+                    id: "MSG",
+                    author_id: "U_REP",
+                    text: "Keep the agreed pilot date visible",
+                    at: "2026-06-01T10:00:00Z",
+                  },
+                ],
+                next_cursor: "",
+              });
+        throw new Error(`Unexpected route ${path}`);
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ConversationHost />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(
+      await screen.findByText("Keep the agreed pilot date visible"),
+    ).toBeVisible();
+    expect(screen.getByRole("textbox")).toBeVisible();
+    failed = true;
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["messenger.refresh"] }),
+    );
+    await screen.findByText("Reading is temporarily unavailable");
+    await waitFor(() => {
+      expect(
+        Boolean(screen.queryByText("Keep the agreed pilot date visible")),
+      ).toBe(retained);
+      expect(Boolean(screen.queryByRole("textbox"))).toBe(retained);
+    });
+    client.clear();
+  },
+);

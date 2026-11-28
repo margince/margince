@@ -76,6 +76,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// A chat link's level and state are served as they are stored, so the
 	// contract's enums and the CHECKs are one vocabulary.
 	"chat_link.message_detail":      {"internal/contracts", "ChannelMessageDetail"},
+	"chat_service.provider":         {"internal/contracts", "MessengerProvider"},
 	"chat_link.provider":            {"internal/contracts", "MessengerProvider"},
 	"chat_member_grant.provider":    {"internal/contracts", "MessengerProvider"},
 	"chat_member_grant.status":      {"internal/modules/chatlinks", "MemberGrantStatus"},

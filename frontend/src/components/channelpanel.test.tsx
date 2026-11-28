@@ -57,6 +57,11 @@ function stubServer(
     "fetch",
     vi.fn(async (request: Request) => {
       const path = new URL(request.url).pathname;
+      if (path === "/v1/messenger/service")
+        return jsonResponse({
+          active_provider: "dispact",
+          providers: ["dispact"],
+        });
       if (path === `${LINK_PATH}/channels` && request.method === "GET") {
         return jsonResponse({
           channels: [

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   installFetchStub,
+  jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -15,6 +16,7 @@ const meta = {
     (Story) => {
       installFetchStub({
         ...UNUSED_INSTALLATION_ROUTES,
+        "GET /messenger/service": () => jsonResponse({ providers: [] }),
         "GET /me": meRoute({
           capture_settings: ["read", "update"],
           channel_connection: ["read", "create", "update"],

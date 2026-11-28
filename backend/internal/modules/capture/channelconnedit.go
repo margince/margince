@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/teamchat"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -127,19 +128,8 @@ func (s *ChannelStore) confirmReplacement(ctx context.Context, current channelRo
 	return bot, nil
 }
 
-// repoint re-points the connection at the new bot and its newly sealed token, in
-// one transaction with its audit row. The status is untouched: the row was live
-// before and is live after, under a different token.
-//
-// The row is locked first because the decision to repoint was made from a read
-// taken before two provider round trips: without the lock a concurrent rotation
-// or disconnect in that window would be overwritten by a decision made against
-// state that no longer holds. The lock alone only SERIALIZES those writers,
-// though — it does not tell this one that its snapshot went stale — so the
-// version read with the snapshot travels into the WHERE clause as a predicate.
-// Zero rows matched means another replacement already moved this connection on,
-// and this one would otherwise destroy the credential that winner is now polling
-// with.
+// repoint restores a verified connection under the version it replaced, so
+// reconnecting recovers polling without overwriting a concurrent disconnect.
 func (s *ChannelStore) repoint(ctx context.Context, current channelRow, bot ChannelBot, refs connectionRefs) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
@@ -147,12 +137,15 @@ func (s *ChannelStore) repoint(ctx context.Context, current channelRow, bot Chan
 		if err != nil {
 			return err
 		}
+		if err := teamchat.Admit(ctx, tx, current.Provider); err != nil {
+			return err
+		}
 		if _, err := storekit.LockRow(ctx, tx, "channel_connection", current.ID, storekit.LiveOnly); err != nil {
 			return err
 		}
 		out, err := scanChannelConnection(tx.QueryRow(ctx, `
 			UPDATE channel_connection
-			   SET channel_id = $2, channel_label = $3, credential_ref = $4, poll_offset = 0,
+			   SET channel_id = $2, channel_label = $3, credential_ref = $4, poll_offset = 0, status = 'connected',
 			       events_credential_ref = coalesce(NULLIF($6, ''), events_credential_ref)
 			 WHERE id = $1 AND version = $5 AND archived_at IS NULL
 			 RETURNING `+channelConnectionColumns,
@@ -176,15 +169,12 @@ func (s *ChannelStore) repoint(ctx context.Context, current channelRow, bot Chan
 	return err
 }
 
-// Disconnect withdraws the binding: it archives the row as `disconnected` and
-// destroys the sealed token and events secret. Already-captured activities are
-// retained: disconnecting stops capture, it does not erase history.
-//
-// Archiving is what actually stops ingress: the poll dispatcher's due-scan selects
-// only live `connected` rows, so an archived connection is never polled again. It
-// also frees both partial unique indexes, so the same bot — or another one — can
-// be connected here again later.
+// Disconnect archives the binding and destroys its credentials; captured History remains.
 func (s *ChannelStore) Disconnect(ctx context.Context, id ids.UUID) error {
+	return s.disconnectForSelection(ctx, id, nil)
+}
+
+func (s *ChannelStore) disconnectForSelection(ctx context.Context, id ids.UUID, expected *teamchat.Selection) error {
 	if err := auth.Require(ctx, channelConnectionObject, principal.ActionDelete); err != nil {
 		return err
 	}
@@ -204,7 +194,7 @@ func (s *ChannelStore) Disconnect(ctx context.Context, id ids.UUID) error {
 	if err != nil {
 		return err
 	}
-	if err := s.archiveDisconnected(ctx, current); err != nil {
+	if err := s.archiveDisconnected(ctx, current, expected); err != nil {
 		return err
 	}
 	s.destroyDetached(ctx, ws, "channel-disconnected", current.refs.token, current.refs.events)
@@ -222,8 +212,13 @@ func (s *ChannelStore) Disconnect(ctx context.Context, id ids.UUID) error {
 // archiving anyway would retire that bot's live connection, record the outgoing
 // bot as the one disconnected, and send the caller on to destroy a credential the
 // row no longer names — leaving the winner's with nothing to collect it.
-func (s *ChannelStore) archiveDisconnected(ctx context.Context, current channelRow) error {
+func (s *ChannelStore) archiveDisconnected(ctx context.Context, current channelRow, expected *teamchat.Selection) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if expected != nil {
+			if err := teamchat.HoldSelection(ctx, tx, *expected); err != nil {
+				return err
+			}
+		}
 		if _, err := storekit.LockRow(ctx, tx, "channel_connection", current.ID, storekit.LiveOnly); err != nil {
 			return err
 		}

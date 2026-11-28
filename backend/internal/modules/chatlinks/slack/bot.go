@@ -19,10 +19,8 @@ import (
 
 // Bot performs channel synchronization through an installed application's credentials.
 type Bot struct {
-	threadReader  *Client
-	threadFailure error
-	client        *Client
-	history       historyPacing
+	client  *Client
+	history historyPacing
 }
 
 // NewBot binds channel operations to the installed application's identity.
@@ -66,16 +64,25 @@ func (b *Bot) Channel(ctx context.Context, id string) (chatwire.Channel, error) 
 	if ch.IM || ch.MPIM {
 		return chatwire.Channel{}, chatwire.ErrRequestRejected
 	}
-	return chatwire.Channel{Slug: ch.ID, Name: ch.Name, IsPrivate: ch.Private, IsArchived: ch.Archived, BotIsMember: ch.Member}, nil
+	posting := ch.Private
+	return chatwire.Channel{PostingAllowed: &posting, Slug: ch.ID, Name: ch.Name, IsPrivate: ch.Private, IsArchived: ch.Archived, BotIsMember: ch.Member}, nil
 }
 
 // Channels lists native rooms available to the current credential.
 func (b *Bot) Channels(ctx context.Context) ([]chatwire.Channel, error) {
 	out := []chatwire.Channel{}
+	kinds := "private_channel,public_channel"
 	cursor := ""
 	seen := map[string]bool{}
 	for range 100 {
-		raw, err := b.client.call(ctx, http.MethodGet, "conversations.list?"+url.Values{"types": {"private_channel"}, "exclude_archived": {"true"}, limitKey: {"100"}, cursorKey: {cursor}}.Encode(), nil)
+		raw, err := b.client.call(ctx, http.MethodGet, "conversations.list?"+url.Values{"types": {kinds}, "exclude_archived": {"true"}, limitKey: {"100"}, cursorKey: {cursor}}.Encode(), nil)
+		if errors.Is(err, messaging.ErrConsentRequired) && kinds != "private_channel" {
+			kinds = "private_channel"
+			cursor = ""
+			out = []chatwire.Channel{}
+			clear(seen)
+			continue
+		}
 		if err != nil {
 			return nil, botFailure(err)
 		}
@@ -89,8 +96,9 @@ func (b *Bot) Channels(ctx context.Context) ([]chatwire.Channel, error) {
 			return nil, chatwire.ErrUnreachable
 		}
 		for _, ch := range page.Channels {
-			if ch.Member && ch.Private && !ch.Archived && !ch.IM && !ch.MPIM {
-				out = append(out, chatwire.Channel{Slug: ch.ID, Name: ch.Name, IsPrivate: true, BotIsMember: true})
+			if ch.Member && !ch.Archived && !ch.IM && !ch.MPIM {
+				posting := ch.Private
+				out = append(out, chatwire.Channel{Slug: ch.ID, Name: ch.Name, IsPrivate: ch.Private, BotIsMember: true, PostingAllowed: &posting})
 			}
 		}
 		cursor = page.Metadata.Next
@@ -218,9 +226,6 @@ func (b *Bot) PostReviewed(ctx context.Context, id, text, key, root, expected st
 
 // Update replaces a shared provider message using its native receipt.
 func (b *Bot) Update(ctx context.Context, id, message, text string) error {
-	if _, err := b.Audience(ctx, id); err != nil {
-		return err
-	}
 	audience, err := b.Audience(ctx, id)
 	if err != nil {
 		return err
@@ -259,8 +264,14 @@ func (b *Bot) UpdateReviewed(ctx context.Context, id, message, text, expected st
 }
 
 func botFailure(err error) error {
+	if errors.Is(err, messaging.ErrConsentRequired) {
+		return errors.Join(chatwire.ErrHistoryProfileNeedsReview, err)
+	}
 	if err == nil {
 		return nil
+	}
+	if errors.Is(err, messaging.ErrForbidden) {
+		return errors.Join(chatwire.ErrNotMember, err)
 	}
 	if refusal, ok := errors.AsType[*apiRefusal](err); ok {
 		if refusal.code == errorNotInChannel {
@@ -274,10 +285,4 @@ func botFailure(err error) error {
 		return errors.Join(chatwire.ErrTokenRejected, err)
 	}
 	return err
-}
-
-// WithThreadReader uses delegated read-only consent because bot tokens cannot read channel replies.
-func (b *Bot) WithThreadReader(reader *Client, failure error) *Bot {
-	b.threadReader, b.threadFailure = reader, failure
-	return b
 }

@@ -265,6 +265,8 @@ var refusals = []struct {
 	{ErrSummaryFailed, http.StatusBadGateway, "channel_summary_failed", "The summary could not be written. Nothing was filed. Try again."},
 	{ErrChatUnreachable, http.StatusBadGateway, "channel_provider_unreachable", "The chat could not be reached. Nothing was changed. Try again."},
 	{messaging.ErrUnauthorized, http.StatusConflict, "messenger_consent_required", "Reconnect your messaging account to continue."},
+	{messaging.ErrConsentRequired, http.StatusForbidden, "messenger_app_consent_required", "Ask an administrator to approve the app permissions, then reconnect the account or reinstall the shared app."},
+	{messaging.ErrForbidden, http.StatusForbidden, "messenger_access_denied", "Check conversation membership, app permissions and messaging policy in the provider. An administrator may need to renew consent or reinstall the app."},
 	{messaging.ErrUnsupported, http.StatusServiceUnavailable, "messenger_unavailable", "This messaging operation is unavailable. Check the provider connection and supported capabilities."},
 	{messaging.ErrUnavailable, http.StatusBadGateway, "messenger_conversation_unavailable", "This conversation is unavailable. Check access in your messaging app and refresh."},
 	{messaging.ErrInvalid, http.StatusConflict, "messenger_review_required", "Review the destination, audience and message before sending."},
@@ -272,20 +274,22 @@ var refusals = []struct {
 }
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
+	httperr.Write(w, r, MessengerFailure(w, err))
+}
+
+// MessengerFailure shares provider repair codes with composed handlers that also reach a model.
+func MessengerFailure(w http.ResponseWriter, err error) error {
 	if limited, ok := errors.AsType[*connector.RateLimitedError](err); ok {
 		seconds := max(1, int(limited.RetryAfter.Seconds()))
 		w.Header().Set("Retry-After", strconv.Itoa(seconds))
-		httperr.Write(w, r, &httperr.DetailedError{Status: http.StatusTooManyRequests, Code: "messenger_rate_limited", Detail: "The provider asked us to wait. Your draft is preserved."})
-		return
+		return &httperr.DetailedError{Status: http.StatusTooManyRequests, Code: "messenger_rate_limited", Detail: "The provider asked us to wait. Your draft is preserved."}
 	}
-
 	for _, refusal := range refusals {
 		if errors.Is(err, refusal.err) {
-			httperr.Write(w, r, &httperr.DetailedError{Status: refusal.status, Code: refusal.code, Detail: refusal.detail})
-			return
+			return &httperr.DetailedError{Status: refusal.status, Code: refusal.code, Detail: refusal.detail}
 		}
 	}
-	httperr.Write(w, r, err)
+	return err
 }
 
 func optionalRoot(root string) *string {

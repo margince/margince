@@ -100,3 +100,16 @@ func TestDispactNoticeUsesPermanentIdentityAfterChannelRename(t *testing.T) {
 		t.Fatalf("immutable deletion notice lost after rename: %+v %v roots=%+v", got, err, roots)
 	}
 }
+
+func TestSlackSetupChallengeDoesNotRequireAnInstalledBotButStillChecksSignature(t *testing.T) {
+	receiver := SlackReceiver{Receiver: &Receiver{Now: func() time.Time { return pushNow }}, SigningSecret: func(context.Context) (string, error) { return pushSecret, nil }}
+	delivery := signedSlack(t, `{"type":"url_verification","challenge":"setup-proof"}`, pushNow)
+	receipt, err := receiver.Receive(context.Background(), delivery)
+	if err != nil || receipt.Challenge == nil || *receipt.Challenge != "setup-proof" {
+		t.Fatalf("setup challenge refused: %+v %v", receipt, err)
+	}
+	delivery.Signature = "forged"
+	if _, err := receiver.Receive(context.Background(), delivery); !errors.Is(err, chatlinks.ErrEventRejected) {
+		t.Fatalf("unsigned setup accepted: %v", err)
+	}
+}

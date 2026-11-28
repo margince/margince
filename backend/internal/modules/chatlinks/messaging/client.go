@@ -14,6 +14,8 @@ import (
 // Provider failures preserve consent, membership, source and delivery distinctions for repair.
 var (
 	ErrUnauthorized    = errors.New("messaging: reconnect the sending account")
+	ErrConsentRequired = errors.New("messaging: app permissions need renewed consent")
+	ErrForbidden       = errors.New("messaging: check access to this conversation and the provider policy")
 	ErrUnavailable     = errors.New("messaging: the conversation is unavailable")
 	ErrInvalid         = errors.New("messaging: review the destination and message")
 	ErrUnsupported     = errors.New("messaging: this operation is unavailable")
@@ -38,26 +40,30 @@ type Identity struct {
 
 // Conversation carries native room identity and audience-verification state.
 type Conversation struct {
-	Access          string
-	SupportsThreads bool
-	ID              string
-	Name            string
-	Kind            string
-	Members         []Member
-	AudienceKnown   bool
-	External        bool
+	SupportsOutcomeDraft *bool
+	SourceURL            string
+	Access               string
+	SupportsThreads      bool
+	ID                   string
+	Name                 string
+	Kind                 string
+	Members              []Member
+	AudienceKnown        bool
+	External             bool
 }
 
 // Message retains native identifiers used to detect source changes.
 type Message struct {
-	SourceURL string
-	ID        string
-	Root      string
-	Author    string
-	Text      string
-	At        time.Time
-	Edited    bool
-	Deleted   bool
+	ReplyCount        int
+	ContentIncomplete bool
+	SourceURL         string
+	ID                string
+	Root              string
+	Author            string
+	Text              string
+	At                time.Time
+	Edited            bool
+	Deleted           bool
 }
 
 // Page keeps message pagination explicit for personal conversation reads.

@@ -51,6 +51,9 @@ func WithMessengerOAuth(cfg GraphConfig, private bool) Option {
 		h.resolve = s.messengerApp
 		for provider, vendor := range map[string]capture.AppProvider{chatlinks.ProviderSlack: capture.AppProviderSlack, chatlinks.ProviderTeams: capture.AppProviderMicrosoft} {
 			s.addRedirectURI(vendor, "messenger_connect", h.callbackURL(provider))
+			if provider == chatlinks.ProviderSlack {
+				s.addRedirectURI(vendor, "channel_connect", s.slackChannelCallbackURL())
+			}
 		}
 	}
 }

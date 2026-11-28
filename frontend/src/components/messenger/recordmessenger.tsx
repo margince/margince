@@ -11,9 +11,7 @@ import { DockedWindow, type DockState } from "../../design-system/dockedwindow";
 import { VerbWord } from "../../design-system/iconaction";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { QueryStates } from "../../design-system/querystates";
-import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { isMessengerProvider } from "../../lib/messagingproviders";
 import { unwrap } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
@@ -28,6 +26,7 @@ import {
   useMessengerConversation,
   useMessengerIdentity,
 } from "./messenger.queries";
+import { useMessengerService } from "./messenger.service";
 import "./messenger.css";
 
 type RecordType = components["schemas"]["ChannelLinkRecordType"];
@@ -48,7 +47,6 @@ export function RecordMessenger({
   const t = useT();
   const [params, replaceParams] = useUrlParams();
   const [open, Open] = useState(() => params.has("messenger") && !disabled);
-  const returnedProvider = params.get("provider") ?? "";
   return (
     <>
       <Button
@@ -64,9 +62,6 @@ export function RecordMessenger({
           recordType={recordType}
           recordId={recordId}
           name={name}
-          initialProvider={
-            isMessengerProvider(returnedProvider) ? returnedProvider : undefined
-          }
           onClose={() => {
             Open(false);
             const next = new Map(params);
@@ -85,19 +80,14 @@ function RecordMessengerWindow({
   recordId,
   name,
   onClose,
-  initialProvider,
 }: Readonly<{
   recordType: RecordType;
   recordId: string;
   name: string;
   onClose: () => void;
-  initialProvider?: MessengerProvider;
 }>) {
   const t = useT();
   const [dock, Dock] = useState<DockState>("open");
-  const [chosen, Chosen] = useState<MessengerProvider | null>(
-    initialProvider ?? null,
-  );
   const [destination, Destination] = useState<string | null>(null);
   const [picking, Picking] = useState(false);
   const seat = useViewerId();
@@ -111,8 +101,15 @@ function RecordMessengerWindow({
       ),
     retry: false,
   });
-  const provider = chosen ?? link.data?.link?.provider ?? "dispact";
-  const identity = useMessengerIdentity(provider, Boolean(seat), seat);
+  const service = useMessengerService();
+  const selected =
+    service.data?.active_provider ?? service.data?.providers?.[0];
+  const provider = selected ?? "dispact";
+  const identity = useMessengerIdentity(
+    provider,
+    Boolean(seat) && Boolean(selected) && !service.isError,
+    seat,
+  );
   const linked = link.data?.link;
   const conversation =
     destination ??
@@ -142,56 +139,57 @@ function RecordMessengerWindow({
   const title = conversationTitle(current, t("messenger.verb"));
   return (
     <DockedWindow
-      title={title || t("messenger.verb")}
+      title={title}
       state={dock}
       onStateChange={Dock}
       onClose={onClose}
     >
-      <div className="record-messenger">
-        <p className="t-caption">{t("messenger.openedFrom", { name })}</p>
-        <MessengerProviderToolbar
-          provider={provider}
-          account={
-            <MessengerAccountActions
+      <QueryStates query={service} pendingLabel={t("messenger.loading")}>
+        {selected ? (
+          <div className="record-messenger">
+            <p className="t-caption">{t("messenger.openedFrom", { name })}</p>
+            <MessengerProviderToolbar
               provider={provider}
-              returnRecord={scope}
-              state={identity.data?.state}
-              compact
+              account={
+                <MessengerAccountActions
+                  provider={provider}
+                  returnRecord={scope}
+                  state={identity.data?.state}
+                  compact
+                />
+              }
+              showDestination={Boolean(conversation) && !picking}
+              destinationDisabled={!ready}
+              onDestination={() => Picking(true)}
             />
-          }
-          onProvider={(next) => {
-            Chosen(next);
-            Destination(null);
-            Picking(true);
-          }}
-          showDestination={Boolean(conversation) && !picking}
-          destinationDisabled={!ready}
-          onDestination={() => Picking(true)}
-        />
-        <QueryStates query={identity} pendingLabel={t("messenger.loading")}>
-          {identity.data?.state !== "connected" && (
-            <MessengerAccountActions
-              provider={provider}
-              returnRecord={scope}
-              state={identity.data?.state}
-            />
-          )}
-          {ready && (
-            <MessengerDestination
-              scope={scope}
-              conversation={conversation}
-              picking={picking}
-              onChoose={(id) => {
-                Destination(id);
-                Picking(false);
-              }}
-              query={context}
-              context={current}
-              seat={seat}
-            />
-          )}
-        </QueryStates>
-      </div>
+            <QueryStates query={identity} pendingLabel={t("messenger.loading")}>
+              {identity.data?.state !== "connected" && (
+                <MessengerAccountActions
+                  provider={provider}
+                  returnRecord={scope}
+                  state={identity.data?.state}
+                />
+              )}
+              {ready && (
+                <MessengerDestination
+                  scope={scope}
+                  conversation={conversation}
+                  picking={picking}
+                  onChoose={(id) => {
+                    Destination(id);
+                    Picking(false);
+                  }}
+                  query={context}
+                  context={current}
+                  seat={seat}
+                />
+              )}
+            </QueryStates>
+          </div>
+        ) : (
+          <p>{t("messenger.chooseService")}</p>
+        )}
+      </QueryStates>
     </DockedWindow>
   );
 }
@@ -211,14 +209,12 @@ function conversationTitle(
 
 function MessengerProviderToolbar({
   provider,
-  onProvider,
   showDestination,
   destinationDisabled,
   account,
   onDestination,
 }: Readonly<{
   provider: MessengerProvider;
-  onProvider: (value: MessengerProvider) => void;
   showDestination: boolean;
   destinationDisabled: boolean;
   account: ReactNode;
@@ -227,18 +223,10 @@ function MessengerProviderToolbar({
   const t = useT();
   return (
     <div className="messenger-toolbar">
-      <Select
-        aria-label={t("messenger.provider")}
-        value={provider}
-        options={MESSENGER_PROVIDERS.map((item) => ({
-          ...item,
-          adornment: <ProviderMark providerKey={item.value} />,
-        }))}
-        onChange={(value) => {
-          const next = MESSENGER_PROVIDERS.find((item) => item.value === value);
-          if (next) onProvider(next.value);
-        }}
-      />
+      <span>
+        <ProviderMark providerKey={provider} />{" "}
+        {MESSENGER_PROVIDERS.find((item) => item.value === provider)?.label}
+      </span>
       {account}
       {showDestination && (
         <Button

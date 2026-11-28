@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/messengeraccounts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/messaging"
@@ -65,5 +66,21 @@ func TestDispactPersonalConsentVerifiesIdentityAndCannotFollowAnotherInstallatio
 	}
 	if calls != beforeCalls {
 		t.Fatal("retired installation sent a personal credential to a new connection")
+	}
+}
+
+func TestOutcomeHTTPUsesTheComposedFilerAndRefusesMissingPersonalConsent(t *testing.T) {
+	e := integration.Setup(t)
+	e.GrantRole(t, e.AdminUser, "admin")
+	company := e.SeedCompany(t, "Pilot", &e.AdminUser)
+	s := Server{vault: keyvault.NewMemory()}
+	WithChannelSurface()(&s, e.Pool)
+	WithChatLinks(nil, true, nil)(&s, e.Pool)
+	ctx := integration.OnSeat(e.Admin(), principal.SeatFull)
+	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"conversation_id":"PRIVATE","message_ids":["M1"]}`)).WithContext(ctx)
+	response := httptest.NewRecorder()
+	s.DraftMessengerOutcome(response, request, crmcontracts.MessengerProvider("slack"), crmcontracts.ChannelLinkRecordType("company"), crmcontracts.Id(company))
+	if response.Code != http.StatusConflict || !strings.Contains(response.Body.String(), "messenger_consent_required") {
+		t.Fatalf("outcome wiring did not check personal consent: %d %s", response.Code, response.Body.String())
 	}
 }

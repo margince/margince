@@ -32,6 +32,10 @@ func classifyDelivery(receipt messaging.Receipt, conversation string, err error)
 		out.code, out.retrySeconds = failureRateLimited, limited.RetryAfter.Seconds()
 	case errors.Is(err, messaging.ErrUnauthorized):
 		out.code = "reconnect"
+	case errors.Is(err, messaging.ErrConsentRequired):
+		out.code = "review_access"
+	case errors.Is(err, messaging.ErrForbidden):
+		out.code = "review_access"
 	case errors.Is(err, messaging.ErrUnavailable):
 		out.code = "unavailable"
 	case errors.Is(err, messaging.ErrInvalid):

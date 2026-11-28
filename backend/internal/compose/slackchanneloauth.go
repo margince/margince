@@ -54,8 +54,14 @@ func (s Server) GetSlackChannelSetup(w http.ResponseWriter, r *http.Request) {
 	_, _, err := s.slackChannelApp(r.Context())
 	out := crmcontracts.ChannelProviderSetup{
 		Configured: err == nil, CallbackUrl: s.slackChannelCallbackURL(),
-		EventsUrl: strings.TrimSuffix(s.slackChannelCallbackURL(), "/channel-providers/slack/callback") + "/channel-events/slack", Scopes: append(append([]string{}, slack.BotScopes...), slack.ChannelReaderScopes...),
+		EventsUrl: strings.TrimSuffix(s.slackChannelCallbackURL(), "/channel-providers/slack/callback") + "/channel-events/slack", Scopes: slack.BotScopes,
 	}
+	manifest, manifestErr := slack.AppManifest(s.messengerOAuthHandlers.callbackURL("slack"), out.CallbackUrl, out.EventsUrl)
+	if manifestErr != nil {
+		httperr.Write(w, r, manifestErr)
+		return
+	}
+	out.AppManifest = &manifest
 	if s.historyProfile != nil {
 		profile, err := s.historyProfile(r.Context(), "slack")
 		if err != nil {
@@ -67,7 +73,7 @@ func (s Server) GetSlackChannelSetup(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// ConnectSlackChannels requests shared bot and read-only channel-reader consent.
+// ConnectSlackChannels requests the shared bot installation permissions.
 func (s Server) ConnectSlackChannels(w http.ResponseWriter, r *http.Request) {
 	actor, workspace, ok := signedInHuman(w, r)
 	if !ok {
@@ -94,6 +100,17 @@ func (s Server) ConnectSlackChannels(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		httperr.Write(w, r, apperrors.ErrInvalidArgument)
 		return
+	}
+	selection, err := s.links.MessengerSelection(r.Context())
+	if err != nil {
+		chatlinks.WriteMessengerFailure(w, r, err)
+		return
+	}
+	if selection.Version > 0 {
+		if err := s.links.SetWorkspaceHistoryProfile(r.Context(), selection, string(in.Distribution), s.messengerOAuthHandlers.now()); err != nil {
+			chatlinks.WriteMessengerFailure(w, r, err)
+			return
+		}
 	}
 	h := s.messengerOAuthHandlers
 	state := connectState{Workspace: workspace, User: actor.UserID, Provider: "channel:slack", Version: stateVersionNamespacedCSRF}

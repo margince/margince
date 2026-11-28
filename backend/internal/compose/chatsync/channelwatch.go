@@ -16,7 +16,7 @@ import (
 )
 
 func (p *Puller) maintainChannelWatch(ctx context.Context, session chatlinks.Session, link chatlinks.Link) error {
-	bot, ok := session.Chat.(*teams.Bot)
+	bot, ok := teamBot(session.Chat, link.ChannelSlug)
 	if !ok || p.NotificationURL == "" {
 		return nil
 	}
@@ -58,44 +58,54 @@ func (p *Puller) retireChannelWatches(ctx context.Context, connection ids.UUID) 
 	if err != nil || len(watches) == 0 {
 		return err
 	}
-	var bot *teams.Bot
+
+	var session chatlinks.Session
+	var opening error
+	deferred := []error{}
 	for _, watch := range watches {
 		if watch.LeaseEnded(p.Now()) {
 			if err := p.Store.RetireChannelWatch(ctx, watch, p.Now(), false); err != nil {
-				return err
+				deferred = append(deferred, err)
 			}
 			continue
 		}
-		if bot == nil {
-			session, err := chatlinks.OpenProvider(ctx, p.Chats, chatlinks.ProviderTeams)
-			if err != nil {
-				return err
+		if session.Chat == nil && opening == nil {
+			session, opening = chatlinks.OpenProvider(ctx, p.Chats, chatlinks.ProviderTeams)
+			if opening == nil && session.ConnectionID != connection {
+				opening = chatlinks.ErrBotNotConnected
 			}
-			if session.ConnectionID != connection {
-				return chatlinks.ErrBotNotConnected
-			}
-			var ok bool
-			bot, ok = session.Chat.(*teams.Bot)
-			if !ok {
-				return messaging.ErrUnsupported
+			if opening != nil {
+				deferred = append(deferred, opening)
 			}
 		}
-		app, tenant := bot.WatchBinding()
-		if app != watch.App || tenant != watch.Tenant {
-			return messaging.ErrUnauthorized
+		if opening != nil {
+			continue
 		}
-		secret, err := p.Store.ChannelWatchSecret(ctx, watch)
-		if err != nil {
-			return err
+		bot, ok := teamBot(session.Chat, watch.Channel)
+		if !ok {
+			deferred = append(deferred, messaging.ErrUnsupported)
+			continue
 		}
-		if err := bot.RemoveWatch(ctx, teams.WatchRequest{Channel: watch.Channel, URL: watch.URL, Secret: secret, Subscription: watch.Subscription, Now: p.Now()}); err != nil {
-			return err
-		}
-		if err := p.Store.RetireChannelWatch(ctx, watch, p.Now(), true); err != nil {
-			return err
+		if err := p.retireNativeWatch(ctx, bot, watch); err != nil {
+			deferred = append(deferred, err)
 		}
 	}
-	return nil
+	return errors.Join(deferred...)
+}
+
+func (p *Puller) retireNativeWatch(ctx context.Context, bot *teams.Bot, watch chatlinks.ChannelWatch) error {
+	app, tenant := bot.WatchBinding()
+	if app != watch.App || tenant != watch.Tenant {
+		return messaging.ErrUnauthorized
+	}
+	secret, err := p.Store.ChannelWatchSecret(ctx, watch)
+	if err != nil {
+		return err
+	}
+	if err := bot.RemoveWatch(ctx, teams.WatchRequest{Channel: watch.Channel, URL: watch.URL, Secret: secret, Subscription: watch.Subscription, Now: p.Now()}); err != nil {
+		return err
+	}
+	return p.Store.RetireChannelWatch(ctx, watch, p.Now(), true)
 }
 
 func (p *Puller) moveChannelWatch(ctx context.Context, bot *teams.Bot, watch chatlinks.ChannelWatch) error {

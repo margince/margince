@@ -77,3 +77,36 @@ func TestPeopleSearchCrossesAnEmptyMatchingPage(t *testing.T) {
 		t.Fatalf("search stopped on a nonmatching page: %+v next=%s err=%v reads=%d", people, next, err, reads)
 	}
 }
+
+func TestJoinedChannelDiscoveryDoesNotNeedTheOptionalMembershipFlag(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/users.conversations" {
+			t.Errorf("not scoped to calling user: %s", r.URL.Path)
+		}
+		if _, err := w.Write([]byte(`{"ok":true,"channels":[{"id":"C_JOINED","name":"Pilot","is_private":true}]}`)); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+	client := New(server.Client(), "fixture", "TEAM", "REP")
+	client.http.Base = server.URL
+	channels, next, err := client.Channels(context.Background(), "")
+	if err != nil || len(channels) != 1 || channels[0].ID != "C_JOINED" || next != "" {
+		t.Fatalf("joined channel hidden: %+v %q %v", channels, next, err)
+	}
+}
+
+func TestPeopleCanBeFoundByTheirSlackHandle(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := w.Write([]byte(`{"ok":true,"members":[{"id":"U_OPS","team_id":"TEAM","name":"pilot-ops","real_name":"Jordan Lee","profile":{"display_name":"JL"}}]}`)); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+	client := New(server.Client(), "fixture", "TEAM", "REP")
+	client.http.Base = server.URL
+	people, _, err := client.People(context.Background(), "pilot-ops", "")
+	if err != nil || len(people) != 1 || people[0].Name != "Jordan Lee" {
+		t.Fatalf("native handle not found: %+v %v", people, err)
+	}
+}

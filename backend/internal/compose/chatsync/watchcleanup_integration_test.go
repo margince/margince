@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/messaging"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/teams"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -78,5 +80,54 @@ func TestDisconnectedWatchCleanupRetainsLostResponseLeaseAndDestroysExpiredSecre
 	cleanup, err = chatlinks.DueChannelWatchCleanup(context.Background(), e.pool)
 	if err != nil || len(cleanup) != 0 {
 		t.Fatalf("retired watch rescheduled: %v %v", cleanup, err)
+	}
+}
+
+func TestUnroutedWatchDoesNotPreventAnotherExpiredLeaseFromRetiring(t *testing.T) {
+	e := setupFlush(t)
+	e.exec(t, `UPDATE channel_connection SET provider='teams',channel_id='tenant/team',address=NULL`)
+	e.exec(t, `UPDATE chat_link SET provider='teams',channel_slug='team/channel'`)
+	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), chatLinksPrincipal)
+	vault := keyvault.NewMemory()
+	e.store.WithVault(func() keyvault.Vault { return vault })
+	var connection ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `SELECT connection_id FROM chat_link WHERE id=$1`, e.link).Scan(&connection); err != nil {
+		t.Fatal(err)
+	}
+	links, err := e.store.PullLinks(ctx, connection)
+	if err != nil || len(links) != 1 {
+		t.Fatalf("links=%v %v", links, err)
+	}
+	now := time.Date(2026, 11, 10, 9, 0, 0, 0, time.UTC)
+	first, err := e.store.PrepareChannelWatch(ctx, links[0], "app", "tenant", "https://crm.example.test/events", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.BeginChannelWatchAttempt(ctx, first, now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	e.exec(t, `UPDATE chat_link SET channel_slug='team/other' WHERE id=$1`, e.link)
+	links, err = e.store.PullLinks(ctx, connection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := e.store.PrepareChannelWatch(ctx, links[0], "app", "tenant", "https://crm.example.test/events", now.Add(-time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.BeginChannelWatchAttempt(ctx, second, now.Add(-time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	e.exec(t, `UPDATE channel_connection SET status='disconnected',archived_at=now()`)
+	sessions := teamWatchSessions{session: chatlinks.Session{ConnectionID: connection, Chat: dispact.New(nil, "https://chat.example.test", "fixture")}}
+	puller := Puller{Store: e.store, Chats: sessions, Now: func() time.Time { return now }}
+	if err := puller.retireChannelWatches(ctx, connection); !errors.Is(err, messaging.ErrUnsupported) {
+		t.Fatalf("unrouted lease was not reported: %v", err)
+	}
+	if _, err := e.store.ChannelWatchSecret(ctx, second); !errors.Is(err, keyvault.ErrNotFound) {
+		t.Fatalf("expired lease cleanup stopped early: %v", err)
+	}
+	if _, err := e.store.ChannelWatchSecret(ctx, first); err != nil {
+		t.Fatalf("live uncertain lease discarded: %v", err)
 	}
 }

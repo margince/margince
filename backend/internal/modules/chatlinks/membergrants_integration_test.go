@@ -24,7 +24,7 @@ type identityClient struct {
 func (c identityClient) Identity(context.Context) (messaging.Identity, error) { return c.identity, nil }
 
 func TestParticipantCredentialsArePrivateVerifiedAndWithdrawnOnDisconnect(t *testing.T) {
-	e := setupLinks(t)
+	e := setupSlackMemberLinks(t)
 	vault := keyvault.NewMemory()
 	factory := func(_ context.Context, _ MemberGrant, secret []byte) (messaging.Client, error) {
 		member := "MEMBER1"

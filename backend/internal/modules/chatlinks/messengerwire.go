@@ -32,7 +32,7 @@ func wireMembers(members []messaging.Member) []crmcontracts.MessengerMember {
 }
 
 func wireConversation(room messaging.Conversation) crmcontracts.MessengerConversation {
-	out := crmcontracts.MessengerConversation{Id: room.ID, Name: room.Name, Kind: crmcontracts.MessengerConversationKind(room.Kind), AudienceKnown: room.AudienceKnown, External: room.External, Members: wireMembers(room.Members), SupportsThreads: &room.SupportsThreads}
+	out := crmcontracts.MessengerConversation{SupportsOutcomeDraft: room.SupportsOutcomeDraft, SourceUrl: &room.SourceURL, Id: room.ID, Name: room.Name, Kind: crmcontracts.MessengerConversationKind(room.Kind), AudienceKnown: room.AudienceKnown, External: room.External, Members: wireMembers(room.Members), SupportsThreads: &room.SupportsThreads}
 	if room.Access != "" {
 		access := crmcontracts.MessengerConversationAccess(room.Access)
 		out.Access = &access
@@ -63,7 +63,7 @@ func wireMessengerPage(page messaging.Page) crmcontracts.MessengerPage {
 		out.CursorDirection = &direction
 	}
 	for _, m := range page.Messages {
-		out.Messages = append(out.Messages, crmcontracts.MessengerMessage{Id: m.ID, RootId: m.Root, Author: m.Author, Text: m.Text, At: m.At, Edited: m.Edited, Deleted: m.Deleted})
+		out.Messages = append(out.Messages, crmcontracts.MessengerMessage{ReplyCount: &m.ReplyCount, ContentIncomplete: &m.ContentIncomplete, SourceUrl: &m.SourceURL, Id: m.ID, RootId: m.Root, Author: m.Author, Text: m.Text, At: m.At, Edited: m.Edited, Deleted: m.Deleted})
 	}
 	return out
 }

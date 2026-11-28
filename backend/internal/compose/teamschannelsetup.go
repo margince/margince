@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"slices"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -131,7 +132,30 @@ func (s Server) ConnectTeamsChannels(w http.ResponseWriter, r *http.Request) {
 		if installation.ID != installationID {
 			continue
 		}
-		raw, err := json.Marshal(chatwire.BotCredential{Workspace: installation.Tenant, Member: installation.Team, NativeTeam: installation.NativeTeam, BotMember: installation.BotMember, ServiceURL: installation.ServiceURL, Credential: messaging.Credential{AppID: app.ClientID}})
+		credential := chatwire.BotCredential{Workspace: installation.Tenant, Member: installation.Team, NativeTeam: installation.NativeTeam, BotMember: installation.BotMember, ServiceURL: installation.ServiceURL, Credential: messaging.Credential{AppID: app.ClientID}, AllowedTeams: []string{installation.Team}}
+		registry := capture.NewRegistry(InstallationDB(s.chatSourceHandlers.pool), nil, nil, s.vault)
+		current, err := registry.LiveBot(ctx, chatlinks.ProviderTeams)
+		if err == nil {
+			var previous chatwire.BotCredential
+			if json.Unmarshal([]byte(current.Token), &previous) != nil || previous.Workspace != app.Tenant || previous.Credential.AppID != app.ClientID {
+				httperr.Write(w, r, apperrors.ErrConflict)
+				return
+			}
+			credential.AllowedTeams = slices.Clone(previous.AllowedTeams)
+			for _, team := range []string{previous.Member, installation.Team} {
+				if !slices.Contains(credential.AllowedTeams, team) {
+					credential.AllowedTeams = append(credential.AllowedTeams, team)
+				}
+			}
+		} else if !errors.Is(err, capture.ErrNoConnection) {
+			httperr.Write(w, r, err)
+			return
+		}
+		if len(credential.AllowedTeams) > 100 {
+			httperr.Write(w, r, apperrors.ErrInvalidArgument)
+			return
+		}
+		raw, err := json.Marshal(credential)
 		if err != nil {
 			httperr.Write(w, r, err)
 			return

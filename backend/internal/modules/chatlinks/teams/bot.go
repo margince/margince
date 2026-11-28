@@ -20,13 +20,14 @@ var BotScopes = []string{"TeamSettings.Read.Group", "TeamMember.Read.Group", "Ch
 
 // Bot performs channel synchronization through an installed application's credentials.
 type Bot struct {
-	references ThreadReference
-	graph      *Client
-	connector  messaging.HTTP
-	app        string
-	team       string
-	nativeTeam string
-	member     string
+	installationVerified bool
+	references           ThreadReference
+	graph                *Client
+	connector            messaging.HTTP
+	app                  string
+	team                 string
+	nativeTeam           string
+	member               string
 }
 
 // NewBot binds channel operations to the installed application's identity.
@@ -71,6 +72,7 @@ func (b *Bot) Me(ctx context.Context) (chatwire.Bot, error) {
 		}
 		for _, app := range page.Apps {
 			if app.Definition.App == b.app {
+				b.installationVerified = true
 				return chatwire.Bot{ID: b.member, TeamID: b.graph.tenant, Name: team.Name}, nil
 			}
 		}
@@ -89,7 +91,7 @@ func (b *Bot) Me(ctx context.Context) (chatwire.Bot, error) {
 
 // Channel retains native channel identity independently of its mutable display name.
 func (b *Bot) Channel(ctx context.Context, id string) (chatwire.Channel, error) {
-	if _, err := b.Me(ctx); err != nil {
+	if err := b.ensureInstallation(ctx); err != nil {
 		return chatwire.Channel{}, err
 	}
 	path, ok := channelPath(id)
@@ -111,16 +113,21 @@ func (b *Bot) Channel(ctx context.Context, id string) (chatwire.Channel, error) 
 	if json.Unmarshal(raw, &channel) != nil || id != team+"/"+channel.ID {
 		return chatwire.Channel{}, chatwire.ErrUnreachable
 	}
-	if channel.Membership != standardChannelKind && channel.Membership != privateChannelKind {
+	if channel.Membership != standardChannelKind && channel.Membership != privateChannelKind && channel.Membership != sharedChannelKind {
 		return chatwire.Channel{}, messaging.ErrUnsupported
 	}
-	posting := channel.Membership == standardChannelKind
+	posting := true
+	if channel.Membership != standardChannelKind {
+		if _, err := b.graph.http.Call(ctx, http.MethodGet, path+"/messages?$top=1", nil); err != nil {
+			return chatwire.Channel{}, teamsBotFailure(err)
+		}
+	}
 	return chatwire.Channel{Slug: id, Name: channel.Name, IsPrivate: true, BotIsMember: true, IsArchived: channel.Archived, PostingAllowed: &posting}, nil
 }
 
 // Channels lists native rooms available to the current credential.
 func (b *Bot) Channels(ctx context.Context) ([]chatwire.Channel, error) {
-	if _, err := b.Me(ctx); err != nil {
+	if err := b.ensureInstallation(ctx); err != nil {
 		return nil, err
 	}
 	expected := "/teams/" + url.PathEscape(b.team) + "/channels"
@@ -145,11 +152,22 @@ func (b *Bot) Channels(ctx context.Context) ([]chatwire.Channel, error) {
 			return nil, chatwire.ErrUnreachable
 		}
 		for _, channel := range page.Channels {
-			if channel.ID == "" || channel.Archived || channel.Membership != "private" && channel.Membership != standardChannelKind {
+			if channel.ID == "" || channel.Archived || channel.Membership != "private" && channel.Membership != standardChannelKind && channel.Membership != sharedChannelKind {
 				continue
 			}
-			posting := channel.Membership == standardChannelKind
-			out = append(out, chatwire.Channel{Slug: b.team + "/" + channel.ID, Name: channel.Name, IsPrivate: true, BotIsMember: true, PostingAllowed: &posting})
+			if channel.Membership != standardChannelKind {
+				verified, err := b.Channel(ctx, b.team+"/"+channel.ID)
+				if errors.Is(err, chatwire.ErrNotMember) {
+					continue
+				}
+				if err != nil {
+					return nil, err
+				}
+				out = append(out, verified)
+			} else {
+				posting := true
+				out = append(out, chatwire.Channel{Slug: b.team + "/" + channel.ID, Name: channel.Name, IsPrivate: true, BotIsMember: true, PostingAllowed: &posting})
+			}
 		}
 		if page.Next == "" {
 			return out, nil
@@ -199,8 +217,19 @@ func (b *Bot) History(context.Context, string, int64, int) (chatwire.HistoryPage
 }
 
 func teamsBotFailure(err error) error {
+	if errors.Is(err, messaging.ErrForbidden) {
+		return errors.Join(chatwire.ErrNotMember, err)
+	}
 	if errors.Is(err, messaging.ErrUnauthorized) {
 		return errors.Join(chatwire.ErrTokenRejected, err)
 	}
+	return err
+}
+
+func (b *Bot) ensureInstallation(ctx context.Context) error {
+	if b.installationVerified {
+		return nil
+	}
+	_, err := b.Me(ctx)
 	return err
 }

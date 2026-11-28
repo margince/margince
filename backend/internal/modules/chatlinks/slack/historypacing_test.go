@@ -29,7 +29,7 @@ func fixtureBot(t *testing.T, httpClient messaging.Doer, token string) *Bot {
 		t.Fatal(err)
 	}
 	meter := ratelimit.NewRegistry().NewPacer(func() time.Time { return now })
-	return NewBot(httpClient, token, workspace, member).WithThreadReader(New(httpClient, token, workspace, member), nil).WithHistoryProfile(profile, "APP").WithHistoryPacing(meter, func(ctx context.Context, wait time.Duration) error {
+	return NewBot(httpClient, token, workspace, member).WithHistoryProfile(profile, "APP").WithHistoryPacing(meter, func(ctx context.Context, wait time.Duration) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -100,11 +100,7 @@ func TestHistoryUsesRecordedPageLimitsAndSharesProviderRetryDelay(t *testing.T) 
 	limited := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		limits = append(limits, r.URL.Query().Get("limit"))
-		expected := "Bearer synthetic"
-		if r.URL.Path == "/conversations.replies" {
-			expected = "Bearer synthetic-reader"
-		}
-		if r.Header.Get("Authorization") != expected {
+		if r.Header.Get("Authorization") != "Bearer synthetic" {
 			t.Errorf("wrong channel reader for %s: %s", r.URL.Path, r.Header.Get("Authorization"))
 		}
 		if limited {
@@ -127,8 +123,7 @@ func TestHistoryUsesRecordedPageLimitsAndSharesProviderRetryDelay(t *testing.T) 
 	}
 	first := NewBot(server.Client(), "synthetic", "TEAM", "BOT").WithHistoryProfile(profile, "APP").WithHistoryPacing(meter, sleep)
 	first.client.http.Base = server.URL
-	first.WithThreadReader(New(server.Client(), "synthetic-reader", "TEAM", "READER"), nil)
-	first.threadReader.http.Base = server.URL
+
 	for _, method := range []string{"conversations.history", "conversations.replies"} {
 		if _, err := first.readMessages(context.Background(), method, url.Values{"limit": {"200"}}); err != nil {
 			t.Fatal(err)
@@ -146,5 +141,46 @@ func TestHistoryUsesRecordedPageLimitsAndSharesProviderRetryDelay(t *testing.T) 
 	var retry *connector.RateLimitedError
 	if !errors.As(err, &retry) || retry.RetryAfter < 120*time.Second {
 		t.Fatalf("recreated client lost Retry-After: %v", err)
+	}
+}
+
+func TestPersonalHistorySharesTheBotQuotaAndReducedTierIsExplicit(t *testing.T) {
+	now := time.Unix(1, 0)
+	profile, err := chatwire.SlackHistoryProfile("internal", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	meter := ratelimit.NewRegistry().NewPacer(func() time.Time { return now })
+	waited := time.Duration(0)
+	sleep := func(ctx context.Context, delay time.Duration) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		waited += delay
+		now = now.Add(delay)
+		return nil
+	}
+	bot := NewBot(nil, "bot", "TEAM", "BOT").WithHistoryProfile(profile, "APP").WithHistoryPacing(meter, sleep)
+	participant := New(nil, "person", "TEAM", "REP").WithParticipantHistory(profile, "APP")
+	participant.history.meter = meter
+	participant.history.sleep = sleep
+	if err := bot.waitHistory(context.Background(), "conversations.history"); err != nil {
+		t.Fatal(err)
+	}
+	if err := participant.waitParticipantHistory(context.Background(), "conversations.history"); err != nil {
+		t.Fatal(err)
+	}
+	if waited != time.Minute/50 {
+		t.Fatalf("separate personal quota: %v", waited)
+	}
+	reduced := New(nil, "person", "TEAM", "REP").WithParticipantHistory(nil, "OTHER_APP")
+	reduced.history.meter = meter
+	reduced.history.sleep = sleep
+	if err := reduced.waitParticipantHistory(context.Background(), "conversations.history"); err != nil {
+		t.Fatal(err)
+	}
+	var limited *connector.RateLimitedError
+	if err := reduced.waitParticipantHistory(context.Background(), "conversations.history"); !errors.As(err, &limited) || limited.RetryAfter != time.Minute {
+		t.Fatalf("reduced quota ignored: %v", err)
 	}
 }

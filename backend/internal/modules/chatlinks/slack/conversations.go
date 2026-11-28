@@ -29,6 +29,11 @@ func (c *Client) Conversation(ctx context.Context, id string) (messaging.Convers
 		return messaging.Conversation{}, messaging.ErrUnavailable
 	}
 	out := response.Channel.conversation()
+	if c.history != nil {
+		supported := c.history.profile != nil && c.history.profile.CanonicalSupported()
+		out.SupportsOutcomeDraft = &supported
+	}
+	out.SourceURL = "https://app.slack.com/client/" + url.PathEscape(c.workspace) + "/" + url.PathEscape(id)
 	cursor := ""
 	identities := []string{}
 	for range 10 {

@@ -49,6 +49,7 @@ func HTTPClient(allowPrivate bool) *http.Client {
 // LiveChats opens a session as the connected Dispact bot. The vault is read
 // when a session opens, because the API learns it from a later option.
 type LiveChats struct {
+	Profiles    chatlinks.HistoryProfileReader
 	TeamThreads *chatlinks.Store
 	App         BotApp
 	Now         func() time.Time

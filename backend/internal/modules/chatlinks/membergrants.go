@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/teamchat"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -140,6 +141,9 @@ func (s *Store) MemberGrant(ctx context.Context, provider string) (MemberGrant, 
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		ctx, err := s.readMemberTx(ctx, tx)
 		if err != nil {
+			return err
+		}
+		if err := teamchat.Check(ctx, tx, provider); err != nil {
 			return err
 		}
 		grant, err = scanMemberGrant(tx.QueryRow(ctx, "SELECT "+memberGrantColumns+" FROM chat_member_grant WHERE user_id=@user AND provider=@provider", pgx.StrictNamedArgs{userKey: user, providerKey: provider}))
@@ -279,14 +283,8 @@ func (s *Store) DisconnectMember(ctx context.Context, provider string) error {
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, "UPDATE chat_member_grant SET status='disconnected' WHERE id=@id", pgx.StrictNamedArgs{"id": before.ID}); err != nil {
-			return err
-		}
 		credential = before.credential
-		after := before
-		after.Status = "disconnected"
-		_, err = storekit.Audit(ctx, tx, "update", "chat_member_grant", before.ID, grantImage(before), grantImage(after))
-		return err
+		return disconnectMemberGrantTx(ctx, tx, before, "member_disconnect")
 	})
 	if err != nil {
 		return err
@@ -323,6 +321,9 @@ func (s *Store) connectMemberTx(ctx context.Context, tx pgx.Tx, grant MemberGran
 		return MemberGrant{}, MemberGrant{}, err
 	}
 	if _, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock(hashtextextended(@key,0))", pgx.StrictNamedArgs{keyKey: "chat-member-grant:" + grant.UserID.String() + ":" + grant.Provider}); err != nil {
+		return MemberGrant{}, MemberGrant{}, err
+	}
+	if err := teamchat.Admit(ctx, tx, grant.Provider); err != nil {
 		return MemberGrant{}, MemberGrant{}, err
 	}
 	before, readErr := scanMemberGrant(tx.QueryRow(ctx, "SELECT "+memberGrantColumns+" FROM chat_member_grant WHERE user_id=@user AND provider=@provider FOR UPDATE", pgx.StrictNamedArgs{userKey: grant.UserID, providerKey: grant.Provider}))

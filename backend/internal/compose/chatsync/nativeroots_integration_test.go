@@ -93,6 +93,7 @@ func TestNativeRootCorrectionsReviseOneRecapAndKeepHumanEdits(t *testing.T) {
 	now := linkedAt.Add(48 * time.Hour)
 	bot := pacedSlackFixture(t, routedSlackHTTP{server.Client(), base}, "synthetic-bot", "T_NATIVE", "U_BOT", &now)
 	connection := ids.NewV7()
+	e.exec(t, `UPDATE channel_connection SET archived_at=now(),status='disconnected'`)
 	e.exec(t, `INSERT INTO channel_connection(id,provider,channel_id,channel_label,credential_ref,status,connected_by)
  VALUES($1,'slack','T_NATIVE','Native fixture','sealed-fixture','connected',$2)`, connection, e.rep)
 	sessions := nativeRootSessions{chatlinks.Session{Provider: "slack", ConnectionID: connection, TeamID: "T_NATIVE", Chat: bot}}
@@ -357,7 +358,7 @@ func pacedSlackFixture(t *testing.T, httpClient messaging.Doer, token, workspace
 		t.Fatal(err)
 	}
 	meter := ratelimit.NewRegistry().NewPacer(func() time.Time { return *now })
-	return slack.NewBot(httpClient, token, workspace, member).WithThreadReader(slack.New(httpClient, token, workspace, member), nil).WithHistoryProfile(profile, "APP_FIXTURE").WithHistoryPacing(meter, func(ctx context.Context, wait time.Duration) error {
+	return slack.NewBot(httpClient, token, workspace, member).WithHistoryProfile(profile, "APP_FIXTURE").WithHistoryPacing(meter, func(ctx context.Context, wait time.Duration) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}

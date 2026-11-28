@@ -2,13 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useLayoutEffect, useRef, useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { NoteMarkdown } from "../../design-system/markdown";
 import { QueryStates } from "../../design-system/querystates";
 import { stable } from "../../format/collate";
 import { formatDateTime } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import { problemMessageOf } from "../../lib/problem";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { problemCodeOf, problemMessageOf } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { MessengerAudience } from "./messenger.audience";
 import { MessengerComposer } from "./messenger.composer";
@@ -31,6 +33,9 @@ export function MessengerMessages({
   context: MessengerContext;
   seat: string;
 }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
   const [reviewed, Reviewed] = useState(context.audience_key);
   const [root, Root] = useState("");
   const current = useMessengerConversation(
@@ -43,6 +48,10 @@ export function MessengerMessages({
     context.conversation.id,
     root,
     true,
+    scope.provider === "slack" &&
+      context.conversation.supports_outcome_draft === false
+      ? 60000
+      : 15000,
   );
   return (
     <div className="messenger-conversation">
@@ -57,7 +66,17 @@ export function MessengerMessages({
         changed={reviewed !== context.audience_key}
         onReview={() => Reviewed(context.audience_key)}
       />
-      <MessengerOutcome scope={scope} />
+      {query.dataUpdatedAt > 0 && (
+        <p className="t-caption">
+          {t("messenger.lastChecked", {
+            at: formatDateTime(
+              new Date(query.dataUpdatedAt).toISOString(),
+              locale,
+              zone,
+            ),
+          })}
+        </p>
+      )}
       <MessengerThread
         key={root}
         scope={scope}
@@ -90,8 +109,6 @@ function MessengerThread({
   query: ReturnType<typeof useMessengerMessages>;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const zone = useViewerZone();
   const conversation = context.conversation;
   const pagination = useMessengerPage();
   const [frozen, Frozen] = useState<MessengerPage | null>(null);
@@ -99,6 +116,9 @@ function MessengerThread({
   const box = useRef<HTMLDivElement>(null);
   const anchor = useRef<{ height: number; top: number } | null>(null);
   const snapshot = frozen ?? query.data;
+  const retainSnapshot =
+    Boolean(snapshot) &&
+    problemCodeOf(query.error) === "messenger_rate_limited";
   const messages = [
     ...pages.flatMap((page) => page.messages),
     ...(snapshot?.messages ?? []),
@@ -150,11 +170,29 @@ function MessengerThread({
   ]);
   return (
     <div className="messenger-conversation">
+      <MessengerOutcome
+        scope={scope}
+        conversation={conversation.id}
+        root={root}
+        supportsDraft={conversation.supports_outcome_draft}
+        messageIds={messages
+          .filter((message) => !message.deleted)
+          .slice(-100)
+          .map((message) => message.id)}
+      />
       {root && (
         <Button onClick={() => onRoot("")}>{t("messenger.back")}</Button>
       )}
-      <QueryStates query={query} pendingLabel={t("messenger.loading")}>
-        {!query.isError && (
+      {query.isError && retainSnapshot && (
+        <Callout tone="warning" title={t("messenger.loadProblem")}>
+          {problemMessageOf(query.error, t)}
+        </Callout>
+      )}
+      <QueryStates
+        query={{ ...query, isError: query.isError && !retainSnapshot }}
+        pendingLabel={t("messenger.loading")}
+      >
+        {(!query.isError || retainSnapshot) && (
           <div
             className="messenger-transcript"
             ref={box}
@@ -175,37 +213,13 @@ function MessengerThread({
             )}
             {messages.length === 0 && <p>{t("messenger.empty")}</p>}
             {messages.map((message) => (
-              <article
+              <MessengerMessageRow
                 key={message.id}
-                className={
-                  message.author === context.sender.id
-                    ? "messenger-message is-own"
-                    : "messenger-message"
-                }
-              >
-                <div className="t-caption messenger-message-meta">
-                  {conversation.members.find(
-                    (person) => person.id === message.author,
-                  )?.name ?? t("messenger.authorUnavailable")}
-                  <time dateTime={message.at}>
-                    {formatDateTime(message.at, locale, zone)}
-                  </time>
-                </div>
-                <p className="messenger-message-text">
-                  {message.deleted ? t("messenger.deleted") : message.text}
-                </p>
-                {message.edited && <small>{t("messenger.edited")}</small>}
-                {(conversation.supports_threads ??
-                  conversation.kind === "channel") &&
-                  !root &&
-                  !message.deleted && (
-                    <Button
-                      onClick={() => onRoot(message.root_id || message.id)}
-                    >
-                      {t("messenger.reply")}
-                    </Button>
-                  )}
-              </article>
+                message={message}
+                context={context}
+                root={root}
+                onRoot={onRoot}
+              />
             ))}
             {cursor && later && (
               <Button pending={pagination.isPending} onClick={loadMore}>
@@ -230,26 +244,109 @@ function MessengerThread({
           {t("messenger.newMessages")}
         </Button>
       )}
-      {!query.isError &&
-      conversation.audience_known &&
-      !conversation.external &&
-      audienceReviewed ? (
-        <MessengerComposer
-          key={draftKey}
-          scope={scope}
-          context={context}
-          root={root}
-          draftKey={draftKey}
-          onSent={() => {
-            Frozen(null);
-            Pages([]);
-            void query.refetch();
-          }}
-        />
-      ) : (
-        audienceReviewed &&
-        !conversation.audience_known && <p>{t("messenger.audienceUnknown")}</p>
-      )}
+      <MessengerWriting
+        scope={scope}
+        context={context}
+        root={root}
+        draftKey={draftKey}
+        readable={!query.isError || retainSnapshot}
+        reviewed={audienceReviewed}
+        onSent={() => {
+          Frozen(null);
+          Pages([]);
+          void query.refetch();
+        }}
+      />
     </div>
+  );
+}
+
+function MessengerMessageRow({
+  message,
+  context,
+  root,
+  onRoot,
+}: Readonly<{
+  message: MessengerPage["messages"][number];
+  context: MessengerContext;
+  root: string;
+  onRoot: (root: string) => void;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const conversation = context.conversation;
+  return (
+    <article
+      className={
+        message.author === context.sender.id
+          ? "messenger-message is-own"
+          : "messenger-message"
+      }
+    >
+      <div className="t-caption messenger-message-meta">
+        {conversation.members.find((person) => person.id === message.author)
+          ?.name ?? t("messenger.authorUnavailable")}
+        <time dateTime={message.at}>
+          {formatDateTime(message.at, locale, zone)}
+        </time>
+      </div>
+      <div className="messenger-message-text">
+        <NoteMarkdown
+          source={message.deleted ? t("messenger.deleted") : message.text}
+        />
+      </div>
+      {message.content_incomplete && !message.deleted && (
+        <small>{t("messenger.incompleteContent")}</small>
+      )}
+      {message.source_url && /^https:\/\//.test(message.source_url) && (
+        <AppLink href={message.source_url}>{t("messenger.openSource")}</AppLink>
+      )}
+      {message.edited && <small>{t("messenger.edited")}</small>}
+      {(conversation.supports_threads ?? conversation.kind === "channel") &&
+        !root &&
+        !message.deleted && (
+          <Button onClick={() => onRoot(message.root_id || message.id)}>
+            {message.reply_count
+              ? plural("messenger.replyCount", message.reply_count)
+              : t("messenger.reply")}
+          </Button>
+        )}
+    </article>
+  );
+}
+
+function MessengerWriting({
+  scope,
+  context,
+  root,
+  draftKey,
+  readable,
+  reviewed,
+  onSent,
+}: Readonly<{
+  scope: MessengerScope;
+  context: MessengerContext;
+  root: string;
+  draftKey: string;
+  readable: boolean;
+  reviewed: boolean;
+  onSent: () => void;
+}>) {
+  const t = useT();
+  if (!readable || !reviewed) return null;
+  if (!context.conversation.audience_known)
+    return <p>{t("messenger.audienceUnknown")}</p>;
+  if (context.conversation.external) return null;
+  return (
+    <MessengerComposer
+      key={draftKey}
+      scope={scope}
+      context={context}
+      root={root}
+      draftKey={draftKey}
+      onSent={onSent}
+    />
   );
 }

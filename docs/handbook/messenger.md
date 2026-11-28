@@ -43,7 +43,7 @@ a new human attempt, which could duplicate a message that already arrived. Revie
 ## Keep a business outcome
 
 Private conversation bodies are fetched for the window rather than copied into CRM History.
-**Share outcome** opens the existing note editor. Review and edit the business result, then save it
+**Share outcome** lets you write a note or request a draft from the displayed messages. Requesting a draft sends those messages to the summary model. You must review and edit the business result before saving it
 as a note. The editor says when that note may also reach a linked work channel.
 
 Use [Team chat channels](chat-channels.md) to choose which channel updates to save and which CRM updates to send.

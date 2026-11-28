@@ -6,6 +6,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ChannelHistoryProfile } from "../../components/channelhistoryprofile";
+import { useMessengerService } from "../../components/messenger/messenger.service";
 import { Button, Disclosure } from "../../design-system/atoms";
 import { CopyAction } from "../../design-system/clipboardcopy";
 import { Field, TextInput } from "../../design-system/field";
@@ -21,13 +22,16 @@ import { unwrap } from "../../lib/problem";
 
 export function ChannelInstallations() {
   const t = useT();
+  const service = useMessengerService();
+  const selected =
+    service.data?.active_provider ?? service.data?.providers?.[0];
   return (
     <Panel title={t("channelInstall.title")}>
       <PanelBody>
         <p>{t("channelInstall.separate")}</p>
         <ProviderList>
-          <SlackInstallation />
-          <TeamsInstallation />
+          {(!selected || selected === "slack") && <SlackInstallation />}
+          {(!selected || selected === "teams") && <TeamsInstallation />}
         </ProviderList>
       </PanelBody>
     </Panel>
@@ -132,6 +136,19 @@ function SlackInstallation() {
             titleKey="channelInstall.failed"
             error={connect.error}
           />
+          {setup.data?.app_manifest && (
+            <Button
+              onClick={() =>
+                downloadBytes(
+                  new TextEncoder().encode(setup.data?.app_manifest ?? ""),
+                  "margince-slack.json",
+                  "application/json",
+                )
+              }
+            >
+              {t("channelInstall.downloadSlack")}
+            </Button>
+          )}
           {setup.data && (
             <Disclosure summary={t("messenger.setupDetails")}>
               <p>{t("channelInstall.callback")}</p>

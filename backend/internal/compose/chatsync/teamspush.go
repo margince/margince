@@ -138,12 +138,9 @@ func (r *TeamsReceiver) actTeams(ctx context.Context, app capture.ConnectorApp, 
 		return r.pauseRemovedTeam(ctx, installed)
 	}
 	root, eligible := teamsMessageTarget(activity)
-	if !eligible {
+	removing := teamsRemoval(activity) && activity.Data.Channel.ID != ""
+	if !eligible && !removing {
 		return receipt(crmcontracts.DispactChannelEventReceiptStatusIgnored), nil
-	}
-	channel := installed.Team + "/" + activity.Data.Channel.ID
-	if err := r.Store.RecordTeamThread(ctx, installed, channel, root, activity.Conversation.ID, activity.At); err != nil {
-		return crmcontracts.DispactChannelEventReceipt{}, err
 	}
 	bot, err := r.Binding(ctx)
 	if errors.Is(err, capture.ErrNoConnection) {
@@ -152,8 +149,25 @@ func (r *TeamsReceiver) actTeams(ctx context.Context, app capture.ConnectorApp, 
 	if err != nil {
 		return crmcontracts.DispactChannelEventReceipt{}, err
 	}
-	if bot.TeamID != installed.Tenant+"/"+installed.Team {
+	channel := installed.Team + "/" + activity.Data.Channel.ID
+	links, err := r.Store.ConnectionLinks(ctx, bot.ConnectionID)
+	if err != nil {
+		return crmcontracts.DispactChannelEventReceipt{}, err
+	}
+	matched := []chatlinks.Link{}
+	for _, link := range links {
+		if link.ChannelSlug == channel {
+			matched = append(matched, link)
+		}
+	}
+	if len(matched) == 0 {
 		return receipt(crmcontracts.DispactChannelEventReceiptStatusIgnored), nil
+	}
+	if removing {
+		return r.removedTeamsChannel(ctx, app, installed, channel, matched)
+	}
+	if err := r.Store.RecordTeamThread(ctx, installed, channel, root, activity.Conversation.ID, activity.At); err != nil {
+		return crmcontracts.DispactChannelEventReceipt{}, err
 	}
 	if err := r.Store.InvalidateNativeRoot(ctx, bot.ConnectionID, channel, chatwire.RootRef{ID: root, Revision: revision, Deleted: activity.Type == "messageDelete" && root == activity.ID}); err != nil {
 		return crmcontracts.DispactChannelEventReceipt{}, err
@@ -168,18 +182,54 @@ func (r *TeamsReceiver) actTeams(ctx context.Context, app capture.ConnectorApp, 
 	return receipt(crmcontracts.DispactChannelEventReceiptStatusPullQueued), nil
 }
 
+func teamsRemoval(activity teamsActivity) bool {
+	remove := activity.Type == "installationUpdate" && activity.Action == "remove"
+	for _, member := range activity.Removed {
+		remove = remove || member.ID == activity.Recipient.ID
+	}
+	return remove
+}
+
+func (r *TeamsReceiver) removedTeamsChannel(ctx context.Context, app capture.ConnectorApp, installed chatlinks.TeamInstallation, channel string, links []chatlinks.Link) (crmcontracts.DispactChannelEventReceipt, error) {
+	credential := chatwire.BotCredential{Workspace: installed.Tenant, Member: installed.Team, NativeTeam: installed.NativeTeam, BotMember: installed.BotMember, ServiceURL: installed.ServiceURL, Credential: messaging.Credential{AppID: installed.AppID}}
+	bot, err := TeamsBot(ctx, r.HTTP, app, credential)
+	if err != nil {
+		return crmcontracts.DispactChannelEventReceipt{}, err
+	}
+	if _, err = bot.Channel(ctx, channel); err == nil {
+		return receipt(crmcontracts.DispactChannelEventReceiptStatusIgnored), nil
+	}
+	if !errors.Is(err, chatwire.ErrNotMember) && !errors.Is(err, messaging.ErrNotFound) {
+		return crmcontracts.DispactChannelEventReceipt{}, err
+	}
+	for _, link := range links {
+		if err := r.Store.MarkChannelGone(ctx, link.ID); err != nil {
+			return crmcontracts.DispactChannelEventReceipt{}, err
+		}
+	}
+	return receipt(crmcontracts.DispactChannelEventReceiptStatusLinkPaused), nil
+}
+
 func (r *TeamsReceiver) installation(ctx context.Context, app capture.ConnectorApp, activity teamsActivity) (chatlinks.TeamInstallation, error) {
 	prior, err := r.Store.TeamInstallationByNative(ctx, app.ClientID, app.Tenant, activity.Data.Team.ID)
 	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 		return prior, err
 	}
-	remove := activity.Type == "installationUpdate" && activity.Action == "remove"
-	for _, member := range activity.Removed {
-		remove = remove || member.ID == activity.Recipient.ID
-	}
+	remove := teamsRemoval(activity)
 	if remove {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return chatlinks.TeamInstallation{}, nil
+		}
+		credential := chatwire.BotCredential{Workspace: prior.Tenant, Member: prior.Team, NativeTeam: prior.NativeTeam, BotMember: prior.BotMember, ServiceURL: prior.ServiceURL, Credential: messaging.Credential{AppID: prior.AppID}}
+		bot, checkErr := TeamsBot(ctx, r.HTTP, app, credential)
+		if checkErr != nil {
+			return prior, checkErr
+		}
+		if _, checkErr = bot.Me(ctx); checkErr == nil {
+			return prior, nil
+		}
+		if !errors.Is(checkErr, chatwire.ErrNotMember) && !errors.Is(checkErr, messaging.ErrNotFound) {
+			return prior, checkErr
 		}
 		prior.Installed, prior.SignedAt = false, activity.At
 		if err := r.Store.RecordTeamInstallation(ctx, prior); err != nil {
@@ -214,14 +264,15 @@ func (r *TeamsReceiver) pauseRemovedTeam(ctx context.Context, installation chatl
 	if err != nil {
 		return crmcontracts.DispactChannelEventReceipt{}, err
 	}
-	if bot.TeamID != installation.Tenant+"/"+installation.Team {
-		return receipt(crmcontracts.DispactChannelEventReceiptStatusIgnored), nil
-	}
-	links, err := r.Links.PullLinks(ctx, bot.ConnectionID)
+
+	links, err := r.Store.ConnectionLinks(ctx, bot.ConnectionID)
 	if err != nil {
 		return crmcontracts.DispactChannelEventReceipt{}, err
 	}
 	for _, link := range links {
+		if !strings.HasPrefix(link.ChannelSlug, installation.Team+"/") {
+			continue
+		}
 		if err := r.Links.MarkChannelGone(ctx, link.ID); err != nil {
 			return crmcontracts.DispactChannelEventReceipt{}, err
 		}

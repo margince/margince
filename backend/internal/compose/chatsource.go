@@ -13,12 +13,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/chatsync"
 	"github.com/margince/margince/backend/internal/compose/messengeraccounts"
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/messaging"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -29,6 +32,7 @@ import (
 const fileChannelMessageTool = "file_channel_message"
 
 type chatSourceHandlers struct {
+	filer *chatsync.Filer
 	pool  *pgxpool.Pool
 	notes *activities.Store
 	links *chatlinks.Store
@@ -91,4 +95,41 @@ func (h chatSourceHandlers) GetChatSummarySource(w http.ResponseWriter, r *http.
 
 func chatSourceUnavailable(err error) bool {
 	return errors.Is(err, messaging.ErrUnauthorized) || errors.Is(err, messaging.ErrUnavailable) || errors.Is(err, messaging.ErrUnsupported) || errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, capture.ErrNoConnection) || errors.Is(err, chatlinks.ErrBotNotConnected)
+}
+
+// DraftMessengerOutcome requires an attended selection before private content reaches the summary lane.
+func (s Server) DraftMessengerOutcome(w http.ResponseWriter, r *http.Request, provider crmcontracts.MessengerProvider, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	if _, _, ok := signedInHuman(w, r); !ok {
+		return
+	}
+	if !auth.SeatAdmitsWrites(r.Context()) {
+		httperr.Write(w, r, apperrors.ErrSeatTierInsufficient)
+		return
+	}
+	if err := auth.Require(r.Context(), "activity", principal.ActionCreate); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if s.links == nil || s.filer == nil {
+		httperr.ServiceUnavailable(w, r, "Messaging outcome drafting is unavailable.")
+		return
+	}
+	var in crmcontracts.DraftMessengerOutcomeJSONRequestBody
+	if !httperr.Decode(w, r, &in) {
+		return
+	}
+	root := ""
+	if in.RootId != nil {
+		root = *in.RootId
+	}
+	filer := s.filer
+	draft, err := filer.DraftMessengerOutcome(r.Context(), string(recordType), ids.UUID(id), string(provider), in.ConversationId, root, in.MessageIds)
+	if err != nil {
+		err = modelfailure.Refusal(r.Context(), err)
+		err = chatlinks.MessengerFailure(w, err)
+		modelfailure.Write(w, r, err)
+		return
+	}
+
+	httperr.WriteJSON(w, http.StatusOK, draft)
 }

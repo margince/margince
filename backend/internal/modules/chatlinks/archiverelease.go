@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -105,6 +106,9 @@ func retireLink(ctx context.Context, tx pgx.Tx, link Link) error {
 	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("chatlinks: retiring %s: %w", link.ID, ErrLinkNotFound)
 	}
-	_, err = storekit.Audit(ctx, tx, "archive", chatLinkEntity, link.ID, auditImage(link), nil)
-	return err
+	audit, err := storekit.Audit(ctx, tx, "archive", chatLinkEntity, link.ID, auditImage(link), nil)
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, audit, link.ID, crmcontracts.InternalEventChatLinkStatusChanged{})
 }

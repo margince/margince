@@ -3,10 +3,9 @@
 
 **Do you only use the product?** The [handbook](handbook/README.md) answers questions
 about how to use the app. **Ask your documents** in the app also reads its answers from the handbook.
-Step-by-step guides for sales and delivery teams are in [user-guide/README.md](../user-guide/README.md). The rest of this tree is
-for the developer who changes or runs the code.
+Step-by-step guides for sales and delivery teams are in [user-guide/README.md](../user-guide/README.md). The rest of this tree is for the developer who changes or runs the code.
 
-These docs explain how to build and run Margince. It is a CRM with one company per installation, and the server refuses a second one. The backend is a Go API under `/v1`, and the React web app ships
+It is a CRM with one company per installation, and the server refuses a second one. The backend is a Go API under `/v1`, and the React web app ships
 on its own. The docs follow the four kinds of [Diátaxis](https://diataxis.fr/), and the pages in
 `operations/` say how to install and run Margince. Tutorials help you learn, how-to guides do tasks,
 reference pages are to look things up, and explanation pages say why. The
@@ -113,6 +112,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up mailbox and calendar capture providers.
 - [connect-a-shared-mailbox.md](how-to/connect-a-shared-mailbox.md): set up IMAP, Microsoft 365 or Google
   Workspace for a mailbox one team reads, and connect it.
+- [Connect team messaging](how-to/connect-team-messaging.md): set up messaging apps.
 - [connect-google-groups.md](how-to/connect-google-groups.md): set up Google lookups for the role map.
 - [measure-mail-import.md](how-to/measure-mail-import.md): measure a mail import.
 - [profile-mail-import.md](how-to/profile-mail-import.md): profile a mail import.

@@ -101,6 +101,7 @@ export function useMessengerMessages(
   conversation: string,
   root: string,
   enabled: boolean,
+  pollingInterval = 15000,
 ) {
   return useQuery({
     queryKey: ["messenger-messages", scope, conversation, root],
@@ -118,7 +119,8 @@ export function useMessengerMessages(
       ),
     enabled,
     retry: false,
-    refetchInterval: 60000,
+    refetchInterval: () =>
+      document.visibilityState === "visible" ? pollingInterval : false,
   });
 }
 export function useMessengerSend() {

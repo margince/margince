@@ -415,6 +415,7 @@ public.chat_send_attempt.provider_message_id document
 public.chat_send_attempt.record_type label
 public.chat_send_attempt.root_id document
 public.chat_send_attempt.state label
+public.chat_service.provider exempt closed enum is bounded by chat_service_provider_check
 public.chat_team_installation.app_id document
 public.chat_team_installation.bot_member_id document
 public.chat_team_installation.native_team_id document

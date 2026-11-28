@@ -85,6 +85,7 @@ func WithChatLinks(inserter *jobs.Runner, private bool, lane ai.Completer) Optio
 	return func(s *Server, pool *pgxpool.Pool) {
 		store, chats := chatLinks(pool, func() keyvault.Vault { return s.vault }, inserter, 0, private)
 		chats.App = s.messagingAppCredentials
+		chats.Profiles = store.WorkspaceHistoryProfile
 		registry := capture.NewRegistry(InstallationDB(pool), nil, nil, nil)
 		binding := func(ctx context.Context) (capture.LiveBot, error) {
 			return registry.LiveBotIdentity(ctx, chatlinks.ProviderDispact)
@@ -94,7 +95,7 @@ func WithChatLinks(inserter *jobs.Runner, private bool, lane ai.Completer) Optio
 		s.historyProfile = chats.HistoryProfile
 		store.WithHistoryProfiles(chats.HistoryProfile)
 		s.http = chatsync.HTTPClient(private)
-		store.WithMessenger(func() keyvault.Vault { return s.vault }, messengeraccounts.Clients(private, registry.LiveBotIdentity))
+		store.WithMessenger(func() keyvault.Vault { return s.vault }, messengeraccounts.Clients(private, registry.LiveBotIdentity, chats.HistoryProfile))
 		s.messengerOAuthHandlers.store = store
 		store.WithMessengerRoster(messengeraccounts.RecordRoster)
 		store.WithMemberAuthority(messengeraccounts.MemberAuthority)
@@ -108,6 +109,7 @@ func WithChatLinks(inserter *jobs.Runner, private bool, lane ai.Completer) Optio
 		s.chatSourceHandlers = chatSourceHandlers{pool: pool, notes: activities.NewStore(InstallationDB(pool)), links: store, now: time.Now}
 		s.chatPulls = inserter
 		filer := chatsync.NewFiler(pool, store, chats, lane)
+		s.filer = filer
 		filer.Reconfirm = channelReconfirmation(pool)
 		filer.Reauthorize = s.channelFilingAuthority(pool)
 		filer.PreviewOrigin = func() string { return s.send.PublicBaseURL }
@@ -240,6 +242,9 @@ func WithChatEvents(replays chatsync.Replays, marks chatsync.Marks) Option {
 		teamsReceiver := &chatsync.TeamsReceiver{Receiver: receiver, Store: store, App: s.messagingAppCredentials, HTTP: chatsync.HTTPClient(false), Verifier: oidctoken.NewBotFramework(), Binding: func(ctx context.Context) (capture.LiveBot, error) {
 			return registry.LiveBotIdentity(ctx, chatlinks.ProviderTeams)
 		}}
-		s.chatEventHandlers = chatlinks.NewEventHandlers(receiver).WithSlack(&chatsync.SlackReceiver{Receiver: receiver, Roots: store}).WithTeams(teamsReceiver).WithTeamsGraph(&chatsync.TeamsGraphReceiver{Receiver: receiver, Store: store, App: s.messagingAppCredentials})
+		s.chatEventHandlers = chatlinks.NewEventHandlers(receiver).WithSlack(&chatsync.SlackReceiver{Receiver: receiver, Roots: store, SigningSecret: func(ctx context.Context) (string, error) {
+			app, err := s.messagingAppCredentials(ctx, chatlinks.ProviderSlack)
+			return app.SigningSecret, err
+		}}).WithTeams(teamsReceiver).WithTeamsGraph(&chatsync.TeamsGraphReceiver{Receiver: receiver, Store: store, App: s.messagingAppCredentials})
 	}
 }

@@ -3050,6 +3050,20 @@ public.chat_send_attempt.updated_at timestamp with time zone NOT NULL gen=- def=
 public.chat_send_attempt.user_id uuid NOT NULL gen=- def=-
 public.chat_send_attempt_pkey CREATE UNIQUE INDEX chat_send_attempt_pkey ON public.chat_send_attempt USING btree (id)
 public.chat_send_attempt_user_id_request_id_key CREATE UNIQUE INDEX chat_send_attempt_user_id_request_id_key ON public.chat_send_attempt USING btree (user_id, request_id)
+public.chat_service acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.chat_service.chat_service_pkey PRIMARY KEY (id)
+public.chat_service.chat_service_provider_check CHECK ((provider = ANY (ARRAY['dispact'::text, 'slack'::text, 'teams'::text])))
+public.chat_service.chat_service_singleton_check CHECK (singleton)
+public.chat_service.chat_service_singleton_key UNIQUE (singleton)
+public.chat_service.chat_service_version_check CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.chat_service.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_service.provider text gen=- def=-
+public.chat_service.singleton boolean NOT NULL gen=- def=true
+public.chat_service.slack_history_profile jsonb gen=- def=-
+public.chat_service.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_service.version bigint NOT NULL gen=- def=1
+public.chat_service_pkey CREATE UNIQUE INDEX chat_service_pkey ON public.chat_service USING btree (id)
+public.chat_service_singleton_key CREATE UNIQUE INDEX chat_service_singleton_key ON public.chat_service USING btree (singleton)
 public.chat_team_installation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.chat_team_installation.app_id text NOT NULL gen=- def=-
 public.chat_team_installation.bot_member_id text NOT NULL gen=- def=-

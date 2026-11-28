@@ -35,6 +35,7 @@ import {
   MESSENGER_PROVIDERS,
   type MessengerProvider,
 } from "./messenger/messenger.queries";
+import { useMessengerService } from "./messenger/messenger.service";
 
 type LinkableChannel = components["schemas"]["LinkableChannel"];
 type ChannelLinkState = components["schemas"]["ChannelLinkState"];
@@ -188,7 +189,9 @@ function UnlinkedBody({
   const t = useT();
   const link = useLinkChannel(record, onCreated);
   const [existingOpen, setExistingOpen] = useState(false);
-  const [provider, Provider] = useState<MessengerProvider>("dispact");
+  const service = useMessengerService();
+  const provider =
+    service.data?.active_provider ?? service.data?.providers?.[0] ?? "dispact";
   const linkable = useLinkableChannels(record, existingOpen, provider);
   const createFailed = link.isError && link.variables?.mode === "create";
   return (
@@ -199,32 +202,29 @@ function UnlinkedBody({
           sub={t("channelLink.noneSub")}
         />
       </OverviewList>
-      {canEdit && (
-        <Select
-          aria-label={t("messenger.provider")}
-          value={provider}
-          options={MESSENGER_PROVIDERS.map((item) => ({
-            ...item,
-            adornment: <ProviderMark providerKey={item.value} />,
-          }))}
-          onChange={(value) => {
-            const next = MESSENGER_PROVIDERS.find(
-              (item) => item.value === value,
-            );
-            if (next) Provider(next.value);
-          }}
-        />
-      )}
-      {canEdit && (
+      <QueryStates query={service} pendingLabel={t("messenger.loading")}>
+        {service.data?.providers?.length ? (
+          <p>
+            <ProviderMark providerKey={provider} />{" "}
+            {MESSENGER_PROVIDERS.find((item) => item.value === provider)?.label}
+          </p>
+        ) : (
+          <p>{t("messenger.chooseService")}</p>
+        )}
+      </QueryStates>
+      {canEdit && Boolean(service.data?.providers?.length) && (
         <div className="card-actions">
-          <Button
-            variant="primary"
-            pending={link.isPending && link.variables?.mode === "create"}
-            disabled={link.isPending}
-            onClick={() => link.mutate({ mode: "create", provider })}
-          >
-            {t("channelLink.create")}
-          </Button>
+          {provider !== "teams" && (
+            <Button
+              variant="primary"
+              pending={link.isPending && link.variables?.mode === "create"}
+              disabled={link.isPending}
+              onClick={() => link.mutate({ mode: "create", provider })}
+            >
+              {t("channelLink.create")}
+            </Button>
+          )}
+          {provider === "teams" && <p>{t("channelLink.createInTeams")}</p>}
           <Button onClick={() => setExistingOpen(true)} aria-haspopup="dialog">
             {t("channelLink.linkExisting")}
           </Button>

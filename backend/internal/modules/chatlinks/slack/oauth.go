@@ -18,10 +18,21 @@ import (
 )
 
 // BotScopes declares the shared channel application permissions.
-var BotScopes = []string{groupsReadScope, channelHistoryScope, "groups:write", "chat:write", usersReadScope, usersEmailScope}
+var BotScopes = []string{publicReadScope, publicHistoryScope, groupsReadScope, channelHistoryScope, "groups:write", "chat:write", usersReadScope, usersEmailScope}
+
+// RequiredBotScopes keeps existing private-channel installations usable after public reading is added.
+func RequiredBotScopes() []string {
+	scopes := []string{}
+	for _, scope := range BotScopes {
+		if scope != publicReadScope && scope != publicHistoryScope {
+			scopes = append(scopes, scope)
+		}
+	}
+	return scopes
+}
 
 // UserScopes declares personal Slack capabilities separately from the installation grant.
-var UserScopes = []string{"channels:read", "groups:read", "im:read", "mpim:read", "im:write", "mpim:write", "channels:history", "groups:history", "im:history", "mpim:history", "chat:write", "users:read", "users:read.email"}
+var UserScopes = []string{publicReadScope, "groups:read", "im:read", "mpim:read", "im:write", "mpim:write", publicHistoryScope, "groups:history", "im:history", "mpim:history", "chat:write", "users:read", "users:read.email"}
 
 // OAuth keeps delegated authorization bound to the configured application.
 type OAuth struct {
@@ -33,11 +44,9 @@ type OAuth struct {
 
 // Authorization keeps exchanged credentials bound to the provider identity returned with them.
 type Authorization struct {
-	Reader       *messaging.Credential
-	ReaderMember string
-	Credential   messaging.Credential
-	Workspace    string
-	Member       string
+	Credential messaging.Credential
+	Workspace  string
+	Member     string
 }
 
 // AuthorizeURL starts delegated consent for the configured personal application.

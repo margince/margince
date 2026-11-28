@@ -42,6 +42,12 @@ func (p *Puller) pullNativeLink(ctx context.Context, session chatlinks.Session, 
 		page = chatwire.RootPage{Roots: []chatwire.RootRef{{ID: link.RootID, Revision: "bound-root"}}}
 	} else {
 		since := time.Time{}
+		if !link.BackfillRequested {
+			since = link.CreatedAt
+			if link.ReadSince != nil {
+				since = *link.ReadSince
+			}
+		}
 		if scan.Coverage != nil {
 			since = *scan.Coverage
 		}

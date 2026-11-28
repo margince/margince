@@ -241,7 +241,7 @@ export const en = {
   "timeline.chatSummary.sourceHelp":
     "Connect your own messaging account from Messenger on this record, check that you can open the channel there, then check source access again.",
   "channelInstall.slackReader":
-    "Shared channel installation also asks the installing account for read-only channel history. That account must belong to the linked private channels. It grants no direct-message access or personal sending permission.",
+    "The shared Slack bot reads channel history and replies using its own permissions. Add the bot to each linked channel. Personal Messenger consent is separate.",
   "channelProfile.distribution": "Slack app distribution",
   "channelProfile.declaration":
     "Choose how this app is distributed. Margince records your declaration and the documented history limits when you install or reconnect it.",
@@ -252,9 +252,9 @@ export const en = {
   "channelProfile.missing":
     "History limits have not been confirmed for this installation.",
   "channelProfile.reconnect":
-    "Ask an administrator to reconnect Slack in Shared channel connections, confirm the app distribution and approve read-only channel history. The installing account must belong to the linked private channels. Complete summaries remain paused until access and limits are confirmed.",
+    "Ask an administrator to reconnect the shared Slack bot, confirm the app distribution and approve the listed bot permissions. Add the bot to each linked channel. Complete summaries need confirmed access and supported history limits.",
   "channelProfile.unsupported":
-    "This distribution allows only one history and one thread request per minute, with 15 messages per page. Complete channel summaries are unavailable. Personal Messenger and CRM updates to Slack remain separate.",
+    "This app has reduced history limits. Complete automatic summaries and immediate outcome drafts are unavailable. Personal Messenger reads must wait between requests; permitted sends remain available.",
   "channelProfile.limits":
     "History: {history} requests/minute, {historyPage} messages/page. Threads: {replies} requests/minute, {repliesPage} messages/page.",
   "channelProfile.provenance":
@@ -274,14 +274,14 @@ export const en = {
   "channelInstall.adminRequired":
     "An administrator with channel connection access must approve this connection.",
   "channelInstall.teamsSteps":
-    "Register the Microsoft bot with the event address below. Upload the app package to Teams and add it to the intended team, approve its team permissions, then refresh and approve that team here.",
+    "Register the Microsoft bot with the event address below. Upload the app package to Teams, add it to each intended team and approve its permissions, then approve those teams here. Add the app separately to each private or shared channel you want to link.",
   "channelInstall.teamsApp": "Microsoft app {app}, tenant {tenant}",
   "channelInstall.refresh": "Refresh installed teams",
   "channelInstall.noTeams":
     "No verified team installation yet. Check the bot registration and add the app to your team, then refresh.",
   "channelInstall.team": "Verified installed team",
   "channelInstall.approval":
-    "Only this team will be connected. Existing links keep their destination; connecting another team requires disconnecting the current connection first.",
+    "Approve this team for the Teams connection. You can approve several teams from the same Microsoft directory; existing links keep their destination.",
   "channelInstall.approve": "Approve team connection",
   "channelInstall.connected":
     "Team connected. You can now link its channels from a company, deal or project.",
@@ -13856,7 +13856,7 @@ export const en = {
   "channelLink.identityReviewBody":
     "Confirm this channel again to bind its permanent identity. Unlink it, then choose it from the channel list. Saved History stays on the record.",
   "channelLink.privateTeamsReadOnly":
-    "Teams supports incoming recaps in private channels. Use a standard channel to send CRM updates as the bot.",
+    "This channel can send summaries to History. Automatic CRM posts are unavailable for this channel.",
   "channelLink.chooseConversation": "Conversation to link",
   "channelLink.specificConversation":
     "Link one conversation in a shared channel",
@@ -13864,6 +13864,8 @@ export const en = {
   "channelLink.none": "No channel yet",
   "channelLink.noneSub":
     "A private channel keeps the team up to date on this record.",
+  "channelLink.createInTeams":
+    "Create the channel and manage its members in Teams, then link it here.",
   "channelLink.create": "Create a channel",
   "channelLink.linkExisting": "Link an existing channel",
   "channelLink.linkCta": "Link channel",
@@ -15687,6 +15689,7 @@ export const en = {
   "audit.kind.capture_personal_sweep": "Private mail cleanup",
   "audit.kind.company_domain_disposition": "Company domain decision",
   "audit.kind.capture_settings": "Capture settings",
+  "audit.kind.chat_service": "Team messaging service",
   "audit.kind.chat_link": "Chat link",
   "audit.kind.commission": "Commission",
   "audit.kind.communication_instruction": "Communication instruction",
@@ -25493,9 +25496,8 @@ export const en = {
   "messenger.dispactOpen": "Open Dispact",
   "messenger.loadLater": "Load later replies",
   "messenger.verb": "Messenger",
-  "messenger.provider": "Messaging provider",
 
-  "messenger.channels": "Channels",
+  "messenger.channels": "Conversations",
   "messenger.people": "People",
 
   "messenger.change": "Change conversation",
@@ -25520,10 +25522,43 @@ export const en = {
   "messenger.loadEarlier": "Load earlier messages",
   "messenger.newMessages": "Jump to latest messages",
   "messenger.empty": "No messages in this conversation yet.",
+  "messenger.incompleteContent":
+    "Some content or attachment contents were not read.",
+  "messenger.openSource": "Open in messaging app",
+  "messenger.replyCount_one": "View reply ({count}+)",
+  "messenger.replyCount_other": "View replies ({count}+)",
+  "messenger.serviceTitle": "Team messaging service",
+  "messenger.oneService":
+    "Use one service for your company: Dispact, Slack or Teams. Messenger and channel links use the same service.",
+  "messenger.chooseService":
+    "An administrator selects the service below. Messenger and channel links then use that choice.",
+  "messenger.serviceConflict":
+    "Older connections to several services remain. Confirm the service to keep; the other accounts and channel links will be disconnected.",
+  "messenger.switchService": "Change service",
+  "messenger.disconnectService": "Disconnect service",
+  "messenger.switchServiceBody":
+    "Use {name} for your company. Other shared connections and personal accounts will be disconnected, and their channel links will end. History stays. Link channels again from their records and connect personal accounts to this service.",
+  "channelInstall.downloadSlack": "Download Slack app setup",
+  "messenger.draftOutcome": "Draft outcome from these messages",
+  "messenger.draftLimited":
+    "This Slack connection reads history slowly. Write the outcome yourself, or open Slack to review it. Automatic outcome drafts need a supported history plan.",
+  "messenger.draftConsent":
+    "This sends up to 100 displayed messages to the configured summary model. Private messages stay out of History until you review and save the outcome.",
+  "messenger.reviewOutcomeDraft":
+    "Review and edit the draft before saving. Check decisions, conditions, owners and dates.",
+  "messenger.useService": "Use this service",
   "messenger.reply": "Reply in thread",
   "messenger.back": "Back to conversation",
   "messenger.deleted": "Message deleted",
   "messenger.edited": "Edited",
+  "messenger.lastChecked": "Messages checked {at}",
+  "messenger.failureAccess":
+    "Check conversation access and app permissions in your messaging app. An administrator may need to renew consent.",
+  "messenger.slackPlan":
+    "Confirm how your Slack app is distributed. This reading plan also applies to personal Messenger without a shared bot.",
+  "messenger.chooseSlackPlan": "Choose the actual app distribution",
+  "messenger.disconnectServiceBody":
+    "Disconnect this service and its personal accounts, and end its channel links. History stays. Choose a service before connecting again.",
   "messenger.loading": "Loading conversation…",
   "messenger.loadProblem": "Conversation unavailable",
   "messenger.searchPeople": "Find people",
@@ -25579,7 +25614,7 @@ export const en = {
     "An administrator needs to complete app setup before accounts can connect.",
   "messenger.participantScopes": "Required participant permissions",
   "messenger.teamsTenant":
-    "Pin the Microsoft app to your directory ID and grant the listed delegated permissions in Entra.",
+    "Pin the Microsoft app to your directory ID. A directory administrator must grant the listed delegated permissions in Entra before colleagues can connect.",
   "messenger.editDraft": "Edit draft",
   "messenger.reviewDelivery": "Check delivery before editing",
   "messenger.checkedConversation": "Conversation checked",

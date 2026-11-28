@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import { en } from "../../i18n/en";
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -22,6 +23,8 @@ it("requires immutable discovery before opening a UUID-shaped legacy Dispact slu
   const reads: string[] = [];
   const path = `/messenger/dispact/deal/${messengerScope.id}`;
   installFetchStub({
+    "GET /messenger/service": () =>
+      jsonResponse({ providers: ["dispact"], active_provider: "dispact" }),
     "GET /me": meRoute({}, { seat: "full" }),
     [`GET /channel-links/deal/${messengerScope.id}`]: () =>
       jsonResponse({
@@ -90,7 +93,9 @@ it("requires immutable discovery before opening a UUID-shaped legacy Dispact slu
     </StoryProviders>,
   );
   await user.click(screen.getByRole("button", { name: "Messenger" }));
-  await user.click(await screen.findByRole("button", { name: "Channels" }));
+  await user.click(
+    await screen.findByRole("button", { name: en["messenger.channels"] }),
+  );
   const discovered = await screen.findByRole("button", {
     name: "Discovered channel",
   });

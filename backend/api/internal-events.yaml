@@ -25,6 +25,30 @@ components:
         column: { type: string, description: The email, address or domain column whose representation changed. }
       additionalProperties: false
 
+    InternalEventChatLinkStatusChanged:
+      type: object
+      x-event-type: chat_link.status_changed
+      x-entity-type: chat_link
+      description: A linked channel changed its local availability status.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventChatServiceSelected:
+      type: object
+      x-event-type: chat_service.selected
+      x-entity-type: chat_service
+      description: The workspace team-messaging service changed.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventChatMemberGrantDisconnected:
+      type: object
+      x-event-type: chat_member_grant.disconnected
+      x-entity-type: chat_member_grant
+      description: Personal team-messaging consent was withdrawn.
+      properties: {}
+      additionalProperties: false
+
     InternalEventSdrHandoffCreated:
       type: object
       x-event-type: sdr_handoff.created

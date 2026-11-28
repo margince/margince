@@ -3,6 +3,7 @@
 
 import { RotateCw } from "lucide-react";
 import { useId, useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button, Modal } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
@@ -45,6 +46,9 @@ export function MessengerAudience({
                 count: formatNumber(room.members.length, locale),
               })}
         </span>
+        {room.source_url && /^https:\/\//.test(room.source_url) && (
+          <AppLink href={room.source_url}>{t("messenger.openSource")}</AppLink>
+        )}
         <Button variant="ghost" onClick={() => Open(true)}>
           {t("messenger.viewAudience")}
         </Button>

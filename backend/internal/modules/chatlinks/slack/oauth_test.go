@@ -94,10 +94,10 @@ func TestRefreshKeepsTheRotatedParticipantCredential(t *testing.T) {
 	}
 }
 
-func TestChannelConsentSeparatesTheBotFromItsReadOnlyChannelReader(t *testing.T) {
+func TestChannelConsentUsesBotHistoryWithoutDelegatedReader(t *testing.T) {
 	flow := OAuth{ClientID: "APP", ClientSecret: "synthetic-secret", Now: func() time.Time { return time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC) }}
 	link, err := url.Parse(flow.AuthorizeBotURL("state", "https://app.example.test/callback"))
-	if err != nil || link.Query().Get("user_scope") != strings.Join(ChannelReaderScopes, ",") || link.Query().Get("scope") != strings.Join(BotScopes, ",") {
+	if err != nil || link.Query().Get("user_scope") != "" || link.Query().Get("scope") != strings.Join(BotScopes, ",") {
 		t.Fatalf("bot consent mixed participant grants: %s %v", link, err)
 	}
 	for scope := range strings.SplitSeq(link.Query().Get("scope"), ",") {
@@ -106,10 +106,10 @@ func TestChannelConsentSeparatesTheBotFromItsReadOnlyChannelReader(t *testing.T)
 		}
 	}
 	flow.HTTP = oauthDoer(func(*http.Request) (*http.Response, error) {
-		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"ok":true,"access_token":"bot-token","token_type":"bot","bot_user_id":"BOTUSER","team":{"id":"TEAM"},"scope":"` + strings.Join(BotScopes, ",") + `","authed_user":{"id":"REP","access_token":"history-reader-token","token_type":"user","scope":"` + strings.Join(ChannelReaderScopes, ",") + `"}}`))}, nil
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"ok":true,"access_token":"bot-token","token_type":"bot","bot_user_id":"BOTUSER","team":{"id":"TEAM"},"scope":"` + strings.Join(BotScopes, ",") + `","authed_user":{"id":"REP","access_token":"history-reader-token","token_type":"user","scope":"` + "groups:history,groups:read,users:read,users:read.email" + `"}}`))}, nil
 	})
 	grant, err := flow.ExchangeBot(context.Background(), "code", "https://app.example.test/callback")
-	if err != nil || grant.Credential.AccessToken != "bot-token" || grant.Reader == nil || grant.Reader.AccessToken != "history-reader-token" || grant.ReaderMember != "REP" || grant.Workspace != "TEAM" || grant.Member != "BOTUSER" {
+	if err != nil || grant.Credential.AccessToken != "bot-token" || grant.Workspace != "TEAM" || grant.Member != "BOTUSER" {
 		t.Fatalf("bot grant: %+v %v", grant, err)
 	}
 }
@@ -123,24 +123,23 @@ func TestChannelConsentRefusesAUserTokenEvenWhenItsScopesMatch(t *testing.T) {
 	}
 }
 
-func TestChannelInstallationRequiresReadScopesWithoutRequestingPrivateMessaging(t *testing.T) {
-	for _, scopes := range []string{"", strings.Join(UserScopes, ",")} {
-		flow := OAuth{ClientID: "APP", HTTP: oauthDoer(func(*http.Request) (*http.Response, error) {
-			body := `{"ok":true,"access_token":"synthetic-bot","token_type":"bot","bot_user_id":"BOT","team":{"id":"TEAM"},"scope":"` + strings.Join(BotScopes, ",") + `","authed_user":{"id":"READER","access_token":"synthetic-reader","token_type":"user","scope":"` + scopes + `"}}`
-			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body))}, nil
-		})}
-		grant, err := flow.ExchangeBot(context.Background(), "synthetic", "https://app.example.test/callback")
-		if scopes == "" {
-			if !errors.Is(err, messaging.ErrUnauthorized) {
-				t.Fatalf("accepted missing channel reader scopes: %+v %v", grant, err)
-			}
-		} else if err != nil || grant.Reader == nil {
-			t.Fatalf("existing broader user grant refused: %v", err)
-		}
+func TestChannelInstallationDoesNotRequireAnInstallingUsersToken(t *testing.T) {
+	flow := OAuth{ClientID: "APP", HTTP: oauthDoer(func(*http.Request) (*http.Response, error) {
+		body := `{"ok":true,"access_token":"synthetic-bot","token_type":"bot","bot_user_id":"BOT","team":{"id":"TEAM"},"scope":"` + strings.Join(BotScopes, ",") + `"}`
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body))}, nil
+	})}
+	grant, err := flow.ExchangeBot(context.Background(), "synthetic", "https://app.example.test/callback")
+	if err != nil || grant.Member != "BOT" {
+		t.Fatalf("bot-only install: %+v %v", grant, err)
 	}
-	for _, scope := range ChannelReaderScopes {
-		if strings.HasPrefix(scope, "im:") || strings.HasPrefix(scope, "mpim:") || strings.Contains(scope, "write") {
-			t.Fatalf("shared reader requests personal messaging: %s", scope)
-		}
+}
+
+func TestExistingPrivateBotConsentCanRefreshWithoutPublicChannelScopes(t *testing.T) {
+	flow := OAuth{ClientID: "APP", ClientSecret: "synthetic", Now: func() time.Time { return time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC) }, HTTP: oauthDoer(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"ok":true,"token_type":"bot","access_token":"renewed","refresh_token":"next","expires_in":43200,"scope":"` + strings.Join(RequiredBotScopes(), ",") + `"}`))}, nil
+	})}
+	credential, err := flow.RefreshBot(context.Background(), messaging.Credential{AppID: "APP", RefreshToken: "previous"})
+	if err != nil || credential.AccessToken != "renewed" {
+		t.Fatalf("existing bot forced to reconnect: %+v %v", credential, err)
 	}
 }
