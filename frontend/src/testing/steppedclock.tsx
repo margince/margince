@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
+import { onTestFinished, vi } from "vitest";
 
 // A clock that moves only when a test says so, and an interaction driver on the
 // same clock.
@@ -23,7 +23,8 @@ import { vi } from "vitest";
 // true })` instead — the other way out of the same deadlock — and their clock
 // already moves on its own. Advancing it from inside `asyncWrapper` fires timers
 // they never asked to fire, which is a failure in a suite that did nothing
-// wrong. Opting in per file keeps that blast radius at the file that wants it.
+// wrong. Opting in per test, and removing the method when the test ends, keeps
+// that blast radius at the test that wants it.
 //
 // It is NOT a *.test.* file: the design-system and lint gates skip test files,
 // and a helper this many suites lean on should answer to the same rules the app
@@ -36,7 +37,7 @@ import { vi } from "vitest";
  * Call it ONCE per test and reuse the instance: a second one starts a second
  * view of the document's input state — what is focused, which buttons are held —
  * and the two then disagree, which shows up as an interaction that silently does
- * nothing. Pair it with `vi.useRealTimers()` in `afterEach`.
+ * nothing. The test that installed it gets real timers back when it ends.
  */
 export function steppedClock(
   options: Readonly<{
@@ -50,6 +51,10 @@ export function steppedClock(
         vi.advanceTimersByTime(ms);
       },
     },
+  });
+  onTestFinished(() => {
+    Reflect.deleteProperty(globalThis, "jest");
+    vi.useRealTimers();
   });
   return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 }

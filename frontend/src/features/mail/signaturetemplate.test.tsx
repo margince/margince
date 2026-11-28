@@ -8,6 +8,7 @@ import { useToast } from "../../design-system/toast";
 import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
+import { steppedClock } from "../../testing/steppedclock";
 import { SignatureSettingRow } from "../settings/settingssignaturerow";
 import { SignatureTemplateCard } from "./signaturetemplatecard";
 
@@ -68,7 +69,7 @@ afterEach(() => {
 
 describe("a member under a workspace template", () => {
   it("fills in title and phone instead of writing a sign-off, and sees it rendered", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const calls: Call[] = [];
     vi.stubGlobal("fetch", backend(calls, true));
     render(<Row />);
@@ -133,7 +134,7 @@ function TemplatePage() {
 
 describe("the template card", () => {
   it("saves the admin's layout through the page's save bar, in one PUT", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const calls: Call[] = [];
     vi.stubGlobal("fetch", backend(calls, true));
     render(<TemplatePage />);

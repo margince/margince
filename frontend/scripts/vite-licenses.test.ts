@@ -11,12 +11,16 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { build } from "vite";
+import { build, type Plugin } from "vite";
 import { describe, expect, it } from "vitest";
 import spaConfig from "../vite.config";
 import { mcpAppView } from "../vite.mcp-apps.config";
 import { inlineViews } from "./vite-inline-views";
-import { THIRD_PARTY_NOTICES, thirdPartyNotices } from "./vite-licenses";
+import {
+  SPA_CORE_PACKAGES,
+  THIRD_PARTY_NOTICES,
+  thirdPartyNotices,
+} from "./vite-licenses";
 
 const FRONTEND = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -51,7 +55,12 @@ function fixture(license: boolean) {
   return root;
 }
 
-async function fixtureBuild(root: string, inline = false, view = false) {
+async function fixtureBuild(
+  root: string,
+  inline = false,
+  view = false,
+  named: readonly string[] = [],
+) {
   const config = view ? mcpAppView("create-followups", join(root, "dist")) : {};
   const result = await build({
     ...config,
@@ -59,7 +68,7 @@ async function fixtureBuild(root: string, inline = false, view = false) {
     root,
     logLevel: "silent",
     plugins: [
-      thirdPartyNotices({ repository: root, inline }),
+      thirdPartyNotices({ repository: root, inline, named }),
       ...(view ? [inlineViews()] : []),
     ],
     build: {
@@ -73,6 +82,24 @@ async function fixtureBuild(root: string, inline = false, view = false) {
   });
   return (Array.isArray(result) ? result : [result]).flatMap((bundle) =>
     "output" in bundle ? bundle.output : [],
+  );
+}
+
+function noticesPlugin(option: unknown): Plugin | undefined {
+  if (Array.isArray(option)) {
+    return option.map(noticesPlugin).find((plugin) => plugin !== undefined);
+  }
+  return isPlugin(option) && option.name === "margince-third-party-notices"
+    ? option
+    : undefined;
+}
+
+function isPlugin(option: unknown): option is Plugin {
+  return (
+    typeof option === "object" &&
+    option !== null &&
+    "name" in option &&
+    typeof option.name === "string"
   );
 }
 
@@ -327,22 +354,42 @@ describe("third-party notices", () => {
       );
   });
 
-  it("names the core packages in the actual SPA build", async () => {
-    const result = await build({
-      ...spaConfig,
-      configFile: false,
-      root: FRONTEND,
-      logLevel: "silent",
-      build: { ...spaConfig.build, write: false },
-    });
-    const outputs = (Array.isArray(result) ? result : [result]).flatMap(
-      (bundle) => ("output" in bundle ? bundle.output : []),
-    );
-    const notice = outputs.find(
-      (item) => item.fileName === THIRD_PARTY_NOTICES,
-    );
-    const text = notice && "source" in notice ? String(notice.source) : "";
-    for (const name of ["react", "react-dom", "lucide-react", "tailwindcss"])
-      expect(text).toContain(`${name}@`);
-  }, 30_000);
+  it("refuses a build that ships no module of a package it names", async () => {
+    const root = fixture(true);
+    try {
+      const outputs = await fixtureBuild(root, false, false, ["fake-pkg"]);
+      expect(
+        outputs.some((item) => item.fileName === THIRD_PARTY_NOTICES),
+      ).toBe(true);
+      await expect(
+        fixtureBuild(root, false, false, ["fake-pkg", "react"]),
+      ).rejects.toThrow(/no bundled module of react, which/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses an SPA build that bundles none of the core packages", async () => {
+    const plugin = noticesPlugin(spaConfig.plugins);
+    expect(plugin).toBeDefined();
+    const root = fixture(true);
+    try {
+      await expect(
+        build({
+          configFile: false,
+          root,
+          logLevel: "silent",
+          plugins: [plugin],
+          build: {
+            write: false,
+            rolldownOptions: { input: join(root, "index.html") },
+          },
+        }),
+      ).rejects.toThrow(
+        `no bundled module of ${SPA_CORE_PACKAGES.join(", ")}, which`,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

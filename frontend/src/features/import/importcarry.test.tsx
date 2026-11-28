@@ -8,6 +8,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en as englishCopy } from "../../i18n/en";
+import { steppedClock } from "../../testing/steppedclock";
 import {
   jsonResponse,
   profile,
@@ -80,7 +81,7 @@ async function fixAndReupload(user: UserEvent, uploads: readonly object[]) {
 
 describe("Fix and re-upload with the same headers", () => {
   it("opens the new file with the type, source name, tag and mapping of the run it replaces", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const sent = await fixAndReupload(user, [again, asContacts]);
     expect(uploadsOf(sent)).toEqual([
       { file: "export.csv" },
@@ -118,7 +119,7 @@ describe("Fix and re-upload with the same headers", () => {
   });
 
   it("starts from the server's proposal when the headers differ", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const other = {
       ...again,
       columns: [{ header: "Company", fill_rate: 1, samples: ["Acme"] }],

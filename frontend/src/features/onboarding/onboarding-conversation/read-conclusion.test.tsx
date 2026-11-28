@@ -1,13 +1,13 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
 import { en as englishCopy } from "../../../i18n/en";
 import { meFixture } from "../../../testing/mefixture";
+import { steppedClock } from "../../../testing/steppedclock";
 import { OnboardingScreen } from "../onboarding";
 
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
@@ -251,12 +251,13 @@ describe("the read conclusion ordering contract", () => {
   // card with no rail commentary about it at all: the coverage detail lives
   // on the review's own CoverageCard, and the rail never restates it.
   it("a multi-poll partial terminal that skipped a page reaches the confirm card with no outcome bubble", async () => {
+    const user = steppedClock();
     stubApi([midRead, midRead, partialRead]);
     render(<OnboardingScreen />);
     const composer = await screen.findByRole("textbox", {
       name: /Website address/,
     });
-    await userEvent.type(composer, "gradion.com{Enter}");
+    await user.type(composer, "gradion.com{Enter}");
 
     expect(
       await screen.findByRole(
@@ -273,9 +274,10 @@ describe("the read conclusion ordering contract", () => {
   // A long run whose snapshots keep arriving must converge on the review rather
   // than stall as the poll count grows.
   it("a long multi-snapshot run converges on the review", async () => {
+    const user = steppedClock();
     stubApi([midRead, midRead, midRead, midRead, partialRead]);
     render(<OnboardingScreen />);
-    await userEvent.type(
+    await user.type(
       await screen.findByRole("textbox", { name: /Website address/ }),
       "gradion.com{Enter}",
     );
@@ -298,12 +300,13 @@ describe("the read conclusion ordering contract", () => {
   }, 20000);
 
   it("a poll error mid-read that recovers into the terminal still reaches review", async () => {
+    const user = steppedClock();
     stubApi([midRead, 500, partialRead]);
     render(<OnboardingScreen />);
     const composer = await screen.findByRole("textbox", {
       name: /Website address/,
     });
-    await userEvent.type(composer, "gradion.com{Enter}");
+    await user.type(composer, "gradion.com{Enter}");
 
     expect(
       await screen.findByRole(
@@ -323,9 +326,10 @@ describe("the read conclusion ordering contract", () => {
   // it the read completes on the server and the user waits on "opening your
   // review" until they reload.
   it("a read whose wizard-state join failed before the terminal still reaches review", async () => {
+    const user = steppedClock();
     stubApi([midRead, midRead, partialRead], { wizardStateWritable: false });
     render(<OnboardingScreen />);
-    await userEvent.type(
+    await user.type(
       await screen.findByRole("textbox", { name: /Website address/ }),
       "gradion.com{Enter}",
     );

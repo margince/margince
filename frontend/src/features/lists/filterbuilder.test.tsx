@@ -18,6 +18,7 @@ import {
   newLeaf,
   resetIDsForTest,
 } from "../../lib/segmentpredicate";
+import { steppedClock } from "../../testing/steppedclock";
 import { FilterBuilder } from "./filterbuilder";
 
 // The builder's one job is that every choice it offers came from the server's
@@ -303,9 +304,9 @@ describe("an id clause names a record, not a uuid", () => {
   });
 
   it("searches for a target too large to enumerate, and only a hit becomes the value", async () => {
+    const user = steppedClock();
     resetIDsForTest();
     stubCompanies();
-    const user = userEvent.setup();
     render(
       <Harness start={newGroup("and", [newLeaf("company_id", "eq", "")])} />,
     );
@@ -338,9 +339,9 @@ describe("an id clause names a record, not a uuid", () => {
   });
 
   it("says a search found nothing rather than showing an empty list", async () => {
+    const user = steppedClock();
     resetIDsForTest();
     stubCompanies();
-    const user = userEvent.setup();
     render(
       <Harness start={newGroup("and", [newLeaf("company_id", "eq", "")])} />,
     );
@@ -386,9 +387,9 @@ describe("an id clause names a record, not a uuid", () => {
   });
 
   it("searches for each company a list clause names", async () => {
+    const user = steppedClock();
     resetIDsForTest();
     stubCompanies();
-    const user = userEvent.setup();
     render(
       <Harness start={newGroup("and", [newLeaf("company_id", "in", [])])} />,
     );

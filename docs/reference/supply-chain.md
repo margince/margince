@@ -395,6 +395,6 @@ files, copies with no record, and a licence outside `copied-file-licenses`. One 
 licence, or another owner than Gradion. A package with no licence text may use a recorded file whose source is
 `name@version`.
 
-The frontend build collects licence and notice texts from bundled code, CSS and copied files, and missing text fails it.
+The frontend build collects licence and notice texts from bundled code, CSS and copied files, and missing text fails it. The SPA build also fails when a package in `SPA_CORE_PACKAGES` has no bundled module.
 The app serves `/licenses/THIRD-PARTY-NOTICES.txt`; MCP App documents embed the text to stay in one file.
 `make sbom-supplement` sets the copied-file licences in all three formats, and `make sbom-parity` refuses files or licences that do not match.

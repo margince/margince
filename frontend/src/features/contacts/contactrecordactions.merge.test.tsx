@@ -1,7 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
@@ -10,6 +9,7 @@ import {
   PROBED_CONTACT_ID,
 } from "../../testing/contactdocuments";
 import { meFixture } from "../../testing/mefixture";
+import { steppedClock } from "../../testing/steppedclock";
 import { ContactRecordActions } from "./contactrecordactions";
 
 afterEach(() => {
@@ -75,7 +75,7 @@ function mountMerging(whileMerging: () => void = () => undefined) {
 }
 
 async function mergeIntoDanaBuyer() {
-  const user = userEvent.setup();
+  const user = steppedClock();
   await user.click(await screen.findByTestId("merge-record"));
   await user.type(screen.getByRole("searchbox"), "Dana");
   await user.click(await screen.findByRole("button", { name: /Dana Buyer/ }));

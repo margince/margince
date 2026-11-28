@@ -8,10 +8,10 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
 import { LocaleProvider } from "../i18n";
 import { en as englishCopy } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
+import { steppedClock } from "../testing/steppedclock";
 import {
   ProjectLinks,
   type ProjectLinksAdapter,
@@ -117,7 +117,7 @@ describe("ProjectLinks", () => {
   });
 
   it("attaches the picked project and closes", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const attach = vi.fn(async () => undefined);
     draw({
       search: async () => [{ id: "p9", name: "Warehouse rollout · WR-1" }],
@@ -153,7 +153,7 @@ describe("ProjectLinks", () => {
   });
 
   it("writes the role chosen after the pick, and confirms nothing unpicked", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const attach = vi.fn(async () => undefined);
     draw({
       search: async () => [{ id: "p9", name: "Warehouse rollout" }],
@@ -183,7 +183,7 @@ describe("ProjectLinks", () => {
   });
 
   it("keeps the dialog open and shows what the server refused", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     draw({
       search: async () => [{ id: "p9", name: "Warehouse rollout" }],
       // Every real adapter refuses through throwProblem (companyprojects and
@@ -218,7 +218,7 @@ describe("ProjectLinks", () => {
   });
 
   it("opens each dialog without the refusal another one met", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const refused = new ProblemError({
       status: 404,
       code: "not_found",
@@ -312,7 +312,7 @@ describe("ProjectLinks", () => {
   });
 
   it("cannot be dismissed while the write is in flight", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     let release: (() => void) | undefined;
     draw({
       search: async () => [{ id: "p9", name: "Warehouse rollout" }],
@@ -402,7 +402,7 @@ describe("ProjectLinks", () => {
   // but not attach it to a project is refused by `auth.Require`, whose detail
   // is the RBAC object and the verb.
   it("answers a permission refusal in the reader's words, never the server's", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     draw({
       search: async () => [{ id: "p9", name: "Warehouse rollout" }],
       attach: async () => {

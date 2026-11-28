@@ -6,12 +6,12 @@ import {
   screen,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { jsonResponse } from "../../testing/company.fixtures";
+import { steppedClock } from "../../testing/steppedclock";
 import { ContactRecordActions } from "../contacts/contactrecordactions";
 
 // The merge picker names more than a contact's name, because two contacts may
@@ -64,6 +64,7 @@ async function openPickerAndSearch(
   term: string,
   merge: Response | Promise<Response> = jsonResponse({}),
 ) {
+  const user = steppedClock();
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) =>
@@ -87,7 +88,6 @@ async function openPickerAndSearch(
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  const user = userEvent.setup();
   await user.click(screen.getByTestId("merge-record"));
   const dialog = screen.getByRole("dialog");
   await user.type(within(dialog).getByRole("searchbox"), term);

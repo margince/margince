@@ -179,6 +179,7 @@ describe("AuditLogCard", () => {
   });
 
   it("follows a second link while the log is open", async () => {
+    steppedClock();
     const backend = auditLogBackend();
     vi.stubGlobal("fetch", backend);
     window.location.hash = auditHistoryHref("approval", RECORD_ID);
@@ -194,7 +195,7 @@ describe("AuditLogCard", () => {
   });
 
   it("holds a part of a record ID at its field and asks the server only for a whole one", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const backend = auditLogBackend();
     vi.stubGlobal("fetch", backend);
     render(<AuditLogCard />);
@@ -220,7 +221,7 @@ describe("AuditLogCard", () => {
   });
 
   it("says a reversed window at its field and asks the server nothing for it", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const backend = auditLogBackend();
     vi.stubGlobal("fetch", backend);
     render(<AuditLogCard />);

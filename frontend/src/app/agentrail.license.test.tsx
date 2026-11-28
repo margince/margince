@@ -5,13 +5,16 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
+import { steppedClock } from "../testing/steppedclock";
 import { AgentRail } from "./agentrail";
+// Evaluated up front: a stepped clock never waits for the lazy panel's chunk to load.
+import "./agentpanel";
 
 // The licence pill in the panel's runtime strip names a fault only the seats
 // page can repair, so the pill is the way there: a label that told the reader
@@ -89,9 +92,9 @@ const coreState = (container: HTMLElement) =>
 async function openPanel(
   state: LicenseEntitlement["state"],
   running: readonly unknown[] = [],
+  user: UserEvent = userEvent.setup(),
 ) {
   stubApi(state, running);
-  const user = userEvent.setup();
   const { container } = renderRail();
   const trigger = container.querySelector(".arhit");
   if (!trigger) throw new Error("no .arhit trigger in the rendered tree");
@@ -135,14 +138,18 @@ describe("the licence stays out of the orb and its line", () => {
   // The pill is waited on first, so the refusal has provably been read before
   // the orb is: a working orb before the licence answered would prove nothing.
   it("a refused licence does not outrank a live run: the rail reads the run", async () => {
-    const { opened, container } = await openPanel("rejected", [
-      {
-        id: "019f7e65-fbf7-7114-b114-40af4af63a01",
-        kind: "morning_brief",
-        state: "running",
-        started_at: "2026-08-01T08:59:00Z",
-      },
-    ]);
+    const { opened, container } = await openPanel(
+      "rejected",
+      [
+        {
+          id: "019f7e65-fbf7-7114-b114-40af4af63a01",
+          kind: "morning_brief",
+          state: "running",
+          started_at: "2026-08-01T08:59:00Z",
+        },
+      ],
+      steppedClock(),
+    );
     await waitFor(() =>
       expect(opened.querySelector("a.arwarning")?.textContent).toBe(
         englishCopy["shell.license.refused"],

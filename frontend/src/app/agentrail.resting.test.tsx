@@ -11,6 +11,7 @@ import type { components } from "../api/schema";
 import { LocaleProvider, translatePlural } from "../i18n";
 import { en, type MessageKey } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
+import { steppedClock } from "../testing/steppedclock";
 import { AgentRail } from "./agentrail";
 import {
   restingReadings,
@@ -306,6 +307,7 @@ describe("the rail's resting line", () => {
   }
 
   it("says a summary that has just landed", async () => {
+    steppedClock();
     stubRail([summary(2 * MINUTE)]);
     const { container } = mountRail();
     await waitFor(() => expect(shown(container)).toBe(SUMMARY_LINE));

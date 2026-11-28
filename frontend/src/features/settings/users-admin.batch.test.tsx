@@ -68,10 +68,10 @@ describe("a large members list", () => {
     await waitFor(() => expect(drawnNames()).toBe(MEMBER_BATCH));
 
     const user = userEvent.setup();
-    await user.type(
+    await user.click(
       screen.getByRole("searchbox", { name: englishCopy["users.search"] }),
-      "Roster Member 321",
     );
+    await user.paste("Roster Member 321");
     await waitFor(() => expect(drawnNames()).toBe(1));
     expect(screen.getByText("Roster Member 321")).toBeTruthy();
     expect(screen.getByText(`1 of ${SIZE} members`)).toBeTruthy();
@@ -97,7 +97,8 @@ describe("a search changed and cleared", () => {
     const search = screen.getByRole("searchbox", {
       name: englishCopy["users.search"],
     });
-    await user.type(search, "Roster Member 3");
+    await user.click(search);
+    await user.paste("Roster Member 3");
     await waitFor(() => expect(drawnNames()).toBeLessThan(MEMBER_BATCH + 1));
     await user.clear(search);
     await waitFor(() => expect(drawnNames()).toBe(MEMBER_BATCH));

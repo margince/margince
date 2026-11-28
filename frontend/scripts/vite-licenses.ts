@@ -20,6 +20,13 @@ import { stable } from "../src/format/collate";
 
 const REPOSITORY = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const THIRD_PARTY_NOTICES = "licenses/THIRD-PARTY-NOTICES.txt";
+// The packages the SPA build must find among its bundled modules.
+export const SPA_CORE_PACKAGES: readonly string[] = [
+  "react",
+  "react-dom",
+  "lucide-react",
+  "tailwindcss",
+];
 // Written by backend/tools/gen-composition (fetchedUnitsIndex), one `name | module@version` line per downloaded unit.
 const FETCHED_UNITS = "build/extensions/fetched-units.txt";
 
@@ -186,6 +193,7 @@ function bundleNotices(
   root: string,
   bundle: Rolldown.OutputBundle,
   cssFiles: readonly string[],
+  named: readonly string[],
 ): string {
   const copied = copiedFiles(root);
   const packages = new Map<string, BundledPackage>();
@@ -205,6 +213,12 @@ function bundleNotices(
     const pkg = bundledPackage(file);
     if (pkg) packages.set(pkg.root, pkg);
   }
+  const found = new Set([...packages.values()].map((pkg) => pkg.name));
+  const unfound = named.filter((name) => !found.has(name));
+  if (unfound.length > 0)
+    throw new Error(
+      `third-party notices: found no bundled module of ${unfound.join(", ")}, which this build names as shipped; check how bundledPackage maps module paths to packages, or remove the name from the named list`,
+    );
   const units = fetchedUnits(root)
     .filter((unit) =>
       shipped.some((file) => file.startsWith(`${unit.dir}${sep}`)),
@@ -281,11 +295,19 @@ function embedNotices(bundle: Rolldown.OutputBundle, text: string): void {
     );
 }
 
-/** The emitted chunks decide which packages ship; the lockfile also holds build tools. */
+/**
+ * The emitted chunks decide which packages ship; the lockfile also holds build tools.
+ * The build fails when a package in `named` has no bundled module.
+ */
 export function thirdPartyNotices(
-  options: { repository?: string; inline?: boolean } = {},
+  options: {
+    repository?: string;
+    inline?: boolean;
+    named?: readonly string[];
+  } = {},
 ): Plugin {
   const root = realpathSync(options.repository ?? REPOSITORY);
+  const named = options.named ?? [];
   let config: ResolvedConfig | undefined;
   return {
     name: "margince-third-party-notices",
@@ -299,7 +321,7 @@ export function thirdPartyNotices(
       if (!config)
         this.error("third-party notices: build configuration is missing");
       const css = await cssDependencies(this.getModuleIds(), config);
-      const text = bundleNotices(root, bundle, css);
+      const text = bundleNotices(root, bundle, css, named);
       if (options.inline) {
         embedNotices(bundle, text);
       } else {

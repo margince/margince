@@ -5,12 +5,13 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import type userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import type { LeafValue } from "../../lib/segmentpredicate";
 import { recordNamesRoutes } from "../../testing/recordnames.testkit";
+import { steppedClock } from "../../testing/steppedclock";
 import {
   installFetchStub,
   jsonResponse,
@@ -94,6 +95,7 @@ async function pickDemo(user: ReturnType<typeof userEvent.setup>) {
 
 describe("searching for a company", () => {
   it("offers the answers as a suggestion list the keyboard walks", async () => {
+    const user = steppedClock();
     installFetchStub({
       "GET /me": meRoute({ company: ["read"] }),
       "GET /companies": () =>
@@ -106,7 +108,6 @@ describe("searching for a company", () => {
         }),
       ...recordNamesRoutes({ company: { [ID]: "Demo GmbH" } }),
     });
-    const user = userEvent.setup();
     render(
       <StoryProviders>
         <OneCompany />
@@ -144,6 +145,7 @@ describe("searching for a company", () => {
   });
 
   it("moves focus only after the reader's own pick, not on a later outside change", async () => {
+    const user = steppedClock();
     installFetchStub({
       "GET /me": meRoute({ company: ["read"] }),
       "GET /companies": () =>
@@ -153,7 +155,6 @@ describe("searching for a company", () => {
         }),
       ...recordNamesRoutes({ company: { [ID]: "Demo GmbH" } }),
     });
-    const user = userEvent.setup();
     render(
       <StoryProviders>
         <OneCompany />
@@ -178,8 +179,8 @@ describe("searching for a company", () => {
   });
 
   it("moves focus when the pick arrives in another shape", async () => {
+    const user = steppedClock();
     stubOneAnswer();
-    const user = userEvent.setup();
     render(
       <StoryProviders>
         <OneCompany arrive={(sent) => (Array.isArray(sent) ? sent : [sent])} />
@@ -195,8 +196,8 @@ describe("searching for a company", () => {
   });
 
   it("stops waiting for the pick once the value changes to something else", async () => {
+    const user = steppedClock();
     stubOneAnswer();
-    const user = userEvent.setup();
     render(
       <StoryProviders>
         <OneCompany arrive={() => "other"} />

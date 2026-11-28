@@ -23,6 +23,7 @@ import { LocaleProvider } from "../i18n";
 import { en as englishCopy } from "../i18n/en";
 import { companyDocumentsKey, dealFilesKey } from "../lib/attachmentkeys";
 import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../lib/attachmentupload";
+import { steppedClock } from "../testing/steppedclock";
 import { AddDocumentDialog } from "./adddocument";
 
 // What this dialog owes the reader: the file lands on the record they chose,
@@ -338,7 +339,7 @@ describe("adding a document from the account", () => {
   });
 
   it("files it against the deal the reader picked, which is the only kind that can be read for deal fields", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const calls = stubApi(FULL_SEAT);
     show();
 
@@ -353,7 +354,7 @@ describe("adding a document from the account", () => {
   });
 
   it("refreshes the picked deal's files and the company the server filed it under", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     stubApi(FULL_SEAT, { stampedCompany: "o-1" });
     show();
     const lists = shared ?? client();
@@ -374,7 +375,7 @@ describe("adding a document from the account", () => {
   });
 
   it("reaches a deal on a later page, which no single request offers", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const calls = stubApi(FULL_SEAT);
     show();
 
@@ -433,7 +434,7 @@ describe("adding a document from the account", () => {
   });
 
   it("reports a failed deal search in the picker rather than offering nothing", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     stubApi(FULL_SEAT, { dealsStatus: 500 });
     show();
 

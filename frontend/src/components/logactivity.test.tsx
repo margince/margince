@@ -14,6 +14,7 @@ import { pickOption } from "../design-system/select-testing";
 import { calendarDay } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { en as englishCopy } from "../i18n/en";
+import { steppedClock } from "../testing/steppedclock";
 import { LogActivity } from "./logactivity";
 import { LogActivityAction } from "./logactivity.action";
 import {
@@ -379,7 +380,7 @@ describe("log activity from a 360", () => {
     };
 
     it("asks who was there, and refuses to send until it is answered", async () => {
-      const user = userEvent.setup();
+      const user = steppedClock();
       stubApi({
         "POST /activities": createdActivity,
         "GET /contacts": () => jsonResponse(contacts),
@@ -400,7 +401,7 @@ describe("log activity from a 360", () => {
     });
 
     it("links the contact and NOT the company, which the server refuses", async () => {
-      const user = userEvent.setup();
+      const user = steppedClock();
       const captured: Captured[] = [];
       stubApi(
         {
@@ -436,7 +437,7 @@ describe("log activity from a 360", () => {
     });
 
     it("files a note on the company after a meeting's attendee was picked", async () => {
-      const user = userEvent.setup();
+      const user = steppedClock();
       const captured: Captured[] = [];
       stubApi(
         {
@@ -482,7 +483,7 @@ describe("log activity from a 360", () => {
     });
 
     it("says the company has no contacts rather than offering none silently", async () => {
-      const user = userEvent.setup();
+      const user = steppedClock();
       stubApi({
         "POST /activities": createdActivity,
         "GET /contacts": () =>
@@ -543,10 +544,10 @@ describe("log activity from a 360", () => {
     expect(dayBox("Date").value).toBe("23/10/2026");
   });
   it("refuses a future or ancient day for a note and a due date past the window", async () => {
+    const user = steppedClock();
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
     render(<LogActivity entityType="company" entityId="o1" />);
-    const user = userEvent.setup();
     // A note is capped at today: a day typed past it fails the form's own
     // validation, so the POST never leaves.
     const noteDay = dayBox("Date");

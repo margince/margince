@@ -13,6 +13,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { steppedClock } from "../testing/steppedclock";
 import { SetPicker, type SetPickerOption } from "./setpicker";
 
 afterEach(cleanup);
@@ -117,7 +118,7 @@ describe("SetPicker", () => {
   });
 
   it("asks the server for a typed term and keeps the name of a value ticked from its answer", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const search = vi.fn(async (term: string) =>
       term === "iberia" ? [{ value: "t9", label: "Iberia Sales" }] : [],
     );
@@ -135,7 +136,7 @@ describe("SetPicker", () => {
   });
 
   it("offers a new name only once the server has answered that it holds none", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     let release = () => {};
     const search = vi.fn(
       (term: string) =>
@@ -167,7 +168,7 @@ describe("SetPicker", () => {
   });
 
   it("says a search failed rather than that nothing matched", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     render(
       <Picker
         options={[]}

@@ -15,6 +15,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
 import { en as englishCopy } from "../../i18n/en";
+import { steppedClock } from "../../testing/steppedclock";
 import { ImportCard } from "./import";
 import {
   jsonResponse,
@@ -468,7 +469,7 @@ describe("a single CSV whose name names no type", () => {
   });
 
   it("opens with no type when its header names none, and refuses Next until one is picked", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const sent = await dropCsv(user, "export.csv", unnamed("lead", "none"));
     expect(
       screen.getByText(englishCopy["import.files.unguessed"]),
@@ -710,7 +711,7 @@ describe("an edit refused while another tab tested the run", () => {
   // The first save is refused as the run was being tested. Read again, the run
   // is a draft once more, at the version that test left it on.
   it("goes again with the run's new version once the run is a draft", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     let refused = false;
     const sent = stubRoutes({
       [`PATCH ${RUN}`]: () => {

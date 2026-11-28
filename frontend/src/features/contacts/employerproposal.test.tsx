@@ -20,6 +20,7 @@ import { LocaleProvider } from "../../i18n";
 import { en as englishCopy } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { steppedClock } from "../../testing/steppedclock";
 import { useContact360 } from "./contact360";
 import { useContactAboutSections } from "./contactdetails";
 import { Employers } from "./contactemployers";
@@ -310,9 +311,9 @@ describe("The signature’s company on the Company card", () => {
   });
 
   it("links through the picker, searching the fact, then confirms it", async () => {
+    const user = steppedClock();
     const sent = stubApi();
     mount(contactView());
-    const user = userEvent.setup();
 
     await user.click(await screen.findByRole("button", { name: "Link" }));
     const dialog = await screen.findByRole("dialog");
@@ -489,6 +490,7 @@ describe("The signature’s company in the rail’s About section", () => {
   });
 
   it("confirms a company linked through the picker after the row gives way", async () => {
+    const user = steppedClock();
     let answer: (response: Response) => void = () => {};
     const sent = stubApi({
       relationship: () =>
@@ -497,7 +499,6 @@ describe("The signature’s company in the rail’s About section", () => {
         }),
     });
     const client = mount(contactView(), "live");
-    const user = userEvent.setup();
 
     await user.click(await screen.findByRole("button", { name: "Link" }));
     const dialog = await screen.findByRole("dialog");

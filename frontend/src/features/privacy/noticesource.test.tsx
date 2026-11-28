@@ -15,6 +15,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import * as timezone from "../../format/timezone";
 import { en } from "../../i18n/en";
 import { SourceHost } from "../../testing/sourcehost";
+import { steppedClock } from "../../testing/steppedclock";
 import {
   jsonResponse,
   StoryProviders,
@@ -86,7 +87,7 @@ afterEach(() => {
 });
 
 it("confirms an existing source record without retyping its contents", async () => {
-  const user = userEvent.setup();
+  const user = steppedClock();
   const writes: unknown[] = [];
   stubWithSession(
     {
@@ -161,7 +162,7 @@ it("confirms an existing source record without retyping its contents", async () 
 });
 
 it("requires a successful preview before confirmation and allows a failed preview to retry", async () => {
-  const user = userEvent.setup();
+  const user = steppedClock();
   let refused = true;
   const writes = vi.fn(() => jsonResponse(duty));
   stubWithSession(
@@ -275,8 +276,8 @@ it("keeps refused source details hidden when another evidence page arrives", asy
 });
 
 it("offers source assessment without claiming a duty or offering a notice", async () => {
+  const user = steppedClock();
   vi.spyOn(timezone, "browserZone").mockReturnValue("Asia/Ho_Chi_Minh");
-  const user = userEvent.setup();
   const writes: unknown[] = [];
   let current: NoticeCase = duty;
   stubWithSession(
@@ -368,8 +369,8 @@ it("keeps an unconfirmed source visible to a read-only privacy officer", async (
 });
 
 it("submits the entered acquisition date in the selected calendar timezone", async () => {
+  const user = steppedClock();
   vi.spyOn(timezone, "browserZone").mockReturnValue("Asia/Ho_Chi_Minh");
-  const user = userEvent.setup();
   const writes: unknown[] = [];
   stubWithSession(
     {
@@ -445,7 +446,7 @@ function stubReview(writes: unknown[]) {
 }
 
 async function openReview() {
-  const user = userEvent.setup();
+  const user = steppedClock();
   render(
     <StoryProviders>
       <NoticeDuty caseId={duty.id} />
@@ -566,7 +567,7 @@ it("leaves the source unconfirmed and saves nothing when the reviewer is not sur
 });
 
 it("explains when the contact's own approach removes a referral duty", async () => {
-  const user = userEvent.setup();
+  const user = steppedClock();
   stubWithSession(
     {
       "GET /privacy/notice-case-reviews/case-source": () => jsonResponse(duty),

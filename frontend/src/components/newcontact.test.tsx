@@ -11,12 +11,13 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import type userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
+import { steppedClock } from "../testing/steppedclock";
 import { workEmailAddress } from "./contactformfields";
 import { NewContactAction } from "./newcontact";
 
@@ -88,7 +89,7 @@ async function openNewContact(
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
   withChannel = true,
 ) {
-  const user = userEvent.setup();
+  const user = steppedClock();
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -340,11 +341,11 @@ it("requires an email, phone or LinkedIn URL before creating a contact", async (
 
 describe("New contact on a company's page", () => {
   it("keeps the reader on the company and names the new contact", async () => {
+    const user = steppedClock();
     const { posted } = stubApi(() =>
       json({ id: "p-new", full_name: "Dana Buyer" }, 201),
     );
     window.location.hash = "#/companies/c-1";
-    const user = userEvent.setup();
     render(
       <QueryClientProvider client={new QueryClient()}>
         <LocaleProvider initial="en">
