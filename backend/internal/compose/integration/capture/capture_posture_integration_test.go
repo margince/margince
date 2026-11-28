@@ -67,7 +67,7 @@ func postureOf(t *testing.T, e *integration.SearchEnv, user ids.UUID) string {
 	var posture string
 	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT mail_posture FROM capture_connection WHERE user_id = $1 AND archived_at IS NULL`,
+			`SELECT mail_posture FROM capture_connection WHERE user_id = $1`,
 			user).Scan(&posture)
 	}); err != nil {
 		t.Fatalf("reading the mailbox posture: %v", err)
@@ -296,30 +296,6 @@ func TestACounterpartyHoldIsOneSeatsAlone(t *testing.T) {
 	activityID := oneActivityID(t, e)
 	if got, _ := audienceOf(t, e, activityID); got != "workspace" {
 		t.Fatalf("a colleague's hold held this seat's mail: %q", got)
-	}
-}
-
-func TestACaptureWithNoIdentifiableConnectionIsBornHeld(t *testing.T) {
-	env := newCaptureEnv(t)
-	e, sync := env.e, env.sync
-	allowSharedPosture(t, e)
-	setPosture(t, env, e.Rep1, capturemod.PostureShared)
-
-	// Archive the connection out from under the sync. The seat can no longer be
-	// asked what they want, and a message whose provenance the product cannot
-	// establish is the last one to publish on a guess.
-	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(),
-			`UPDATE capture_connection SET archived_at = now() WHERE user_id = $1`, e.Rep1)
-		return err
-	}); err != nil {
-		t.Fatalf("archiving the connection: %v", err)
-	}
-
-	sync(t, customerMail("noconn-1@acme.example"))
-	activityID := oneActivityID(t, e)
-	if got, reason := audienceOf(t, e, activityID); got != "participants" || reason != "posture" {
-		t.Fatalf("a capture with no identifiable mailbox is %q / %q, want participants", got, reason)
 	}
 }
 

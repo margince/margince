@@ -67,8 +67,7 @@ func (r *Registry) listContainersOf(ctx context.Context, name, connection string
 	if err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT credential_ref, auth FROM capture_connection
-			 WHERE `+connection+` AND provider = $2 AND status <> 'disconnected'
-			   AND archived_at IS NULL`,
+			 WHERE `+connection+` AND provider = $2 AND status <> 'disconnected'`,
 			key, name).Scan(&credentialRef, &authBytes)
 	}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

@@ -9,13 +9,14 @@ package gates
 
 // A table that declares a lifecycle column has a statement that keeps it.
 //
-// On a row that is only inserted, `version` and `updated_at` repeat the insert,
-// and `version` promises a guarded update path that does not exist. updated_at
-// needs a production statement that updates the table. version needs one that
-// assigns it, or an update the table's trigger answers by assigning NEW.version.
+// On a row that is only inserted, `version` and `updated_at` repeat the insert.
+// updated_at needs a production statement that updates the table. version needs
+// one that assigns it, or an update its trigger answers by assigning NEW.version.
+// archived_at needs one that assigns it, or its `IS NULL` filters read nothing.
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"io/fs"
 	"maps"
@@ -29,13 +30,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// lifecycleColumn reads a catalog line declaring an integer version counter or
-// an updated_at timestamp. A text `version` names a wording, not a counter.
-var lifecycleColumn = regexp.MustCompile(`^public\.(\w+)\.(version (?:bigint|integer)|updated_at timestamp)`)
+// lifecycleColumn reads a catalog line declaring an integer version counter, an
+// updated_at timestamp or an archived_at mark. A text `version` names a wording,
+// not a counter.
+var lifecycleColumn = regexp.MustCompile(`^public\.(\w+)\.(version (?:bigint|integer)|updated_at timestamp|archived_at timestamp)`)
 
 // lifecycleTableFloor is the vacuity floor: the catalog held 130 such tables
 // when this gate was written, and far fewer means the reader stopped matching.
 const lifecycleTableFloor = 100
+
+// archiveColumnFloor is the same floor for archived_at: 52 tables carried one
+// when its arm was written.
+const archiveColumnFloor = 40
 
 // rowWritingCalls are the storekit entry points whose table argument names a
 // row they update, with that argument's position. LockRow and LockPair stand in
@@ -54,6 +60,9 @@ var (
 	// versionIncrement is a SET item a writer keeps apart and joins into its
 	// statement at run time, so no whole statement holds it.
 	versionIncrement = regexp.MustCompile(`(?i)^\s*version\s*=\s*version\s*\+\s*1\s*$`)
+	// archiveAssignment is an archive mark a writer keeps apart from its
+	// statement and joins in at run time.
+	archiveAssignment = regexp.MustCompile(`(?is)^\s*archived_at\s*=\s*\S`)
 )
 
 // legacyEvidenceReason is why a retired evidence table keeps its lifecycle.
@@ -70,6 +79,10 @@ var appendOnlyLifecycle = gatekit.Waive(map[string]string{
 		"the row was written. ProductSetTag hashes it to tell one allocation set from the next.",
 	"list_revision.version": "version copies the list's own version at the revision it records. It is a snapshot " +
 		"of the counter on list, not a counter of this row.",
+	"conversation_claim.archived_at": "A migration archived the duplicate claims the evidence index refused, and " +
+		"contacts.ArchivedClaimsDataTask deletes them. The column goes once a release guarantees that task ran.",
+	"workspace.archived_at": "An archived workspace row is a predecessor company merged in before the current " +
+		"code. The installation's workspace lookups skip it, and boot warns while one is stored.",
 })
 
 // lifecycleCatalog is what the head catalog says: the lifecycle columns of each
@@ -111,6 +124,9 @@ func newLifecycleEvidence() lifecycleEvidence {
 	return lifecycleEvidence{updated: map[string]bool{}, assigned: map[string]map[string]bool{}, assembled: map[string]bool{}}
 }
 
+// packageMarks are the SET items a package keeps apart from its statements.
+type packageMarks struct{ increments, archives bool }
+
 func (e lifecycleEvidence) assign(table, column string) {
 	if e.assigned[table] == nil {
 		e.assigned[table] = map[string]bool{}
@@ -133,8 +149,11 @@ func (e lifecycleEvidence) note(sql string) {
 
 // kept reports whether a production statement keeps column of table.
 func (e lifecycleEvidence) kept(catalog lifecycleCatalog, table, column string) bool {
-	if column == "version" {
+	switch column {
+	case "version":
 		return e.assigned[table]["version"] || e.updated[table] && catalog.versionBumped[table]
+	case "archived_at":
+		return e.assigned[table]["archived_at"]
 	}
 	return e.updated[table]
 }
@@ -144,7 +163,7 @@ func readLifecycleEvidence(t *testing.T) lifecycleEvidence {
 	t.Helper()
 	evidence := newLifecycleEvidence()
 	packages := map[string]lifecycleEvidence{}
-	increments := map[string]bool{}
+	marks := map[string]packageMarks{}
 	packageConstants := map[string]map[string]string{}
 	for _, root := range []string{"internal", "pkg", "../extensions"} {
 		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -169,8 +188,10 @@ func readLifecycleEvidence(t *testing.T) lifecycleEvidence {
 			if _, ok := packages[dir]; !ok {
 				packages[dir] = newLifecycleEvidence()
 			}
-			if packages[dir].noteGoFile(t, path, string(src), packageConstants) {
-				increments[dir] = true
+			found := packages[dir].noteGoFile(t, path, string(src), packageConstants)
+			marks[dir] = packageMarks{
+				increments: marks[dir].increments || found.increments,
+				archives:   marks[dir].archives || found.archives,
 			}
 			return nil
 		})
@@ -179,7 +200,7 @@ func readLifecycleEvidence(t *testing.T) lifecycleEvidence {
 		}
 	}
 	for dir, pkg := range packages {
-		evidence.merge(pkg, increments[dir])
+		evidence.merge(pkg, marks[dir])
 	}
 	for _, dir := range []string{"migrations/baseline/core", "migrations/core"} {
 		entries, err := gatekit.ReadDir(dir)
@@ -198,25 +219,29 @@ func readLifecycleEvidence(t *testing.T) lifecycleEvidence {
 }
 
 // noteGoFile reads one Go file's statements and storekit row writers into its
-// package's evidence, and reports whether the file holds a version increment.
-func (e lifecycleEvidence) noteGoFile(t *testing.T, path, src string, packageConstants map[string]map[string]string) bool {
+// package's evidence, and reports the SET items the file keeps apart.
+func (e lifecycleEvidence) noteGoFile(t *testing.T, path, src string, packageConstants map[string]map[string]string) packageMarks {
 	t.Helper()
-	increments := false
+	var found packageMarks
 	for _, sql := range gatekit.SQLStatementsIn(t, path, src) {
 		e.note(sql)
-		increments = increments || versionIncrement.MatchString(sql)
+		found.increments = found.increments || versionIncrement.MatchString(sql)
+		found.archives = found.archives || archiveAssignment.MatchString(sql)
 	}
 	e.noteRowWritingCalls(t, path, packageConstants)
-	return increments
+	return found
 }
 
-// merge adds a package's evidence. A version increment kept apart from its
-// statement counts only on a table whose SET list the package assembles.
-func (e lifecycleEvidence) merge(pkg lifecycleEvidence, increments bool) {
+// merge adds a package's evidence. A SET item kept apart from its statement
+// counts only on a table whose SET list the package assembles.
+func (e lifecycleEvidence) merge(pkg lifecycleEvidence, marks packageMarks) {
 	for table := range pkg.updated {
 		e.updated[table] = true
-		if increments && pkg.assembled[table] {
+		if marks.increments && pkg.assembled[table] {
 			e.assign(table, "version")
+		}
+		if marks.archives && pkg.assembled[table] {
+			e.assign(table, "archived_at")
 		}
 	}
 	for table, columns := range pkg.assigned {
@@ -238,35 +263,68 @@ func noteFunctionBodies(path string, note func(string)) error {
 }
 
 // noteRowWritingCalls records the table a storekit row writer is handed, as a
-// literal or as a constant the package declares.
+// literal or as a constant the package declares. A file that also sets
+// archived_at on a patch assigns it on each table it writes.
 func (e lifecycleEvidence) noteRowWritingCalls(t *testing.T, path string, packageConstants map[string]map[string]string) {
 	t.Helper()
 	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
-	constants := packageStringConstants(t, filepath.Dir(path), packageConstants)
+	e.noteRowWritingFile(file, packageStringConstants(t, filepath.Dir(path), packageConstants))
+}
+
+func (e lifecycleEvidence) noteRowWritingFile(file *ast.File, constants map[string]string) {
+	var written []string
+	archives := false
 	ast.Inspect(file, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
 		if !ok {
 			return true
 		}
-		at, ok := rowWritingCalls[calledName(call)]
-		if !ok || len(call.Args) <= at {
-			return true
-		}
-		switch arg := call.Args[at].(type) {
-		case *ast.BasicLit:
-			if table, err := strconv.Unquote(arg.Value); err == nil {
-				e.updated[table] = true
-			}
-		case *ast.Ident:
-			if table, ok := constants[arg.Name]; ok {
-				e.updated[table] = true
-			}
+		archives = archives || setsArchiveMark(call)
+		if table, ok := rowWritingTable(call, constants); ok {
+			e.updated[table] = true
+			written = append(written, table)
 		}
 		return true
 	})
+	for _, table := range written {
+		if archives {
+			e.assign(table, "archived_at")
+		}
+	}
+}
+
+// rowWritingTable is the table a storekit row writer call names, as a literal
+// or as a package constant.
+func rowWritingTable(call *ast.CallExpr, constants map[string]string) (string, bool) {
+	at, ok := rowWritingCalls[calledName(call)]
+	if !ok || len(call.Args) <= at {
+		return "", false
+	}
+	switch arg := call.Args[at].(type) {
+	case *ast.BasicLit:
+		table, err := strconv.Unquote(arg.Value)
+		return table, err == nil
+	case *ast.Ident:
+		table, ok := constants[arg.Name]
+		return table, ok
+	}
+	return "", false
+}
+
+// setsArchiveMark reports a storekit patch's Set of archived_at.
+func setsArchiveMark(call *ast.CallExpr) bool {
+	if calledName(call) != "Set" || len(call.Args) == 0 {
+		return false
+	}
+	lit, ok := call.Args[0].(*ast.BasicLit)
+	if !ok || lit.Kind != token.STRING {
+		return false
+	}
+	column, err := strconv.Unquote(lit.Value)
+	return err == nil && column == "archived_at"
 }
 
 func packageStringConstants(t *testing.T, dir string, packageConstants map[string]map[string]string) map[string]string {
@@ -322,6 +380,9 @@ func TestALifecycleColumnSitsOnARowThatIsUpdated(t *testing.T) {
 		t.Fatalf("the catalog yields %d tables with a lifecycle column, under the floor of %d; "+
 			"the reader has stopped matching the catalog's line shape", len(catalog.columns), lifecycleTableFloor)
 	}
+	if archived := countArchiveColumns(catalog); archived < archiveColumnFloor {
+		t.Fatalf("the catalog yields %d tables with archived_at, under the floor of %d", archived, archiveColumnFloor)
+	}
 	if len(catalog.versionBumped) == 0 {
 		t.Fatal("no table's update trigger assigns NEW.version; the reader has stopped matching function bodies")
 	}
@@ -338,6 +399,60 @@ func TestALifecycleColumnSitsOnARowThatIsUpdated(t *testing.T) {
 	}
 }
 
+func countArchiveColumns(catalog lifecycleCatalog) int {
+	count := 0
+	for _, columns := range catalog.columns {
+		if slices.Contains(columns, "archived_at") {
+			count++
+		}
+	}
+	return count
+}
+
+func TestAnArchiveMarkSetOnAPatchKeepsTheTableItsFileLocks(t *testing.T) {
+	t.Parallel()
+	const src = `package planted
+func archive(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	lock, err := storekit.LockRow(ctx, tx, "archived", id, storekit.LiveOnly)
+	if err != nil {
+		return err
+	}
+	p := storekit.NewPatch()
+	p.Set("archived_at", nil, time.Now())
+	return p.ApplyLocked(ctx, tx, lock)
+}
+func rename(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	_, err := storekit.LockRow(ctx, tx, table, id, storekit.LiveOnly)
+	return err
+}`
+	file, err := parser.ParseFile(token.NewFileSet(), "planted.go", src, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence := newLifecycleEvidence()
+	evidence.noteRowWritingFile(file, map[string]string{"table": "renamed"})
+	catalog := lifecycleCatalog{versionBumped: map[string]bool{}}
+	if !evidence.kept(catalog, "archived", "archived_at") {
+		t.Error("a patch that sets archived_at does not keep the mark on the table its file locks")
+	}
+	if !evidence.kept(catalog, "renamed", "updated_at") {
+		t.Error("a lock through a package constant does not count as an update")
+	}
+	unrelated := newLifecycleEvidence()
+	plain, err := parser.ParseFile(token.NewFileSet(), "plain.go", `package planted
+func rename(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	_, err := storekit.LockRow(ctx, tx, "renamed", id, storekit.LiveOnly)
+	return err
+}`, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unrelated.noteRowWritingFile(plain, nil)
+	if unrelated.kept(catalog, "renamed", "archived_at") {
+		t.Error("a lock with no archive mark keeps archived_at")
+	}
+}
+
 func TestTheLifecycleEvidenceRuleFiresOnPlantedStatements(t *testing.T) {
 	t.Parallel()
 	catalog := lifecycleCatalog{versionBumped: map[string]bool{"bumped": true}}
@@ -351,11 +466,20 @@ func TestTheLifecycleEvidenceRuleFiresOnPlantedStatements(t *testing.T) {
 		{"an update the trigger answers keeps version", `UPDATE bumped SET note = $2 WHERE id = $1`, "bumped", "version", true},
 		{"an assigned increment keeps version", `UPDATE ledger SET version = version + 1 WHERE id = $1`, "ledger", "version", true},
 		{"a version named in WHERE is no assignment", `UPDATE ledger SET note = $2 WHERE version = $1`, "ledger", "version", false},
-		{"an upsert after an insert keeps only its own table",
+		{
+			"an upsert after an insert keeps only its own table",
 			`INSERT INTO ledger (id) VALUES ($1); INSERT INTO other (id) VALUES ($1) ON CONFLICT (id) DO UPDATE SET note = $2`,
-			"ledger", "updated_at", false},
-		{"an upsert keeps its table", `INSERT INTO other (id) VALUES ($1) ON CONFLICT (id) DO UPDATE SET note = $2`,
-			"other", "updated_at", true},
+			"ledger", "updated_at", false,
+		},
+		{
+			"an upsert keeps its table", `INSERT INTO other (id) VALUES ($1) ON CONFLICT (id) DO UPDATE SET note = $2`,
+			"other", "updated_at", true,
+		},
+		{
+			"an update keeps no archive mark it does not set", `UPDATE ledger SET note = $2 WHERE archived_at IS NULL`,
+			"ledger", "archived_at", false,
+		},
+		{"an assigned archive mark is kept", `UPDATE ledger SET archived_at = now() WHERE id = $1`, "ledger", "archived_at", true},
 	}
 	for _, c := range cases {
 		evidence := newLifecycleEvidence()
@@ -372,7 +496,7 @@ func TestALoneIncrementCountsOnlyOnAnAssembledUpdate(t *testing.T) {
 	pkg.note(`UPDATE assembled SET `)
 	pkg.note(`UPDATE written SET note = $2 WHERE id = $1`)
 	merged := newLifecycleEvidence()
-	merged.merge(pkg, true)
+	merged.merge(pkg, packageMarks{increments: true})
 	catalog := lifecycleCatalog{versionBumped: map[string]bool{}}
 	if !merged.kept(catalog, "assembled", "version") {
 		t.Error("an increment joined into an assembled SET list does not keep version")

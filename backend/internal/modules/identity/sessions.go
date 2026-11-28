@@ -55,33 +55,6 @@ func isOwnSessionRevoke(r *http.Request) bool {
 	return r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, revokeSessionPathPrefix)
 }
 
-// userAgentContextKey carries the request's User-Agent from the login handler
-// down to insertSession, which records it on the session row.
-//
-// It rides the context rather than Login's signature because a User-Agent is a
-// transport detail, not a domain argument: threading it through Login would push
-// an HTTP header into the thirty-odd call sites that open a session with no
-// request to name it. The login handlers set it; insertSession reads it.
-type userAgentContextKey struct{}
-
-// withUserAgent binds the request's User-Agent so the session opened later in
-// the same context records the device it came from.
-func withUserAgent(ctx context.Context, userAgent string) context.Context {
-	return context.WithValue(ctx, userAgentContextKey{}, userAgent)
-}
-
-// userAgentFromContext returns the captured User-Agent, or nil when none was
-// set or the header was empty. A missing device is stored as NULL, not as an
-// empty string, so "we never learned it" and "the client sent a blank one" stay
-// distinguishable — the same reason locale and timezone keep NULL off app_user.
-func userAgentFromContext(ctx context.Context) *string {
-	userAgent, ok := ctx.Value(userAgentContextKey{}).(string)
-	if !ok || userAgent == "" {
-		return nil
-	}
-	return &userAgent
-}
-
 // ListSessions returns the caller's own live sessions, newest activity first,
 // marking the one whose token hashes to currentHash. The user id comes off the
 // bound principal, never a parameter, so there is no other account it could

@@ -113,36 +113,6 @@ func TestAPendingHeldNarrowingIsNeitherLoosenedNorDropped(t *testing.T) {
 	}
 }
 
-// A removed mailbox's pending request is dropped with a trail, and none of
-// its earlier mail is narrowed.
-func TestARemovedMailboxDropsItsPendingNarrowing(t *testing.T) {
-	env := newCaptureEnv(t)
-	e, sync := env.e, env.sync
-	allowSharedPosture(t, e)
-	setPosture(t, env, e.Rep1, capturemod.PostureShared)
-	sync(t, customerMail("removed-1@acme.example"))
-	connection := rep1Connection(t, env, "gmail").ID
-	if _, err := env.registry.SetMailPosture(
-		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureHeld, true); err != nil {
-		t.Fatalf("narrowing with apply_to_history: %v", err)
-	}
-	if _, err := e.Owner.Exec(context.Background(), `UPDATE capture_connection SET archived_at = now() WHERE id = $1`, connection); err != nil {
-		t.Fatalf("removing the mailbox: %v", err)
-	}
-	integration.NarrowHistoryToTheEnd(t, e.WS, env.registry)
-	if n := openActivityCount(t, e); n != 1 {
-		t.Fatalf("%d messages open after the removed mailbox's request ran, want 1: it is dropped", n)
-	}
-	if got := countRows(t, e, fmt.Sprintf(`SELECT count(*) FROM capture_connection
-		WHERE id = '%s' AND history_narrowing_held IS NULL`, connection)); got != 1 {
-		t.Fatal("the removed mailbox still holds its request")
-	}
-	if got := countRows(t, e, fmt.Sprintf(`SELECT count(*) FROM audit_log
-		WHERE entity_id = '%s' AND after->>'dropped_archived' = 'held'`, connection)); got != 1 {
-		t.Fatalf("%d audit rows say the request was dropped, want 1", got)
-	}
-}
-
 // A seat's narrowing reaches only the mail its own mailbox delivered. The
 // seat's other mailbox keeps its mail, and the count names only the first.
 func TestNarrowingOneMailboxLeavesTheSeatsOtherMailboxAlone(t *testing.T) {

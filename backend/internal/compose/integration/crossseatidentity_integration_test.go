@@ -45,7 +45,7 @@ func connectAs(t *testing.T, e *integration.Env, seat ids.UUID, provider, addres
 			INSERT INTO capture_connection (provider, user_id, credential_ref, status, account_label)
 			VALUES ($1, $2, 'test-credential', 'connected', $3)
 			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL
-			DO UPDATE SET account_label = EXCLUDED.account_label, status = 'connected', archived_at = NULL`,
+			DO UPDATE SET account_label = EXCLUDED.account_label, status = 'connected'`,
 			provider, seat, address)
 		return err
 	}); err != nil {

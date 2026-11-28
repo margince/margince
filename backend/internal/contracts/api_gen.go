@@ -50114,7 +50114,8 @@ type CustomField struct {
 	// ActivityKinds The activity kinds an activity field applies to; null means every kind, and every other object's field is null. A logged or edited activity of another kind refuses a value for the field with `422 field_not_valid_for_kind`. A value stored before the field was narrowed stays readable, and sending null clears it.
 	ActivityKinds *[]CustomFieldActivityKinds `json:"activity_kinds,omitempty"`
 
-	// ArchivedAt Base envelope field; stays null even when `status=retired`, because retiring is a status flip rather than an archive.
+	// ArchivedAt Never set; always null. A field is retired through `status`, never archived. Kept so existing clients keep compiling.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// ColumnName Server-derived, `cf_`-prefixed, slug-derived physical column identifier: never client-supplied, immutable once live, stable across rename.

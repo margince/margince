@@ -36,9 +36,9 @@ func (r *Registry) ReachOn(ctx context.Context, providers []string) (Reach, erro
 	return reachOf(views, providers), nil
 }
 
-// reachOf decides it over views Connections already read unarchived, which is
-// why `status = connected` alone is liveConnection's rule here. A failed history
-// import is not broken: the connection still delivers what happens from now on.
+// reachOf applies liveConnection's rule, `status = connected`, to the views
+// Connections read. A failed history import is not broken: the connection
+// still delivers what happens from now on.
 func reachOf(views []ConnectionView, providers []string) Reach {
 	reach := ReachNone
 	for _, view := range views {

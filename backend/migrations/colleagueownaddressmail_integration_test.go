@@ -15,6 +15,7 @@ import (
 const (
 	colleagueMailUnderOwnAddress     = "core/1791782100_a_colleagues_mail_is_ours_under_an_own_address.up.sql"
 	colleagueMailUnderOwnAddressDown = "core/1791782100_a_colleagues_mail_is_ours_under_an_own_address.down.sql"
+	connectionArchiveMarkDropped     = "core/1795852367_a_capture_connection_carries_no_archive_mark.down.sql"
 )
 
 // A colleague's copy whose address the capturing seat also claims was stored
@@ -24,6 +25,9 @@ func TestAColleaguesMailUnderAnOwnAddressIsOurs(t *testing.T) {
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
+	// The file reads capture_connection.archived_at, which a later migration
+	// drops; its rollback brings the column back for the replay.
+	applyMigrationFile(t, conn, connectionArchiveMarkDropped)
 	ctx := context.Background()
 	var seat, colleague, copied, reminder string
 	if err := conn.QueryRow(ctx, `

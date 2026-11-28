@@ -11,18 +11,16 @@
 # shard artifact, a group two shards claimed, divergent discoveries — would
 # quietly run fewer or doubled tests while every job stays green, which for
 # this lane means RLS/erasure gates silently not running. A shard that reported
-# nothing is named with the tests no other shard ran.
+# nothing is named with the tests no other shard ran. The coverage pods are
+# merged later, with the unit legs' (scripts/merge-go-coverage.sh).
 #
 # Layout under <artifacts-root> (the actions/download-artifact target dir), once
 # the newest attempt of each artifact has its plain name:
 #   integration-shard-<k>/     discovery.txt assigned.txt ran.txt meta.txt
 #                              repeated-gates.txt covdata/<part>/ (binary pods)
 #                              claimed.txt (queue mode, also when red)
-#   integration-covdata-unit/  binary pods from the unit `-cover` pass
 #
-# Usage: test-integration-reconcile.sh <artifacts-root> [cover-out]
-#   cover-out: merge every binary pod (shards + unit) into this Go text
-#   profile — the single file sonar-project.properties points SonarCloud at.
+# Usage: test-integration-reconcile.sh <artifacts-root>
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -31,10 +29,8 @@ ROOT="$ROOT_DIR"
 source "$ROOT/scripts/lib-testdb.sh"
 source "$ROOT/scripts/lib-integration-artifacts.sh"
 
-ARTIFACTS="${1:?usage: test-integration-reconcile.sh <artifacts-root> [cover-out]}"
-COVER_OUT="${2:-}"
+ARTIFACTS="${1:?usage: test-integration-reconcile.sh <artifacts-root>}"
 case "$ARTIFACTS" in /*) ;; *) ARTIFACTS="$ROOT_DIR/$ARTIFACTS";; esac
-[[ -z "$COVER_OUT" ]] || case "$COVER_OUT" in /*) ;; *) COVER_OUT="$ROOT_DIR/$COVER_OUT";; esac
 
 fail() { echo "FAIL: $*"; exit 1; }
 
@@ -113,19 +109,5 @@ NTESTS="$(wc -l < "$REF_DISCOVERY" | tr -d ' ')"
 seen_files=()
 for k in $(seq 1 "$TOTAL"); do seen_files+=("$ARTIFACTS/integration-shard-$k/repeated-gates.txt"); done
 stale_repeated_gates "${seen_files[@]}" || fail "the repeated-gate allowlist names senders that no longer repeat — remove them"
-
-if [[ -n "$COVER_OUT" ]]; then
-  unit_dir="$ARTIFACTS/integration-covdata-unit"
-  [[ -d "$unit_dir" ]] || fail "unit coverage pods missing ($unit_dir) — SonarCloud would see unit-only packages at a false 0%"
-  pods="$(find "$ARTIFACTS" -name 'covmeta.*' -exec dirname {} \; | LC_ALL=C sort -u)"
-  # A here-string rather than a pipe: `grep -q` exits on its first match, which
-  # sends SIGPIPE to a producer still writing, and `set -o pipefail` then reports
-  # the pipeline as failed. That turned a SUCCESSFUL match into this very
-  # `fail` — the more pods there are, the likelier printf blocks and gets it.
-  grep -qxF "$unit_dir" <<<"$pods" || fail "no covmeta pods in $unit_dir — the unit pass produced no coverage"
-  dirs="$(printf '%s\n' "$pods" | paste -sd, -)"
-  ( cd backend && go tool covdata textfmt -i="$dirs" -o="$COVER_OUT" )
-  echo "coverage: merged $(printf '%s\n' "$pods" | grep -c .) pods (shards + unit) → $COVER_OUT"
-fi
 
 echo "OK: integration reconciled — $TOTAL shards cover all $NTESTS tests, complete and disjoint"

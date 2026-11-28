@@ -37,7 +37,7 @@ var ErrMailboxAmbiguous = fmt.Errorf("you have more than one mailbox of this pro
 func memberMailboxTx(ctx context.Context, tx pgx.Tx, user ids.UUID, mb Mailbox) (ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id, status <> 'disconnected' FROM capture_connection
-		 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL AND ($3::uuid IS NULL OR id = $3)`,
+		 WHERE user_id = $1 AND provider = $2 AND ($3::uuid IS NULL OR id = $3)`,
 		user, mb.Provider, mailboxIDArg(mb))
 	if err != nil {
 		return ids.Nil, fmt.Errorf("capture: finding the mailbox: %w", err)

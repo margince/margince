@@ -6,7 +6,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 ## custom_field
 
-20 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -26,7 +26,6 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 | `slug` | `text` | yes | Admin-facing key the column_name derives from. |
 | `status` | `text`, default `'active'::text` | yes | retired = soft: hidden from the API and filtering, column and values preserved. |
 | `type` | `text` | yes | The supported field types. |
-| `archived_at` | `timestamp with time zone` |  | Base envelope field; stays null even when `status=retired`, because retiring is a status flip rather than an archive. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |

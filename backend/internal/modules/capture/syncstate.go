@@ -127,7 +127,7 @@ func (r *Registry) recordSyncSuccessTx(ctx context.Context, tx pgx.Tx, connectio
 	}
 	revived, err := tx.Exec(ctx, `
 		UPDATE capture_connection SET status = 'connected'
-		WHERE id = @id AND status = 'error' AND archived_at IS NULL`, pgx.NamedArgs{"id": connectionID})
+		WHERE id = @id AND status = 'error'`, pgx.NamedArgs{"id": connectionID})
 	if err != nil {
 		return err
 	}
@@ -353,7 +353,7 @@ func logSyncFailureTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, cla
 func parkForReauthTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
 	parked, err := tx.Exec(ctx, `
 		UPDATE capture_connection SET status = 'reauth_required'
-		WHERE id = $1 AND status IN ('connected','error') AND archived_at IS NULL`, connectionID)
+		WHERE id = $1 AND status IN ('connected','error')`, connectionID)
 	if err != nil {
 		return err
 	}
@@ -364,7 +364,7 @@ func parkForReauthTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) erro
 func degradeConnectionTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
 	degraded, err := tx.Exec(ctx, `
 		UPDATE capture_connection SET status = 'error'
-		WHERE id = $1 AND status = 'connected' AND archived_at IS NULL`, connectionID)
+		WHERE id = $1 AND status = 'connected'`, connectionID)
 	if err != nil {
 		return err
 	}
@@ -376,7 +376,7 @@ func degradeConnectionTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) 
 func parkForbiddenTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) (time.Duration, error) {
 	parked, err := tx.Exec(ctx, `
 		UPDATE capture_connection SET status = 'error'
-		WHERE id = $1 AND status = 'connected' AND archived_at IS NULL`, connectionID)
+		WHERE id = $1 AND status = 'connected'`, connectionID)
 	if err != nil {
 		return 0, err
 	}

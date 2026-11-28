@@ -166,6 +166,14 @@ func TestALeadOnlyRecipientGetsAWorkingOptOut(t *testing.T) {
 	if !ref.ContactID.IsZero() {
 		t.Error("the link names a contact, but no contact holds this address")
 	}
+	var used bool
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT last_used_at IS NOT NULL FROM withdrawal_credential WHERE id = $1`, ref.CredentialID).Scan(&used); err != nil {
+		t.Fatalf("read the link's last use: %v", err)
+	}
+	if !used {
+		t.Error("the link resolved, but its row records no use for the subject's access export")
+	}
 }
 
 // AN OLD LINK STILL WITHDRAWS. Every link already in a mailbox carries a

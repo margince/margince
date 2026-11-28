@@ -171,7 +171,7 @@ func queryMailSeatIdentities(ctx context.Context, tx pgx.Tx) ([]mailSeatIdentity
  JOIN app_user u ON u.id = i.user_id WHERE i.kind = 'address' AND `+workforce.LiveMemberSQL("u")+`
  UNION SELECT c.user_id::text, c.account_label, CASE WHEN `+provedMailboxClause("c")+` THEN '`+provedMailboxSource+`'
    WHEN c.status = 'disconnected' THEN '`+withdrawnMailboxSource+`' ELSE '' END, `+provedMailboxClause("c")+` FROM capture_connection c
- JOIN app_user u ON u.id = c.user_id WHERE c.archived_at IS NULL AND `+workforce.LiveMemberSQL("u")+` AND coalesce(c.account_label, '') <> ''`)
+ JOIN app_user u ON u.id = c.user_id WHERE `+workforce.LiveMemberSQL("u")+` AND coalesce(c.account_label, '') <> ''`)
 	if err != nil {
 		return nil, fmt.Errorf("reading mail identities: %w", err)
 	}

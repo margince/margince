@@ -83,7 +83,7 @@ func changeSharedReplyTx(ctx context.Context, tx pgx.Tx, before SharedMailboxVie
 		}
 		scopes = append(scopes, scope)
 	}
-	tag, err := tx.Exec(ctx, `UPDATE capture_connection SET provider_scopes = $2 WHERE id = $1 AND archived_at IS NULL`, before.ID, scopes)
+	tag, err := tx.Exec(ctx, `UPDATE capture_connection SET provider_scopes = $2 WHERE id = $1`, before.ID, scopes)
 	if err != nil {
 		return before, fmt.Errorf("capture: changing the replies of the shared mailbox: %w", err)
 	}
@@ -117,7 +117,7 @@ type sharedReply struct {
 func sharedReplyTx(ctx context.Context, tx pgx.Tx, seat ids.UserID, id ids.UUID) (reply sharedReply, ok bool, err error) {
 	err = tx.QueryRow(ctx, `SELECT c.provider, coalesce(c.provider_scopes, '{}'), c.account_label, c.credential_ref, c.auth
 	  FROM capture_connection c
-	 WHERE c.id = $1 AND c.user_id IS NULL AND c.archived_at IS NULL AND c.status IN ('connected','error')
+	 WHERE c.id = $1 AND c.user_id IS NULL AND c.status IN ('connected','error')
 	   AND cardinality(coalesce(c.provider_scopes, '{}')) > 0
 	   AND `+auth.SeatReadsSharedMailboxSQL("c", "$2"), id, seat).
 		Scan(&reply.provider, &reply.scopes, &reply.label, &reply.ref, &reply.auth)
@@ -251,7 +251,7 @@ func (r *Registry) ReplyableSharedMailboxes(ctx context.Context) ([]SendingMailb
 	var out []SendingMailbox
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT c.id, c.provider, c.account_label, c.provider_scopes FROM capture_connection c
-		 WHERE c.user_id IS NULL AND c.archived_at IS NULL AND c.status IN ('connected','error')
+		 WHERE c.user_id IS NULL AND c.status IN ('connected','error')
 		   AND cardinality(coalesce(c.provider_scopes, '{}')) > 0
 		   AND `+auth.SeatReadsSharedMailboxSQL("c", "$1")+` ORDER BY lower(c.account_label)`, actor.UserID)
 		if err != nil {

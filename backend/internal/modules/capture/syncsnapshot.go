@@ -12,7 +12,7 @@ import (
 
 const syncSnapshotMatch = `id=@id AND generation=@generation
  AND sync_revision=@revision AND sync_cursor IS NOT DISTINCT FROM @prior::jsonb
- AND status IN ('connected','error') AND archived_at IS NULL`
+ AND status IN ('connected','error')`
 
 type syncSnapshot struct {
 	id         ids.UUID

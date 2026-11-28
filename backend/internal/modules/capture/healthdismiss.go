@@ -42,7 +42,7 @@ func (r *Registry) DismissSilence(ctx context.Context, mb Mailbox, since time.Ti
 func (r *Registry) dismissSilenceTx(ctx context.Context, tx pgx.Tx, match connectionMatch, provider string, since time.Time) error {
 	var view ConnectionView
 	if err := tx.QueryRow(ctx, `SELECT id, provider, status, connected_at, silence_dismissed_since
- FROM capture_connection WHERE `+match.where+` AND archived_at IS NULL FOR UPDATE`, match.args...).
+ FROM capture_connection WHERE `+match.where+` FOR UPDATE`, match.args...).
 		Scan(&view.ID, &view.Provider, &view.Status, &view.ConnectedAt, &view.SilenceDismissedSince); err != nil {
 		return err
 	}

@@ -137,7 +137,7 @@ func meetingHoldersTx(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, se
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM capture_import i, capture_connection c2, unnest(i.provider_message_ids) o(key)
 		                WHERE i.activity_id = $1 AND i.user_id = $2
-		                  AND c2.user_id = $2 AND c2.id <> $3 AND c2.archived_at IS NULL
+		                  AND c2.user_id = $2 AND c2.id <> $3
 		                  AND c2.status IN ('connected', 'error')
 		                  AND starts_with(o.key, `+storekit.MailboxMarkSQL("c2")+` || ':')),
 		       EXISTS (SELECT 1 FROM capture_import other

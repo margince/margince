@@ -14,21 +14,22 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func insertSession(ctx context.Context, tx pgx.Tx, userID ids.UserID, tokenHash string, providerAuthenticated bool) error {
-	// The device rides the context, not this signature: it is a transport
-	// detail the login handler captured, absent (NULL) for any session opened
-	// without a request behind it. See withUserAgent.
+	// The device and address ride the context, not this signature: the login
+	// handlers bind them, and a session opened with no request records NULL.
+	origin := httpserver.RequestOriginFrom(ctx)
 	if err := reapDeadCredentials(ctx, tx, "session"); err != nil {
 		return err
 	}
 	_, err := tx.Exec(ctx,
-		`INSERT INTO session (user_id, token_hash, user_agent, idle_expires_at, expires_at, provider_authenticated)
-   VALUES (@user_id, @token, @agent, now() + @idle::interval, now() + @absolute::interval, @provider)`,
+		`INSERT INTO session (user_id, token_hash, user_agent, ip, idle_expires_at, expires_at, provider_authenticated)
+   VALUES (@user_id, @token, @agent, @ip::inet, now() + @idle::interval, now() + @absolute::interval, @provider)`,
 		pgx.StrictNamedArgs{
-			"user_id": userID, "token": tokenHash, "agent": userAgentFromContext(ctx),
+			"user_id": userID, "token": tokenHash, "agent": origin.UserAgent, "ip": origin.IP,
 			"idle": idleTTL.String(), "absolute": absoluteTTL.String(), "provider": providerAuthenticated,
 		})
 	return err

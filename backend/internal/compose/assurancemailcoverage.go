@@ -43,7 +43,7 @@ func mailCoverage(ctx context.Context, tx pgx.Tx, now time.Time) assurance.Sourc
 		SELECT `+mailCountsSQL+`
 		FROM capture_connection c
 		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
-		WHERE c.provider = ANY($1) AND c.archived_at IS NULL`,
+		WHERE c.provider = ANY($1)`,
 		mailProviders).Scan(&counts.live, &counts.reauth, &counts.unsynced, &counts.oldestSuccess); err != nil {
 		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
 	}
@@ -107,7 +107,7 @@ func mailCoverageByOwner(ctx context.Context, tx pgx.Tx, now time.Time) (map[ids
 		SELECT c.user_id, `+mailCountsSQL+`
 		FROM capture_connection c
 		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
-		WHERE c.provider = ANY($1) AND c.archived_at IS NULL AND c.user_id IS NOT NULL
+		WHERE c.provider = ANY($1) AND c.user_id IS NOT NULL
 		GROUP BY c.user_id
 		HAVING count(*) FILTER (WHERE c.status <> 'disconnected') > 0`, mailProviders)
 	if err != nil {
@@ -176,7 +176,7 @@ func mailCoverageByConnection(ctx context.Context, tx pgx.Tx, now time.Time) (ma
 		SELECT c.user_id, c.provider, c.generation::text, `+mailCountsSQL+`
 		FROM capture_connection c
 		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
-		WHERE c.provider = ANY($1) AND c.archived_at IS NULL AND c.user_id IS NOT NULL
+		WHERE c.provider = ANY($1) AND c.user_id IS NOT NULL
 		GROUP BY c.id, c.user_id, c.provider, c.generation`, mailProviders)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading each mail connection: %w", err)

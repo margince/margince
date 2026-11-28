@@ -51,7 +51,7 @@ func requestHistoryNarrowingTx(ctx context.Context, tx pgx.Tx, match connectionM
 	var after bool
 	err := tx.QueryRow(ctx, `UPDATE capture_connection
 		   SET history_narrowing_held = coalesce(history_narrowing_held, false) OR `+placeholder+`::boolean
-		 WHERE `+match.where+` AND archived_at IS NULL
+		 WHERE `+match.where+`
 		RETURNING (SELECT c.history_narrowing_held FROM capture_connection c WHERE c.id = capture_connection.id),
 		          history_narrowing_held`, args...).Scan(&before, &after)
 	if err != nil {
@@ -149,12 +149,12 @@ func (r *Registry) NarrowPendingHistory(ctx context.Context) (bool, error) {
 			return nil
 		}
 		var p pendingNarrowing
-		var held, archived, shared bool
+		var held, shared bool
 		// A shared mailbox has no user, and its pending narrowing is carried out
 		// over the mailbox's own rows.
-		err := tx.QueryRow(ctx, `SELECT id, user_id, user_id IS NULL, history_narrowing_held, archived_at IS NOT NULL
+		err := tx.QueryRow(ctx, `SELECT id, user_id, user_id IS NULL, history_narrowing_held
 			 FROM capture_connection WHERE history_narrowing_held IS NOT NULL ORDER BY id LIMIT 1 FOR UPDATE`).
-			Scan(&p.connection, &p.seat, &shared, &held, &archived)
+			Scan(&p.connection, &p.seat, &shared, &held)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -165,10 +165,6 @@ func (r *Registry) NarrowPendingHistory(ctx context.Context) (bool, error) {
 			p.seat = nil
 		}
 		found, p.posture = true, narrowingPosture(held)
-		if archived {
-			// A removed mailbox's request is dropped, not carried out.
-			return dropArchivedNarrowingTx(ctx, tx, p)
-		}
 		return r.narrowPendingBatchTx(ctx, tx, p)
 	})
 	return found, err
@@ -211,12 +207,12 @@ func (r *Registry) narrowPendingBatchTx(ctx context.Context, tx pgx.Tx, p pendin
 	return endNarrowingTx(ctx, tx, p)
 }
 
-// endNarrowingTx clears the finished request of a live mailbox and records it.
+// endNarrowingTx clears the finished request and records it.
 // The batch holds the row lock; the expected request makes the write fail on
 // a request that changed underneath it.
 func endNarrowingTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing) error {
 	tag, err := tx.Exec(ctx, `UPDATE capture_connection SET history_narrowing_held = NULL
-		WHERE id = $1 AND archived_at IS NULL AND history_narrowing_held = $2`, p.connection, p.posture == PostureHeld)
+		WHERE id = $1 AND history_narrowing_held = $2`, p.connection, p.posture == PostureHeld)
 	if err != nil {
 		return fmt.Errorf("capture: ending the history narrowing: %w", err)
 	}
@@ -226,29 +222,7 @@ func endNarrowingTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing) error {
 	if tag.RowsAffected() != 1 {
 		return fmt.Errorf("the history narrowing of %s changed before it ended: %w", p.connection, apperrors.ErrConflict)
 	}
-	return closingTrailTx(ctx, tx, p, "history_narrowed_to")
-}
-
-// dropArchivedNarrowingTx clears the request of a removed mailbox without
-// narrowing its mail, and records that it was dropped.
-func dropArchivedNarrowingTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing) error {
-	tag, err := tx.Exec(ctx, `UPDATE capture_connection SET history_narrowing_held = NULL
-		WHERE id = $1 AND archived_at IS NOT NULL AND history_narrowing_held = $2`, p.connection, p.posture == PostureHeld)
-	if err != nil {
-		return fmt.Errorf("capture: dropping the history narrowing: %w", err)
-	}
-	if err := storekit.CaptureFactsChangedBy(ctx, tx, tag); err != nil {
-		return err
-	}
-	if tag.RowsAffected() != 1 {
-		return fmt.Errorf("the history narrowing of %s changed before it was dropped: %w", p.connection, apperrors.ErrConflict)
-	}
-	return closingTrailTx(ctx, tx, p, "dropped_archived")
-}
-
-// closingTrailTx records why a request ended under outcome.
-func closingTrailTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing, outcome string) error {
 	return narrowingTrailTx(ctx, tx, p.connection, p.seat == nil,
 		map[string]any{historyNarrowingKey: p.posture},
-		map[string]any{historyNarrowingKey: nil, outcome: p.posture})
+		map[string]any{historyNarrowingKey: nil, "history_narrowed_to": p.posture})
 }

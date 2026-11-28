@@ -84,8 +84,7 @@ SELECT count(*) AS suspect_direction
   FROM activity a
  WHERE a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
    AND (lower(a.counterparty_email) IN (SELECT lower(email) FROM app_user)
-     OR lower(a.counterparty_email) IN (SELECT lower(account_label) FROM capture_connection
-                                         WHERE archived_at IS NULL)
+     OR lower(a.counterparty_email) IN (SELECT lower(account_label) FROM capture_connection)
      OR lower(a.counterparty_email) IN (SELECT lower(value) FROM capture_owner_identity
                                          WHERE kind = 'address'));
 

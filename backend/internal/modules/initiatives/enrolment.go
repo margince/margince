@@ -93,7 +93,7 @@ func LiveInitiativesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT id FROM sales_initiative WHERE id > $1 AND status = 'live' AND archived_at IS NULL ORDER BY id LIMIT $2`, after, limit)
+	rows, err := tx.Query(ctx, `SELECT id FROM sales_initiative WHERE id > $1 AND status = 'live' ORDER BY id LIMIT $2`, after, limit)
 	if err != nil {
 		return nil, fmt.Errorf("page live initiatives: %w", err)
 	}
@@ -127,7 +127,7 @@ func (s *Store) lockedEnrolmentTx(ctx context.Context, tx pgx.Tx, id ids.UUID, d
 // is archived, every live initiative that can hold the lead. So a lead created
 // and promoted between two sweeps still sourced its deal. at is the promotion.
 func (s *Store) WitnessLeadPromotionTx(ctx context.Context, tx pgx.Tx, lead ids.UUID, at time.Time) error {
-	rows, err := tx.Query(ctx, `SELECT i.id FROM sales_initiative i WHERE i.status = 'live' AND i.archived_at IS NULL
+	rows, err := tx.Query(ctx, `SELECT i.id FROM sales_initiative i WHERE i.status = 'live'
 		AND (coalesce(i.lead_rule, '{}'::jsonb) <> '{}'::jsonb OR EXISTS (SELECT 1 FROM sales_initiative_member m
 			WHERE m.initiative_id = i.id AND m.record_type = 'lead' AND m.record_id = $1 AND m.reason = 'picked'))
 		ORDER BY i.id`, lead)
@@ -315,7 +315,7 @@ func CountUndatedLiveInitiatives(ctx context.Context, q interface {
 		return 0, err
 	}
 	var count int64
-	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM sales_initiative i WHERE i.status = 'live' AND i.archived_at IS NULL
+	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM sales_initiative i WHERE i.status = 'live'
 		AND NOT EXISTS (SELECT 1 FROM sales_initiative_enrolment e WHERE e.initiative_id = i.id) LIMIT $1) undated`, maximum+1).Scan(&count)
 	return count, err
 }

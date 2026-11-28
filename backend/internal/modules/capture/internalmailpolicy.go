@@ -189,7 +189,7 @@ func readInternalMailSource(ctx context.Context, tx pgx.Tx, id ids.UUID) (Intern
 	err := tx.QueryRow(ctx, `SELECT c.user_id, c.provider, c.generation
  FROM capture_connection c
  WHERE c.id = $1 AND c.provider IN ('gmail','graph','imap')
- AND c.status IN ('connected','error') AND c.archived_at IS NULL
+ AND c.status IN ('connected','error')
  AND (c.user_id IS NOT NULL OR `+sharedMailboxLiveSQL+`) FOR SHARE OF c`, id).
 		Scan(&source.OwnerUserID, &source.Provider, &source.Generation)
 	if err == pgx.ErrNoRows {
