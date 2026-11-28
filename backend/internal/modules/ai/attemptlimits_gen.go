@@ -12,6 +12,8 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	"chat_task_reading": {limit: 30 * time.Second, measured: []boundModel{
 		{provider: "anthropic", model: "claude-haiku-5-5"},
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
+		{provider: "openai_compatible", model: "google/gemma-4-31b-it"},
+		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 	}},
 	// records/cold_start/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 59.19s
 	"cold_start": {limit: 89 * time.Second, measured: []boundModel{
@@ -36,12 +38,10 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
 		{provider: "gemini", model: "gemini-3.8-flash"},
-		{provider: "openai_compatible", model: "google/gemma-4-31b-it"},
 		{provider: "openai_compatible", model: "mistralai/ministral-14b-2512"},
 		{provider: "openai_compatible", model: "mistralai/mistral-medium-3-5"},
 		{provider: "openai_compatible", model: "openai/gpt-6-luna"},
 		{provider: "openai_compatible", model: "openai/gpt-6-sol"},
-		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 		{provider: "openai_compatible", model: "qwen/qwen3.8-27b"},
 	}},
 	// records/draft_reply/anthropic_claude-haiku-5-5_cloud_frontier.json: p95 14.653s
@@ -55,7 +55,6 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "openai_compatible", model: "google/gemma-4-31b-it"},
 		{provider: "openai_compatible", model: "openai/gpt-6-luna"},
 		{provider: "openai_compatible", model: "openai/gpt-6-sol"},
-		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 	}},
 	// records/growth_fit/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 3m43.062s
 	"growth_fit": {limit: 300 * time.Second, measured: []boundModel{
@@ -86,7 +85,6 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "openai_compatible", model: "mistralai/mistral-medium-3-5"},
 		{provider: "openai_compatible", model: "openai/gpt-6-luna"},
 		{provider: "openai_compatible", model: "openai/gpt-6-sol"},
-		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 		{provider: "openai_compatible", model: "qwen/qwen3.8-27b"},
 	}},
 	// records/offer_draft/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 1m20.239s
@@ -98,11 +96,9 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
 		{provider: "gemini", model: "gemini-3.8-flash"},
-		{provider: "openai_compatible", model: "google/gemma-4-31b-it"},
 		{provider: "openai_compatible", model: "mistralai/mistral-medium-3-5"},
 		{provider: "openai_compatible", model: "openai/gpt-6-luna"},
 		{provider: "openai_compatible", model: "openai/gpt-6-sol"},
-		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 		{provider: "openai_compatible", model: "qwen/qwen3.8-27b"},
 	}},
 	// records/propose_roles/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 2m0.039s
@@ -128,7 +124,6 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
 		{provider: "gemini", model: "gemini-3.8-flash"},
-		{provider: "openai_compatible", model: "google/gemma-4-31b-it"},
 		{provider: "openai_compatible", model: "mistralai/mistral-medium-3-5"},
 		{provider: "openai_compatible", model: "qwen/qwen3.8-27b"},
 	}},
@@ -150,5 +145,7 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
 		{provider: "gemini", model: "gemini-3.8-flash"},
+		{provider: "openai_compatible", model: "google/gemma-4-31b-it"},
+		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 	}},
 }
