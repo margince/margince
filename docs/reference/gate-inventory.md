@@ -380,6 +380,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `fiscalperiodsingle_test.go` | H2 | Which fiscal period holds a day is computed in one place. |
 | `forecastscopeauthority_test.go` | H2 | Every forecasting store entry point that records against a scope asks whether its caller answers for that scope. |
 | `frontendabsent404_test.go` | H3 | A screen that reads a 404 as "nothing here yet" fills the browser console with failed requests on ordinary pages, and JavaScript cannot silence them. |
+| `frontendlanereads_test.go` | H2 | The frontend lane runs on a change to every path outside frontend/ it reads. |
 | `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |
@@ -798,6 +799,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `declinedwritehelpers_test.go` | H2 | _(no doc comment)_ |
 | `extensionsqlscopecases_test.go` | H2 | The SQL-scope gate's own test, driven with synthetic unit sources rather than the tree, because the real units are supposed to pass. |
 | `frontendobjectkeys_test.go` | H2 | The word map reader reads each shape a frontend map is declared in, and fails one it cannot read. |
+| `frontendreadforms_test.go` | H2 | Each read form the frontend read census claims to see is seen, and each shape that only looks like a read is not. |
 | `geministrictwire_test.go` | H2 | Each tool's arguments and the runner's step schema go through the Gemini rewrite. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
 | `historyimageguards_falsify_test.go` | H3 | _(no doc comment)_ |
