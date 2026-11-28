@@ -829,9 +829,10 @@ fe-bundle:
 	$(MAKE) fe-build
 	$(MAKE) fe-storybook
 
-## fe-storybook — build the Storybook catalog (stories must compile + register).
+## fe-storybook — build the Storybook catalog in test mode: stories must compile and
+## register; docgen and tree-shaking are off. `pnpm build-storybook` stays full.
 fe-storybook:
-	cd frontend && pnpm install --frozen-lockfile && pnpm build-storybook
+	cd frontend && pnpm install --frozen-lockfile && pnpm build-storybook --test
 
 ## fe-install — install the frontend deps (pnpm, frozen lockfile). The FE half
 ## of `make install`; also what `fe-uat` / `dev` assume has run.
