@@ -547,7 +547,9 @@ it.each([
     await waitFor(() => expect(review).toHaveProperty("disabled", false));
     await user.click(review);
     const composer = await screen.findByRole("dialog", { name: "Compose" });
-    expect(composer.getAttribute("data-reason")).toBe(context.reason);
+    await waitFor(() =>
+      expect(composer.getAttribute("data-reason")).toBe(context.reason),
+    );
   },
 );
 
