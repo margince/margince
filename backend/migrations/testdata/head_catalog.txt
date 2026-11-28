@@ -67,7 +67,7 @@ public.activity.activity_restriction_window CHECK (((restricted_until IS NULL) O
 public.activity.activity_retention_class_known CHECK (((retention_class IS NULL) OR (retention_class = 'commercial_correspondence'::text)))
 public.activity.activity_retention_class_stamped CHECK (((retention_class IS NULL) = (retention_class_at IS NULL)))
 public.activity.activity_search_tsv_insert CREATE TRIGGER activity_search_tsv_insert BEFORE INSERT ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_keeps_search_tsv()
-public.activity.activity_search_tsv_update CREATE TRIGGER activity_search_tsv_update BEFORE UPDATE OF subject, body, language, body_own_end, search_tsv ON public.activity FOR EACH ROW WHEN ((((((old.subject IS DISTINCT FROM new.subject) OR (old.body IS DISTINCT FROM new.body)) OR (old.language IS DISTINCT FROM new.language)) OR (old.body_own_end IS DISTINCT FROM new.body_own_end)) OR (old.search_tsv IS DISTINCT FROM new.search_tsv))) EXECUTE FUNCTION activity_keeps_search_tsv()
+public.activity.activity_search_tsv_update CREATE TRIGGER activity_search_tsv_update BEFORE UPDATE OF subject, body, meeting_notes, language, body_own_end, search_tsv ON public.activity FOR EACH ROW WHEN (((((((old.subject IS DISTINCT FROM new.subject) OR (old.body IS DISTINCT FROM new.body)) OR (old.meeting_notes IS DISTINCT FROM new.meeting_notes)) OR (old.language IS DISTINCT FROM new.language)) OR (old.body_own_end IS DISTINCT FROM new.body_own_end)) OR (old.search_tsv IS DISTINCT FROM new.search_tsv))) EXECUTE FUNCTION activity_keeps_search_tsv()
 public.activity.activity_sent_by_colleague_fkey FOREIGN KEY (sent_by_colleague) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.activity.activity_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
@@ -290,6 +290,9 @@ public.activity_keeps_search_tsv() secdef=false cfg=- acl=-
 DECLARE
     fresh tsvector := activity_search_tsv(NEW.subject, NEW.body, NEW.body_own_end, NEW.language);
 BEGIN
+    IF NEW.meeting_notes IS NOT NULL AND NEW.meeting_notes <> '' THEN
+        fresh := fresh || activity_search_tsv(NULL, NEW.meeting_notes, NULL, NEW.language);
+    END IF;
     IF NEW.search_tsv IS DISTINCT FROM fresh THEN
         NEW.search_tsv := fresh;
     END IF;

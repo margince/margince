@@ -22782,7 +22782,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingReading": "Đang tải cuộc họp…",
   "worklist.verb.meetingWhatHappened": "Điều đã diễn ra",
   "worklist.verb.meetingBodyHint":
-    "Nội dung trao đổi và bước tiếp theo. Có thể sửa ghi chú từ lịch tại đây.",
+    "Nội dung trao đổi và bước tiếp theo. Ghi chú chỉ được lưu trong Margince.",
   "worklist.verb.meetingHeld": "Đã diễn ra",
   "worklist.verb.meetingNoShow": "Vắng mặt",
   "worklist.verb.meetingCanceled": "Không diễn ra",

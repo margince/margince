@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -88,7 +89,7 @@ func MeetingCopyHasInternalNotesTx(ctx context.Context, tx pgx.Tx, id ids.Activi
 		return false, err
 	}
 	var notes bool
-	err := tx.QueryRow(ctx, `SELECT meeting_notes IS NOT NULL FROM activity WHERE id=$1 FOR UPDATE`, id.UUID).Scan(&notes)
+	err := tx.QueryRow(ctx, `SELECT a.meeting_notes IS NOT NULL OR (`+meetingoutcome.RecordBodySQL("a")+`) IS NOT NULL FROM activity a WHERE a.id=$1 FOR UPDATE`, id.UUID).Scan(&notes)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, apperrors.ErrNotFound
 	}

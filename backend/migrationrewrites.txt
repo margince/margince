@@ -374,3 +374,7 @@
 
 1795856759_one_team_messaging_service.up.sql | chat_service | the new singleton table accepts at most one row through UNIQUE/CHECK on singleton; INSERT selects at most one incumbent with LIMIT 1
 1795848595_meeting_note_shape_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+
+
+1795848596_meeting_notes_have_the_shared_text_limit.up.sql | * | replaces text-bound trigger declarations for activity without rewriting stored rows
+1795848596_meeting_notes_have_the_shared_text_limit.down.sql | * | restores the earlier text-bound trigger declarations without rewriting stored rows

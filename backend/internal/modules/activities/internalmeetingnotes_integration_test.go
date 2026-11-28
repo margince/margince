@@ -12,12 +12,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -146,5 +148,53 @@ func TestMeetingNotesKeepTheSharedTextBoundAndMeetingKind(t *testing.T) {
 		if !ok || fault.Code != attempt.code {
 			t.Fatalf("notes shape: %v, want %s", err, attempt.code)
 		}
+	}
+}
+
+func TestInternalMeetingNotesStayInKeywordSearchUntilCleared(t *testing.T) {
+	e := setupSend(t)
+	id := capturedMeetingForNotes(t, e, seedCustomer(t, e))
+	store, ctx := meetingStore(e), meetingCtx(e)
+	for _, notes := range []string{"Buyer approved renewalquokka", ""} {
+		if _, err := store.UpdateActivity(ctx, id, UpdateActivityInput{MeetingNotes: new(notes)}); err != nil {
+			t.Fatal(err)
+		}
+		var noteFound, agendaFound bool
+		if err := e.owner.QueryRow(context.Background(), `SELECT search_tsv @@ plainto_tsquery('simple','renewalquokka'),search_tsv @@ plainto_tsquery('simple','agenda') FROM activity WHERE id=$1`, id.UUID).Scan(&noteFound, &agendaFound); err != nil {
+			t.Fatal(err)
+		}
+		if noteFound != (notes != "") || !agendaFound {
+			t.Fatalf("notes=%q indexed=%v, description indexed=%v", notes, noteFound, agendaFound)
+		}
+	}
+}
+
+func TestMeetingCopyRetirementKeepsCurrentAndLegacyInternalNotes(t *testing.T) {
+	e := setupSend(t)
+	store, ctx := meetingStore(e), meetingCtx(e)
+	system := principal.SystemActing(ctx, "meeting-notes-test")
+	for _, actor := range []string{"connector", "human", "agent", "cleared"} {
+		t.Run(actor, func(t *testing.T) {
+			id := capturedMeetingForNotes(t, e, seedCustomer(t, e))
+			if actor == "cleared" {
+				if _, err := store.UpdateActivity(ctx, id, UpdateActivityInput{MeetingNotes: new("")}); err != nil {
+					t.Fatal(err)
+				}
+			} else if actor != "connector" {
+				e.exec(t, `UPDATE activity SET body='Earlier rep notes' WHERE id=$1`, id.UUID)
+				e.exec(t, `INSERT INTO audit_log(action,entity_type,entity_id,actor_type,actor_id,after) VALUES('update','activity',$1,$2,$2||':notes-test','{"body":"Earlier rep notes"}')`, id.UUID, actor)
+			}
+			var kept bool
+			if err := store.tx(system, func(tx pgx.Tx) error {
+				var err error
+				kept, err = MeetingCopyHasInternalNotesTx(system, tx, id)
+				return err
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if kept != (actor != "connector") {
+				t.Fatalf("%s copy kept=%v", actor, kept)
+			}
+		})
 	}
 }

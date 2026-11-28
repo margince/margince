@@ -23022,7 +23022,7 @@ export const en = {
   "worklist.verb.meetingReading": "Loading meeting…",
   "worklist.verb.meetingWhatHappened": "What happened",
   "worklist.verb.meetingBodyHint":
-    "Discussion and next steps. Calendar notes can be edited here.",
+    "Discussion and next steps. Notes stay inside Margince.",
   "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "No-show",
   "worklist.verb.meetingCanceled": "Did not happen",

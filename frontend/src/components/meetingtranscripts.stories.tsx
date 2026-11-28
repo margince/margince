@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
@@ -66,9 +66,8 @@ export const HeldCalendarMeeting: Story = {
       }),
     );
     const dialog = within(document.body).getByRole("dialog");
-    await expect(
-      within(dialog).findByText(meeting.meeting_notes ?? ""),
-    ).resolves.toBeVisible();
+    const notes = await within(dialog).findByText(meeting.meeting_notes ?? "");
+    await waitFor(() => expect(notes).toBeVisible());
     await expect(
       within(dialog).getByRole("textbox", {
         name: en["meeting.transcriptText"],
@@ -94,8 +93,9 @@ export const ReadOnlyMeeting: Story = {
         name: en["meeting.transcripts"],
       }),
     );
-    await expect(
-      within(document.body).findByText(en["meeting.readOnly"]),
-    ).resolves.toBeVisible();
+    const notice = await within(document.body).findByText(
+      en["meeting.readOnly"],
+    );
+    await waitFor(() => expect(notice).toBeVisible());
   },
 };

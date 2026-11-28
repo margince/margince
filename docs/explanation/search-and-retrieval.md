@@ -86,8 +86,10 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
 - **Mail search reads the sender's own text.** Each writer of `activity.body` or `activity.subject`
   stores `body_own_end` beside it: the number of characters before the quoted earlier mail
   (`mailquote.OwnEnd`). It reads the body and the subject. A trigger builds `search_tsv` from the subject and that part of the body. It
-  runs on an insert, and on an update that changes `subject`, `body`, `language`, `body_own_end` or
-  `search_tsv` itself.
+  runs on an insert. On an update, its trigger compares the columns the vector reads before rebuilding it.
+- **Meeting notes are searchable.** The activity vector includes `meeting_notes` through the same
+  builder as its description. Editing or clearing the notes updates the vector
+  without changing the description.
 - **The History tab folds at the same line.** A forward line ends the text as a reply line does, and
   a reply written between the quoted lines keeps every line. When the subject starts with a forward
   prefix (`Fwd:`, `FW:`, `WG:`), the first header block opens the forwarded mail, which stays in the
