@@ -247,21 +247,15 @@ export const panel = () => {
 };
 
 /**
- * The state's own resting line, once the ticker has finished naming the
- * mount-time reads.
- *
- * Every query the section holds starts a `useAgentTicker` line the moment it
- * fetches (agentrail-ticker.ts). That line outlives its own request by
- * `LINGER_MS` so a fast read is still readable. A case that asserts
- * the state's own line has to wait past that window. Otherwise it asserts
- * about the ticker's last word instead.
+ * The state's own resting line, once the ticker stops naming mount-time reads.
+ * Each read's ticker line outlives it by `LINGER_MS`, so a resting-line case
+ * must wait past that.
  */
-// Named so it does not begin with `waitFor`. scripts/test-budget.ts treats
-// that prefix as a library waiter. It then cannot fold the budget inside a
-// local helper that wears it.
+// Not named `waitFor…`: scripts/test-budget.ts reads that prefix as a library
+// waiter and would not fold this budget.
 export async function settlesOnLine(container: HTMLElement, expected: string) {
-  // A stepped clock reaches the first check before any read has answered, and
-  // the line then still holds the words it had before the ticker spoke.
+  // On a stepped clock the first check runs before any read answers, while the
+  // line still predates the ticker.
   await waitFor(() => {
     if (!mounted)
       throw new Error("settlesOnLine needs a rail mounted by render()");
