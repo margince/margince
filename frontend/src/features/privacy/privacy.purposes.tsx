@@ -82,18 +82,19 @@ function isFrequency(value: string): value is Frequency {
   return Object.hasOwn(FREQUENCY_LABEL, value);
 }
 
-// The key as the server stores and compares it: trimmed, in lower case.
+// The key as the server stores and compares it: trimmed, and lowered a letter at
+// a time as Go's strings.ToLower does, so İ is i and a closing Σ is σ.
 function purposeKey(typed: string): string {
-  return serverTrim(typed.toLowerCase());
+  const lower = (c: string) => (c === "\u0130" ? "i" : c.toLowerCase());
+  return serverTrim(Array.from(typed, lower).join(""));
 }
 
 // What a key may hold once trimmed and lower-cased; the server's own rule,
 // which frontendlimits_test.go holds equal.
 const PURPOSE_KEY_PATTERN = /^[a-z0-9_]+$/;
 
-// The key a label suggests: accents dropped, every other run of characters a
-// key may not hold turned into one underscore. A run is one underscore by then,
-// so the trim takes one from each end.
+// The key a label suggests: accents dropped, and each run a key may not hold made
+// one underscore, so the trim takes one from each end.
 function keyFromLabel(label: string): string {
   return label
     .normalize("NFD")
@@ -103,9 +104,8 @@ function keyFromLabel(label: string): string {
     .replace(/^_|_$/g, "");
 }
 
-// The characters the server's strings.Fields splits a label on and
-// strings.TrimSpace trims (Go's unicode.IsSpace). JavaScript's \s and trim()
-// would add U+FEFF and leave out U+0085.
+// Go's unicode.IsSpace, which strings.Fields splits on and TrimSpace trims.
+// JavaScript's \s and trim() would add U+FEFF and leave out U+0085.
 const SERVER_SPACE =
   "[\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]";
 const LABEL_SPACES = new RegExp(`${SERVER_SPACE}+`);

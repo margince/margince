@@ -211,6 +211,22 @@ describe("Add purpose", () => {
     expect(posted).toHaveLength(0);
   });
 
+  // Go lowers İ to i, a key the server takes. Mutation: lowering the whole key
+  // with toLowerCase leaves a combining dot, and the form refuses it.
+  it("sends a key with a dotted capital I, which the server lowers to i", async () => {
+    const created = {
+      ...NEWSLETTER,
+      id: "p8",
+      key: "iletisim",
+      label: "Mail digest",
+    };
+    const posted = stub(() => json(created, 201));
+    await addPurpose("\u0130letisim", created.label);
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ key: "\u0130letisim" });
+  });
+
   // The slip this guards: key and label swapped, so the label is a listed key.
   it.each([
     ["a listed key", "transactional"],
