@@ -345,7 +345,7 @@ func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfS
 		  FROM capture_owner_identity own WHERE own.user_id = $1
 		 UNION ALL
 		SELECT 'address', account_label, '', false FROM capture_connection
-		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
+		 WHERE user_id = $1 AND coalesce(account_label, '') <> ''
 `, user, IdentitySourceDeliveredTo)
 	if err != nil {
 		return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)

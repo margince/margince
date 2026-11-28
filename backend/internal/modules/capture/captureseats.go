@@ -12,8 +12,8 @@ import (
 )
 
 // liveConnectionPredicate is a connection a sync still selects or a human
-// still has to act on: not withdrawn, not archived.
-const liveConnectionPredicate = `c.status <> 'disconnected' AND c.archived_at IS NULL`
+// still has to act on: one not withdrawn.
+const liveConnectionPredicate = `c.status <> 'disconnected'`
 
 // LiveConnectionsTx counts each member's live mail and calendar connections.
 // A member with none is absent from the map.

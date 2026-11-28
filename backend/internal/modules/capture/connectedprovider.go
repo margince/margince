@@ -55,7 +55,7 @@ func ConnectedOnAny(ctx context.Context, tx pgx.Tx, user ids.UserID, providers [
 // SQL — see ConnectedOnAny for why an errored connection is not live. Both
 // ConnectedOnAny and MailboxCaughtUpSQL read it; reachOf is its Go spelling.
 func liveConnection(alias string) string {
-	return fmt.Sprintf("%[1]s.status = '%[2]s' AND %[1]s.archived_at IS NULL", alias, statusConnected)
+	return fmt.Sprintf("%s.status = '%s'", alias, statusConnected)
 }
 
 // MailboxCaughtUpSQL renders "Margince can see this seat's mail" for a SQL

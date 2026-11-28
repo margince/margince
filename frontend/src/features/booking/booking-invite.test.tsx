@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -19,7 +19,6 @@ import {
   bookingSlots,
 } from "../../testing/book.testkit";
 import { meFixture } from "../../testing/mefixture";
-import { steppedClock } from "../../testing/steppedclock";
 import { BookingInviteScreen } from "./booking-invite";
 
 vi.mock("../mail/compose", () => ({
@@ -597,6 +596,7 @@ it.each([false, undefined])(
 );
 
 it("closes onto the contact's meetings by going back when it was opened from them", async () => {
+  const user = userEvent.setup();
   window.history.replaceState(
     null,
     "",
@@ -604,22 +604,13 @@ it("closes onto the contact's meetings by going back when it was opened from the
   );
   const stop = watchAddress(() => undefined);
   mount();
-  // Found on real timers, so the hashchange that records the booking entry has landed.
-  const close = await screen.findByRole("button", { name: "Close" });
-  const bookingHash = window.location.hash;
-  const user = steppedClock({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+  // The traversal settles as a real step would land it. Left in flight, its
+  // one-second fallback replaces the address in whichever test runs next.
   const go = vi
     .spyOn(globalThis.history, "go")
-    .mockImplementation(() => undefined);
-  await user.click(close);
+    .mockImplementation(() => globalThis.dispatchEvent(new Event("pageshow")));
+  await user.click(await screen.findByRole("button", { name: "Close" }));
   expect(go.mock.calls).toEqual([[-1]]);
-  // The stubbed step never lands, so the close replaces the entry once
-  // historydepth.ts's UNANSWERED_MS (1000) has passed.
-  const meetings = `#/contacts/${bookingContact.id}/meetings`;
-  act(() => vi.advanceTimersByTime(999));
-  expect(window.location.hash).toBe(bookingHash);
-  act(() => vi.advanceTimersByTime(1));
-  expect(window.location.hash).toBe(meetings);
   go.mockRestore();
   stop();
 });

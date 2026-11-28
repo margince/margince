@@ -173,7 +173,7 @@ var frontendGuard = regexp.MustCompile(`outputs\s*(?:\.\s*frontend\b|\[\s*['"]fr
 // census would lose the job.
 func frontendLanes(t *testing.T, workflow workflowFile) []filteredLane {
 	t.Helper()
-	lanes, unparsed, gated := frontendGatedJobs(t, workflow)
+	lanes, unparsed, gated := frontendGatedJobs(t, workflow, filterScopes(t, workflow))
 	if gated == 0 {
 		t.Fatalf("no job in %s runs on the %q scope; this census would judge no lane", classifierWorkflow, frontendTree)
 	}
@@ -186,10 +186,10 @@ func frontendLanes(t *testing.T, workflow workflowFile) []filteredLane {
 
 // gated counts the jobs whose condition names the frontend scope. unparsed is each
 // of them that spells the scope in a way filteredLanes misses.
-func frontendGatedJobs(t *testing.T, workflow workflowFile) (lanes []filteredLane, unparsed []string, gated int) {
+func frontendGatedJobs(t *testing.T, workflow workflowFile, scopes map[string][]string) (lanes []filteredLane, unparsed []string, gated int) {
 	t.Helper()
 	parsed := map[string]bool{}
-	for _, lane := range filteredLanes(t, workflow) {
+	for _, lane := range filteredLanes(t, workflow, scopes) {
 		if slices.Contains(lane.scopes, frontendTree) {
 			lanes = append(lanes, lane)
 			parsed[lane.name] = true
@@ -216,7 +216,7 @@ func TestAFrontendGuardInAnotherSpellingIsNotDropped(t *testing.T) {
 	if err := unmarshalYAML([]byte(source), &workflow); err != nil {
 		t.Fatalf("parsing the planted workflow: %v", err)
 	}
-	lanes, unparsed, gated := frontendGatedJobs(t, workflow)
+	lanes, unparsed, gated := frontendGatedJobs(t, workflow, map[string][]string{frontendTree: {"frontend/**"}})
 	if gated != 2 || len(lanes) != 1 || !slices.Equal(unparsed, []string{"indexed"}) {
 		t.Errorf("two jobs on the frontend scope, one spelled with an index: read %d gated, %d lane(s), unparsed %v; want 2, 1, [indexed]",
 			gated, len(lanes), unparsed)
@@ -429,7 +429,7 @@ func (q *laneQueue) drain(t *testing.T, ts *tsReader, census *laneCensus) (shell
 func uncoveredReads(reads []laneRead, scope []string) []laneRead {
 	var missing []laneRead
 	for _, read := range reads {
-		if !covered(scope, read.path) {
+		if !scopeClaims(read.path, scope) {
 			missing = append(missing, read)
 		}
 	}

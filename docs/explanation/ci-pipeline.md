@@ -122,42 +122,31 @@ Note the `== 'true'` on each output. paths-filter writes the **string** `true`/`
 of GitHub treats values as true or false in its own way. There the string `"false"` is not empty, so it
 counts as true. Without the check, every scope would read as true on every event.
 
-`backend` and `backend_db` are the same set, apart from the files that Go gates read without running.
+`backend` is every path, and `backend_db` is the part that can change what a database-backed lane proves.
 They are split because one flag was driving two things that have nothing to do with each other. One is
 to run the Go unit gates. The other is to boot the sharded Postgres databases.
 
-- `AGENTS.md`, `CLAUDE.md`, `frontend/AGENTS.md`, `frontend/CLAUDE.md` and `docs/**` are each read by a Go
-  gate (`backend/gates/rulebookdelegation_test.go`, `backend/gates/rulebookdirection_test.go` and
-  `backend/gates/rulebooktally_test.go`). So an edit to any of them has to run a unit lane.
-- No integration test reads them, so they must not run the database lanes. The integration shards move
-  in step with the `integration` fan-in, which checks for `success` from them. Skipping one alone would
-  report a PR that only changes docs as a broken integration lane.
+- Many Go gates walk every tracked file (`gitcontent`, `docsprose`, the vocabulary and public-reference
+  gates). So an edit to any file can change a gate's verdict, and has to run a unit lane.
+- An edit outside `backend_db` must not run the database lanes. The integration shards move in step with
+  the `integration` fan-in, which checks for `success` from them. Skipping one alone would report a PR
+  that only changes docs as a broken integration lane.
 
 | Scope | Paths | Gates |
 |---|---|---|
-| `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.mod`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it calls, matched by a glob so a new lane is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in: every lane that opens a database |
-| `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, the staged `crm-hello` walk, craftsmanship, unit coverage, vuln |
-| `backend_lint` | `backend_db` plus `tools/**`, a module `lint-modules` lints. golangci reads no frontend or docs file | `backend-lint` |
+| `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.mod`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it calls, matched by a glob so a new lane is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json`, and what integration tests read outside `backend/`: `config/presets/**` and `docs/reference/mcp-tool-roles/**` | the integration shards and the `integration` fan-in: every lane that opens a database |
+| `backend` | `**`, every path | Go build and gate, the staged `crm-hello` walk, craftsmanship, unit coverage, vuln |
+| `backend_lint` | `backend_db` plus `tools/**`, a module `lint-modules` lints, and the image the job runs in, `.github/ci-image/**`. golangci reads no frontend or docs file | `backend-lint` |
 | `frontend` | `third-party-files.txt`, `frontend/**`, `backend/api/**` (the contract drives FE types), `backend/internal/modules/agents/previewcatalog_gen.json` (only `fe-drift` builds it again from `frontend/`), the composition inputs the lane type checks against (`instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the `uat` part can run at all, so a change to it cannot be reviewed without the lane it governs), and for the same reason the CI image `.github/ci-image/**` and `.github/actions/ci-image/**`. Last, each file outside `frontend/` that the lane reads, which `backend/gates/frontendlanereads_test.go` finds in the lane's own tests, scripts, recipes, workflows and actions: `backend/Makefile`, `.github/workflows/ci.yml`, `.github/workflows/_lane-frontend.yml`, `.github/actions/frontend-cache-key/**`, `.github/actions/upload-artifact-retried/**`, `docs/reference/ui-copy-style*.md`, `docs/reference/mcp-info.json`, `docs/handbook/**`, `backend/gates/marketingquestion_test.go`, `backend/gates/testdata/servertrim.json`, `backend/gates/testdata/sourcecensus.json`, `backend/internal/shared/kernel/*/testdata/*`, `backend/internal/compose/approvalpreviewcoverage.go`, `backend/internal/compose/approvalpreviewevidence.go`, `backend/internal/compose/lifecyclereview/latest.go`, `backend/internal/compose/contact360/testdata/**`, `backend/internal/modules/activities/testdata/replysubjects.txt`, `backend/internal/modules/ai/callsentinels.go`, `backend/internal/modules/ai/callstore.go`, `backend/internal/modules/automation/catalog_actions.go`, `backend/internal/modules/identity/testdata/passwordrule.json`, `backend/internal/modules/identity/testdata/redirecturi.json` | frontend lane, `uat` |
-| `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
+| `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile`, the workspace `go.mod`, `go.work`, `go.work.sum`, and the job itself, `.github/workflows/ci.yml` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
-| `release` | `Makefile`, `scripts/release*`, `scripts/lib-git-fixture.sh`, `.github/workflows/release.yml`, `.github/workflows/release-tag.yml`, `.github/workflows/_release-*.yml` | `release-scripts` (`make check-release`). The release workflows run it too, before a job calls a release script. `backend/gates/releaselane_test.go` derives this scope from the tree |
+| `release` | `Makefile`, `scripts/release*`, `scripts/lib-git-fixture.sh`, `scripts/lib-dist-version.sh`, `.github/workflows/release.yml`, `.github/workflows/release-tag.yml`, `.github/workflows/_release-*.yml` | `release-scripts` (`make check-release`). The release workflows run it too, before a job calls a release script. `backend/gates/releaselane_test.go` derives this scope from the tree |
 | `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `scripts/install-sbom-python.sh`, `scripts/test-install-sbom-python.sh`, `scripts/sbom-license-parity.sh`, `scripts/test-sbom-license-parity.sh`, `third-party-files.txt`, `scripts/third_party_files.py`, `scripts/third-party-files.sh`, `scripts/test-third-party-files.sh`, `embedded-binaries.txt`, `scripts/embedded-binary-licenses.sh`, `scripts/test-embedded-binary-licenses.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
 
-What the `backend` scope adds on top of `backend_db`:
-
-- The agent rule files `AGENTS.md` and `CLAUDE.md`, and `docs/**`.
-- The tree the gates read but do not build, `frontend/**`. Many gates under
-  `backend/gates/` read files under `frontend/`. So a pull request that only changes the frontend must
-  still run the lane that holds them.
-- The rest of what the suite opens: `.github/**`, `.coderabbit.yaml`, `.env.example`, `.tool-versions`,
-  `config/**`, `e2e/**`, `tools/**`, `user-guide/**`, `Dockerfile*`, `package.json`, `pnpm-lock.yaml`
-  and `renovate.json`. It also opens the root pages `README.md`, `CLA.md`,
-  `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `LICENSING.md`, `MAINTAINERS.md`, `SECURITY.md` and `SUPPORT.md`.
-
-That list is worked out from the tree, not kept by hand. `backend/gates/gatelanetrigger_test.go` checks every path literal
-in the suite against the tree, and fails on one this scope does not cover. These paths sit in `backend`
-and not in `backend_db`, because a Go gate needs no Postgres shard.
+Both are worked out from the tree, not kept by hand. `backend/gates/gatelanetrigger_test.go` holds every
+tracked file inside `backend`. It also finds what integration tests read outside `backend/`, and fails on
+a file `backend_db` does not claim. `backend/gates/laneinputscope_test.go` follows the scripts a lane runs,
+and the helpers they `source`, into that lane's scope.
 
 In the `frontend` scope, `pnpm-workspace.yaml` and the root `package.json` decide *which* dependency the
 SPA builds on, and which one `openapi-typescript` parses the contract with. `overrides` lives in the
@@ -177,8 +166,8 @@ What follows from this:
   - `make ci-doc-parity` holds the table above to the filters in `ci.yml`, and it runs in
     `deterministic-gates`. So an edit to this file alone still runs the gate that can tell it is stale.
   - A prose PR that touches nothing under `docs/` (the root `README.md`, say) still matches `backend`,
-    because the root Markdown files are in that scope. With the queue on, the prose entry is also gated
-    against the full tree it merges into.
+    because every path is in that scope. With the queue on, the prose entry is also gated against the
+    full tree it merges into.
 - A **PR that only changes a Dockerfile** (the root `Dockerfile`, `.dockerignore`, `docker-bake.hcl`)
   matches the `images` scope. It runs the **`images (build only)`** job: a `docker buildx bake` of the
   default group (the three roles) that pushes nothing.
@@ -198,7 +187,7 @@ What follows from this:
   `_lane-*.yml`, the `Makefile`, or `scripts/**`. Those change what a gate *does*, so the gates run again
   to prove they still pass under the new version.
   - The release workflows and `sbom.yml` sit outside `backend_db`, because none runs a backend gate, so they
-    boot no Postgres shard. They still match `backend` (through `.github/**`) and `deps` (through
+    boot no Postgres shard. They still match `backend` (every path) and `deps` (through
     `.github/workflows/**`). So the Go gates and the license gate run on them.
   - None of them proves itself on a schedule. The next user to start one finds a change that made it fail.
     So start `sbom.yml` from the branch of a PR that touches it. A release workflow publishes, so read its diff.
@@ -378,7 +367,7 @@ dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
-| `plain` | `cache-warm.yml` job `plain`, its `runner` part | `integration unit coverage`, `live-boot`, `vuln`, and the [CI image](ci-image.md) jobs when they run on the runner |
+| `plain` | `cache-warm.yml` job `plain`, its `runner` part | `live-boot`, `vuln`, and the [CI image](ci-image.md) jobs when they run on the runner |
 | `plain-in-image` | `cache-warm.yml` job `plain`, its `image` part | `deterministic-gates` |
 | `lint`, `lint-in-image` | `lint-cache.yml`, after each push to `main` or `develop`: it compiles, and runs no test | `backend-lint` |
 | `integration` | `cache-warm.yml` job `integration`, on `main` only | `integration build`, and every shard for the tools it runs with `go run` |
@@ -492,9 +481,10 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md). `determ
   into `extensions/`, then runs the composed build, the tests of `cmd/` and every unit's own tests. Its
   coverage profile goes to `sonarcloud`, because the shard profiles cannot reach a unit's module.
 - **`INTEGRATION_JOBS=8`**, twice the cores of a runner: the tests wait on Postgres, and 16 ran out of memory.
-- **`integration unit coverage`** exists because the shards run only the integration packages, and
-  SonarCloud would see the rest at a false 0% for new code. It skips `backend/gates`, which has no code
-  of its own: the tests of the code it reaches cover nearly all of it.
+- **`deterministic-gates (unit)` and `deterministic-gates (solo)` measure coverage** when the integration
+  lane runs, since the shards run only the integration packages. Go caches no run with `-shuffle`, so
+  this costs one pass over the tests, where a separate job ran every package again. A local run
+  measures nothing, so its test cache still works.
 - **A fan-in turns red, not skipped**, when a job in its lane fails. The aggregate reads a skip as "this
   part was out of scope". The `frontend` fan-in checks its jobs before the merge half. So a red shard
   ends the job, and does not hand the merge a partial set of blob reports.
@@ -550,9 +540,10 @@ exceptions above. `make check-backend` runs it too, so a laptop `make check` get
 
 ## Coverage → SonarCloud
 
-The `sonarcloud` job runs **last** and runs no suite again. It fetches the coverage that `integration`,
-`deterministic-gates (unit)` and `frontend` already made. Those are `coverage.out` (from each shard and
-unit pod), `coverage-extensions.out`, and two lcov reports: the core frontend and the unit screens
+The `sonarcloud` job runs **last** and runs no suite again. It fetches the coverage that the integration
+shards, `deterministic-gates (unit)`, `deterministic-gates (solo)` and `frontend` already made. It merges
+the pods of the shards and of those two jobs into `coverage.out` (`scripts/merge-go-coverage.sh`). Next
+to it come `coverage-extensions.out` and two lcov reports: the core frontend and the unit screens
 (`frontend/coverage-ext`). It then runs only the scanner, with no second stack and no second test run.
 
 Those pod files are uploaded through
@@ -560,8 +551,8 @@ Those pod files are uploaded through
 Every workflow in this repository uses it in place of `actions/upload-artifact`
 (`backend/gates/artifactuploadretry_test.go` holds it).
 
-- Without it, one short failure from the artifact service of GitHub costs a whole lane. The fan-in
-  cannot merge a pod that a shard is missing, so `ci` reports its failure. Then the check at push time
+- Without it, one short failure from the artifact service of GitHub costs a whole lane. The merge
+  cannot use a pod that a shard is missing, so `ci` reports its failure. Then the check at push time
   files a red `main` issue against a tree whose tests all passed.
 - The wrapper tries twice. The second attempt does not let a failure pass, so a missing pod still fails,
   and does not reach the scanner as a false 0%.
@@ -610,7 +601,7 @@ Wiring details:
 
 - `permissions: contents: read` at the workflow root (the least rights). Only `ci-image` may push, and only the [CI image](ci-image.md).
 - `persist-credentials: false` on the checkout of each job that runs code a PR wrote (the `integration`
-  shards, the unit coverage pass and fan-in, `live-boot`, `frontend`, `uat`). So a PR with bad code running
+  shards and fan-in, `live-boot`, `frontend`, `uat`). So a PR with bad code running
   `make test-integration` / `make frontend-e2e` cannot read the stored `GITHUB_TOKEN`.
   - The gate jobs scoped to the diff (`deterministic-gates`, `craftsmanship`, `craft-residue`) keep the
     token, because they diff against `origin/main` and need it to fetch.

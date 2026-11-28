@@ -240,7 +240,7 @@ func TestCaptureScopeIntersectionRefusesOverScopedConnector(t *testing.T) {
 	}
 }
 
-func TestReconnectUnarchivesTheConnection(t *testing.T) {
+func TestReconnectRevivesTheDisconnectedRow(t *testing.T) {
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(&mailFake{})
@@ -250,34 +250,18 @@ func TestReconnectUnarchivesTheConnection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Archive the row: the per-user unique key spans archived rows, so a
-	// reconnect must resurrect this exact row, not be blocked by it.
-	if err := database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `UPDATE capture_connection SET archived_at = now() WHERE id = $1`, connID)
-		return err
-	}); err != nil {
+	// The per-user unique key spans disconnected rows, so a reconnect must
+	// revive this exact row, not be blocked by it.
+	if err := registry.Disconnect(grantCtx, capturemod.ProviderMailbox("graph")); err != nil {
 		t.Fatal(err)
 	}
-	if views, err := registry.Connections(grantCtx); err != nil || len(views) != 0 {
-		t.Fatalf("archived connection still listed: %+v err=%v", views, err)
-	}
 
-	// Reconnect the same provider for the same human.
 	if _, err := registry.Connect(grantCtx, "graph", connector.Auth("token")); err != nil {
 		t.Fatalf("reconnect: %v", err)
 	}
 	views, err := registry.Connections(grantCtx)
-	if err != nil || len(views) != 1 || views[0].Status != "connected" {
-		t.Fatalf("after reconnect Connections = %+v err=%v, want one connected (archived_at cleared)", views, err)
-	}
-	var archivedAt *time.Time
-	if err := database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT archived_at FROM capture_connection WHERE id = $1`, connID).Scan(&archivedAt)
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if archivedAt != nil {
-		t.Errorf("reconnect left archived_at set (%v); the row stays invisible to the poller", archivedAt)
+	if err != nil || len(views) != 1 || views[0].ID != connID || views[0].Status != "connected" {
+		t.Fatalf("after reconnect Connections = %+v err=%v, want row %s connected", views, err, connID)
 	}
 }
 

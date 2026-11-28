@@ -85,8 +85,8 @@ func TestTheContractReachesTheFrontendLane(t *testing.T) {
 	}
 
 	// Decoded as yaml.Node rather than into a []string, because the classifier
-	// composes filters out of YAML anchors — `backend` is `[*backend_db, …]`, a
-	// sequence whose first element is itself a sequence. A flat decode fails on
+	// composes filters out of YAML anchors. `backend_lint` is `[*backend_db, …]`,
+	// a sequence whose first element is itself a sequence. A flat decode fails on
 	// that, and failing to read the file this test takes its obligation from is
 	// indistinguishable from the obligation being met.
 	var parsed map[string]yaml.Node

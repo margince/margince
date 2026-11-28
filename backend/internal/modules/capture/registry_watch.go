@@ -47,7 +47,7 @@ func (r *Registry) DueWatches(ctx context.Context, name string, within time.Dura
 		// registration.
 		rows, err := tx.Query(ctx, `
 			SELECT id FROM capture_connection
-			WHERE provider = $1 AND status = 'connected' AND archived_at IS NULL
+			WHERE provider = $1 AND status = 'connected'
 			  AND (watch_expires_at IS NULL OR watch_expires_at < $2)`, name, threshold)
 		if err != nil {
 			return nil, err
@@ -128,7 +128,7 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			UPDATE capture_connection SET watch_expires_at = $2, watch_ref = NULLIF($3, '')
-			WHERE id = $1 AND status = 'connected' AND archived_at IS NULL AND generation = $4`,
+			WHERE id = $1 AND status = 'connected' AND generation = $4`,
 			connectionID, res.ExpiresAt, res.Ref, generation)
 		return err
 	})

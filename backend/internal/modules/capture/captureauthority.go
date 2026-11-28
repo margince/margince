@@ -175,8 +175,7 @@ func (s *Sink) mailboxRunAllowedTx(ctx context.Context, tx pgx.Tx) (context.Cont
 	if !isMailboxRun(ctx) {
 		return ctx, nil
 	}
-	// An archived mailbox births held mail without provider keys. The lock still
-	// excludes writes from a different account generation.
+	// The lock excludes writes from a different account generation.
 	if connection, bound := ctx.Value(mailboxConnectionKey{}).(mailboxConnection); bound {
 		var generation int
 		err := tx.QueryRow(ctx, `SELECT generation FROM capture_connection

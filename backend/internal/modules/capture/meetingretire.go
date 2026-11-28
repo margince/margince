@@ -22,7 +22,7 @@ const calendarProvidersArg = "calendar_providers"
 // is the placeholder that binds calendarProviderNames.
 func calendarLiveSQL(seat, providers string) string {
 	return `EXISTS (SELECT 1 FROM capture_connection seat_calendar WHERE seat_calendar.user_id=` + seat + `
- AND seat_calendar.provider=ANY(` + providers + `) AND seat_calendar.status IN ('connected','error') AND seat_calendar.archived_at IS NULL)`
+ AND seat_calendar.provider=ANY(` + providers + `) AND seat_calendar.status IN ('connected','error'))`
 }
 
 // anotherLiveRosterSQL holds for a row that a seat besides the syncing one

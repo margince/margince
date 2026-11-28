@@ -121,7 +121,7 @@ func meetingNotesReaderTx(ctx context.Context, tx pgx.Tx) (notesReader, bool, er
 	err := tx.QueryRow(ctx, `
 		SELECT provider, user_id, account_label, provider_scopes FROM capture_connection
 		 WHERE id = @id AND generation = @generation AND user_id IS NOT NULL
-		   AND status IN ('connected','error') AND archived_at IS NULL`,
+		   AND status IN ('connected','error')`,
 		pgx.NamedArgs{"id": run.ID, argGeneration: run.Generation}).Scan(&provider, &owner, &label, &scopes)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return notesReader{}, false, nil
@@ -136,7 +136,7 @@ func meetingNotesReaderTx(ctx context.Context, tx pgx.Tx) (notesReader, bool, er
 	var calendarLabel *string
 	err = tx.QueryRow(ctx, `
 		SELECT account_label FROM capture_connection
-		 WHERE user_id = $1 AND provider = $2 AND status IN ('connected','error') AND archived_at IS NULL
+		 WHERE user_id = $1 AND provider = $2 AND status IN ('connected','error')
 		 ORDER BY lower(account_label) = lower($3) DESC, created_at, id LIMIT 1`,
 		owner, calendar, *label).Scan(&calendarLabel)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -229,7 +229,7 @@ func (s *Sink) MeetingNotesRefused(ctx context.Context) error {
 		var scopes []string
 		err := tx.QueryRow(ctx, `
 			SELECT provider, coalesce(provider_scopes, '{}') FROM capture_connection
-			 WHERE id = $1 AND generation = $2 AND archived_at IS NULL FOR UPDATE`,
+			 WHERE id = $1 AND generation = $2 FOR UPDATE`,
 			run.ID, run.Generation).Scan(&provider, &scopes)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil

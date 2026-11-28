@@ -91,8 +91,9 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 	}
 }
 
-// CHECK_TREE_GATES=off drops the root script gates, drift and composition
-// reproducibility from a check-backend leg. Off in every leg, they run nowhere.
+// CHECK_TREE_GATES=off drops the root script gates, the `go build ./...`, drift
+// and composition reproducibility from a check-backend leg. Off in every leg,
+// they run nowhere.
 func TestOneBackendLegRunsTheTreeGates(t *testing.T) {
 	t.Parallel()
 	raw, err := gatekit.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
@@ -108,7 +109,7 @@ func TestOneBackendLegRunsTheTreeGates(t *testing.T) {
 		t.Fatalf("job %q has no `make check-backend` step, so this test cannot tell where the tree gates run", testLegsJob)
 	}
 	if !slices.ContainsFunc(values, func(v string) bool { return v != "off" }) {
-		t.Errorf("every %s leg passes CHECK_TREE_GATES=off (%v), so the root script gates, drift and "+
+		t.Errorf("every %s leg passes CHECK_TREE_GATES=off (%v), so the root script gates, the build, drift and "+
 			"composition reproducibility run in no leg of CI", testLegsJob, values)
 	}
 }
@@ -132,8 +133,8 @@ func TestMainHealthSplitsTheCheckLegsAsCIDoes(t *testing.T) {
 	}
 	trees, _ := legsRunBy(t, health, mainHealthGatesJob, "check-backend", "CHECK_TREE_GATES", []string{"on"})
 	if !slices.ContainsFunc(trees, func(v string) bool { return v != "off" }) {
-		t.Errorf("every leg of %s job %q passes CHECK_TREE_GATES=off (%v), so main's health check runs no drift "+
-			"or composition check", mainHealthWorkflow, mainHealthGatesJob, trees)
+		t.Errorf("every leg of %s job %q passes CHECK_TREE_GATES=off (%v), so main's health check runs no build, "+
+			"drift or composition check", mainHealthWorkflow, mainHealthGatesJob, trees)
 	}
 }
 

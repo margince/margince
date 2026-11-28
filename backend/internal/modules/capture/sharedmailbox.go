@@ -79,7 +79,7 @@ func (r *Registry) runContext(ctx context.Context, name string, grantedBy *ids.U
 func sharedMailboxAllowedTx(ctx context.Context, tx pgx.Tx, connection ids.UUID) error {
 	var live bool
 	err := tx.QueryRow(ctx, `SELECT `+sharedMailboxLiveSQL+`
-	  FROM capture_connection c WHERE c.id = $1 AND c.archived_at IS NULL AND c.status IN ('connected','error')`,
+	  FROM capture_connection c WHERE c.id = $1 AND c.status IN ('connected','error')`,
 		connection).Scan(&live)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !live) {
 		return fmt.Errorf("the shared mailbox is no longer connected to a live reader team: %w", apperrors.ErrPermissionDenied)
@@ -93,7 +93,7 @@ func sharedMailboxAddressTx(ctx context.Context, tx pgx.Tx, connection ids.UUID)
 	return database.Remember(tx, ownerIdentitiesMemo+"mailbox:"+connection.String(), func() (SelfSet, error) {
 		var label string
 		if err := tx.QueryRow(ctx, `SELECT coalesce(account_label, '') FROM capture_connection
-		  WHERE id = $1 AND user_id IS NULL AND archived_at IS NULL`, connection).Scan(&label); err != nil {
+		  WHERE id = $1 AND user_id IS NULL`, connection).Scan(&label); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return SelfSet{}, nil
 			}

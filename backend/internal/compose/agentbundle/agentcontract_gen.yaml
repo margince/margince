@@ -52022,8 +52022,9 @@ components:
         archived_at:
           type: [string, 'null']
           format: date-time
+          deprecated: true
           description: >-
-            Base envelope field; stays null even when `status=retired`, because retiring is a status flip rather than an archive.
+            Never set; always null. A field is retired through `status`, never archived. Kept so existing clients keep compiling.
         version: {$ref: '#/components/schemas/RowVersion'}
         records_changed:
           type: integer
