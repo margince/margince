@@ -15,6 +15,7 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
+import { steppedClock } from "../../testing/steppedclock";
 import { LeadScreen } from "./leads";
 
 // The Deals tab's two panels: the deal `qualified_deal_id` names, and the
@@ -129,7 +130,7 @@ describe("LeadScreen: the Deals tab's deal and project verbs", () => {
   });
 
   it("the Attach verb opens the picker, and picking patches project_id", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const patched: unknown[] = [];
     stubLeadScreenFetch(async (url, method, request) => {
       if (method === "GET" && url.includes("/projects")) {
@@ -173,7 +174,7 @@ describe("LeadScreen: the Deals tab's deal and project verbs", () => {
   });
 
   it("keeps the picker open over a refused attach, saying why, until Escape hands focus back", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     stubLeadScreenFetch(async (url, method) => {
       if (method === "GET" && url.includes("/projects")) {
         return jsonResponse({

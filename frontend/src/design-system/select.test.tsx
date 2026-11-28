@@ -9,6 +9,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { declaredValues, rulesOf } from "../../scripts/lib/css-rules";
 import { stable } from "../format/collate";
+import { steppedClock } from "../testing/steppedclock";
 import { Field } from "./atoms";
 import type { SelectOption, SelectProps } from "./select";
 import { Select } from "./select";
@@ -958,7 +959,7 @@ describe("pickOption", () => {
   // pick from — which it says out loud, because a helper that returned quietly
   // here would leave a suite asserting an untouched form and passing.
   it("refuses an already-open control rather than closing it and going quiet", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const { trigger, changes } = renderSelect();
 
     await user.click(trigger);

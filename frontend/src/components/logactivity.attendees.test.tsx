@@ -15,6 +15,7 @@ import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
+import { steppedClock } from "../testing/steppedclock";
 import { LogActivity } from "./logactivity";
 import { MAX_MEETING_NAMES, MeetingAttendeeFields } from "./meetingattendees";
 
@@ -117,7 +118,7 @@ async function logMeeting(user: UserEvent, posted: unknown[]) {
 
 describe("everyone on a logged meeting", () => {
   it("links the open contact and every attendee across companies", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const posted: unknown[] = [];
     stubApi(posted);
     const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
@@ -156,7 +157,7 @@ describe("everyone on a logged meeting", () => {
   });
 
   it("keeps a deal's link beside the contacts who attended", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const posted: unknown[] = [];
     stubApi(posted);
     render("deal", "d-1");
@@ -172,7 +173,7 @@ describe("everyone on a logged meeting", () => {
   });
 
   it("sends several attendees from a company page, and no company link", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const posted: unknown[] = [];
     stubApi(posted);
     render("company", "co-b");
@@ -189,7 +190,7 @@ describe("everyone on a logged meeting", () => {
   });
 
   it("drops an attendee the reader removed", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const posted: unknown[] = [];
     stubApi(posted);
     render("company", "co-b");

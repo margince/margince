@@ -18,6 +18,7 @@ import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
 import { en } from "../../../i18n/en";
 import { type GrantSpec, meFixture } from "../../../testing/mefixture";
+import { steppedClock } from "../../../testing/steppedclock";
 import { OnboardingScreen } from "../onboarding";
 
 // The restore matrix of the conversational shell: which act a reload lands
@@ -832,6 +833,7 @@ describe("reload adoption of a persisted read", () => {
   });
 
   it("a reload mid-crawl resumes polling into the review", async () => {
+    steppedClock();
     stubApi({
       state: stateRow({ step: "read", site_read_id: READ_ID }),
       reads: [

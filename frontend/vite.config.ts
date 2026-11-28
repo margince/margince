@@ -13,7 +13,10 @@ import {
   preloadEntries,
 } from "./scripts/vite-entry-chunks.ts";
 import { buildRevision, serveMcpApps } from "./scripts/vite-inline-views.ts";
-import { thirdPartyNotices } from "./scripts/vite-licenses.ts";
+import {
+  SPA_CORE_PACKAGES,
+  thirdPartyNotices,
+} from "./scripts/vite-licenses.ts";
 import { precompress } from "./scripts/vite-precompress.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
 import { screenChunks } from "./scripts/vite-screen-chunks.ts";
@@ -185,7 +188,7 @@ export default defineConfig({
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.
     svgr({ svgrOptions: { dimensions: false } }),
     serveMcpApps(),
-    thirdPartyNotices(),
+    thirdPartyNotices({ named: SPA_CORE_PACKAGES }),
     pwa({ release }),
     screenChunks(join(frontendRoot, "src", "App.screencode.ts")),
     precompress(),

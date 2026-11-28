@@ -21,6 +21,7 @@ import { jsonResponse } from "../../testing/company.fixtures";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { project } from "../../testing/projects.fixtures";
+import { steppedClock } from "../../testing/steppedclock";
 import { dealProjectFields } from "./dealproject";
 import { DealScreen, DealsScreen } from "./deals";
 
@@ -304,7 +305,7 @@ function dealBackend(opts: {
 
 describe("the deal form's project picker", () => {
   it("posts the picked project's id with the deal", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const writes = dealBackend({
       projects: [
         project({ id: "pr-1", name: "CRM rollout" }),
@@ -336,7 +337,7 @@ describe("the deal form's project picker", () => {
   });
 
   it("starts a new project on the deal's company before the deal is born", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const writes = dealBackend({ projects: [] });
     render(<DealsScreen />);
     await user.click(await screen.findByTestId("new-record"));
@@ -364,7 +365,7 @@ describe("the deal form's project picker", () => {
 
   // An agent seat is never offered: the server refuses one as an owner.
   it("starts the new project owned by the colleague picked as its owner", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const writes = dealBackend({
       projects: [],
       users: [
@@ -396,7 +397,7 @@ describe("the deal form's project picker", () => {
   // page in the browser can only ever match the anchor, and the answer has to
   // come from a re-read the form's own answers drive.
   it("repopulates the picker from the server when the form names a different company", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     dealBackend({
       projects: [
         project({ id: "pr-1", name: "CRM rollout" }),
@@ -434,7 +435,7 @@ describe("the deal form's project picker", () => {
   });
 
   it("holds the picker until a company is chosen, and drops a pick the new company does not own", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     dealBackend({
       projects: [
         project({ id: "pr-1", name: "CRM rollout" }),
@@ -471,7 +472,7 @@ describe("the deal form's project picker", () => {
 
 describe("the deal form's company picker", () => {
   it("finds a company past the first page by name and posts it with the deal", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const writes = dealBackend({
       farCompanies: [{ id: "o-77", display_name: "Wendt Logistik" }],
     });

@@ -10,6 +10,7 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
+import { steppedClock } from "../testing/steppedclock";
 import { AGENT_EDGE_STILL, currentAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
 
@@ -144,6 +145,7 @@ describe("a mailbox import", () => {
   });
 
   it("says so under the orb, with the share", async () => {
+    steppedClock();
     const { container } = mount({ connectors: [mailbox(IMPORTING)] });
     await waitFor(() =>
       expect(container.querySelector(".arline")?.textContent).toBe(
@@ -153,6 +155,7 @@ describe("a mailbox import", () => {
   });
 
   it("says why the share fell after a restart, and draws no ring", async () => {
+    steppedClock();
     const { container } = mount({
       connectors: [mailbox({ ...IMPORTING, window_restarts: 1 })],
     });
@@ -165,6 +168,7 @@ describe("a mailbox import", () => {
   });
 
   it("names the import without a share when the run has no estimate", async () => {
+    steppedClock();
     const { container } = mount({
       connectors: [
         mailbox({

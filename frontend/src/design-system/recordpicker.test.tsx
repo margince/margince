@@ -15,6 +15,7 @@ import { LocaleProvider } from "../i18n";
 import { en as englishCopy } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import { meFixture } from "../testing/mefixture";
+import { steppedClock } from "../testing/steppedclock";
 import { Field } from "./atoms";
 import { SEARCH_DEBOUNCE_MS } from "./debouncedsearch";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
@@ -35,6 +36,7 @@ const candidates: RecordPickerCandidate[] = [
 
 describe("RecordPicker", () => {
   it("lists default candidates on focus only when requested and collapses them after a pick", async () => {
+    const user = steppedClock();
     const searchTargets = vi.fn().mockResolvedValue(candidates);
     const onPick = vi.fn();
     rtlRender(
@@ -46,7 +48,6 @@ describe("RecordPicker", () => {
       />,
     );
     expect(searchTargets).not.toHaveBeenCalled();
-    const user = userEvent.setup();
     await user.click(screen.getByRole("searchbox"));
     await user.click(await screen.findByRole("button", { name: "Anna Weber" }));
     expect(searchTargets).toHaveBeenCalledWith("");
@@ -86,6 +87,7 @@ describe("RecordPicker", () => {
   });
 
   it("ignores a late default answer after the reader types a search", async () => {
+    const user = steppedClock();
     let resolveDefault: ((rows: RecordPickerCandidate[]) => void) | undefined;
     const defaults = new Promise<RecordPickerCandidate[]>((resolve) => {
       resolveDefault = resolve;
@@ -101,7 +103,6 @@ describe("RecordPicker", () => {
         onPick={vi.fn()}
       />,
     );
-    const user = userEvent.setup();
     await user.click(screen.getByRole("searchbox"));
     await waitFor(() => expect(searchTargets).toHaveBeenCalledWith(""));
     await user.type(screen.getByRole("searchbox"), "typed");
@@ -151,6 +152,7 @@ describe("RecordPicker", () => {
   });
 
   it("clears any candidates when the term is emptied instead of searching", async () => {
+    const user = steppedClock();
     const searchTargets = vi.fn().mockResolvedValue(candidates);
     rtlRender(
       <RecordPicker
@@ -160,16 +162,17 @@ describe("RecordPicker", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "anna");
+    await user.type(screen.getByRole("searchbox"), "anna");
     await waitFor(() => expect(screen.getByText("Anna Weber")).toBeTruthy());
 
-    await userEvent.clear(screen.getByRole("searchbox"));
+    await user.clear(screen.getByRole("searchbox"));
     await waitFor(() => expect(screen.queryByText("Anna Weber")).toBeNull());
     // The clear itself never re-invokes the search transport.
     expect(searchTargets).toHaveBeenCalledTimes(1);
   });
 
   it("fires onPick with the clicked candidate", async () => {
+    const user = steppedClock();
     const onPick = vi.fn();
     rtlRender(
       <RecordPicker
@@ -179,13 +182,14 @@ describe("RecordPicker", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "anna");
-    await userEvent.click(await screen.findByText("Anna Weber"));
+    await user.type(screen.getByRole("searchbox"), "anna");
+    await user.click(await screen.findByText("Anna Weber"));
 
     expect(onPick).toHaveBeenCalledWith({ id: "c-1", name: "Anna Weber" });
   });
 
   it("marks the selected candidate as pressed", async () => {
+    const user = steppedClock();
     rtlRender(
       <RecordPicker
         label="Search…"
@@ -195,7 +199,7 @@ describe("RecordPicker", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "o");
+    await user.type(screen.getByRole("searchbox"), "o");
     // Scope to the list option (a button) — the name also appears in the
     // always-visible selection summary below, which is not a button.
     const picked = await screen.findByRole("button", { name: "Otto Fischer" });
@@ -223,6 +227,7 @@ describe("RecordPicker", () => {
   });
 
   it("clears the search once a candidate is picked", async () => {
+    const user = steppedClock();
     const onPick = vi.fn();
     rtlRender(
       <RecordPicker
@@ -232,10 +237,8 @@ describe("RecordPicker", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "anna");
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Anna Weber" }),
-    );
+    await user.type(screen.getByRole("searchbox"), "anna");
+    await user.click(await screen.findByRole("button", { name: "Anna Weber" }));
 
     expect(onPick).toHaveBeenCalledWith({ id: "c-1", name: "Anna Weber" });
     // The pick collapses the list and empties the field, so the resolved
@@ -247,7 +250,7 @@ describe("RecordPicker", () => {
   });
 
   it("renders a rejected search inline instead of throwing", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const searchTargets = vi.fn().mockRejectedValue(new Error("search down"));
     rtlRender(
       <RecordPicker
@@ -278,7 +281,7 @@ describe("RecordPicker", () => {
   // they lack and on what — the shape of the authority model, handed to
   // whoever probed it.
   it("answers a refusal in the reader's words, never the server's", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const refused = new ProblemError({
       code: "permission_denied",
       detail: "your role does not grant update on contact",
@@ -306,7 +309,7 @@ describe("RecordPicker", () => {
   // untouched — replacing a cause somebody composed for a user would be the
   // opposite defect.
   it("keeps a detail the server wrote for a reader", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const refused = new ProblemError({
       code: "schema_changed",
       detail:
@@ -330,6 +333,7 @@ describe("RecordPicker", () => {
   });
 
   it("discards a stale search when the term changes before it resolves", async () => {
+    const user = steppedClock();
     let resolveFirst: ((value: RecordPickerCandidate[]) => void) | undefined;
     const searchTargets = vi
       .fn()
@@ -349,11 +353,11 @@ describe("RecordPicker", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "ann");
+    await user.type(screen.getByRole("searchbox"), "ann");
     await waitFor(() => expect(searchTargets).toHaveBeenCalledTimes(1));
 
-    await userEvent.clear(screen.getByRole("searchbox"));
-    await userEvent.type(screen.getByRole("searchbox"), "otto");
+    await user.clear(screen.getByRole("searchbox"));
+    await user.type(screen.getByRole("searchbox"), "otto");
     await waitFor(() => expect(searchTargets).toHaveBeenCalledTimes(2));
 
     // The first (stale) search resolves after the second has already fired —
@@ -410,6 +414,7 @@ describe("RecordPicker", () => {
   // round trip, and a caller that changed the space — notes' filing control
   // changes it with the record TYPE — would take a pick of the wrong kind.
   it("drops the rendered candidates when the search space changes", async () => {
+    const user = steppedClock();
     const contacts = vi
       .fn()
       .mockResolvedValue([{ id: "p-1", name: "Anna Weber" }]);
@@ -424,7 +429,7 @@ describe("RecordPicker", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "weber");
+    await user.type(screen.getByRole("searchbox"), "weber");
     await waitFor(() => expect(screen.getByText("Anna Weber")).toBeTruthy());
 
     rerender(
@@ -449,7 +454,7 @@ describe("RecordPicker", () => {
   // A failed search that is then made in a new space must not leave its line
   // behind: it described a question nobody is asking any more.
   it("drops a failed search's message when the search space changes", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const failing = vi.fn().mockRejectedValue(new Error("search unavailable"));
     const working = vi
       .fn()

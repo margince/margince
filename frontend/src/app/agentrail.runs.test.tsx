@@ -8,6 +8,7 @@ import {
   modelCallsInFlight,
 } from "../api/model-inflight";
 import { en } from "../i18n/en";
+import { steppedClock } from "../testing/steppedclock";
 import {
   block,
   jsonResponse,
@@ -102,6 +103,7 @@ describe("AgentRail", () => {
   // Acme" rather than "about this company". That generic phrase was wrong for
   // a contact or a meeting, and told a rep nothing for a company.
   it("names the record a summary is about while it is still being written", async () => {
+    steppedClock();
     withRuns(RUN({ kind: "summarize", subject_label: "Acme" }));
     const { container } = render();
     await settlesOnLine(container, "Summarizing Acme…");
@@ -126,7 +128,7 @@ describe("AgentRail", () => {
           subject_id: id,
         }),
       );
-      const user = userEvent.setup();
+      const user = steppedClock();
       const { container } = render();
       await settlesOnLine(container, `Summarizing ${name}…`);
       const link = container.querySelector(".arline a");
@@ -149,6 +151,7 @@ describe("AgentRail", () => {
     ["a meeting", "activity"],
     ["a kind this build does not know", "orbital-body"],
   ])("names %s as text rather than a link", async (_what, subjectType) => {
+    steppedClock();
     withRuns(
       RUN({
         kind: "summarize",
@@ -166,6 +169,7 @@ describe("AgentRail", () => {
   // to the record there too. A reader who opened the panel to see which
   // account is ready should not have to go back to the rail to reach it.
   it("links the record in the panel's head and in its list of live runs", async () => {
+    const user = steppedClock();
     const id = "019f7e65-fbf7-7114-b114-40af4af63a77";
     withRuns(
       RUN({
@@ -175,7 +179,6 @@ describe("AgentRail", () => {
         subject_id: id,
       }),
     );
-    const user = userEvent.setup();
     const { container } = render();
     await settlesOnLine(
       container,
@@ -195,6 +198,7 @@ describe("AgentRail", () => {
   // with no name to give. It falls back to a line that names no record,
   // rather than guessing at one.
   it("names no record for a summary that carried no name", async () => {
+    steppedClock();
     withRuns(RUN({ kind: "summarize" }));
     const { container } = render();
     await settlesOnLine(container, "Writing summary…");
@@ -209,6 +213,7 @@ describe("AgentRail", () => {
   });
 
   it("names the run in the rail line", async () => {
+    steppedClock();
     withRuns(RUN());
     const { container } = render();
     await settlesOnLine(container, BRIEF_RUNNING);
@@ -242,6 +247,7 @@ describe("AgentRail", () => {
   // carries the occurrence, it outranks the bare fact that a request is open.
   // Both are true here at once, and the sentence has to be the run's own.
   it("lets the feed name the work as soon as it carries the run", async () => {
+    steppedClock();
     withRuns(RUN());
     const { container } = render();
     act(() => {
@@ -354,6 +360,7 @@ describe("AgentRail", () => {
   // `ingest` for the whole read instead of resting between calls. The line
   // names the company, because the source sent its name.
   it("moves the Core to ingest while a company website is being read, and names the company", async () => {
+    steppedClock();
     withRuns(RUN({ kind: "site_read", subject_label: "Acme" }));
     const { container } = render();
     await waitFor(() =>
@@ -482,8 +489,8 @@ describe("AgentRail", () => {
   // section in neither case. The two bounds differ. agentrail.resting.test.tsx
   // holds the rotation's.
   it("reads a run that finished today in the resting line and in the recap, never as live work", async () => {
+    const user = steppedClock();
     withSettled(RUN({ state: "done" }));
-    const user = userEvent.setup();
     const { container } = render();
     await settlesOnLine(container, "Morning brief ready");
     expect(block(container).getAttribute("data-core-state")).toBe("idle");

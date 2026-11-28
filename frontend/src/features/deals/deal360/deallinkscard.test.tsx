@@ -7,10 +7,10 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-
 import { pickOption } from "../../../design-system/select-testing";
 import { en } from "../../../i18n/en";
 import { dealsQueryParams } from "../../../lib/deals.queries";
+import { steppedClock } from "../../../testing/steppedclock";
 import {
   installFetchStub,
   jsonResponse,
@@ -127,7 +127,7 @@ describe("DealLinksCard", () => {
   });
 
   it("names each hit's kind and leaves the deal itself out", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     mount(true);
     await user.click(
       await screen.findByRole("button", { name: en["deal.links.add"] }),
@@ -151,7 +151,7 @@ describe("DealLinksCard", () => {
   });
 
   it("starts a new link without the last one's refusal", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     mount(true);
     await user.click(
       await screen.findByRole("button", { name: en["deal.links.add"] }),

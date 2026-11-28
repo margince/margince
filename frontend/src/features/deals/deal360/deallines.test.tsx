@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../../design-system/select-testing";
 import { en as englishCopy } from "../../../i18n/en";
 import { renderWithQueryClient } from "../../../testing/queryrender";
+import { steppedClock } from "../../../testing/steppedclock";
 import { installFetchStub, jsonResponse } from "../../../testing/story-utils";
 import type { DealCommercial } from "./deallinestotal";
 import { DealProductsCard } from "./dealproducts";
@@ -185,6 +186,7 @@ describe("a deal priced from its lines", () => {
   });
 
   it("sends a negotiated price and a new name for a product picked from the catalogue", async () => {
+    const user = steppedClock();
     const posted: unknown[] = [];
     show(ESTIMATE, posted);
     installFetchStub({
@@ -209,7 +211,6 @@ describe("a deal priced from its lines", () => {
         return jsonResponse(BANANAS);
       },
     });
-    const user = userEvent.setup();
     await user.click(
       await screen.findByRole("button", {
         name: englishCopy["deal.lines.start"],
@@ -249,6 +250,7 @@ describe("a deal priced from its lines", () => {
   });
 
   it("starts a picked product at its rate card price, and sends the price the seller saw", async () => {
+    const user = steppedClock();
     const posted: unknown[] = [];
     show(ESTIMATE, posted);
     installFetchStub({
@@ -273,7 +275,6 @@ describe("a deal priced from its lines", () => {
         return jsonResponse(BANANAS);
       },
     });
-    const user = userEvent.setup();
     await user.click(
       await screen.findByRole("button", {
         name: englishCopy["deal.lines.start"],
@@ -305,6 +306,7 @@ describe("a deal priced from its lines", () => {
   });
 
   it("drops a rate card price once the lines take another currency", async () => {
+    const user = steppedClock();
     const posted: unknown[] = [];
     installFetchStub({
       [`GET /deals/${DEAL}/products`]: () => jsonResponse({ data: [] }),
@@ -337,7 +339,6 @@ describe("a deal priced from its lines", () => {
         typedAmount={null}
       />,
     );
-    const user = userEvent.setup();
     await user.click(
       await screen.findByRole("button", {
         name: englishCopy["deal.lines.start"],
@@ -461,6 +462,7 @@ describe("a deal priced from its lines", () => {
   });
 
   it("tells products of one name apart by their SKU and rate card price", async () => {
+    const user = steppedClock();
     show(ESTIMATE);
     installFetchStub({
       [`GET /deals/${DEAL}/products`]: () => jsonResponse({ data: [] }),
@@ -489,7 +491,6 @@ describe("a deal priced from its lines", () => {
           has_more: false,
         }),
     });
-    const user = userEvent.setup();
     await user.click(
       await screen.findByRole("button", {
         name: englishCopy["deal.lines.start"],

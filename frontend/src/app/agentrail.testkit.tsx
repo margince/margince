@@ -6,11 +6,13 @@ import {
 } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode, RefObject } from "react";
-import { expect, vi } from "vitest";
+import { expect, onTestFinished, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
+// Evaluated up front: a stepped clock never waits for the lazy panel's chunk to load.
+import "./agentpanel";
 
 // The agent section at the foot of the workspace rail draws what the API said.
 // It never shows a number nobody computed, or a read that has not answered.
@@ -191,6 +193,9 @@ export function stubAgentRailApi(routes: FetchRoutes = {}) {
   return fetchMock;
 }
 
+// The client this test rendered, so a wait can tell when its reads have all answered.
+let mounted: QueryClient | undefined;
+
 export function render(
   options: Readonly<{
     client?: QueryClient;
@@ -203,6 +208,10 @@ export function render(
     new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+  mounted = client;
+  onTestFinished(() => {
+    mounted = undefined;
+  });
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -238,19 +247,24 @@ export const panel = () => {
 };
 
 /**
- * The state's own resting line, once the ticker has finished naming the
- * mount-time reads.
- *
- * Every query the section holds starts a `useAgentTicker` line the moment it
- * fetches (agentrail-ticker.ts). That line outlives its own request by
- * `LINGER_MS` (1400ms) so a fast read is still readable. A case that asserts
- * the state's own line has to wait past that window. Otherwise it asserts
- * about the ticker's last word instead.
+ * The state's own resting line, once the ticker stops naming mount-time reads.
+ * Each read's ticker line outlives it by `LINGER_MS`, so a resting-line case
+ * must wait past that.
  */
-// Named so it does not begin with `waitFor`. scripts/test-budget.ts treats
-// that prefix as a library waiter. It then cannot fold the budget inside a
-// local helper that wears it.
+// Not named `waitFor…`: scripts/test-budget.ts reads that prefix as a library
+// waiter and would not fold this budget.
 export async function settlesOnLine(container: HTMLElement, expected: string) {
+  // On a stepped clock the first check runs before any read answers, while the
+  // line still predates the ticker.
+  await waitFor(() => {
+    if (!mounted)
+      throw new Error("settlesOnLine needs a rail mounted by render()");
+    const inFlight = mounted
+      .getQueryCache()
+      .findAll({ fetchStatus: "fetching" })
+      .map((query) => JSON.stringify(query.queryKey));
+    expect(inFlight, "reads still in flight").toEqual([]);
+  });
   await waitFor(
     () =>
       expect(container.querySelector(".arline")?.textContent).toBe(expected),

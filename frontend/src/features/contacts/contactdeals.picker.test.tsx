@@ -9,11 +9,11 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { en as englishCopy } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
+import { steppedClock } from "../../testing/steppedclock";
 import {
   jsonResponse,
   StoryProviders,
@@ -212,12 +212,12 @@ it.each(scenarios)(
         return fallback(input, init);
       },
     );
+    const user = steppedClock();
     render(
       <StoryProviders>
         <ContactDealsTab view={view} />
       </StoryProviders>,
     );
-    const user = userEvent.setup();
     await user.click(
       await screen.findByRole("button", {
         name: englishCopy["rel.seatOnDeal"],

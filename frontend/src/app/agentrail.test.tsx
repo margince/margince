@@ -12,6 +12,7 @@ import type { components } from "../api/schema";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { stubPhoneViewport } from "../testing/shellharness";
+import { steppedClock } from "../testing/steppedclock";
 import {
   AGENT_EDGE_STILL,
   clearAgentEdge,
@@ -132,7 +133,7 @@ function DealCreateButton() {
 describe("AgentRail", () => {
   it("shows the reader's own write on the line, and heads the orb's state with the agent's line", async () => {
     stubAgentRailApi();
-    const user = userEvent.setup();
+    const user = steppedClock();
     const { container } = render({ children: <DealCreateButton /> });
     await settlesOnLine(container, en["agent.line.allClear"]);
 
@@ -154,6 +155,7 @@ describe("AgentRail", () => {
   // clean queue has only one true thing to say. Which is the point of the case:
   // a resting surface says nothing rather than inventing something to report.
   it("is idle and says nothing needs you when every source is connected and nothing is queued", async () => {
+    steppedClock();
     stubAgentRailApi();
     const { container } = render();
     await waitFor(() =>
@@ -241,6 +243,7 @@ describe("AgentRail", () => {
   // failure this derivation was rebuilt to avoid. Nor does the line say that
   // nothing needs attention: nobody read which sources are reachable.
   it("does not colour the orb for a transient tool failure, and claims no all-clear", async () => {
+    steppedClock();
     stubAgentRailApi({
       connectors: () =>
         jsonResponse(
@@ -295,6 +298,7 @@ describe("AgentRail", () => {
   // second badge of its own: the same number twice in one column is a reader
   // checking whether the two agree.
   it("says what is waiting in its line, and badges no count of its own", async () => {
+    steppedClock();
     const fetchMock = stubAgentRailApi({
       approvals: () => jsonResponse(pendingCount(3)),
     });
@@ -321,7 +325,7 @@ describe("AgentRail", () => {
   // of them is here now, and the state was never one of them because a queue is
   // not a fault.
   it("says nothing about the duplicate queue, in the line, the state or the panel", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const fetchMock = stubAgentRailApi({
       dedupe: () =>
         jsonResponse({ data: [CANDIDATE("d-1"), CANDIDATE("d-2")] }),
@@ -655,6 +659,7 @@ describe("AgentRail", () => {
   // work it out for themselves: the reads are all local here, so a margin that
   // re-derived the state would report on a second agent.
   it("publishes what the margins draw, and goes quiet when it unmounts", async () => {
+    steppedClock();
     clearAgentEdge();
     stubAgentRailApi({
       approvals: () => jsonResponse(pendingCount(1)),
