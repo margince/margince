@@ -54,7 +54,7 @@ held_as AS (
     SELECT d.id, d.seat, d.audience, d.address,
            CASE WHEN d.audience = 'participants' THEN
              (SELECT cc.mail_posture FROM capture_connection cc
-               WHERE cc.user_id = d.seat AND cc.provider = d.provider AND cc.archived_at IS NULL
+               WHERE cc.user_id = d.seat AND cc.provider = d.provider
                ORDER BY cc.created_at DESC LIMIT 1)
            END AS posture,
            CASE WHEN d.audience = 'participants' AND d.audience_reason = 'pending_verdict' THEN 'pending' END AS status,
@@ -69,7 +69,7 @@ SELECT h.id, h.seat, h.posture, h.status, h.reason
    AND (EXISTS (SELECT 1 FROM capture_owner_identity oi
                  WHERE oi.user_id = h.seat AND oi.kind = 'address' AND oi.value = h.address)
         OR EXISTS (SELECT 1 FROM capture_connection cc
-                    WHERE cc.user_id = h.seat AND cc.archived_at IS NULL
+                    WHERE cc.user_id = h.seat
                       AND lower(btrim(coalesce(substring(cc.account_label FROM '<([^>]*)>'), cc.account_label)))
                           = h.address))
 ON CONFLICT (activity_id, user_id) DO NOTHING;

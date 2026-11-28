@@ -110,7 +110,7 @@ func (r *Registry) SetContextTag(ctx context.Context, mb Mailbox, tagID *ids.UUI
 		row := tx.QueryRow(ctx, `
 			UPDATE capture_connection
 			   SET context_tag_id = $3
-			 WHERE `+match.where+` AND archived_at IS NULL
+			 WHERE `+match.where+`
 			RETURNING (SELECT c.context_tag_id
 			             FROM capture_connection c WHERE c.id = capture_connection.id)`,
 			match.id, actor.UserID, tagID)

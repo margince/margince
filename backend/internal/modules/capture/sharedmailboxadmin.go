@@ -65,7 +65,7 @@ func (r *Registry) SharedMailboxes(ctx context.Context) ([]SharedMailboxView, er
 	var out []SharedMailboxView
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT `+sharedMailboxColumns+` FROM capture_connection
-		  WHERE `+mailSeatSQL+` AND archived_at IS NULL ORDER BY lower(account_label), provider`)
+		  WHERE `+mailSeatSQL+` ORDER BY lower(account_label), provider`)
 		if err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func (r *Registry) SharedMailbox(ctx context.Context, id ids.UUID) (SharedMailbo
 // sharedMailboxTx reads one shared mailbox; ErrNotFound when id names none.
 func sharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.UUID, lock string) (SharedMailboxView, error) {
 	v, err := scanSharedMailbox(tx.QueryRow(ctx, `SELECT `+sharedMailboxColumns+` FROM capture_connection
-	  WHERE id = $1 AND `+mailSeatSQL+` AND archived_at IS NULL `+lock, id))
+	  WHERE id = $1 AND `+mailSeatSQL+` `+lock, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return v, fmt.Errorf("no shared mailbox has that id: %w", apperrors.ErrNotFound)
 	}
@@ -226,7 +226,7 @@ func moveSharedReadersTx(ctx context.Context, tx pgx.Tx, prior SharedMailboxView
 		return prior, err
 	}
 	tag, err := tx.Exec(ctx, `UPDATE capture_connection SET reader_team_id = $2
-	  WHERE id = $1 AND reader_team_id = $3 AND archived_at IS NULL`, prior.ID, team, prior.ReaderTeam)
+	  WHERE id = $1 AND reader_team_id = $3`, prior.ID, team, prior.ReaderTeam)
 	if err != nil {
 		return prior, fmt.Errorf("capture: moving the shared mailbox to other readers: %w", err)
 	}
@@ -290,7 +290,7 @@ func (r *Registry) StartSharedBackfill(ctx context.Context, id ids.UUID, windowM
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		var live bool
 		err := tx.QueryRow(ctx, `SELECT status IN ('connected','error') FROM capture_connection
-		  WHERE id = $1 AND `+mailSeatSQL+` AND archived_at IS NULL`, id).Scan(&live)
+		  WHERE id = $1 AND `+mailSeatSQL, id).Scan(&live)
 		if errors.Is(err, pgx.ErrNoRows) || (err == nil && !live) {
 			return fmt.Errorf("no connected shared mailbox has that id: %w", apperrors.ErrNotFound)
 		}

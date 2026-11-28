@@ -272,7 +272,7 @@ func refuseStrandingConnections(ctx context.Context, tx pgx.Tx, k appKind, curre
 	var connected int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM capture_connection
-		 WHERE provider = ANY($1) AND status IN ('connected','error') AND archived_at IS NULL`,
+		 WHERE provider = ANY($1) AND status IN ('connected','error')`,
 		k.connectors).Scan(&connected); err != nil {
 		return fmt.Errorf("capture: counting the connections a %s app change would strand: %w", k.name, err)
 	}

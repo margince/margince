@@ -71,7 +71,7 @@ func (s *OwnDomainStore) ReaderAddressesTx(
 		 WHERE user_id = $1 AND kind = 'address'
 		 UNION
 		SELECT account_label, '' FROM capture_connection
-		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
+		 WHERE user_id = $1 AND coalesce(account_label, '') <> ''
 `, user).Query(func(rows pgx.Rows) error {
 		for rows.Next() {
 			var label, source string

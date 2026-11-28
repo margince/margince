@@ -2392,7 +2392,6 @@ public.capture_backfill_pkey CREATE UNIQUE INDEX capture_backfill_pkey ON public
 public.capture_connection acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_connection.account_bound_at timestamp with time zone gen=- def=-
 public.capture_connection.account_label text gen=- def=-
-public.capture_connection.archived_at timestamp with time zone gen=- def=-
 public.capture_connection.auth bytea gen=- def=-
 public.capture_connection.backup_owner_id uuid gen=- def=-
 public.capture_connection.capture_connection_backup_owner_id_fkey FOREIGN KEY (backup_owner_id) REFERENCES app_user(id) ON DELETE SET NULL
@@ -7110,7 +7109,7 @@ public.idx_brief_run_user CREATE INDEX idx_brief_run_user ON public.brief_run US
 public.idx_bulk_confirmation_expires CREATE INDEX idx_bulk_confirmation_expires ON public.bulk_confirmation USING btree (expires_at)
 public.idx_capture_auto_enrich_due CREATE INDEX idx_capture_auto_enrich_due ON public.capture_auto_enrich_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_capture_backfill_conn CREATE INDEX idx_capture_backfill_conn ON public.capture_backfill USING btree (connection_id, created_at DESC)
-public.idx_capture_connection CREATE INDEX idx_capture_connection ON public.capture_connection USING btree (provider, status) WHERE (archived_at IS NULL)
+public.idx_capture_connection CREATE INDEX idx_capture_connection ON public.capture_connection USING btree (provider, status)
 public.idx_capture_exclusion_connection CREATE INDEX idx_capture_exclusion_connection ON public.capture_exclusion USING btree (connection_id) WHERE (connection_id IS NOT NULL)
 public.idx_capture_exclusion_user CREATE INDEX idx_capture_exclusion_user ON public.capture_exclusion USING btree (user_id)
 public.idx_capture_exclusion_value CREATE INDEX idx_capture_exclusion_value ON public.capture_exclusion USING btree (kind, value)

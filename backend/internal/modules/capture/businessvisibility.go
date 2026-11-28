@@ -58,7 +58,7 @@ func changeSeatPostureTx(ctx context.Context, tx pgx.Tx, seatID *ids.UUID, postu
 		return fmt.Errorf("approve this business connection before changing its visibility: %w", apperrors.ErrConflict)
 	}
 	seat, err := scanSharedMailbox(tx.QueryRow(ctx, `SELECT `+sharedMailboxColumns+` FROM capture_connection
-	  WHERE id = $1 AND user_id IS NULL AND archived_at IS NULL FOR UPDATE`, *seatID))
+	  WHERE id = $1 AND user_id IS NULL FOR UPDATE`, *seatID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperrors.ErrNotFound
 	}

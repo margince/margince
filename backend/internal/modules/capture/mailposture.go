@@ -140,7 +140,7 @@ func replacePostureTx(ctx context.Context, tx pgx.Tx, match connectionMatch, pos
 	err := tx.QueryRow(ctx, `
 		UPDATE capture_connection
 		   SET mail_posture = `+placeholder+`
-		 WHERE `+match.where+` AND archived_at IS NULL
+		 WHERE `+match.where+`
 		RETURNING (SELECT c.mail_posture
 		             FROM capture_connection c WHERE c.id = capture_connection.id)`,
 		args...).Scan(&before)

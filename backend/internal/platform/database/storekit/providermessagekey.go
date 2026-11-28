@@ -30,7 +30,7 @@ func ProviderMessageKeysSQL(seat, provider, connection, message string) string {
 func ConnectionMessageKeysSQL(match, message string) string {
 	return "ARRAY(SELECT " + MailboxMarkSQL("c") + " || ':' || " + message +
 		" FROM capture_connection c WHERE " + match +
-		" AND c.archived_at IS NULL AND c.status IN ('connected','error') AND " + message + " <> '')"
+		" AND c.status IN ('connected','error') AND " + message + " <> '')"
 }
 
 // DeliveredBySQL tests, over connection alias conn, whether that mailbox
@@ -43,14 +43,14 @@ func DeliveredBySQL(conn, activity string) string {
 		" AND split_part(cmd.mark, ':', 1) = " + MailboxSQL(conn) + ")"
 }
 
-// CapturingMailboxSQL matches, over connection alias conn, the unarchived
-// mailboxes that captured activity alias act: the seat and provider its
-// connector stamp names, narrowed by DeliveredBySQL. An import that names no
+// CapturingMailboxSQL matches, over connection alias conn, the mailboxes that
+// captured activity alias act: the seat and provider its connector stamp
+// names, narrowed by DeliveredBySQL. An import that names no
 // mailbox predates delivered_by and keeps every row of that seat and provider.
 // Several rows can match; a caller applies the strictest answer among them.
 func CapturingMailboxSQL(conn, act string) string {
 	return "('connector:' || " + conn + ".provider || ':' || " + conn + ".user_id::text) = " + act + ".captured_by" +
-		" AND " + conn + ".archived_at IS NULL AND (" + DeliveredBySQL(conn, act+".id") +
+		" AND (" + DeliveredBySQL(conn, act+".id") +
 		" OR NOT EXISTS (SELECT 1 FROM capture_import cmn WHERE cmn.activity_id = " + act + ".id" +
 		" AND cmn.user_id = " + conn + ".user_id AND cardinality(cmn.delivered_by) > 0))"
 }
