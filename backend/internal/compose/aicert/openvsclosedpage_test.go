@@ -232,8 +232,8 @@ func writeOpenVsClosedFeatures(p *strings.Builder, open whichAISetup, rows, base
 	fmt.Fprintf(p, "\n**Where Gemini is Ready and this setup is not (%d):** %s.\n\n", len(behind), strings.Join(behind, ", "))
 }
 
-// rowOrNotMeasured reads a feature a setup does not bind as the grade the page
-// promises for it, and not as a zero row that prints an empty cell.
+// rowOrNotMeasured reads a feature a setup does not bind as "Not measured".
+// A zero row would print an empty cell instead.
 func rowOrNotMeasured(rows map[string]openVsClosedRow, task string) openVsClosedRow {
 	if r, ok := rows[task]; ok {
 		return r
