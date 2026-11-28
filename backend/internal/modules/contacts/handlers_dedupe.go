@@ -3,10 +3,7 @@
 
 package contacts
 
-// The dedupe review-queue transport (DH-EXT-1/2): wire decode, store-error
-// mapping, and the row→contract rendering — the evidence snapshot passes
-// through verbatim (DH-N-8; the transport must not re-derive or reshape
-// what the detector saw).
+// Review snapshots pass through unchanged so transport cannot reshape detector evidence.
 
 import (
 	"encoding/json"
@@ -137,4 +134,23 @@ func toContractDedupeCandidate(row DedupeCandidateRow) (crmcontracts.DedupeCandi
 		}
 	}
 	return c, nil
+}
+
+// MergeContact relies on the admission gate before this transport runs.
+// Relinking and consent checks belong to the store.
+func (h Handlers) MergeContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.MergeContactParams) {
+	var req crmcontracts.MergeContactJSONBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	survivor, err := h.store.MergeContact(r.Context(), pathID[ids.ContactKind](id), ids.From[ids.ContactKind](ids.UUID(req.TargetId)), ifVersion)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, survivor)
 }

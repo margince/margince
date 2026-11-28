@@ -4408,7 +4408,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.sources.model_one": "Margince · {count} nguồn",
   "standing.sources.model_other": "Margince · {count} nguồn",
   "standing.ring.rated": "Đã đánh giá {rated}/{total}",
-  "standing.ring.noInteractions": "Chưa có tương tác",
+  "standing.ring.noInteractions": "Chưa có tương tác được chia sẻ",
   "standing.ring.strength": "Độ gắn kết {score}/100, {band}",
   "standing.ring.score": "Điểm {score}/100",
   "standing.ladder.position": "Giai đoạn {n}/{total}",
@@ -13404,6 +13404,37 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // uses. Unlike the mail providers, the connection stays editable in
   // place: replacing the token goes through PATCH, never a disconnect.
   "connectors.provTelegram": "Telegram",
+  "connectors.business.whatsapp": "WhatsApp Business",
+  "connectors.business.zalo": "Tài khoản Zalo Official Account",
+  "connectors.business.connect": "Kết nối tài khoản",
+  "connectors.business.done": "Xong",
+  "connectors.business.intro":
+    "Tin nhắn khách hàng xuất hiện trong Lịch sử. Trả lời trong ứng dụng của nhà cung cấp.",
+  "connectors.business.empty":
+    "Chưa kết nối tài khoản. Kết nối tài khoản để nhận tin nhắn khách hàng.",
+  "connectors.business.connectHelp":
+    "Nhập thông tin truy cập tài khoản và chọn nhóm được đọc tin nhắn.",
+  "connectors.business.wabaId": "ID tài khoản WhatsApp Business",
+  "connectors.business.phoneNumberId": "ID số điện thoại",
+  "connectors.business.phone": "Số điện thoại hiển thị",
+  "connectors.business.oaId": "ID Official Account",
+  "connectors.business.appId": "ID ứng dụng",
+  "connectors.business.name": "Tên tài khoản",
+  "connectors.business.accessToken": "Mã truy cập",
+  "connectors.business.refreshToken": "Mã làm mới",
+  "connectors.business.appSecret": "Khóa bí mật ứng dụng",
+  "connectors.business.oaSecretKey": "Khóa bí mật Official Account",
+  "connectors.business.verifyToken": "Mã xác minh webhook",
+  "connectors.business.verifyHelp":
+    "Sao chép mã này vào cài đặt webhook của Meta trước khi đóng. Mã chỉ hiển thị một lần.",
+  "connectors.business.tokenDiscard":
+    "Mã xác minh chỉ hiển thị một lần. Đóng mà không sao chép?",
+  "connectors.business.reauth": "Cần kết nối lại",
+  "connectors.business.reauthHelp":
+    "Quyền truy cập đã hết hạn. Ngắt kết nối rồi kết nối lại bằng thông tin truy cập mới.",
+  "connectors.business.disconnectTitle": "Ngắt kết nối {name}?",
+  "connectors.business.disconnectHelp":
+    "Ngắt kết nối sẽ ngừng nhận tin nhắn mới và xóa thông tin truy cập đã lưu. Lịch sử hiện có vẫn được giữ. Kết nối mới bắt đầu ở chế độ Giữ riêng.",
   "connectors.telegramTitle": "Bot Telegram",
   "connectors.telegramSub": "Một bot nhận và gửi tin nhắn cho cả công ty.",
   "connectors.telegramNotConfigured":
@@ -15601,8 +15632,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.contact": "Dữ liệu liên hệ",
   "settings.part.integrations.accounting": "Kế toán",
   "settings.part.integrations.webhooks": "Webhook",
-  "settings.part.integrations.telegram": "Nhà cung cấp nhắn tin",
-
+  "settings.part.integrations.telegram": "Tài khoản nhắn tin",
   "settings.part.integrations.sharedMailboxes": "Hộp thư dùng chung",
   "sharedMailboxes.title": "Hộp thư dùng chung",
   "sharedMailboxes.intro":
@@ -20549,7 +20579,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.ofOpen_other": "trong {count} đang mở",
   "standing.open_one": "{count} đang mở",
   "standing.open_other": "{count} đang mở",
-  "contact.standing.dim.exchange": "Trao đổi",
+  "contact.standing.dim.exchange": "Trao đổi được chia sẻ",
   "contact.standing.dim.exchangeValue": "{in} nhận · {out} gửi",
   "contact.standing.dim.window": "90 ngày qua",
   "contact.standing.dim.reach": "Phạm vi",
@@ -24314,7 +24344,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.verdict.dayOf":
     "Ngày {day}/{total}, không có việc cần làm nào quá hạn.",
   "contact.verdict.nothingOwed": "Không bên nào còn việc cần làm.",
-  "contact.verdict.noExchange": "Chưa ghi nhận trao đổi nào với liên hệ này.",
+  "contact.verdict.noExchange":
+    "Chưa ghi nhận trao đổi được chia sẻ nào với liên hệ này.",
   "contactCase.title": "Liên hệ có thể trùng",
   "contactCase.intro":
     "Đánh dấu các liên hệ là cùng một người. Sau đó chọn liên hệ được giữ lại và người chịu trách nhiệm.",

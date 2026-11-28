@@ -110,6 +110,7 @@ func dataTaskTitleCode(taskID string) string {
 
 func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 	return []datatask.Task{
+		contacts.ChannelPhonesDataTask(),
 		heldMailDataTask(now), subjectMailDataTask(now), noticeSourceDataTask(now), homeRepairDataTask(pool, now), mailRecipientsDataTask(), machineAddressDataTask(), pastActivityClocksDataTask(), taskActivityClocksDataTask(),
 		unaskedcommitments.DataTask(), retiredstagecards.DataTask(), colleagueSenderDataTask(), deliveryReportsDataTask(pool, now), liftedAgentCallsDataTask(), mailDealsDataTask(pool), mailBodyCompletenessDataTask(),
 		machineSenderDataTask(), signatureTitleHistoryDataTask(pool), manualSignalNoEvidenceDataTask(), companyprofiles.IndustryTask(), contactEmployersDataTask(pool), unknownEmploymentDataTask(pool), leadScoresFollowOriginDataTask(now), phaseHistoryLinksDataTask(),

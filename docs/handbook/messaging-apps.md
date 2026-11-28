@@ -51,7 +51,7 @@ A company contact in Margince does not get a chat account or join a conversation
 
 ### How do I open messaging settings?
 <!-- opens: settings/integrations -->
-To open messaging settings, choose **Settings**, then **Integrations**, and find **Messaging apps**.
+To open messaging settings, choose **Settings**, then **Integrations**, then **Messaging accounts**.
 Connect your personal account there. Ask an administrator to complete shared setup when it is missing.
 Also called: connect chat, messaging setup.
 

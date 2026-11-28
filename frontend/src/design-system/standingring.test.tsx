@@ -52,7 +52,7 @@ describe("the strength ring", () => {
     );
   });
 
-  it("says no interaction happened rather than drawing a zero", () => {
+  it("names missing shared interactions when there is no evidence", () => {
     render(
       <StrengthRing
         score={0}
@@ -63,7 +63,9 @@ describe("the strength ring", () => {
       />,
     );
     expect(document.querySelector(".standing-ring-fill")).toBeNull();
-    expect(screen.getByRole("img")).toHaveAccessibleName("No interactions yet");
+    expect(screen.getByRole("img")).toHaveAccessibleName(
+      "No shared interactions yet",
+    );
     expect(screen.queryByText("0")).toBeNull();
   });
 });

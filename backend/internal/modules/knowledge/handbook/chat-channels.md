@@ -11,7 +11,7 @@ For setup and limits by app, read [What you can do with messaging apps](messagin
 
 ## Link a work channel
 
-An administrator connects the shared provider under **Settings**, **Integrations**. Connect your own
+An administrator connects the shared provider under **Settings**, **Integrations**, **Messaging accounts**. Connect your own
 messaging account there too. Shared installation and personal access are separate: adding a bot
 does not give it your private conversations.
 

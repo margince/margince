@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // seedUnrelatedMeetings adds meetings whose attendees are other contacts, so the
@@ -49,6 +50,49 @@ func (e *dedupeEnv) seedUnrelatedMeetings(ctx context.Context, t *testing.T, cou
 	}
 }
 
+const linkedChannelHistorySize = 20000
+
+func (e *dedupeEnv) seedLinkedChannelHistory(ctx context.Context, t *testing.T, contact ids.ContactID) ids.UUID {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := ResolveOrCreateChannelIdentity(ctx, tx, contact, connector.ChannelIdentity{
+			Provider: "telegram", ChannelUserID: "bounded-channel-author",
+		})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for after := 0; after < linkedChannelHistorySize; after += 5000 {
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `WITH messages AS (
+				INSERT INTO activity (kind, direction, channel_provider, source, source_system, source_id, captured_by)
+				SELECT 'message', 'inbound', 'telegram', 'telegram', 'telegram',
+				       'bounded-channel-' || n, 'connector:telegram'
+				  FROM generate_series(@after::int + 1, @after::int + 5000) n
+				RETURNING id, source_id),
+			linked AS (
+				INSERT INTO activity_link (activity_id, entity_type, contact_id)
+				SELECT id, 'contact', @contact FROM messages RETURNING activity_id)
+			INSERT INTO activity_participant (activity_id, role, channel_user_id, contact_id)
+			SELECT m.id, 'from', 'bounded-channel-author',
+			       CASE WHEN m.source_id = 'bounded-channel-1' THEN NULL ELSE @contact::uuid END
+			  FROM messages m JOIN linked l ON l.activity_id = m.id`,
+				pgx.NamedArgs{"after": after, "contact": contact})
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var unresolved ids.UUID
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT id FROM activity WHERE source_system = 'telegram'
+			AND source_id = 'bounded-channel-1'`).Scan(&unresolved)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return unresolved
+}
+
 func theCohortHoldSeeksPastAnUnrelatedInstallation(t *testing.T, e *dedupeEnv) {
 	ctx := e.as()
 	e.seedUnrelatedMeetings(ctx, t, 20000)
@@ -71,10 +115,37 @@ func theCohortHoldSeeksPastAnUnrelatedInstallation(t *testing.T, e *dedupeEnv) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	analyzeAsOwner(t, "activity", "activity_participant", "activity_link", "contact", "contact_email")
+	analyzeAsOwner(t, "activity", "activity_participant", "activity_link", "contact", "contact_email", "contact_channel_identity")
 	want := []ids.UUID{mail.UUID, attended.UUID, mergedAttendee.UUID}
 	slices.SortFunc(want, func(a, b ids.UUID) int { return bytes.Compare(a[:], b[:]) })
 
+	t.Run("unrelated history", func(t *testing.T) {
+		assertCohortHoldPlan(ctx, t, e, contact, want, 64, 512)
+	})
+
+	// The narrowed read changes no outcome: the repair still files every
+	// message under the contact.
+	if _, err := e.store.RepairContactCohort(ctx, contact); err != nil {
+		t.Fatal(err)
+	}
+	for _, activity := range []ids.ActivityID{mail, attended, mergedAttendee} {
+		if linked, _ := e.cohortStateOf(ctx, t, activity, contact); !linked {
+			t.Errorf("activity %s is not filed under the contact after the repair", activity)
+		}
+	}
+	if _, named := e.cohortStateOf(ctx, t, attended, contact); !named {
+		t.Error("the attendee row of the meeting does not name the contact after the repair")
+	}
+
+	channel := e.seedLinkedChannelHistory(ctx, t, contact)
+	analyzeAsOwner(t, "activity", "activity_participant", "activity_link", "contact_channel_identity")
+	t.Run("linked channel history", func(t *testing.T) {
+		assertCohortHoldPlan(ctx, t, e, contact, []ids.UUID{channel}, linkedChannelHistorySize+64, linkedChannelHistorySize*8+512)
+	})
+}
+
+func assertCohortHoldPlan(ctx context.Context, t *testing.T, e *dedupeEnv, contact ids.ContactID, want []ids.UUID, rowLimit, bufferLimit int) {
+	t.Helper()
 	recorder := &historyPlanTrace{}
 	for _, mode := range []string{"force_custom_plan", "force_generic_plan"} {
 		t.Run(mode, func(t *testing.T) {
@@ -101,7 +172,7 @@ func theCohortHoldSeeksPastAnUnrelatedInstallation(t *testing.T, e *dedupeEnv) {
 					return err
 				}
 				buffers := plans[0].Plan.SharedHits + plans[0].Plan.SharedReads
-				if len(plans) != 1 || !plans[0].Plan.boundsHistoryRows(64) || buffers > 512 {
+				if len(plans) != 1 || !plans[0].Plan.boundsHistoryRows(rowLimit) || buffers > bufferLimit {
 					return fmt.Errorf("the cohort hold visits unrelated rows (%d buffers): %s", buffers, raw)
 				}
 				t.Logf("shared_buffers=%d", buffers)
@@ -110,19 +181,5 @@ func theCohortHoldSeeksPastAnUnrelatedInstallation(t *testing.T, e *dedupeEnv) {
 				t.Fatal(err)
 			}
 		})
-	}
-
-	// The narrowed read changes no outcome: the repair still files every
-	// message under the contact.
-	if _, err := e.store.RepairContactCohort(ctx, contact); err != nil {
-		t.Fatal(err)
-	}
-	for _, activity := range []ids.ActivityID{mail, attended, mergedAttendee} {
-		if linked, _ := e.cohortStateOf(ctx, t, activity, contact); !linked {
-			t.Errorf("activity %s is not filed under the contact after the repair", activity)
-		}
-	}
-	if _, named := e.cohortStateOf(ctx, t, attended, contact); !named {
-		t.Error("the attendee row of the meeting does not name the contact after the repair")
 	}
 }
