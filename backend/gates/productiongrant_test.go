@@ -16,15 +16,16 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-var additionalGrantLine = regexp.MustCompile(`(?ms)^Additional Use Grant:[ \t]*(.*?)^Change Date:`)
-var freeProductionWords = regexp.MustCompile(`(?i)\bproduction\b|\b(?:produktiv|produktion)[a-z]*\b|\bechtbetrieb\b|sản xuất|vận hành thực tế`)
-var freeGrantWords = regexp.MustCompile(`(?i)\bfree\b|no charge|kostenlos|kostenfrei|miễn phí`)
-var seatAllowanceWords = regexp.MustCompile(`(?i)(?:\b[0-9]+|\bone|\btwo|\bthree|\bfour|\bfive|\bsix|\bseven|\beight|\bnine|\bten|\btwenty|\bhundred|\bunlimited|\bein|\bzwei|\bdrei|\bvier|\bfünf|\bmột|\bhai|\bba|\bbốn|\bnăm)[\s-]+(?:(?:free|production|kostenlose|produktive)[\s-]+)*(?:seats?\b|users?\b|members?\b|people\b|persons?\b|licen[cs]es?\b|sitze?\b|personen\b|plätze\b|lizenzen\b|(?:be)?nutzer(?:n|innen)?\b|người dùng|tài khoản)`)
-var nonProductionWords = regexp.MustCompile(`(?i)non[- ]production|nicht[- ]produktiv[a-z]*`)
+var (
+	additionalGrantLine = regexp.MustCompile(`(?ms)^Additional Use Grant:[ \t]*(.*?)^Change Date:`)
+	freeProductionWords = regexp.MustCompile(`(?i)\bproduction\b|\b(?:produktiv|produktion)[a-z]*\b|\bechtbetrieb\b|sản xuất|vận hành thực tế`)
+	freeGrantWords      = regexp.MustCompile(`(?i)\bfree\b|no charge|kostenlos|kostenfrei|miễn phí`)
+	seatAllowanceWords  = regexp.MustCompile(`(?i)(?:\b[0-9]+|\bone|\btwo|\bthree|\bfour|\bfive|\bsix|\bseven|\beight|\bnine|\bten|\btwenty|\bhundred|\bunlimited|\bein|\bzwei|\bdrei|\bvier|\bfünf|\bmột|\bhai|\bba|\bbốn|\bnăm)[\s-]+(?:(?:free|production|kostenlose|produktive)[\s-]+)*(?:seats?\b|users?\b|members?\b|people\b|persons?\b|licen[cs]es?\b|sitze?\b|personen\b|plätze\b|lizenzen\b|(?:be)?nutzer(?:n|innen)?\b|người dùng|tài khoản)`)
+	nonProductionWords  = regexp.MustCompile(`(?i)non[- ]production|nicht[- ]produktiv[a-z]*`)
+)
 
 func productionSeatPromise(paragraph string) bool {
 	text := strings.Join(strings.Fields(paragraph), " ")
