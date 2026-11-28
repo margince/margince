@@ -5,6 +5,8 @@
 Open **Messenger** beside Email on a company, deal or project. The small window keeps the record
 in view while you write. Dispact, Slack and Teams use the same layout, with their own provider marks.
 
+For setup and limits by app, read [What you can do with messaging apps](messaging-apps.md).
+
 ## Connect your account
 
 Under **Settings**, **Integrations**, connect your own provider account. This authorizes actions as

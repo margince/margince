@@ -12,7 +12,9 @@ share [the conversation boundary](../../backend/internal/modules/chatlinks/messa
 |---|---|---|---|
 | Dispact | Personal participant authorization, private conversations and replies | Immutable channel and complete canonical thread capabilities | Effective complete audience required |
 | Slack | User authorization, direct and group conversations, private channel discovery | Complete bounded threads under the standard history tier | Bot installation and a verified internal audience |
-| Teams | Delegated personal authorization, chats and replies | Installed-team consent; standard and private channels | Bot Framework delivery in standard channels; private posting unavailable |
+| Teams | Delegated personal authorization, chats and replies | Standard channels; private reads require channel-specific app access and qualification | Bot Framework delivery in standard channels; private posting unavailable |
+
+Private Teams channel access does not follow from installation in the parent team. Channel-specific installation and consent must be qualified before promising private reads.
 
 Shared Teams channels are refused. The Teams adapter pins the selected tenant and installed team.
 It supports the public-cloud Graph and Bot Framework endpoints named in

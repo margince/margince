@@ -7,6 +7,7 @@ Slack or Teams. Channel sync saves relevant channel decisions to History and can
 updates back to that channel.
 
 [Messenger](messenger.md) is where you write a quick message yourself.
+For setup and limits by app, read [What you can do with messaging apps](messaging-apps.md).
 
 ## Link a work channel
 
@@ -17,7 +18,9 @@ does not give it your private conversations.
 On the record, choose the provider and link an existing channel. Review the channel and its
 scope. A shared room needs a clear thread so other work does not become this record's
 history. Where the provider supports it, you can create a private channel from the same card.
-Private Teams channels support incoming summaries; automatic sent posting is not available there.
+
+Private Teams channel reads require access for the app in that channel and a setup check.
+Margince cannot send automatic posts to private Teams channels or link shared Teams channels.
 
 A channel can belong to a company even when no deal or project exists. Separate threads in a shared
 room can serve separate records. Linking a company does not give its readers access to a hidden
