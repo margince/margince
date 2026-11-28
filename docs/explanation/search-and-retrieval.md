@@ -95,7 +95,7 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
 - **A header block reads in three languages.** Its labels are English, German or Vietnamese (`Từ:`
   with `Đã gửi:` or `Ngày:`). A mail stored before this rule is found through its quoted text until the data task
   `core/1795596207_mail_search_text` has passed it. A mail stored before the Vietnamese labels keeps
-  its earlier end until the data task `core/1795845904_vietnamese_mail_headers` has passed it.
+  its earlier end until the data task `core/1795866483_vietnamese_mail_headers` has passed it.
 - **A mail is one hit.** A mail that several mailboxes captured is one activity hit, the reader's
   own copy where they have one. The timelines group copies the same way
   (`connector.MailCopyGroupFrom`).

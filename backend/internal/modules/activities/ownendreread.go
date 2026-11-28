@@ -25,9 +25,9 @@ const vietnameseHeaderLine = `(^|\n)\s*\*{0,2}(Từ|Đã gửi|Ngày gửi|Ngày
 // with those lines is not found by the mail it passes on.
 func OwnEndRereadDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795845904_vietnamese_mail_headers", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795845904_vietnamese_mail_headers"),
-		Requires: []string{"core/1795845904"},
+		ID: "core/1795866483_vietnamese_mail_headers", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795866483_vietnamese_mail_headers"),
+		Requires: []string{"core/1795866483"},
 		Steps: []datatask.Step{{
 			Name: "reread_own_end", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{Reason: "The stored end and the search value are derived from the body, unaudited as in activities.insertLoggedActivityRow."},
