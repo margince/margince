@@ -16,6 +16,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/andybalholm/brotli"
@@ -63,25 +64,55 @@ type License struct {
 // it, and Resolve is what reads it.
 var ErrVerdict = errors.New("license rejected")
 
-// check runs the module (compiled wasm bytes, gzipped or raw) to validate token
-// for product at generation, issued by issuer. It returns the license the module
-// verified and the granted attributes, or an error when the module rejects the
-// license or fails to run. The token is passed to the module as the
-// MARGINCE_LICENSE environment variable; issuer, product and generation are
-// passed as arguments.
-//
-// The parameters this repository only ever passes constants for stay parameters:
-// the signature is upstream's, and narrowing it here would make the copy harder
-// to compare against the original than the unused generality costs. The tests
-// pass the same constants for the same reason — what varies is the token.
-//
-//nolint:unparam // upstream's signature, kept comparable; see the vendoring note above
-func check(ctx context.Context, module []byte, issuer, product string, generation int, token string) (Result, error) {
+// validator is the module compiled once into a runtime of its own. Compiling is
+// nearly all the cost of a check, so it is paid once. Every check starts a fresh
+// instance, so no memory, output or exit of one check reaches the next. Safe for
+// concurrent checks.
+type validator struct {
+	runtime  wazero.Runtime
+	compiled wazero.CompiledModule
+}
+
+// bundled is the bundled module compiled on the first check that needs it, and
+// kept for the life of the process. A process with no token never compiles it.
+// A failure is kept too: the bytes are fixed at build, so a retry fails the same.
+var bundled = sync.OnceValues(func() (*validator, error) { return compile(bundledModule) })
+
+// compile readies module (compiled wasm bytes, gzipped, brotli or raw) for
+// checks. The runtime is not tied to any caller's context, because it outlives
+// the check that first asked for it.
+func compile(module []byte) (*validator, error) {
 	module, err := maybeDecompress(module)
 	if err != nil {
-		return Result{}, err
+		return nil, err
 	}
-	out, err := run(ctx, module, issuer, product, generation, token)
+	ctx := context.Background()
+	runtime := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().WithCloseOnContextDone(true))
+	wasi_snapshot_preview1.MustInstantiate(ctx, runtime)
+	compiled, err := runtime.CompileModule(ctx, module)
+	if err != nil {
+		//craft:ignore swallowed-errors the compile error is the one to report; a runtime that holds no module has nothing a close could fail to release
+		_ = runtime.Close(ctx)
+		return nil, fmt.Errorf("compile module: %w", err)
+	}
+	return &validator{runtime: runtime, compiled: compiled}, nil
+}
+
+// check runs the module to validate token for product at generation, issued by
+// issuer. It returns the license the module verified and the granted
+// attributes, or an error when the module rejects the license or fails to run.
+// The token is passed to the module as the MARGINCE_LICENSE environment
+// variable; issuer, product and generation are passed as arguments.
+//
+// The parameters this repository only ever passes constants for stay parameters.
+// The signature is upstream's, less the module bytes the receiver holds compiled.
+// Narrowing it further would make the copy harder to compare against the
+// original. The tests pass the same constants for the same reason: what varies
+// is the token.
+//
+//nolint:unparam // upstream's signature, kept comparable; see the vendoring note above
+func (v *validator) check(ctx context.Context, issuer, product string, generation int, token string) (Result, error) {
+	out, err := v.run(ctx, issuer, product, generation, token)
 	if err != nil {
 		return Result{}, err
 	}
@@ -127,14 +158,12 @@ func readAll(reader io.Reader, what string) ([]byte, error) {
 // module's stderr.
 //
 // The run ends with ctx, so a hung module cannot outlive its caller's budget.
-func run(ctx context.Context, module []byte, issuer, product string, generation int, token string) ([]byte, error) {
-	runtime := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().WithCloseOnContextDone(true))
-	//craft:ignore swallowed-errors the runtime is torn down after its single-shot verdict is already in hand; a close failure cannot change it
-	defer func() { _ = runtime.Close(ctx) }()
-	wasi_snapshot_preview1.MustInstantiate(ctx, runtime)
-
+// The stop closes this instance only; the compiled module serves the next check.
+func (v *validator) run(ctx context.Context, issuer, product string, generation int, token string) ([]byte, error) {
 	var stdout, stderr bytes.Buffer
 	config := wazero.NewModuleConfig().
+		// Unnamed, so checks running at once do not collide on one module name.
+		WithName("").
 		WithStdout(&stdout).
 		WithStderr(&stderr).
 		WithEnv("MARGINCE_LICENSE", token).
@@ -145,10 +174,15 @@ func run(ctx context.Context, module []byte, issuer, product string, generation 
 		WithSysWalltime().
 		WithSysNanotime()
 
-	// A Go wasip1 module that exits 0 returns a nil error; a non-zero exit
-	// returns an ExitError (the module rejecting the license); any other error is
-	// a run failure (a malformed module or a trap).
-	_, err := runtime.InstantiateWithConfig(ctx, module, config)
+	// A Go wasip1 module that exits 0 returns a nil error. A non-zero exit
+	// returns an ExitError (the module rejecting the license). Any other error is
+	// a run failure (a trap). An exit closes the instance; one whose _start
+	// returned without exiting is closed here, so no check holds memory.
+	instance, err := v.runtime.InstantiateModule(ctx, v.compiled, config)
+	if instance != nil {
+		//craft:ignore swallowed-errors the instance is torn down after its single-shot verdict is already in hand; a close failure cannot change it
+		defer func() { _ = instance.Close(ctx) }()
+	}
 	if err == nil {
 		return stdout.Bytes(), nil
 	}

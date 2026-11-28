@@ -1737,10 +1737,10 @@ slop-trend: test-craft-pin
 test-comment-budget:
 	@./scripts/test-check-comment-budget.sh
 
-## rls-store-path — DB-free floor under the write shape: no internal/modules
-## statement may address the pool directly, because it would commit outside the
-## transaction that holds the audit and outbox rows. Module work runs inside
-## database.WithTx, which is what bounds it.
+## rls-store-path — DB-free floor under the write shape: no internal/modules or
+## internal/compose statement may address a pool directly, because it would commit
+## outside the transaction that holds the audit and outbox rows. That work runs
+## inside database.WithTx, which is what bounds it.
 ## A statement that must run on the pool carries a `// pool-exempt: <reason>` line.
 rls-store-path:
 	@./scripts/check-rls-store-path.sh

@@ -13,14 +13,14 @@ import (
 // The reader compares the stored instant with a bound the driver cuts to the
 // microsecond. A stored 999 nanoseconds more would round up past that bound.
 func TestAWaitingHorizonIsStoredAtTheMicrosecondTheDatabaseHolds(t *testing.T) {
-	tx := &stateTx{rows: map[string][]byte{}}
+	tx := &fakeTx{}
 	measured := time.Date(2026, 5, 4, 9, 30, 0, 123456999, time.UTC)
 	if err := StoreWaitingHorizonTx(context.Background(), tx, 21, measured); err != nil {
 		t.Fatal(err)
 	}
-	stored := string(tx.rows[string(StateActivityWaitingHorizon)])
-	if !strings.Contains(stored, `"measured_at":"2026-05-04T09:30:00.123456Z"`) {
-		t.Fatalf("the horizon was stored as %s, want the instant cut to the microsecond", stored)
+	stored, encoded := tx.execArgs[1].(string)
+	if !encoded || !strings.Contains(stored, `"measured_at":"2026-05-04T09:30:00.123456Z"`) {
+		t.Fatalf("the horizon was stored as %v, want the instant cut to the microsecond", tx.execArgs[1])
 	}
 }
 

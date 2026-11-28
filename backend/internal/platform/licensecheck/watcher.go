@@ -16,9 +16,9 @@ import (
 )
 
 // recheckInterval is how often a running process re-resolves its posture. A
-// license changes state on a calendar — expiry, then expiry plus grace — so
-// daily is as often as the answer can differ, and a re-check costs one
-// short-lived wazero instantiation.
+// license changes state on a calendar (expiry, then expiry plus grace), so daily
+// is as often as the answer can differ. A re-check costs one short-lived
+// instance of the module compiled at the first check.
 const recheckInterval = 24 * time.Hour
 
 // recheckBudget bounds the context of a re-check that no longer follows its
@@ -44,7 +44,7 @@ type Watcher struct {
 	source  TokenSource
 	now     func() time.Time
 	budget  time.Duration
-	module  []byte
+	module  func() (*validator, error)
 	log     *slog.Logger
 	env     runtimeenv.Environment
 	posture atomic.Pointer[Posture]
@@ -78,7 +78,7 @@ func NewWatcher(ctx context.Context, source TokenSource, now func() time.Time, l
 	if err != nil {
 		return nil, err
 	}
-	w := &Watcher{source: source, now: now, budget: recheckBudget, module: bundledModule, log: log, env: env}
+	w := &Watcher{source: source, now: now, budget: recheckBudget, module: bundled, log: log, env: env}
 	w.posture.Store(&resolved)
 	return w, nil
 }

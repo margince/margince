@@ -250,7 +250,8 @@ already committed:
   again after about `200ms`.
 - **Where it runs:** inside `cmd/api` by default (`--inline-relay=true`), so one process is a
   complete install. It can also run alone in `cmd/worker` when a team splits the setup. Domain code
-  **never** calls `XADD` itself.
+  **never** calls `XADD` itself, and `backend/gates/streamwriter_test.go` fails one outside
+  `platform/events`.
 - Delivery happens **one or more times** by design: a crash after `XADD`, before the `published_at` mark,
   sends the row again. The count of waiting rows and of sent rows show on `/metrics`
   (`margince_outbox_unpublished`, `margince_relay_published_total`). When the relay runs inside the
