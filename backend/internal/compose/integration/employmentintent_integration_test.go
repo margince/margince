@@ -95,8 +95,11 @@ func TestEmploymentUserDecisionsUseTheSameAuthorityForMembersAndMCP(t *testing.T
 		evidence string
 		want     string
 	}{
-		{"human", nil, "{}", "true"}, {"agent", &e.Rep1, "{}", "true"}, {"agent", nil, "{}", "false"},
-		{"human", nil, `{"run_id":"provider-import"}`, "false"}, {"system", nil, "{}", "false"},
+		{"human", nil, "{}", "true"},
+		{"agent", &e.Rep1, "{}", "true"},
+		{"agent", nil, "{}", "false"},
+		{"human", nil, `{"run_id":"provider-import"}`, "false"},
+		{"system", nil, "{}", "false"},
 	} {
 		got := e.WsScalar(t, `SELECT (`+employment.UserDecisionSQL("a")+`)::text FROM (VALUES(@actor::text,@behalf::uuid,@evidence::jsonb)) a(actor_type,on_behalf_of,evidence)`, pgx.StrictNamedArgs{"actor": c.actor, "behalf": c.behalf, "evidence": c.evidence})
 		if got != c.want {

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 

@@ -20,9 +20,8 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
-
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 

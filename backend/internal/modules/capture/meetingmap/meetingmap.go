@@ -29,9 +29,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
-
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"

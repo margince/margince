@@ -15,14 +15,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/installseam"
-	"github.com/margince/margince/backend/internal/compose/reportfixture"
-	"github.com/margince/margince/backend/internal/modules/deals"
-
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/reportfixture"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -283,7 +282,7 @@ func prepareJoinedVisitReport(t *testing.T) joinedVisitReport {
 	return joinedVisitReport{Fixture: f, report: registeredReport{name: "ext:reportdemo:joined", unit: "reportdemo", kind: extReportBreakdown, population: "pipeline-current", by: *f.Field.ColumnName + ".site"}}
 }
 
-func (f joinedVisitReport) run(t *testing.T, ctx context.Context, floor analyticsquery.Floor) extensionReportAnswer {
+func (f joinedVisitReport) run(ctx context.Context, t *testing.T, floor analyticsquery.Floor) extensionReportAnswer {
 	t.Helper()
 	answer, ok, err := newReportEngine(f.E.Pool).runRegistered(ctx, f.report, floor)
 	if err != nil || !ok {
@@ -298,7 +297,7 @@ func TestAJoinedReportKeepsBothRowScopesAndOneDealPerRow(t *testing.T) {
 		scope        principal.RowScope
 		north, south int
 	}{{principal.RowScopeOwn, 6, 0}, {principal.RowScopeTeam, 7, 2}, {principal.RowScopeAll, 8, 2}} {
-		answer := f.run(t, f.Reader(c.scope), analyticsquery.Floor(1))
+		answer := f.run(f.Reader(c.scope), t, analyticsquery.Floor(1))
 		counts := map[string]int{}
 		for _, g := range answer.Groups {
 			counts[fmt.Sprint(g.Key)] = g.Count
@@ -326,12 +325,12 @@ func TestAJoinedReportNeedsBothOptInsAndTheKindsReadRight(t *testing.T) {
 
 func TestAJoinedReportKeepsTheFloorAndExtensionFieldMasks(t *testing.T) {
 	f := prepareJoinedVisitReport(t)
-	answer := f.run(t, f.Reader(principal.RowScopeAll), analyticsquery.DefaultFloor)
+	answer := f.run(f.Reader(principal.RowScopeAll), t, analyticsquery.DefaultFloor)
 	if !answer.Withheld || answer.Total != nil {
 		t.Fatal("a small joined group disclosed its total")
 	}
 	masked := f.E.As(f.E.Rep1, nil, principal.Permissions{Objects: map[string]principal.ObjectGrant{"deal": {Read: true}, reportDemoObject: {Read: true}, "installation_settings": {Read: true}}, RowScope: principal.RowScopeOwn, FieldMasks: []principal.FieldMask{{Object: reportDemoObject, Field: "site", Condition: principal.MaskAlways}}})
-	answer = f.run(t, masked, analyticsquery.Floor(1))
+	answer = f.run(masked, t, analyticsquery.Floor(1))
 	for _, g := range answer.Groups {
 		if g.Key != nil {
 			t.Fatalf("masked kind value escaped: %+v", g)

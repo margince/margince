@@ -9,12 +9,14 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
+// ResolvedPopulation qualifies a population declared within the unit.
 func ResolvedPopulation(unit extension.Name, population string) string {
 	if strings.Contains(population, "-") {
 		return population
@@ -22,10 +24,12 @@ func ResolvedPopulation(unit extension.Name, population string) string {
 	return extension.RecordKindName(unit, population)
 }
 
+// SortedCombination gives each selected set one stable group value.
 func SortedCombination(expr string) string {
 	return "(SELECT string_agg(v, ',' ORDER BY v) FROM unnest(" + expr + ") v)"
 }
 
+// MultiselectColumns reads the declared multi-select schema for a population.
 func MultiselectColumns(ctx context.Context, tx pgx.Tx, object datasource.EntityType) ([]fieldcatalog.Column, error) {
 	cols, err := customfields.ActiveColumnsIn(ctx, tx, string(object))
 	if err != nil {
@@ -34,6 +38,7 @@ func MultiselectColumns(ctx context.Context, tx pgx.Tx, object datasource.Entity
 	return slices.DeleteFunc(cols, func(c fieldcatalog.Column) bool { return c.Type != fieldcatalog.TypeMultiselect }), nil
 }
 
+// ReportableColumns omits record pickers whose IDs are not report dimensions.
 func ReportableColumns(cols []fieldcatalog.Column) []fieldcatalog.ReportableColumn {
 	out := make([]fieldcatalog.ReportableColumn, 0, len(cols))
 	for _, c := range cols {
@@ -42,7 +47,7 @@ func ReportableColumns(cols []fieldcatalog.Column) []fieldcatalog.ReportableColu
 	return out
 }
 
-// companyFieldExpr reads one company column for the deal's company. The
+// CompanyFieldExpr reads one company column for the deal's company. The
 // subselect on the company's primary key matches at most one row, so the grain
 // stays one row per deal. A deal with no company reads NULL.
 func CompanyFieldExpr(column string) string {

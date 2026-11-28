@@ -24,11 +24,10 @@ import (
 	"slices"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
-
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )

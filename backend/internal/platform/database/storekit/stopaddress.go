@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
-
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // StopOnAddressesSQL is true when the communication_suppression row aliased

@@ -4,10 +4,9 @@
 package storekit
 
 import (
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
-
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // EmailLookups are the stored spellings a lookup of these addresses matches.

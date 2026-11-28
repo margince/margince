@@ -24,12 +24,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
-
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 

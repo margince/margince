@@ -34,20 +34,27 @@ type IdentifierPage struct {
 	Review  []ids.UUID
 }
 
+const identifierEmailColumn = "email"
+
+const (
+	identifierAddressColumn = "address"
+	identifierDomainColumn  = "domain"
+)
+
 type identifierRow struct {
 	ID, Parent ids.UUID
 	Value      *string
 }
 
 func (c IdentifierColumn) validate() error {
-	if c.HashedDomainKey && (c.Column != "domain" || c.Parent != "") {
+	if c.HashedDomainKey && (c.Column != identifierDomainColumn || c.Parent != "") {
 		return errors.New("identifier text key needs a domain without a UUID parent")
 	}
 	if c.Table == "" || c.Object == "" || (c.Parent == "" && !c.HashedDomainKey) {
 		return errors.New("identifier repair needs its owning table and record")
 	}
 	switch c.Column {
-	case "email", "address", "domain":
+	case identifierEmailColumn, identifierAddressColumn, identifierDomainColumn:
 		return nil
 	default:
 		return errors.New("identifier repair names no address or domain column")
@@ -92,10 +99,7 @@ func (c IdentifierColumn) Repair(ctx context.Context, tx pgx.Tx, after ids.UUID,
 		if row.Value == nil {
 			continue
 		}
-		folded := correspondence.Fold(*row.Value)
-		if c.Column == "domain" {
-			folded = owndomain.Fold(*row.Value)
-		}
+		folded := c.fold(*row.Value)
 		if folded == *row.Value {
 			continue
 		}
@@ -168,7 +172,8 @@ func (c IdentifierColumn) writeRow(ctx context.Context, tx pgx.Tx, row identifie
 // Count inspects at most maximum+1 primary keys, including unchanged rows.
 func (c IdentifierColumn) Count(ctx context.Context, q interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
-}, maximum int64) (int64, error) {
+}, maximum int64,
+) (int64, error) {
 	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
 		return 0, err
 	}
@@ -183,12 +188,12 @@ func (c IdentifierColumn) Count(ctx context.Context, q interface {
 //craft:ignore naked-any the audit images contain only a fixed identifier field
 func identifierImage(column, value string) map[string]any {
 	switch column {
-	case "email":
-		return map[string]any{"email": value}
-	case "address":
-		return map[string]any{"address": value}
-	case "domain":
-		return map[string]any{"domain": value}
+	case identifierEmailColumn:
+		return map[string]any{identifierEmailColumn: value}
+	case identifierAddressColumn:
+		return map[string]any{identifierAddressColumn: value}
+	case identifierDomainColumn:
+		return map[string]any{identifierDomainColumn: value}
 	default:
 		return nil
 	}
@@ -199,4 +204,11 @@ func (c IdentifierColumn) keySQL() string {
 		return "identifier_spelling_row_id(" + pgx.Identifier{c.Column}.Sanitize() + ")"
 	}
 	return "id"
+}
+
+func (c IdentifierColumn) fold(value string) string {
+	if c.Column == identifierDomainColumn {
+		return owndomain.Fold(value)
+	}
+	return correspondence.Fold(value)
 }

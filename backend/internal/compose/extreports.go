@@ -14,12 +14,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/margince/margince/backend/internal/compose/reportjoin"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/reportjoin"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -295,8 +294,8 @@ func (e *reportEngine) runRegisteredSnapshot(ctx context.Context, r registeredRe
 }
 
 func (r registeredReport) joinedSpecFor(ctx context.Context, pool *pgxpool.Pool, spec reportSpec) (reportSpec, bool, error) {
-	join, err := reportjoin.Resolve(ctx, pool, r.unit, r.by)
-	if err != nil || join == nil {
+	join, found, err := reportjoin.Resolve(ctx, pool, r.unit, r.by)
+	if err != nil || !found {
 		return reportSpec{}, false, err
 	}
 	spec.joins = append(slices.Clone(spec.joins), join.SQL)

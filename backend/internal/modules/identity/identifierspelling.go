@@ -8,6 +8,6 @@ import "github.com/margince/margince/backend/internal/platform/database/storekit
 // IdentifierSpellings are the identifier columns this module owns.
 func IdentifierSpellings() []storekit.IdentifierColumn {
 	return []storekit.IdentifierColumn{
-		{Table: "app_user", Column: "email", Object: "user", Parent: "id"},
+		{Table: "app_user", Column: memberEmailField, Object: "user", Parent: "id"},
 	}
 }

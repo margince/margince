@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func legacyColumn(t *testing.T, e *integration.Env, table, column string) {
+func legacyColumn(t *testing.T, table, column string) {
 	t.Helper()
 	if _, err := integration.OwnerConn(t).Exec(t.Context(), "ALTER TABLE "+pgx.Identifier{table}.Sanitize()+" DROP CONSTRAINT IF EXISTS "+pgx.Identifier{table + "_" + column + "_one_spelling"}.Sanitize()); err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func stepFor(t *testing.T, table string) datatask.Step {
 
 func TestIdentifierSpellingRepairBoundsPagesAndPreservesAtomicHistory(t *testing.T) {
 	e := integration.Setup(t)
-	legacyColumn(t, e, "contact_email", "email")
+	legacyColumn(t, "contact_email", "email")
 	contact := e.SeedContact(t, "Address owner", nil)
 	raw := "  re\u200bp@example.test\u00a0"
 	row := ids.NewV7()
@@ -120,7 +120,7 @@ func TestIdentifierSpellingRepairBoundsPagesAndPreservesAtomicHistory(t *testing
 
 func TestIdentifierSpellingRepairLeavesCollidingUsersForReview(t *testing.T) {
 	e := integration.Setup(t)
-	legacyColumn(t, e, "app_user", "email")
+	legacyColumn(t, "app_user", "email")
 	first, second := ids.NewV7(), ids.NewV7()
 	e.WsExec(t, `INSERT INTO app_user(id,email,display_name) VALUES($1,'duplicate@example.test','First'),($2,$3,'Second')`, first, second, "dupli\u200bcate@example.test")
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -157,7 +157,7 @@ func TestIdentifierSQLAndGoUseTheSameUnicodeSpelling(t *testing.T) {
 
 func TestOwnDomainRepairUsesAnOpaqueCursor(t *testing.T) {
 	e := integration.Setup(t)
-	legacyColumn(t, e, "workspace_email_domain", "domain")
+	legacyColumn(t, "workspace_email_domain", "domain")
 	e.WsExec(t, `INSERT INTO workspace_email_domain(domain,source) VALUES($1,'admin')`, " exam\u200bple.test ")
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	step := stepFor(t, "workspace_email_domain")

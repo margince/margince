@@ -10,8 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
-
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
@@ -20,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 

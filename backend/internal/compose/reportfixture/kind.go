@@ -7,10 +7,11 @@ package reportfixture
 
 import (
 	"context"
+	"testing"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
-	"testing"
 )
 
 func prepareVisitKind(t *testing.T) {
@@ -21,5 +22,4 @@ func prepareVisitKind(t *testing.T) {
 	}
 	kinds := []extension.RecordKindDeclaration{{Kind: "visit", DisplayName: "Visit", Table: visitTable, OwnerColumn: "owner_id", NaturalKey: []string{"code"}, Fields: []extension.RecordKindField{{Name: "code", Label: "Code"}, {Name: "site", Label: "Site", Reportable: true}}}}
 	recordkinds.Register("reportdemo", kinds)
-
 }

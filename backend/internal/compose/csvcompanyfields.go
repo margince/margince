@@ -16,9 +16,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/platform/owndomain"
-
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
 // storedPrimaryDomain reads the `domain` target's current value.

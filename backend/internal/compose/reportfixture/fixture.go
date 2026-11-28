@@ -26,14 +26,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const northSite = "north"
+
 const visitTable = "ext_reportdemo_visit"
 
+// Fixture holds deals and extension rows for report access checks.
 type Fixture struct {
 	E       *integration.Env
 	Catalog *customfields.Service
 	Field   crmcontracts.CustomField
 }
 
+// Prepare seeds scoped deals through their owning stores.
 func Prepare(t *testing.T, register func(*testing.T)) Fixture {
 	t.Helper()
 	e := integration.Setup(t)
@@ -62,7 +66,7 @@ func Prepare(t *testing.T, register func(*testing.T)) Fixture {
 		count     int
 		archive   bool
 	}{
-		{"north", e.Rep1, e.Rep1, 6, false}, {"south", e.Rep2, e.Rep1, 2, false}, {"north", e.Rep1, e.Rep2, 1, false}, {"north", e.Rep3, e.Rep3, 1, false}, {"archived", e.Rep1, e.Rep1, 1, true},
+		{northSite, e.Rep1, e.Rep1, 6, false}, {"south", e.Rep2, e.Rep1, 2, false}, {northSite, e.Rep1, e.Rep2, 1, false}, {northSite, e.Rep3, e.Rep3, 1, false}, {"archived", e.Rep1, e.Rep1, 1, true},
 	} {
 		id := ids.NewV7()
 		if _, err := owner.Exec(context.Background(), `INSERT INTO ext.`+visitTable+`(id,code,site,owner_id) VALUES($1,$2,$3,$4)`, id, id.String(), part.site, part.owner); err != nil {
@@ -83,6 +87,7 @@ func Prepare(t *testing.T, register func(*testing.T)) Fixture {
 	return Fixture{E: e, Catalog: catalog, Field: field}
 }
 
+// SeedVisits fills the already-registered extension test table.
 func SeedVisits(t *testing.T, site string, live, archived int) {
 	t.Helper()
 	owner := integration.OwnerConn(t)
@@ -99,6 +104,7 @@ func SeedVisits(t *testing.T, site string, live, archived int) {
 	}
 }
 
+// Reader binds the report and extension read grants for this fixture.
 func Reader(e *integration.Env, mask ...principal.FieldMask) context.Context {
 	return e.As(e.Rep1, nil, principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
@@ -111,6 +117,7 @@ func Reader(e *integration.Env, mask ...principal.FieldMask) context.Context {
 	})
 }
 
+// Reader selects the requested own, team or all scope over the same records.
 func (f Fixture) Reader(scope principal.RowScope) context.Context {
 	teams := []ids.UUID(nil)
 	if scope == principal.RowScopeTeam {
@@ -119,6 +126,7 @@ func (f Fixture) Reader(scope principal.RowScope) context.Context {
 	return f.E.As(f.E.Rep1, teams, principal.Permissions{Objects: map[string]principal.ObjectGrant{"deal": {Read: true}, "ext_reportdemo_visit": {Read: true}, "installation_settings": {Read: true}}, RowScope: scope})
 }
 
+// PrepareTable creates the registered extension table before store writes.
 func PrepareTable(t *testing.T) {
 	t.Helper()
 	owner := integration.OwnerConn(t)
@@ -134,5 +142,4 @@ func PrepareTable(t *testing.T) {
 			t.Fatalf("preparing the visit table (%s): %v", stmt, err)
 		}
 	}
-
 }

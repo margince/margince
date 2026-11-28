@@ -6,10 +6,11 @@
 package gates
 
 import (
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"regexp"
 	"testing"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The SQL mapping is generated from Go rather than a server's locale tables.

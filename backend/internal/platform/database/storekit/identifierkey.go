@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // SuppressionKeyLabel names the key erased identifiers are hashed under. The

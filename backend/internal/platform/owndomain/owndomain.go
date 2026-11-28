@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
-
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/net/idna"
 	"golang.org/x/net/publicsuffix"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
 // Fold folds a mail domain to the one form own domains are compared in:

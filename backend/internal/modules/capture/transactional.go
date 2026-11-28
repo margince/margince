@@ -28,10 +28,9 @@ package capture
 import (
 	"strings"
 
-	"github.com/margince/margince/backend/internal/platform/owndomain"
-
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
 // Personal service mail can be bookkeeping without making its domain mail infrastructure.

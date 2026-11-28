@@ -14,15 +14,15 @@ package compose
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"maps"
 	"slices"
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/reportjoin"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/dealcoverage"
+	"github.com/margince/margince/backend/internal/compose/reportjoin"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/apperrors"

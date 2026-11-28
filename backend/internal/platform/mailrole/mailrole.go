@@ -25,7 +25,6 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/owndomain"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 

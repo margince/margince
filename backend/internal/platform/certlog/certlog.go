@@ -32,10 +32,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/owndomain"
-
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/platform/outbound"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 )
 
