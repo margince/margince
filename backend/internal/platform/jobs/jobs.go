@@ -35,6 +35,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -43,6 +44,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
@@ -88,6 +90,28 @@ type Config struct {
 	// Never set outside a test harness.
 	// TestJobRunnerConfigIsNeverSetInProduction holds that.
 	TestOnly bool
+	// BindWorkspace is the one place a job's workspace is decided. A worker
+	// client runs it as River worker middleware around every job, and the
+	// context it returns is the one the worker runs under. An error fails the
+	// job without running it, so no job runs unbound. It runs per job and the
+	// caller must not cache a workspace across jobs.
+	BindWorkspace BindWorkspace
+}
+
+// BindWorkspace binds the installation's workspace onto the context one job
+// runs under. It receives the job row so a kind that owes work to workspaces
+// no company is live in (the cleanups that reach archived data) can opt out.
+type BindWorkspace func(ctx context.Context, job *rivertype.JobRow) (context.Context, error)
+
+// bindingMiddleware is the River worker middleware that runs the binding.
+func bindingMiddleware(bind BindWorkspace) rivertype.WorkerMiddleware {
+	return river.WorkerMiddlewareFunc(func(ctx context.Context, job *rivertype.JobRow, doInner func(context.Context) error) error {
+		bound, err := bind(ctx, job)
+		if err != nil {
+			return FaultContext(ctx, err)
+		}
+		return doInner(bound)
+	})
 }
 
 // Runner wraps a River client bound to the shared pool. The zero value is
@@ -120,6 +144,9 @@ func (r *Runner) refuseUnbound(kind string) error {
 // New builds a River client over the given pool. The pool must outlive the
 // runner (River holds it for the client's lifetime).
 func New(pool *pgxpool.Pool, cfg Config, log *slog.Logger) (*Runner, error) {
+	if cfg.BindWorkspace == nil {
+		return nil, errors.New("jobs: a worker client needs Config.BindWorkspace, or its jobs would run unbound")
+	}
 	client, err := river.NewClient(riverpgxv5.New(pool), riverConfig(cfg, log))
 	if err != nil {
 		return nil, fmt.Errorf("jobs: new client: %w", err)
@@ -142,6 +169,7 @@ func riverConfig(cfg Config, log *slog.Logger) *river.Config {
 		Logger:            log,
 		ReindexerSchedule: river.NeverSchedule(),
 		TestOnly:          cfg.TestOnly,
+		WorkerMiddleware:  []rivertype.WorkerMiddleware{bindingMiddleware(cfg.BindWorkspace)},
 	}
 	if cfg.TestOnly {
 		config.FetchCooldown, config.FetchPollInterval = testFetchInterval, testFetchInterval

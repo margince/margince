@@ -65,11 +65,8 @@ func newStandingLineCheckWorker(pool *pgxpool.Pool, cfg JobRunnerConfig) *standi
 }
 
 func (w *standingLineCheckWorker) Work(ctx context.Context, job *river.Job[StandingLineCheckArgs]) error {
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	err = w.refresher.Refresh(principal.SystemActing(wsCtx, standingLineActor),
+	wsCtx := ctx
+	err := w.refresher.Refresh(principal.SystemActing(wsCtx, standingLineActor),
 		ids.From[ids.ActivityKind](job.Args.ActivityID))
 	return jobs.FaultContext(ctx, snoozeWhileRestricted(err))
 }

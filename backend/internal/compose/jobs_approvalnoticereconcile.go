@@ -62,10 +62,7 @@ func newApprovalNoticeReconcileWorker(pool *pgxpool.Pool) *approvalNoticeReconci
 }
 
 func (w *approvalNoticeReconcileWorker) Work(ctx context.Context, job *river.Job[ApprovalNoticeReconcileArgs]) error {
-	passCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	passCtx := ctx
 	passCtx = principal.SystemActing(passCtx, approvalNoticeReconcileActor)
 	var cursor struct {
 		After ids.UUID `json:"approval_notice_after"`

@@ -86,15 +86,11 @@ never one job row that loops over every workspace.
 4. **Write `Work`**, a method on your worker type, and nothing else.
    Do not declare `Timeout`, `NextRetry` or `Middleware`.
    The worker reaches River only as `jobs.WorkOnly[T]`, so the declaration answers those.
-   Bind the installation's workspace through the shared helper, and return through `jobs.FaultContext`:
+   The worker client's middleware has already bound the installation's workspace. Return through `jobs.FaultContext`:
 
    ```go
    func (w *closeDateWorkspaceWorker) Work(ctx context.Context, job *river.Job[CloseDateWorkspaceArgs]) error {
-       wsCtx, err := bindInstallation(ctx, w.pool)   // binds the installation's one workspace to the context
-       if err != nil {
-           return jobs.FaultContext(ctx, err)
-       }
-       wsCtx = principal.WithActor(wsCtx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:close-date"})
+       wsCtx := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:close-date"})
        wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
        return jobs.FaultContext(ctx, w.corrector.SweepWorkspace(wsCtx))
    }
@@ -103,7 +99,7 @@ never one job row that loops over every workspace.
    A pass that writes names who acts and makes its own `correlation_id`, as above. No HTTP layer stands
    behind a job, and `storekit.Emit` fails without a `correlation_id`
    ([write-backbone.md](../explanation/write-backbone.md#6-correlation--causation-the-trace)).
-   `bindInstallation` binds the workspace and nothing else.
+   The middleware binds the workspace and nothing else.
 
    A `Work` of a dispatcher instead calls one of the fan-out helpers (`dispatchOnce`,
    `dispatchOne`, `runInstallationPass`). It makes no tenant write of its own:

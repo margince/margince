@@ -392,7 +392,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `insertattemptcaps_test.go` | H2 | An insert that names no MaxAttempts still has a retry ladder: River's default of 25, on attempt-to-the-fourth backoff, which reaches days. |
 | `intenttimecolumns_test.go` | H2 | The second form leaves a zone that also describes a legacy instant free while no wall clock is stored. |
 | `interactionunit_test.go` | H3 | Every count that becomes a relationship-strength number counts the shared unit, not rows. |
-| `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
+| `jobbinding_test.go` | H2 | workMethodFloor guards against a vacuous pass. |
 | `jobcensus_test.go` | H3 | Every job kind api/jobs.yaml declares is wired in internal/compose, and every wired kind is declared. |
 | `jobregistration_test.go` | H2 | The unexported marker can be implemented only in compose, including its tests. |
 | `jobrole_test.go` | H2 | Every River job declares its kind in api/jobs.yaml, and a job names no workspace and has no WorkspaceID method. |

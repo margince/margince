@@ -64,10 +64,7 @@ type stageEvidenceReadWorker struct {
 // settles.
 func (w *stageEvidenceReadWorker) Work(ctx context.Context, job *river.Job[StageEvidenceReadArgs]) error {
 	args := job.Args
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	written, err := w.reader.Read(wsCtx,
 		ids.From[ids.DealKind](args.DealID), args.ActivityID)
 	if err != nil {
@@ -150,7 +147,7 @@ func newStageEvidenceRereadWorker(
 	pool *pgxpool.Pool, lane bool, log *slog.Logger,
 ) *evidencereread.Worker[StageEvidenceRereadArgs] {
 	return &evidencereread.Worker[StageEvidenceRereadArgs]{
-		Bind: installationBinder(pool), Pool: pool, Log: log, Reads: lane,
+		Pool: pool, Log: log, Reads: lane,
 		Queue: func() (evidencereread.Enqueuer, error) { return callerTxJobs() },
 		Own:   ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))},
 		Reading: func(job StageEvidenceRereadArgs, deal ids.DealID, activity ids.UUID) (river.JobArgs, *river.InsertOpts) {

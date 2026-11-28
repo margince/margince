@@ -195,6 +195,28 @@ func runInstallationPass(ctx context.Context, pool *pgxpool.Pool, run func(conte
 	return errors.Join(run(watched, ws), zonefault.Record(ctx, pool, ws, zones))
 }
 
+// runEveryWorkspacePass is runInstallationPass for the cleanups that owe
+// something to data, not to a live company: retention, trace and object
+// cleanup and the suppression journal.
+//
+// It runs over every workspace row, archived ones included, and still runs when
+// no workspace is live. Every row is attempted and the failures are joined, so
+// one archived row cannot hold back the rest.
+func runEveryWorkspacePass(ctx context.Context, pool *pgxpool.Pool, run func(context.Context, ids.UUID) error) error {
+	all, err := database.EveryWorkspace(ctx, pool)
+	if err != nil {
+		return err
+	}
+	var failures []error
+	for _, ws := range all {
+		watched, zones := storekit.WatchZones(ctx)
+		if err := errors.Join(run(watched, ws), zonefault.Record(ctx, pool, ws, zones)); err != nil {
+			failures = append(failures, fmt.Errorf("workspace %s: %w", ws, err))
+		}
+	}
+	return errors.Join(failures...)
+}
+
 // clientInsertMany binds the fan-out to the River client already in context —
 // the shape gmailSyncWorker's dispatcher uses.
 //

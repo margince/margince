@@ -57,10 +57,7 @@ type evidenceAuthorshipWorker struct {
 }
 
 func (w *evidenceAuthorshipWorker) Work(ctx context.Context, _ *river.Job[EvidenceAuthorshipArgs]) error {
-	wsCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	corrected, err := w.deals.ReconcileEvidenceAuthorship(principal.SystemActing(wsCtx, evidenceAuthorshipActor), w.own, deals.EvidenceAuthorshipScope{})
 	if err != nil {
 		return jobs.FaultContext(ctx, err)

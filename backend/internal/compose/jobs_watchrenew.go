@@ -120,10 +120,7 @@ func (w *gmailWatchRenewWorker) Work(ctx context.Context, job *river.Job[GmailWa
 func renewOneWatch(
 	ctx context.Context, pool *pgxpool.Pool, reg *capture.Registry, args river.JobArgs, connectionID, topic string,
 ) error {
-	wsCtx, err := bindInstallation(ctx, pool)
-	if err != nil {
-		return err
-	}
+	wsCtx := ctx
 	connID, err := ids.Parse(connectionID)
 	if err != nil {
 		return fmt.Errorf("%s: connection id: %w", args.Kind(), err)

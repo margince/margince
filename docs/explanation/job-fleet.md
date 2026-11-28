@@ -39,7 +39,7 @@ backend/api/jobs.yaml
  │   CHILD row × N      role: worker
  │
  └─ WORKER row          role: worker, args carry ids and no workspace
-        │  bindInstallation / installationJobCtx bind the installation's one workspace
+        │  the worker middleware binds the installation's one workspace
         ▼  Work(…) ──► jobs.FaultContext(ctx, err)
 ```
 
@@ -260,20 +260,20 @@ Gates cover the cases the generated checks cannot reach. One is a type the contr
 (`TestEveryJobArgsTypeIsDeclaredInTheContract`). The other is a type that names a workspace again
 (`TestNoJobArgsDeclaresAWorkspaceAccessor`, `TestNoJobArgsCarryAWorkspace`).
 
-**The binding is the installation's.** A worker binds through `compose.bindInstallation`, or through
-`installationJobCtx` when it holds an identity service. The binding gate keeps a `Work` body from calling
-`principal.WithWorkspaceID` itself:
+The worker client runs
+`jobs.Config.BindWorkspace` as River worker middleware around every job. Compose supplies it
+(`installationBinding`, which calls `bindInstallation`). It looks the workspace up for each job and keeps
+nothing between jobs. A job with no live workspace fails with that error, and its worker never starts.
 
-```go
-func bindInstallation(ctx context.Context, pool *pgxpool.Pool) (context.Context, error) {
-    return installationJobCtx(ctx, identity.NewService(pool))
-}
-```
+No `Work` body binds its own workspace. `jobs.New` refuses a Config without a binding. The insert-only
+client works no jobs, so it needs none.
 
-It cannot live in River middleware. `river.WorkerMiddleware` sees a `rivertype.JobRow`, which is raw
-JSON and never the typed args. Some stores still read the workspace off the context. Without the binding, an audit entity id, a blob key
+Some stores still read the workspace off the context. Without the binding, an audit entity id, a blob key
 or the name of an advisory lock would carry a zero id.
-A job queued before the first company exists fails until one does.
+
+The jobs that clean up data in archived workspaces run through `runEveryWorkspacePass`, which reads every
+workspace row. They are listed in `everyWorkspaceKinds`, and the middleware leaves them unbound, so they
+run when no company is live.
 
 **One pass over one corpus.** `embed_reindex` is one: the search data has no
 workspace column, so one row rebuilds it all. It declares `cadence: on_demand`, because a human's
@@ -471,7 +471,7 @@ census carries its own floor, `declaredJobKindFloor`, beside the runner it reads
 |---|---|
 | `jobrole_test.go` | a River job args type (it declares `Kind()`) that `api/jobs.yaml` does not know; and a job args type that declares `WorkspaceID()` |
 | `jobnoworkspacearg_test.go` | a job args type with a `Workspace` field, a `json:"workspace_id"` key, or an embedded type the gate cannot read |
-| `jobbinding_test.go` | a `Work` body that calls `principal.WithWorkspaceID` itself instead of binding through `bindInstallation` or `installationJobCtx` |
+| `jobbinding_test.go` | a `Work` body that binds a workspace itself, and a worker client built without the binding middleware |
 | `jobfleetwide_test.go` | a `FleetWide` kind that reaches the fleet around the helpers in the allowlist, that holds a SQL write in its own `Work`, or that no worker runs at all. A kind on its waiver list must not fan out |
 | `jobfleetwideshapes_test.go` | the gate above, tested against itself: it proves every shape the tree uses to queue child rows is **accepted**, and the two shapes it exists to reject are rejected. A gate that blocks a writer doing the right thing gets turned off by the writer it stopped |
 | `jobfleetscan_test.go` | a `FROM workspace` read of all workspaces outside the agreed places. Each place must name which of four things it is: a dispatcher listing the fleet, a path that only reads, a boot path, or finding the workspace for an inbound request that has none |

@@ -162,10 +162,7 @@ func (w *notificationMailWorker) Work(ctx context.Context, job *river.Job[SendNo
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("notification_email: notice id: %w", err))
 	}
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	if w.mail.Mailer == nil {
 		// No relay on THIS role, and the job ends here: nothing is claimed, so
 		// the row keeps its unspent attempt, but River does not offer a

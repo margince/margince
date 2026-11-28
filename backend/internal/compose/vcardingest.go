@@ -112,11 +112,8 @@ func newVCardIngestWorker(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Lo
 
 // Work imports one message's cards.
 func (w *vcardIngestWorker) Work(ctx context.Context, job *river.Job[VCardIngestArgs]) error {
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	err = w.importCards(wsCtx, job.Args)
+	wsCtx := ctx
+	err := w.importCards(wsCtx, job.Args)
 	switch {
 	case err == nil:
 		return nil

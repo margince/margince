@@ -81,8 +81,8 @@ type ratifiedFleetScan struct {
 // through.
 var ratifiedFleetScans = map[string]ratifiedFleetScan{
 	"internal/platform/database/workspaces.go": {
-		1,
-		"the one scan of the workspace table: LiveWorkspace is what every pass over the installation, due-scan and tenant resolution starts from. It reads the installation's one live workspace and does no tenant work itself",
+		2,
+		"the scans of the workspace table: LiveWorkspace is what every pass over the installation, due-scan and tenant resolution starts from, and EveryWorkspace is what the privacy cleanups start from, because archiving a workspace does not un-store its data. Neither does tenant work itself",
 	},
 	"internal/modules/identity/installation.go": {
 		1,
@@ -213,7 +213,7 @@ func TestModulesReadTheWorkspaceCollectionOnlyInIdentity(t *testing.T) {
 			t.Fatalf("reading %s: %v", path, err)
 		}
 		if n := countFleetScans(string(src)); n > 0 {
-			t.Errorf("%s reads the workspace collection %d time(s); call database.LiveWorkspace instead", slashed, n)
+			t.Errorf("%s reads the workspace collection %d time(s); call database.LiveWorkspace or database.EveryWorkspace instead", slashed, n)
 		}
 	}
 }

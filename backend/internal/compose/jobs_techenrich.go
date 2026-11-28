@@ -138,10 +138,7 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 	// Bound through the shared helper, under a new name. bindInstallation
 	// returns a nil context with its error, and the refusal has to report
 	// through a context that exists.
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	// The lookup reads and writes under an actor of its own: TechnicalDomain
 	// takes company:read and the apply takes company:update, both of
 	// which refuse a context with no principal.

@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -374,8 +375,9 @@ func TestARealRiverInsertCarriesTheSweepTagIntoTheColumnTheReadFiltersOn(t *test
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &taggedWorker{})
 	runner, err := jobs.New(pool, jobs.Config{
-		Queues:  map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 1}},
-		Workers: workers,
+		BindWorkspace: func(ctx context.Context, _ *rivertype.JobRow) (context.Context, error) { return ctx, nil },
+		Queues:        map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 1}},
+		Workers:       workers,
 	}, quietLogger())
 	if err != nil {
 		t.Fatalf("jobs.New: %v", err)

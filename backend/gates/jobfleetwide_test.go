@@ -60,9 +60,10 @@ const fleetWideDispatcherFloor = 20
 
 // fanOutHelpers are the ways a FleetWide job reaches the installation:
 // dispatchOnce and dispatchOne queue a child, and runInstallationPass runs the
-// pass in this process.
+// pass in this process. runEveryWorkspacePass does the same for the cleanups
+// that must also reach archived workspaces.
 var fanOutHelpers = []string{
-	"dispatchOnce", "dispatchOne", "runInstallationPass",
+	"dispatchOnce", "dispatchOne", "runInstallationPass", "runEveryWorkspacePass",
 }
 
 // fleetWideDispatcher is one resolved args→worker→Work association and what

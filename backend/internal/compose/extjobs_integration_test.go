@@ -352,6 +352,40 @@ func TestHandlerSeesAPinnedWorkspace(t *testing.T) {
 	}
 }
 
+// TestAJobWithNoLiveWorkspaceFailsAndDoesNotRun: the binding is the worker
+// middleware, and a job it cannot bind fails with the handler never entered.
+func TestAJobWithNoLiveWorkspaceFailsAndDoesNotRun(t *testing.T) {
+	e := integration.Setup(t)
+	integration.ApplyRiverSchema(t)
+	decl := testJobDecl()
+	var mu sync.Mutex
+	entered := 0
+	composeJob(t, decl, func(context.Context, extension.Runtime) error {
+		mu.Lock()
+		defer mu.Unlock()
+		entered++
+		return nil
+	})
+	archiveEveryWorkspace(t)
+	runner, _ := startRunner(t, e.Pool)
+	if err := runner.Enqueue(context.Background(), extJobWorkspaceArgs{JobKind: decl.ChildKind()}, workspaceSweepOpts(decl.ChildKind())); err != nil {
+		t.Fatalf("enqueueing the child: %v", err)
+	}
+	waitUntil(t, func() bool {
+		var attempted int
+		if err := e.Pool.QueryRow(context.Background(),
+			`SELECT count(*) FROM river_job WHERE kind = $1 AND attempt >= 1`, decl.ChildKind()).Scan(&attempted); err != nil {
+			t.Fatalf("reading the child's attempts: %v", err)
+		}
+		return attempted > 0
+	}, "the unbound job to be attempted")
+	mu.Lock()
+	defer mu.Unlock()
+	if entered != 0 {
+		t.Fatalf("the handler ran %d time(s) with no live workspace; the job must fail before it runs", entered)
+	}
+}
+
 // TestPanickingTickFailsOneAttemptNotTheWorker: a unit's handler is ordinary
 // third-party Go and may panic. What must survive is the runner — the blast
 // radius of a bad tick is ONE attempt of ONE workspace's row, and every other

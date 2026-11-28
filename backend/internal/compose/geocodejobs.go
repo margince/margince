@@ -149,10 +149,7 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeCompanyA
 	// Bound through the shared helper, under a new name. bindInstallation
 	// returns a nil context with its error, and the refusal below has to report
 	// through a context that exists.
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	// The lookup reads and writes under an actor of its own, and it needs one:
 	// AddressForGeocode takes company:read and RecordGeocode takes
 	// company:update, both of which refuse a context with no principal.

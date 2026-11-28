@@ -108,9 +108,9 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// credential (no deployment-wide OAuth app to gate on), so there is nothing
 	// to check for before wiring it up.
 	addDeclaredWorker[TelegramIngestArgs](reg, newTelegramIngestWorker(pool, cfg.CaptureConfig, log))
-	addDeclaredWorker[ZaloOAIngestArgs](reg, zaloedge.NewWorker[ZaloOAIngestArgs](installationBinder(pool), pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(zalo.CapturedBy), log, cfg.ChatMedia.Zalo))
+	addDeclaredWorker[ZaloOAIngestArgs](reg, zaloedge.NewWorker[ZaloOAIngestArgs](pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(zalo.CapturedBy), log, cfg.ChatMedia.Zalo))
 	addDeclaredWorker[WhatsAppIngestArgs](reg, whatsappedge.NewWorker[WhatsAppIngestArgs](
-		installationBinder(pool), pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(whatsapp.CapturedBy), log,
+		pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(whatsapp.CapturedBy), log,
 		whatsappedge.NewMedia(cfg.ChatMedia.WhatsApp, pool, cfg.ChannelVault)))
 	// The captured-company auto-enrich sweep (ADR-0072): always
 	// registered, it enqueues system deep reads the site worker applies.
@@ -301,10 +301,7 @@ func (w *captureSyncWorker) Work(ctx context.Context, job *river.Job[CaptureSync
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("capture_sync: connection id: %w", err))
 	}
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	if err := w.registry.SyncOnce(wsCtx, conn); err != nil {
 		if _, snoozed := errors.AsType[*river.JobSnoozeError](err); snoozed {
 			return jobs.FaultContext(ctx, err)

@@ -88,9 +88,10 @@ func TestARealDiscardStaysFailedBehindTheNextQueuedTick(t *testing.T) {
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &failingPassWorker{})
 	runner, err := jobs.New(pool, jobs.Config{
-		Queues:   map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 1}},
-		Workers:  workers,
-		TestOnly: true,
+		BindWorkspace: func(ctx context.Context, _ *rivertype.JobRow) (context.Context, error) { return ctx, nil },
+		Queues:        map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 1}},
+		Workers:       workers,
+		TestOnly:      true,
 	}, quietLogger())
 	if err != nil {
 		t.Fatalf("jobs.New: %v", err)

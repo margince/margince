@@ -153,10 +153,7 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVa
 	// Bound through the shared helper, so the args' own WorkspaceID() IS the
 	// binding: a worker that picked its own could claim one workspace and work
 	// in another.
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	wsCtx = vatCheckJobActor(wsCtx)
 	store := contacts.NewStore(InstallationDB(w.pool))
 	companyID := ids.From[ids.CompanyKind](args.CompanyID)

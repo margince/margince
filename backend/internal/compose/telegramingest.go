@@ -111,10 +111,7 @@ func (w *telegramIngestWorker) Work(ctx context.Context, job *river.Job[Telegram
 		return jobs.FaultContext(ctx, fmt.Errorf("telegram_ingest: raw capture id: %w", err))
 	}
 
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 
 	var payload []byte
 	err = database.WithTx(wsCtx, w.pool, func(tx pgx.Tx) error {

@@ -72,7 +72,7 @@ type storedObjectReapWorker struct {
 
 func (w *storedObjectReapWorker) Work(ctx context.Context, _ *river.Job[StoredObjectReapArgs]) error {
 	stop := w.now().Add(storedObjectReapDrainBudget)
-	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
+	return jobs.FaultContext(ctx, runEveryWorkspacePass(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
 		return w.reapWorkspace(ctx, workspace, stop)
 	}))
 }

@@ -44,10 +44,7 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("capture_backfill: backfill id: %w", err))
 	}
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	wsCtx = capturemetrics.WithRun(wsCtx)
 	for range backfillPagesPerTick {
 		done, _, retryAfter, err := w.registry.RunBackfillExecution(wsCtx, bfID, job.Args.ExecutionGeneration, backfillScheduler())

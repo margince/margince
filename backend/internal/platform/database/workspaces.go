@@ -39,3 +39,16 @@ func LiveWorkspace(ctx context.Context, pool *pgxpool.Pool) (ws ids.UUID, ok boo
 	}
 	return ids.UUID{}, false, ErrManyLiveWorkspaces
 }
+
+// EveryWorkspace lists every workspace row, archived ones included, oldest
+// first. A privacy cleanup uses it: archiving a workspace does not un-store its
+// data, so a retention floor still binds there, and the list is not empty
+// merely because no company is live.
+func EveryWorkspace(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {
+	// pool-exempt: installation lookup. This reads every workspace row, archived included, before any transaction exists.
+	rows, err := pool.Query(ctx, `SELECT id FROM workspace ORDER BY created_at`)
+	if err != nil {
+		return nil, fmt.Errorf("database: listing every workspace: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}

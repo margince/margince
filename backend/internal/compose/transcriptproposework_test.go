@@ -77,7 +77,7 @@ func transcriptJob(args TranscriptProposeArgs) *river.Job[TranscriptProposeArgs]
 
 func TestAWorkerWithNoModelLaneFailsTheReadingInsteadOfLeavingItQueued(t *testing.T) {
 	store := &recordingReadStore{}
-	worker := &transcriptProposeWorker{bind: bindWorkspace(ids.NewV7()), activities: store, log: slog.New(slog.DiscardHandler)}
+	worker := &transcriptProposeWorker{activities: store, log: slog.New(slog.DiscardHandler)}
 
 	err := worker.Work(context.Background(), transcriptJob(TranscriptProposeArgs{
 		ActivityID: ids.NewV7(), TranscriptReadID: ids.NewV7(),
@@ -99,7 +99,7 @@ func TestAWorkerWithNoModelLaneFailsTheReadingInsteadOfLeavingItQueued(t *testin
 
 func TestAWorkerClaimsWithTheLeaseTheDoorReArmsWith(t *testing.T) {
 	store := &recordingReadStore{}
-	worker := &transcriptProposeWorker{bind: bindWorkspace(ids.NewV7()), activities: store, log: slog.New(slog.DiscardHandler)}
+	worker := &transcriptProposeWorker{activities: store, log: slog.New(slog.DiscardHandler)}
 
 	if err := worker.Work(context.Background(), transcriptJob(TranscriptProposeArgs{
 		TranscriptReadID: ids.NewV7(),
@@ -114,7 +114,7 @@ func TestAWorkerClaimsWithTheLeaseTheDoorReArmsWith(t *testing.T) {
 
 func TestAReadingAnotherWorkerHoldsIsLeftAlone(t *testing.T) {
 	store := &recordingReadStore{claimErr: apperrors.ErrConflict}
-	worker := &transcriptProposeWorker{bind: bindWorkspace(ids.NewV7()), activities: store, log: slog.New(slog.DiscardHandler)}
+	worker := &transcriptProposeWorker{activities: store, log: slog.New(slog.DiscardHandler)}
 
 	err := worker.Work(context.Background(), transcriptJob(TranscriptProposeArgs{
 		TranscriptReadID: ids.NewV7(),

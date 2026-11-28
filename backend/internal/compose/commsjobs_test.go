@@ -55,14 +55,6 @@ func (s *stubDispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (com
 	return s.outcome, s.wait, s.err
 }
 
-// bindWorkspace stands in for the installation binder: it puts the given
-// workspace on the context the way installationBinder does from the database.
-func bindWorkspace(ws ids.UUID) func(context.Context) (context.Context, error) {
-	return func(ctx context.Context) (context.Context, error) {
-		return principal.WithWorkspaceID(ctx, ws), nil
-	}
-}
-
 // sendJob builds one job for the worker.
 func sendJob(ws, delivery ids.UUID) *river.Job[SendEmailArgs] {
 	return &river.Job[SendEmailArgs]{
@@ -83,7 +75,7 @@ func TestSendEmailArgsKindIsStable(t *testing.T) {
 // a delivery pending with nothing left to deliver it.
 func TestSendEmailWorkerSnoozesOnAPostponedOutcome(t *testing.T) {
 	dispatcher := &stubDispatcher{outcome: comms.OutcomePostponed, wait: 90 * time.Second}
-	worker := &commsSendWorker{bind: bindWorkspace(ids.NewV7()), dispatcher: dispatcher}
+	worker := &commsSendWorker{dispatcher: dispatcher}
 
 	err := worker.Work(context.Background(), sendJob(ids.NewV7(), ids.NewV7()))
 
@@ -101,7 +93,7 @@ func TestSendEmailWorkerSnoozesOnAPostponedOutcome(t *testing.T) {
 // floors the interval instead.
 func TestSendEmailWorkerFloorsAZeroPostponement(t *testing.T) {
 	dispatcher := &stubDispatcher{outcome: comms.OutcomePostponed}
-	worker := &commsSendWorker{bind: bindWorkspace(ids.NewV7()), dispatcher: dispatcher}
+	worker := &commsSendWorker{dispatcher: dispatcher}
 
 	err := worker.Work(context.Background(), sendJob(ids.NewV7(), ids.NewV7()))
 
@@ -119,7 +111,7 @@ func TestSendEmailWorkerFloorsAZeroPostponement(t *testing.T) {
 func TestSendEmailWorkerReturnsNilOnATerminalOutcome(t *testing.T) {
 	for _, outcome := range []comms.Outcome{comms.OutcomeSent, comms.OutcomeParked, comms.OutcomeSkipped} {
 		t.Run(string(outcome), func(t *testing.T) {
-			worker := &commsSendWorker{bind: bindWorkspace(ids.NewV7()), dispatcher: &stubDispatcher{outcome: outcome}}
+			worker := &commsSendWorker{dispatcher: &stubDispatcher{outcome: outcome}}
 			if err := worker.Work(context.Background(), sendJob(ids.NewV7(), ids.NewV7())); err != nil {
 				t.Fatalf("Work on a %s outcome = %v, want nil", outcome, err)
 			}
@@ -133,7 +125,7 @@ func TestSendEmailWorkerReturnsNilOnATerminalOutcome(t *testing.T) {
 // swallow the evidence that something changed underneath it.
 func TestSendEmailWorkerSurfacesAnErrorOnATerminalOutcome(t *testing.T) {
 	cause := errors.New("a terminal path grew an error")
-	worker := &commsSendWorker{bind: bindWorkspace(ids.NewV7()), dispatcher: &stubDispatcher{outcome: comms.OutcomeSent, err: cause}}
+	worker := &commsSendWorker{dispatcher: &stubDispatcher{outcome: comms.OutcomeSent, err: cause}}
 
 	err := worker.Work(context.Background(), sendJob(ids.NewV7(), ids.NewV7()))
 	if !errors.Is(err, cause) {
@@ -145,7 +137,7 @@ func TestSendEmailWorkerSurfacesAnErrorOnATerminalOutcome(t *testing.T) {
 // completes while the delivery is still pending and nothing transmits it.
 func TestSendEmailWorkerReturnsTheErrorOnRetry(t *testing.T) {
 	cause := errors.New("the provider is unreachable")
-	worker := &commsSendWorker{bind: bindWorkspace(ids.NewV7()), dispatcher: &stubDispatcher{outcome: comms.OutcomeRetry, err: cause}}
+	worker := &commsSendWorker{dispatcher: &stubDispatcher{outcome: comms.OutcomeRetry, err: cause}}
 
 	err := worker.Work(context.Background(), sendJob(ids.NewV7(), ids.NewV7()))
 	if !errors.Is(err, cause) {
@@ -156,7 +148,7 @@ func TestSendEmailWorkerReturnsTheErrorOnRetry(t *testing.T) {
 // A retry with no cause would complete the job silently — the same pending-row
 // leak, arrived at from the other side. It fails loudly instead.
 func TestSendEmailWorkerFailsARetryThatCarriesNoCause(t *testing.T) {
-	worker := &commsSendWorker{bind: bindWorkspace(ids.NewV7()), dispatcher: &stubDispatcher{outcome: comms.OutcomeRetry}}
+	worker := &commsSendWorker{dispatcher: &stubDispatcher{outcome: comms.OutcomeRetry}}
 
 	if err := worker.Work(context.Background(), sendJob(ids.NewV7(), ids.NewV7())); err == nil {
 		t.Fatal("Work on a causeless retry returned nil — the job completed with the delivery still pending")
@@ -169,9 +161,9 @@ func TestSendEmailWorkerFailsARetryThatCarriesNoCause(t *testing.T) {
 func TestSendEmailWorkerBindsTheInstallationsWorkspaceAndTheJobsDelivery(t *testing.T) {
 	ws, delivery := ids.NewV7(), ids.NewV7()
 	dispatcher := &stubDispatcher{outcome: comms.OutcomeSent}
-	worker := &commsSendWorker{bind: bindWorkspace(ws), dispatcher: dispatcher}
+	worker := &commsSendWorker{dispatcher: dispatcher}
 
-	if err := worker.Work(context.Background(), sendJob(ws, delivery)); err != nil {
+	if err := worker.Work(principal.WithWorkspaceID(context.Background(), ws), sendJob(ws, delivery)); err != nil {
 		t.Fatalf("Work: %v", err)
 	}
 	if !dispatcher.sawWSBind || dispatcher.gotWS != ws {
@@ -191,7 +183,7 @@ func TestSendEmailWorkerBindsTheInstallationsWorkspaceAndTheJobsDelivery(t *test
 // between staging and transmit strand the message's identity.
 func TestSendEmailWorkerDispatchesUnderASystemActorAndACorrelationID(t *testing.T) {
 	dispatcher := &stubDispatcher{outcome: comms.OutcomeSent}
-	worker := &commsSendWorker{bind: bindWorkspace(ids.NewV7()), dispatcher: dispatcher}
+	worker := &commsSendWorker{dispatcher: dispatcher}
 
 	if err := worker.Work(context.Background(), sendJob(ids.NewV7(), ids.NewV7())); err != nil {
 		t.Fatalf("Work: %v", err)
@@ -220,7 +212,7 @@ func TestSendEmailWorkerRefusesAJobArgumentThatNamesNothing(t *testing.T) {
 	for name, args := range cases {
 		t.Run(name, func(t *testing.T) {
 			dispatcher := &stubDispatcher{outcome: comms.OutcomeSent}
-			worker := &commsSendWorker{bind: bindWorkspace(ids.NewV7()), dispatcher: dispatcher}
+			worker := &commsSendWorker{dispatcher: dispatcher}
 			if err := worker.Work(context.Background(), &river.Job[SendEmailArgs]{Args: args}); err == nil {
 				t.Fatal("Work accepted a malformed job argument")
 			}

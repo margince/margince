@@ -103,10 +103,7 @@ func newAccountScanWorker(pool *pgxpool.Pool, brain completer, routingVersion fu
 // snoozes the job until the moment the router named; any other outcome is
 // on the row, which the page and the rail read.
 func (w *accountScanWorker) Work(ctx context.Context, job *river.Job[AccountScanArgs]) error {
-	wsCtx, err := installationJobCtx(ctx, w.users)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	runCtx, err := companyscan.WorkerContext(wsCtx, w.users, ids.From[ids.UserKind](job.Args.ViewerID), job.Args.ScanID)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)

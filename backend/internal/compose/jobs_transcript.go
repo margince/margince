@@ -110,16 +110,12 @@ type transcriptProposeWorker struct {
 	activities transcriptReadStore
 	proposer   *TranscriptProposer
 	users      *identity.Service
-	bind       func(context.Context) (context.Context, error)
 	log        *slog.Logger
 }
 
 func (w *transcriptProposeWorker) Work(ctx context.Context, job *river.Job[TranscriptProposeArgs]) error {
 	args := job.Args
-	wsCtx, err := w.bind(ctx)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	if w.proposer == nil {
 		return jobs.FaultContext(ctx, w.declineUnread(withTranscriptReader(wsCtx, args.RequestedBy, args.TranscriptReadID), args))
 	}
@@ -205,7 +201,6 @@ func newTranscriptProposeWorker(pool *pgxpool.Pool, brain completer, log *slog.L
 		language:   installationLanguage(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
 		users:      identity.NewService(pool),
-		bind:       installationBinder(pool),
 		log:        log,
 	}
 	if brain != nil {

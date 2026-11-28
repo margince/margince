@@ -43,10 +43,9 @@ func NewMedia(client *whatsapp.Client, pool *pgxpool.Pool, vault keyvault.Vault)
 // NewWorker is the shared chat worker for this network's ingest job. It files
 // through the live connection as the connector principal actor, and decodes a
 // stored item with media.decode.
-func NewWorker[T IngestJob](bind func(context.Context) (context.Context, error),
-	pool *pgxpool.Pool, sink connector.Sink, actor principal.Principal, log *slog.Logger, media Media,
+func NewWorker[T IngestJob](pool *pgxpool.Pool, sink connector.Sink, actor principal.Principal, log *slog.Logger, media Media,
 ) *chatedge.Worker[T] {
-	return &chatedge.Worker[T]{Name: "whatsapp_ingest", Bind: bind, Pool: pool, Sink: sink, Actor: actor, Log: log, Decode: media.decode}
+	return &chatedge.Worker[T]{Name: "whatsapp_ingest", Pool: pool, Sink: sink, Actor: actor, Log: log, Decode: media.decode}
 }
 
 // decode reads one stored item. A delivery status is no message, and a reaction

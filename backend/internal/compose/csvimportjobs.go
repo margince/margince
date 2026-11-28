@@ -175,10 +175,6 @@ func newImportSlicer(pool *pgxpool.Pool, log *slog.Logger) importSlicer {
 func (s importSlicer) slice(ctx context.Context, args importJobArgs, work importSliceWork) (result importSliceResult, err error) {
 	ctx = s.features.Context(ctx)
 	db := InstallationDB(s.pool)
-	ctx, err = bindInstallation(ctx, s.pool)
-	if err != nil {
-		return importSliceResult{}, err
-	}
 	lease, runs := args.lease(), migration.NewRunStore(db)
 	system := principal.SystemActing(ctx, importWorkerActor)
 	defer func() {

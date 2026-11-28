@@ -97,10 +97,7 @@ type providerRunSubmitWorker struct {
 }
 
 func (w *providerRunSubmitWorker) Work(ctx context.Context, job *river.Job[ProviderRunSubmitArgs]) error {
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	wsCtx = providerJobActor(wsCtx)
 	ws, err := boundWorkspace(wsCtx)
 	if err != nil {

@@ -117,7 +117,6 @@ var _ deliveryDispatcher = (*comms.Dispatcher)(nil)
 // the row's state, and this is the adapter that keeps River out of comms.
 type commsSendWorker struct {
 	dispatcher deliveryDispatcher
-	bind       func(context.Context) (context.Context, error)
 }
 
 // SendWorkerContext is the scope one dispatch attempt runs under. RecordSent's
@@ -155,10 +154,7 @@ func (w *commsSendWorker) Work(ctx context.Context, job *river.Job[SendEmailArgs
 		return jobs.FaultContext(ctx, fmt.Errorf("comms_send_email: delivery id: %w", err))
 	}
 
-	wsCtx, err := w.bind(ctx)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 
 	outcome, wait, err := w.dispatcher.DispatchWithWait(sendWorkerScope(wsCtx), deliveryID)
 	switch outcome {
@@ -340,7 +336,7 @@ func (s commsSeats) ActiveSeat(ctx context.Context, userID ids.UserID) (bool, st
 // the policy chain. Every one of those edges crosses a module boundary, which
 // is why the assembly lives here and not in comms.
 func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *commsSendWorker {
-	return &commsSendWorker{bind: installationBinder(pool), dispatcher: newPacedDispatcher(pool, func(pace sendPace) deliveryDispatcher {
+	return &commsSendWorker{dispatcher: newPacedDispatcher(pool, func(pace sendPace) deliveryDispatcher {
 		return newSendDispatcher(pool, registry, pace, blob, relay, vault)
 	})}
 }

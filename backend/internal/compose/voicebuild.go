@@ -155,10 +155,7 @@ func voiceBuildWorkerCtx(ctx context.Context, users *identity.Service, args Voic
 func (w *voiceBuildWorker) Work(ctx context.Context, job *river.Job[VoiceBuildArgs]) error {
 	// Into their own variables: voiceBuildWorkerCtx returns nils on an error,
 	// and assigning over ctx would hand that nil to the fault below.
-	bound, err := installationJobCtx(ctx, w.users)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	bound := ctx
 	books, work, err := voiceBuildWorkerCtx(bound, w.users, job.Args)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)

@@ -78,7 +78,7 @@ type suppressionJournalWorker struct {
 }
 
 func (w *suppressionJournalWorker) Work(ctx context.Context, _ *river.Job[SuppressionJournalArgs]) error {
-	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.exportWorkspace))
+	return jobs.FaultContext(ctx, runEveryWorkspacePass(ctx, w.pool, w.exportWorkspace))
 }
 
 func (w *suppressionJournalWorker) exportWorkspace(ctx context.Context, workspace ids.UUID) error {

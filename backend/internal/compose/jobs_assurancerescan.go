@@ -89,15 +89,12 @@ type assuranceDealRescanWorker struct {
 type dealScan func(ctx context.Context, store *assurance.Store, now time.Time, deal ids.UUID) (assurance.Result, error)
 
 func (w *assuranceDealRescanWorker) Work(ctx context.Context, job *river.Job[AssuranceDealRescanArgs]) error {
-	wsCtx, err := bindInstallation(ctx, w.sweep.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	scan := w.scan
 	if scan == nil {
 		scan = w.sweep.scanDeal
 	}
-	err = w.sweep.rescanDeal(principal.SystemActing(wsCtx, assuranceActor), job.Args, scan)
+	err := w.sweep.rescanDeal(principal.SystemActing(wsCtx, assuranceActor), job.Args, scan)
 	if errors.Is(err, assurance.ErrInputsMovedDuringPass) {
 		return river.JobSnooze(assuranceRescanRetry)
 	}

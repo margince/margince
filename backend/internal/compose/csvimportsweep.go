@@ -97,10 +97,6 @@ func requeueImportAttempt(ctx context.Context, tx pgx.Tx, run migration.Run) (bo
 // Work runs every rule even when one fails, so one broken rule cannot keep
 // the others' runs, and their files, held.
 func (w *importRunSweepWorker) Work(ctx context.Context, _ *river.Job[ImportRunSweepArgs]) error {
-	ctx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, fmt.Errorf("import_run_sweep: resolving the installation: %w", err))
-	}
 	ctx = principal.SystemActing(ctx, "system:import-run-sweep")
 	runs := migration.NewRunStore(InstallationDB(w.pool))
 	var failures []error

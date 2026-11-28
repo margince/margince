@@ -117,9 +117,6 @@ func (w *agentSchedulerWorker) Work(ctx context.Context, _ *river.Job[AgentSched
 	// agent tools it executes reach stores that still stamp their workspace_id
 	// from the context (storekit.MustWorkspace). Unbound, those writes would
 	// stamp a zero uuid and fail their foreign key.
-	passCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	passCtx := ctx
 	return jobs.FaultContext(ctx, w.svc.Tick(passCtx, w.now()))
 }

@@ -89,10 +89,7 @@ type dealRefileCursor struct {
 }
 
 func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[CapturedDealRefileArgs]) error {
-	passCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	passCtx := ctx
 	passCtx = principal.WithCorrelationID(principal.SystemActing(passCtx, dealRefileActor), job.Args.Correlation)
 	if !job.Args.Event.IsZero() {
 		passCtx = principal.WithCausationEvent(passCtx, job.Args.Event)

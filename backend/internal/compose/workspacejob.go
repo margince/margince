@@ -7,43 +7,55 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// installationJobCtx binds the installation's workspace for a collapsed pass —
-// one that carries no workspace of its own (ADR-0103 §1).
+// bindInstallation is the one decision about which workspace a job runs in.
+// River runs it as worker middleware around every job (installationBinding),
+// so no worker binds its own.
 //
-// The binding is NOT vestigial while any store still reads the workspace off
-// the context: storekit.MustWorkspace reads it, sixteen deals sites and a
-// handful in contacts, capture, ai and activities call it, and an agent tool
-// reaches several of them — as an audit entity id, a blob storage key or an
-// advisory-lock name, never as a column any of those stores writes. Unbound,
-// those calls would silently carry a zero uuid into whichever of those it
-// feeds, with nothing to fail loudly on. It retires with MustWorkspace itself
-// (ADR-0091 §5), not before.
-func installationJobCtx(ctx context.Context, svc *identity.Service) (context.Context, error) {
-	ws, err := svc.InstallationWorkspace(ctx)
+// It looks the workspace up on every call and keeps nothing between jobs: a
+// cached answer would outlive a change of the installation's company. It fails
+// when no workspace is live, and the job then does not run.
+//
+// Some stores still read the workspace off the context, as an audit entity id,
+// a blob key or an advisory-lock name. Without the binding those would carry a
+// zero id with nothing to fail on.
+func bindInstallation(ctx context.Context, pool *pgxpool.Pool) (context.Context, error) {
+	ws, err := identity.NewService(pool).InstallationWorkspace(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return principal.WithWorkspaceID(ctx, ws.UUID), nil
 }
 
-// bindInstallation is installationJobCtx for a worker that holds a pool and no
-// identity service. It resolves the installation's workspace per job, so a job
-// queued before the first company existed fails until one does.
-func bindInstallation(ctx context.Context, pool *pgxpool.Pool) (context.Context, error) {
-	return installationJobCtx(ctx, identity.NewService(pool))
+// everyWorkspaceKinds are the jobs that clean up data in every workspace row,
+// archived ones included, and so must run when no company is live. They run
+// through runEveryWorkspacePass, which reads the rows itself, so the binding
+// leaves them alone. TestEveryWorkspaceKindsRunTheEveryWorkspacePass holds the
+// list to the workers.
+var everyWorkspaceKinds = map[string]bool{
+	IdempotencyRetentionArgs{}.Kind():   true,
+	CaptureTraceSweepArgs{}.Kind():      true,
+	ChatClarificationSweepArgs{}.Kind(): true,
+	StoredObjectReapArgs{}.Kind():       true,
+	SuppressionJournalArgs{}.Kind():     true,
 }
 
-// installationBinder is bindInstallation as the Bind hook the capture and chat
-// workers of the edge packages take.
-func installationBinder(pool *pgxpool.Pool) func(context.Context) (context.Context, error) {
-	return func(ctx context.Context) (context.Context, error) { return bindInstallation(ctx, pool) }
+// installationBinding is the jobs.Config.BindWorkspace of the worker client.
+func installationBinding(pool *pgxpool.Pool) jobs.BindWorkspace {
+	return func(ctx context.Context, job *rivertype.JobRow) (context.Context, error) {
+		if everyWorkspaceKinds[job.Kind] {
+			return ctx, nil
+		}
+		return bindInstallation(ctx, pool)
+	}
 }
 
 // boundWorkspace reads the workspace installationJobCtx bound, for a worker

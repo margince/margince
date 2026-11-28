@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/webread"
@@ -294,11 +295,17 @@ type fxRefreshWorker struct {
 }
 
 func (w *fxRefreshWorker) Work(ctx context.Context, job *river.Job[FxRateRefreshArgs]) error {
-	bound, err := installationJobCtx(ctx, w.users)
+	// A row queued before the upgrade has a different unique key from a new
+	// one, so two refreshes can be queued. One crawl at a time is the lock's.
+	lease, held, err := database.TrySessionLease(ctx, w.refresh.pool, "fx_rate_refresh", w.refresh.log)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	asAdmin, err := rateRefreshWorkerCtx(bound, w.users, job.Args.RequestedBy)
+	if !held {
+		return nil
+	}
+	defer lease.Close(ctx)
+	asAdmin, err := rateRefreshWorkerCtx(ctx, w.users, job.Args.RequestedBy)
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("fx refresh: the admin who asked cannot act: %w", err))
 	}

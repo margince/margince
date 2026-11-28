@@ -42,14 +42,11 @@ func (w *approvalOwnerNoticeWorker) Work(ctx context.Context, job *river.Job[App
 	if job.Args.ApprovalID.IsZero() || job.Args.DeciderID.IsZero() {
 		return river.JobCancel(jobs.FaultContext(ctx, fmt.Errorf("owner announcement requires a request and recipient: %w", apperrors.ErrInvalidArgument)))
 	}
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return river.JobCancel(jobs.FaultContext(ctx, err))
-	}
+	wsCtx := ctx
 	ctx = principal.SystemActing(wsCtx, "system:approval-owner-notice")
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	db := InstallationDB(w.pool)
-	err = db.Tx(ctx, func(tx pgx.Tx) error {
+	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		return tellNewDecider(ctx, tx, notices.NewStore(db), job.Args.DeciderID, []ids.ApprovalID{ids.From[ids.ApprovalKind](job.Args.ApprovalID)}, w.now)
 	})
 	return jobs.FaultContext(ctx, err)

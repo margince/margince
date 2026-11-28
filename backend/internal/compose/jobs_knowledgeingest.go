@@ -124,10 +124,7 @@ func newKnowledgeIngestWorker(pool *pgxpool.Pool, blob blobstore.Store, embedder
 }
 
 func (w *knowledgeIngestWorker) Work(ctx context.Context, job *river.Job[KnowledgeIngestArgs]) error {
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	wsCtx = knowledgeIngestPrincipal(wsCtx, job.Args.DocumentID)
 
 	release, held, err := holdIngest(wsCtx, w.pool, job.Args.DocumentID, w.log)

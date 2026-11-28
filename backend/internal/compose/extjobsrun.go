@@ -139,10 +139,7 @@ func (w *extJobWorkspaceWorker) Work(ctx context.Context, job *river.Job[extJobW
 	// First, before anything reads a row: every capability the handler gets
 	// re-derives the workspace from the context. An unbound context would refuse
 	// at the unit's first query, which names the wrong fault.
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	wsCtx = principal.WithActor(wsCtx, extensionJobPrincipal(w.decl))
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 	// FaultForKind, on the CHILD's kind, because w.tick is the one call here that

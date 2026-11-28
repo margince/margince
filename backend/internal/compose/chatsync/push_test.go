@@ -335,13 +335,11 @@ func (pullArgs) Kind() string { return "chat_pull" }
 
 func (a pullArgs) Connection() ids.UUID { return a.conn }
 
-func bindAny(ctx context.Context) (context.Context, error) { return ctx, nil }
-
 func TestANoticeDuringAPullRunsItOnceMore(t *testing.T) {
 	conn := ids.NewV7()
 	marks := fakeMarks{}
 	worker := &PullWorker[pullArgs]{
-		Bind: bindAny, Marks: marks,
+		Marks:  marks,
 		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return pushNow }},
 	}
 	job := &river.Job[pullArgs]{Args: pullArgs{conn: conn}}
@@ -399,7 +397,7 @@ func TestANoticeOfUnknownShapeIsRefusedBeforeItCounts(t *testing.T) {
 
 func TestAPullWhoseMarksCannotBeReadRunsOnceMore(t *testing.T) {
 	worker := &PullWorker[pullArgs]{
-		Bind: bindAny, Marks: brokenMarks{},
+		Marks:  brokenMarks{},
 		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return pushNow }},
 	}
 	var snooze *river.JobSnoozeError
@@ -414,7 +412,7 @@ func TestANoticeInTheMillisecondThePullStartedRunsItOnceMore(t *testing.T) {
 	// The store keeps milliseconds, so a notice 300µs after the start reads back as pushNow.
 	marks := fakeMarks{noticeKey(conn): time.UnixMilli(start.Add(300 * time.Microsecond).UnixMilli())}
 	worker := &PullWorker[pullArgs]{
-		Bind: bindAny, Marks: marks,
+		Marks:  marks,
 		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return start }},
 	}
 	var snooze *river.JobSnoozeError

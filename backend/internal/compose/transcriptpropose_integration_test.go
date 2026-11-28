@@ -148,7 +148,7 @@ func (e *transcriptEnv) readAt(t *testing.T, brain completer, now func() time.Ti
 	// The shipped rep role, the same team scope transcriptPerms gives e.ctx,
 	// so what the reader may see is what the rep who asked may see.
 	e.GrantRole(t, e.Rep1, "rep")
-	reader := &transcriptProposeWorker{users: identity.NewService(e.Pool), bind: installationBinder(e.Pool)}
+	reader := &transcriptProposeWorker{users: identity.NewService(e.Pool)}
 	worker, live, err := reader.readerFor(principal.WithWorkspaceID(context.Background(), e.WS),
 		"human:"+e.Rep1.String(), started.ID)
 	if err != nil || !live {

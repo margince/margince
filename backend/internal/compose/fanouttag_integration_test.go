@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -87,8 +88,9 @@ func TestARealFanOutInsertCarriesTheSweepTagIntoRiversTagsColumn(t *testing.T) {
 	river.AddWorker(workers, &inertWorker[CaptureSyncArgs]{})
 
 	runner, err := jobs.New(e.Pool, jobs.Config{
-		Queues:  map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 1}},
-		Workers: workers,
+		BindWorkspace: func(ctx context.Context, _ *rivertype.JobRow) (context.Context, error) { return ctx, nil },
+		Queues:        map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 1}},
+		Workers:       workers,
 	}, slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatalf("jobs.New: %v", err)

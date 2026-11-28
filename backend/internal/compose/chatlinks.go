@@ -169,13 +169,11 @@ func registerChatLinkFlush(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 		flusher := chatsync.NewFlusher(pool, chats, store, cfg.SendOrigin.PublicBaseURL, log)
 		flusher.Lane = cfg.ChatSummaryBrain
 		addDeclaredWorker[ChatLinkFlushArgs](reg, &chatsync.Worker[ChatLinkFlushArgs]{
-			Bind:    installationBinder(pool),
 			Flusher: flusher,
 		})
 		puller := chatsync.NewPuller(pool, store, chats, cfg.ChatSummaryBrain, log).WithNotificationOrigin(cfg.SendOrigin.PublicBaseURL)
 		puller.Reconfirm = channelReconfirmation(pool)
 		addDeclaredWorker[ChatPullArgs](reg, &chatsync.PullWorker[ChatPullArgs]{
-			Bind:   installationBinder(pool),
 			Puller: puller, Marks: cfg.ChatPushMarks,
 		})
 		addDeclaredWorker[ChatPullSweepArgs](reg, &chatPullSweepWorker{

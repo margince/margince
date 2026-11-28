@@ -34,6 +34,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -118,13 +119,17 @@ type assuranceRunWorker struct {
 }
 
 func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceRunArgs]) error {
-	// The guard FIRST, before the worker touches anything: a zero workspace
-	// would bind an empty GUC and the pass would then read and write as
-	// whatever the connection happens to carry.
-	wsCtx, err := bindInstallation(ctx, w.sweep.pool)
+	// A row queued before the upgrade has a different unique key from a new
+	// one, so two passes can be queued. One pass at a time is the lock's.
+	lease, held, err := database.TrySessionLease(ctx, w.sweep.pool, "assurance_run", w.sweep.log)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	if !held {
+		return nil
+	}
+	defer lease.Close(ctx)
+	wsCtx := ctx
 	// SYSTEM, on a pass a human asked for, and deliberately: the pass reads the
 	// whole pipeline, and every exception it raises is captured_by whoever it
 	// runs as. Attributed to the manager who pressed the button, the run would

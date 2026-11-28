@@ -392,3 +392,38 @@ func suppressChannelAccount(t *testing.T, e *integration.Env, account string) {
 		t.Fatalf("arming the erasure suppression for account %s: %v", account, err)
 	}
 }
+
+// A poll queued before the upgrade has a different unique key from a new one,
+// so two polls for one bot can both be queued. The per-connection lock is what
+// keeps getUpdates to one consumer: a poll that finds it held does not call
+// Telegram, and the same poll runs once the lock is free.
+func TestAPollSkipsABotWhoseLockAnotherPollHolds(t *testing.T) {
+	e := integration.Setup(t)
+	integration.ApplyRiverSchema(t)
+	vault := keyvault.NewMemory()
+	api := &telegramPollFakeAPI{
+		bot:  telegram.Bot{ID: 92000009, Username: "locked_bot"},
+		held: []json.RawMessage{telegramPrivateUpdate(6901, 780901, 91, "once")},
+	}
+	conn := connectTestTelegramBot(t, e, vault, api, 92000009, "locked_bot")
+	worker := newTestPollWorker(e, vault, api, ambientPollInserter(t, e))
+
+	holder, held, err := database.TrySessionLease(context.Background(), e.Pool, "telegram_poll:"+conn.ID.String(), nil)
+	if err != nil || !held {
+		t.Fatalf("taking the lock: held=%v err=%v", held, err)
+	}
+	if err := runOnePoll(t, worker, e.WS, conn); err != nil {
+		t.Fatalf("the skipped poll: %v", err)
+	}
+	if got := api.polls(); len(got) != 0 {
+		t.Fatalf("Telegram was polled %v while another poll held the bot", got)
+	}
+	holder.Close(context.Background())
+
+	if err := runOnePoll(t, worker, e.WS, conn); err != nil {
+		t.Fatalf("the poll after the release: %v", err)
+	}
+	if n := rawCaptureCount(t, e, conn, 6901); n != 1 {
+		t.Fatalf("%d raw rows after the released poll, want 1", n)
+	}
+}

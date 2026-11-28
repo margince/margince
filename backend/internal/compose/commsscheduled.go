@@ -138,10 +138,7 @@ func (w *scheduledSendWorker) Work(ctx context.Context, job *river.Job[Scheduled
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("comms_scheduled_send: scheduled send id: %w", err))
 	}
-	wsCtx, err := bindInstallation(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 
 	// Who this message fires as. Read under a system scope, because resolving
 	// the scheduler is what tells us whose authority to adopt — the answer

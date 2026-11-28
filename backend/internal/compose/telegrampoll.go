@@ -214,10 +214,19 @@ func (w *telegramPollWorker) Work(ctx context.Context, job *river.Job[TelegramPo
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("telegram_poll: connection id: %w", err))
 	}
-	wsCtx, err := bindInstallation(ctx, w.pool)
+	wsCtx := ctx
+	// Two poll jobs for one bot would steal each other's batches. A queued row
+	// from before the upgrade has a different unique key from a new one, so the
+	// queue cannot promise one poll. The advisory lock does, and a poll that
+	// finds it held skips: the next tick polls again.
+	lease, held, err := database.TrySessionLease(ctx, w.pool, "telegram_poll:"+connID.String(), w.log)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	if !held {
+		return nil
+	}
+	defer lease.Close(ctx)
 
 	target, err := capture.LoadChannelPollTarget(wsCtx, w.pool, capture.ProviderTelegram, connID)
 	if errors.Is(err, apperrors.ErrNotFound) {
