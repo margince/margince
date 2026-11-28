@@ -313,7 +313,7 @@ the statement and the role that sends it decide what a statement reaches.
 
 - Module statements can only be reached through `database.WithTx`. That seam is the transaction
   boundary an audit can check, because the row, its audit row and its outbox row commit in it.
-  `scripts/check-rls-store-path.sh` refuses a module statement sent over the bare pool.
+  `scripts/check-rls-store-path.sh` refuses a module or compose statement sent over a bare pool.
 - The runtime role `margince_app` is not a superuser, has no `BYPASSRLS`, and does not own the tables.
   So its grants, which allow only DML, bind it. If not, `compose.AssertRuntimeRole` refuses to serve,
   at boot and on `/readyz`. (Only migrations use the schema owner `margince_owner`.)

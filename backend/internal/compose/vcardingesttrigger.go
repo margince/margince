@@ -133,6 +133,7 @@ func (t *VCardIngestTrigger) HandleEvent(ctx context.Context, env events.Envelop
 // was added to avoid.
 func (t *VCardIngestTrigger) carriesCard(ctx context.Context, activity ids.UUID) (bool, error) {
 	var found bool
+	// pool-exempt: a probe that writes nothing; the job it queues re-reads the card under a lock.
 	err := t.pool.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM attachment

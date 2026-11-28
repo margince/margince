@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Store-path gate for database.WithTx.
 #
-# The rule: a module's statement addresses the TRANSACTION (`tx.Exec`/`tx.Query`),
-# never `<recv>.pool.{Exec,Query,QueryRow}`. What that buys is the write shape the
+# The rule: a statement in a module or in compose addresses the TRANSACTION
+# (`tx.Exec`/`tx.Query`), never a pool. Compose is held as modules are, because it
+# writes domain tables through the same seams. What that buys is the write shape the
 # whole product rests on: a domain row, its audit_log row and its event_outbox row
 # commit together or not at all. That only holds if the domain statement is inside
 # the same transaction the audit and outbox writes are. A statement on the bare
@@ -21,25 +22,31 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-dir="backend/internal/modules"
+# Platform is left out: it is the transaction seam itself, and what it may write
+# is bounded by backend/gates/tableownership_test.go, which walks its writers.
+# A scan that reads far fewer files than a tree holds would pass with no subject,
+# so each tree has a floor, raised when the tree grows.
+trees="backend/internal/modules:3000 backend/internal/compose:2000"
 
-# A scan that reads far fewer files than the tree holds would pass with no
-# subject, so the floor is fixed here and raised when the tree grows.
-min_files=1000
+# A file built only with the integration tag is a test fixture, never product.
+files=""
+for tree in $trees; do
+  dir="${tree%%:*}" floor="${tree##*:}"
+  found="$(find "$dir" -name '*.go' ! -name '*_test.go' -exec grep -L '^//go:build integration$' {} + | sort)"
+  count="$(echo "$found" | grep -c . || true)"
+  if (( count < floor )); then
+    echo "FAIL: rls-store-path scanned $count files in $dir, fewer than the floor of $floor; the scan lost the tree"
+    exit 1
+  fi
+  files="$files$found"$'\n'
+done
 
-# One awk pass over every non-test module .go file; prev resets per file. It
-# matches both spellings the tree uses: the field `.pool.Exec(` and the accessor
-# `.Pool().Exec(`. It also counts every match, waived or not.
-files="$(find "$dir" -name '*.go' ! -name '*_test.go' | sort)"
-file_count="$(echo "$files" | wc -l | tr -d ' ')"
-if (( file_count < min_files )); then
-  echo "FAIL: rls-store-path scanned $file_count module files, fewer than the floor of $min_files; the scan lost the module tree"
-  exit 1
-fi
-
-scan="$(echo "$files" | xargs awk '
+# One awk pass; prev resets per file. Any receiver whose name ends in pool or
+# Pool counts, so `pool.`, `.pool.`, `.schemaPool.` and `.Pool().` all match. It
+# also counts every match, waived or not.
+scan="$(echo "$files" | grep . | xargs awk '
   FNR == 1 { prev = "" }
-  $0 ~ /(\.pool|\.Pool\(\))\.(ExecContext|QueryContext|QueryRowContext|Exec|Query|QueryRow|Begin|BeginTx|Acquire|SendBatch|CopyFrom)\(/ {
+  $0 ~ /[[:alnum:]_]*[Pp]ool(\(\))?\.(ExecContext|QueryContext|QueryRowContext|Exec|Query|QueryRow|Begin|BeginTx|Acquire|SendBatch|CopyFrom)\(/ {
     matched++
     if (prev !~ /\/\/[[:space:]]*pool-exempt:/) {
       line = $0; sub(/^[[:space:]]+/, "", line)
@@ -49,7 +56,8 @@ scan="$(echo "$files" | xargs awk '
   { prev = $0 }
   END { printf "MATCHED %d\n", matched }
 ')"
-matched="$(echo "$scan" | sed -n 's/^MATCHED //p')"
+# xargs may split the list over several awk runs, each printing its own count.
+matched="$(echo "$scan" | sed -n 's/^MATCHED //p' | awk '{ total += $1 } END { print total + 0 }')"
 violations="$(echo "$scan" | grep -v '^MATCHED ' || true)"
 if (( matched < 1 )); then
   echo "FAIL: rls-store-path matched no pool statement at all; the pattern no longer sees the spellings the tree uses"
@@ -57,7 +65,7 @@ if (( matched < 1 )); then
 fi
 
 if [[ -n "$violations" ]]; then
-  echo "FAIL: module statements addressing the pool directly, outside the transaction seam:"
+  echo "FAIL: module or compose statements addressing a pool directly, outside the transaction seam:"
   echo "$violations"
   echo
   echo "Route each through database.WithTx and address the tx, not the pool, so the"
@@ -66,4 +74,4 @@ if [[ -n "$violations" ]]; then
   exit 1
 fi
 
-echo "OK: rls-store-path: no module statement addresses the pool directly"
+echo "OK: rls-store-path: no module or compose statement addresses a pool directly"
