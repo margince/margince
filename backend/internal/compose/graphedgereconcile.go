@@ -77,7 +77,7 @@ func (w *graphEdgeReconcileWorker) reconcileWorkspace(ctx context.Context, ws id
 	// and a reader that arrived between those two statements would see an
 	// empty graph. Inside a transaction they see the old one until the new one
 	// commits.
-	return database.WithWorkspaceTx(wsCtx, w.pool, func(tx pgx.Tx) error {
+	return database.WithTx(wsCtx, w.pool, func(tx pgx.Tx) error {
 		return search.RebuildEdges(wsCtx, tx)
 	})
 }
@@ -85,7 +85,7 @@ func (w *graphEdgeReconcileWorker) reconcileWorkspace(ctx context.Context, ws id
 func (w *graphEdgeReconcileWorker) drainWorkspace(ctx context.Context) (bool, error) {
 	ctx = principal.SystemActing(ctx, "system:graph_edge_reconcile")
 	more := false
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
 		more, err = search.DrainPendingGraphTx(ctx, tx, 100)
 		return err

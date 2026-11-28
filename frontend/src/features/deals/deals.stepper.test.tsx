@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -167,9 +168,7 @@ it("draws its own sentence on a closed deal, and points at the way back", async 
 
   const step = await proposalStep();
   expect(step.hasAttribute("disabled")).toBe(true);
-  expect(reasonOf(step)).toBe(
-    "This deal is closed. Reopen it to move it to another stage.",
-  );
+  expect(reasonOf(step)).toBe(englishCopy["deal.closedTakesNoStage"]);
 });
 
 // And a live deal this caller may move says nothing at all. Without this the
@@ -191,8 +190,6 @@ it("draws a deal on a retired pipeline with its own stages and no move", async (
 
   const pilot = await screen.findByRole("button", { name: "Pilot" });
   expect(pilot.hasAttribute("disabled")).toBe(true);
-  expect(reasonOf(pilot)).toBe(
-    "This deal’s pipeline is retired, so its stages are read-only. Restore the pipeline in Settings to move the deal.",
-  );
+  expect(reasonOf(pilot)).toBe(englishCopy["deal.pipelineRetired"]);
   expect(screen.queryByText("Proposal")).toBeNull();
 });

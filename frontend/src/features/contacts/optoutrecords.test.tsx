@@ -10,6 +10,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -85,7 +86,9 @@ describe("Download opt-out records", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Download opt-out records" }),
+      screen.getByRole("button", {
+        name: englishCopy["consent.optOutRecords"],
+      }),
     );
 
     await waitFor(() => expect(downloadBytes).toHaveBeenCalledTimes(1));

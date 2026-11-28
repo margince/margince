@@ -98,19 +98,19 @@ func TestTransactionOwnershipIsCheckedOnSnapshotJoinsAndDetachedWrites(t *testin
 	if checks != 1 || called != 1 {
 		t.Fatalf("guard=%d work=%d", checks, called)
 	}
-	err := database.WithWorkspaceSnapshot(ctx, pool, func(snapshot context.Context) error {
+	err := database.WithSnapshot(ctx, pool, func(snapshot context.Context) error {
 		before := checks
 		if err := db.Tx(snapshot, write); err != nil {
 			return err
 		}
-		if err := database.WithWorkspaceTx(snapshot, pool, write); err != nil {
+		if err := database.WithTx(snapshot, pool, write); err != nil {
 			return err
 		}
 		if checks != before+2 {
 			t.Fatalf("snapshot bypassed guard: %d to %d", before, checks)
 		}
 		permitted = false
-		for _, run := range []func(context.Context, func(pgx.Tx) error) error{db.Tx, func(ctx context.Context, fn func(pgx.Tx) error) error { return database.WithWorkspaceTx(ctx, pool, fn) }} {
+		for _, run := range []func(context.Context, func(pgx.Tx) error) error{db.Tx, func(ctx context.Context, fn func(pgx.Tx) error) error { return database.WithTx(ctx, pool, fn) }} {
 			beforeWork := called
 			if err := run(context.WithoutCancel(snapshot), write); !errors.Is(err, lost) {
 				t.Fatalf("stale snapshot: %v", err)

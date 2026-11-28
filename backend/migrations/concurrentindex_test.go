@@ -123,6 +123,9 @@ func TestTheConcurrentIndexGateReportsWhatItClaimsTo(t *testing.T) {
 		{"concurrent build", "-- pgmigrate:no-transaction\nDROP INDEX CONCURRENTLY IF EXISTS i;\nCREATE INDEX CONCURRENTLY i ON activity (owner_id);", 0},
 		{"concurrent unique build", `CREATE UNIQUE INDEX CONCURRENTLY i ON activity (slug);`, 0},
 		{"index on a table created earlier in the file", `CREATE TABLE fresh (x int); CREATE INDEX i ON fresh (x);`, 0},
+		{"index on a new temporary table", `CREATE TEMP TABLE fresh(x int); CREATE INDEX ON fresh(x);`, 0},
+		{"index on a new TEMPORARY table", `CREATE TEMPORARY TABLE fresh(x int); CREATE INDEX ON fresh(x);`, 0},
+		{"temporary IF NOT EXISTS cannot prove creation", `CREATE TEMP TABLE IF NOT EXISTS fresh(x int); CREATE INDEX ON fresh(x);`, 1},
 		// IF NOT EXISTS creates nothing when the table is already there.
 		{"index after CREATE TABLE IF NOT EXISTS", `CREATE TABLE IF NOT EXISTS activity (x int); CREATE INDEX i ON activity (x);`, 1},
 		{"index before the CREATE that names its table", `CREATE INDEX i ON fresh (x); CREATE TABLE fresh (x int);`, 1},

@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { EconomyBanner } from "./economybanner";
 
@@ -71,34 +72,22 @@ it("does not probe usage for a non-admin", async () => {
       String(input).includes("/ai/budget"),
     ),
   ).toBe(false);
-  expect(
-    screen.queryByText(
-      "80% of AI allowance reached. Review affected features.",
-    ),
-  ).toBeNull();
+  expect(screen.queryByText(englishCopy["aibanner.degraded"])).toBeNull();
 });
 
 it("shows and dismisses economy mode for an admin", async () => {
   mount(AI_RUNTIME_READER, "degraded");
   expect(
-    await screen.findByText(
-      "80% of AI allowance reached. Review affected features.",
-    ),
+    await screen.findByText(englishCopy["aibanner.degraded"]),
   ).toBeTruthy();
   const user = userEvent.setup({ delay: null });
   await user.click(screen.getByLabelText("Dismiss"));
-  expect(
-    screen.queryByText(
-      "80% of AI allowance reached. Review affected features.",
-    ),
-  ).toBeNull();
+  expect(screen.queryByText(englishCopy["aibanner.degraded"])).toBeNull();
 });
 
 it("shows queued while normal stays silent", async () => {
   mount(AI_RUNTIME_READER, "queued");
-  expect(
-    await screen.findByText("AI allowance reached. Review deferred work."),
-  ).toBeTruthy();
+  expect(await screen.findByText(englishCopy["aibanner.queued"])).toBeTruthy();
   cleanup();
   const { fetchMock } = mount(AI_RUNTIME_READER, "normal");
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
@@ -109,9 +98,7 @@ it("shows a recurring band as a new occurrence", async () => {
   let band = "degraded";
   const { client } = mount(AI_RUNTIME_READER, () => band);
   expect(
-    await screen.findByText(
-      "80% of AI allowance reached. Review affected features.",
-    ),
+    await screen.findByText(englishCopy["aibanner.degraded"]),
   ).toBeTruthy();
   const user = userEvent.setup({ delay: null });
   await user.click(screen.getByLabelText("Dismiss"));
@@ -127,17 +114,13 @@ it("shows a recurring band as a new occurrence", async () => {
   band = "degraded";
   await client.refetchQueries({ queryKey: ["ai-budget"] });
   expect(
-    await screen.findByText(
-      "80% of AI allowance reached. Review affected features.",
-    ),
+    await screen.findByText(englishCopy["aibanner.degraded"]),
   ).toBeTruthy();
 });
 
 it("surfaces an unknown budget band", async () => {
   mount(AI_RUNTIME_READER, "future-band");
-  expect(
-    await screen.findByText("AI allowance status not recognized"),
-  ).toBeTruthy();
+  expect(await screen.findByText(englishCopy["aibanner.unknown"])).toBeTruthy();
 });
 
 it("keeps a diagnostics-only management reader free of allowance banners", async () => {
@@ -152,7 +135,7 @@ it("links an allowance editor to usage instead of model bindings", async () => {
   mount(AI_RUNTIME_READER, "degraded");
   expect(
     (
-      await screen.findByRole("link", { name: "Manage allowance" })
+      await screen.findByRole("link", { name: englishCopy["aibanner.link"] })
     ).getAttribute("href"),
   ).toBe("/#/settings/usage");
 });

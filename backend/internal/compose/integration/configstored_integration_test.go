@@ -156,7 +156,7 @@ func TestConfigStored_SeedSkipsABootLockedKeyAndResetClearsIt(t *testing.T) {
 	def := cfg.StoredDefinitions()[0]
 	inTx := func(fn func(tx pgx.Tx) error) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(ctx, e.Pool, fn); err != nil {
+		if err := database.WithTx(ctx, e.Pool, fn); err != nil {
 			t.Fatal(err)
 		}
 	}

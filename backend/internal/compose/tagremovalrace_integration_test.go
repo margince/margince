@@ -64,7 +64,7 @@ func TestMaintenanceKeepsTheTagRemovalThatCommitsWhileItWaits(t *testing.T) {
 					return err
 				})
 			}()
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				waitForBackendBlockedBy(t, tx, holder, applied)
 				return nil
 			}); err != nil {

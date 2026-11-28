@@ -111,7 +111,7 @@ func foldEdges(t *testing.T, e *integration.Env, activityID ids.UUID) {
 		Type: principal.PrincipalSystem, ID: "system:test",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
 	}); err != nil {
 		t.Fatalf("folding interaction edges: %v", err)

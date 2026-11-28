@@ -128,7 +128,7 @@ func TestAnAdminTurnsSharingPrivateQuoteRequestsOff(t *testing.T) {
 	shares := func() bool {
 		t.Helper()
 		var on bool
-		if err := database.WithWorkspaceTx(admin, e.pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(admin, e.pool, func(tx pgx.Tx) (err error) {
 			on, err = SharesPrivateRequestsTx(admin, tx)
 			return err
 		}); err != nil {

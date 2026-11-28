@@ -383,7 +383,7 @@ Two gates narrow it as far as it goes, and the claim goes no further than they d
 
 `Runtime`'s contract:
 
-- **Database access is workspace-pinned, never raw:** the `WithWorkspaceTx` idiom, not the pool.
+- **Database access is transactional, never raw:** the `WithTx` idiom, not the pool.
 - Secrets are reached through the §4.2 port, scoped to the invoking unit.
 - **Lifetime is call-scoped.** Retaining `rt` past the handler's return (a package var, a spawned
   goroutine) is invalid and fails closed (`ErrRuntimeExpired`) rather than working by accident.
@@ -624,8 +624,8 @@ badly. The dispatcher enqueues one child per live workspace: N×M rows per tick.
   `args->>'workspace_id'` landed as a Go statement in `cmd/migrate` after `jobs.Migrate`, not as a
   migration file. River owns its own schema and its ledger, so a core migration file touching `river_job`
   would be the wrong lane.
-- The runner binds the workspace via `WithWorkspaceTx` before the handler runs. A handler never sees
-  a global scope, and multi-tenancy is the shape of the capability rather than an author's discipline.
+- The runner opens the handler's database access through `WithTx`. A handler never sees
+  a global scope, and that is the shape of the capability rather than an author's discipline.
 - **Principal:** the handler persists the initiating principal reference and re-derives authority at
   execution. Missing, revoked or stale authority fails closed.
 - **Auto-execute only, non-egress.** A confirm-first job is a confirmation nobody can give, because there

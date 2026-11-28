@@ -34,7 +34,7 @@ func (e *CounterpartyVerdictEngine) apply(
 	}
 	var acted bool
 	var triageDomain string
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		settled, err := reconcileWithTheOwner(ctx, tx, row, answered{
 			kind: kind, verdict: verdict, measured: measured, byOwner: ownerSaidSo,
 		})

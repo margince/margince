@@ -6,6 +6,7 @@ import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { OvernightGrantChoice } from "../../components/overnight-grant-choice";
 import { SettingList } from "../../design-system/settingrow";
+import { en as englishCopy } from "../../i18n/en";
 import { OVERNIGHT_AGENTS } from "../../lib/overnight-grant";
 import {
   installFetchStub,
@@ -136,7 +137,9 @@ export const SettingsSwitchedOff: Story = {
     await waitFor(() => expect(toggle).toBeChecked());
     await userEvent.click(toggle);
     await waitFor(() =>
-      expect(canvas.getByText("Overnight agent will not run")).toBeVisible(),
+      expect(
+        canvas.getByText(englishCopy["overnightGrant.dangerTitle"]),
+      ).toBeVisible(),
     );
   },
 };
@@ -209,7 +212,7 @@ export const SettingsWriteRefused: Story = {
     const toggle = await canvas.findByTestId("overnight-grant-toggle");
     await waitFor(() => expect(toggle).toBeChecked());
     await userEvent.click(toggle);
-    await canvas.findByText("Change was not saved");
+    await canvas.findByText(englishCopy["overnightGrant.writeFailedTitle"]);
   },
 };
 

@@ -351,7 +351,6 @@ export function AiCallsCard() {
       {hasFigure &&
         `${t("aicalls.filtered", { filter: figureWords(figure, t) })} `}
       <CountLine
-        unit={t("aicalls.unit")}
         first={1}
         last={rows.length}
         total={rows.length}

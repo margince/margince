@@ -4,6 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ImportWindowPicker } from "./window-picker";
 
 afterEach(cleanup);
@@ -42,7 +43,7 @@ it("shows only the selected window's server date, and tolerates older servers", 
   );
   expect(screen.queryByText(/Emails since/)).toBeNull();
   expect(
-    screen.getByRole("combobox", { name: "How far back" }),
+    screen.getByRole("combobox", { name: englishCopy["backfill.windowLabel"] }),
   ).toHaveTextContent("10 years");
   expect(onChange).not.toHaveBeenCalled();
 });

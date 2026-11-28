@@ -148,7 +148,6 @@ export const createView: Handler = ({ route, json }, state) => {
   const created: components["schemas"]["SavedView"] = {
     id: `v-${state.views.length + 1}`,
     owner_id: "u1",
-    shared_scope: "private",
     resource: asked.resource,
     name: asked.name,
     query: asked.query,

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { company as typedCompany } from "../../testing/company.fixtures";
 import {
   installFetchStub,
@@ -548,11 +549,13 @@ export const CompanyFullHistory: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "More actions",
+        name: englishCopy["record.moreActions"],
       }),
     );
     await userEvent.click(await screen.findByTestId("company-full-history"));
-    await screen.findByRole("dialog", { name: "Full history" });
+    await screen.findByRole("dialog", {
+      name: englishCopy["record.fullHistory"],
+    });
   },
 };
 

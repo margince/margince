@@ -95,7 +95,7 @@ func TestRelayRepairRevisitsFinishedTasksAndPreservesHumanRecords(t *testing.T) 
 		task.Steps[i].Limit = 1
 	}
 	rollback := errors.New("roll back employment repair")
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := task.Steps[1].Batch(ctx, tx, datatask.BatchIn{Limit: 50, RunID: ids.NewV7()}); err != nil {
 			return err
 		}

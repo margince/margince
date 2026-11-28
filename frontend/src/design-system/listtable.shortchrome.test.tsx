@@ -1,8 +1,10 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { type ListColumn, ListTable } from "./listtable";
 
 afterEach(() => {
@@ -65,7 +67,7 @@ describe("a short list that hides its chrome", () => {
   it("draws its rows without a count, dials or pager", () => {
     render(<Short rows={testRows(3)} />);
     expect(screen.getByText("Row 3")).toBeTruthy();
-    expect(screen.queryByText(/1 to 3 of 3 rows/)).toBeNull();
+    expect(screen.queryByText(/1-3 of 3/)).toBeNull();
     expect(screen.queryByRole("searchbox")).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Pages" })).toBeNull();
   });
@@ -76,7 +78,7 @@ describe("a short list that hides its chrome", () => {
     render(<Short rows={[]} />);
     expect(
       screen
-        .getByRole("button", { name: "Show archived" })
+        .getByRole("button", { name: englishCopy["list.showArchived"] })
         .getAttribute("aria-pressed"),
     ).toBe("false");
     expect(screen.queryByRole("searchbox")).toBeNull();
@@ -84,7 +86,9 @@ describe("a short list that hides its chrome", () => {
 
   it("draws no switch for a list that offers no archiving", () => {
     render(<Short rows={testRows(3)} archivable={false} />);
-    expect(screen.queryByRole("button", { name: "Show archived" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["list.showArchived"] }),
+    ).toBeNull();
   });
 
   it("says it is empty in one line, with no table of headings", () => {
@@ -103,7 +107,7 @@ describe("a short list that hides its chrome", () => {
   it("keeps every dial while it shows archived rows too", () => {
     render(<Short rows={testRows(3)} showingArchived />);
     expect(screen.getByRole("searchbox")).toBeTruthy();
-    expect(screen.getByText(/1 to 3 of 3 rows/)).toBeTruthy();
+    expect(document.querySelector(".lt-count")).toHaveTextContent("1-3 of 3");
   });
 
   // Not yet known to be short: the rows that arrive may run past one page.
@@ -146,6 +150,6 @@ describe("a short list that hides its chrome", () => {
   it("keeps every dial past the smallest page size", () => {
     render(<Short rows={testRows(40)} />);
     expect(screen.getByRole("searchbox")).toBeTruthy();
-    expect(screen.getByText(/1 to 25 of 40 rows/)).toBeTruthy();
+    expect(document.querySelector(".lt-count")).toHaveTextContent("1-25 of 40");
   });
 });

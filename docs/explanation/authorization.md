@@ -311,8 +311,8 @@ enrich call with `ErrScopeExceeded` before the tier is checked, over MCP or REST
 No table has row level security, and no policy exists to read. An installation holds one company, so
 the statement and the role that sends it decide what a statement reaches.
 
-- Module statements can only be reached through `database.WithWorkspaceTx`, which fails closed before
-  any SQL if no workspace is bound. That seam is the transaction boundary an audit can check.
+- Module statements can only be reached through `database.WithTx`. That seam is the transaction
+  boundary an audit can check, because the row, its audit row and its outbox row commit in it.
   `scripts/check-rls-store-path.sh` refuses a module statement sent over the bare pool.
 - The runtime role `margince_app` is not a superuser, has no `BYPASSRLS`, and does not own the tables.
   So its grants, which allow only DML, bind it. If not, `compose.AssertRuntimeRole` refuses to serve,

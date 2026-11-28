@@ -122,7 +122,7 @@ func (s *Service) ChoiceUse(ctx context.Context, id ids.UUID) (crmcontracts.Cust
 	if err := auth.Require(ctx, rbacObject, principal.ActionRead); err != nil {
 		return use, err
 	}
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var object, column, fieldType string
 		var raw []byte
 		err := tx.QueryRow(ctx, `SELECT object, column_name, type, options FROM custom_field WHERE id = $1`, id).

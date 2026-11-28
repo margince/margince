@@ -69,7 +69,7 @@ func (e *Env) effectiveRate(t *testing.T, from string) (string, time.Time, bool,
 		asOf  time.Time
 		found bool
 	)
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
 		rate, asOf, found, err = e.Deals.EffectiveFxRateInTx(e.Admin(), tx, from)
 		return err
 	})

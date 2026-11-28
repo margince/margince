@@ -245,12 +245,10 @@ describe("PageTitle", () => {
     const { container } = render(<PageTitle route={{ screen: "filters" }} />);
     const heading = screen.getByRole("heading", {
       level: 1,
-      name: "Filters and views",
+      name: en["filters.title"],
     });
     const sub = container.querySelector(".pagesub");
-    expect(sub?.textContent).toBe(
-      "Every saved view and list you can use, and where a new filter starts.",
-    );
+    expect(sub?.textContent).toBe(en["filters.subtitle"]);
     // Under the row the heading shares with the scope badge, inside the title's
     // text column rather than beside the actions.
     expect(heading.closest(".pagetitle-head")?.nextElementSibling).toBe(sub);
@@ -363,7 +361,10 @@ describe("Section switcher (the page title at phone width)", () => {
   it("renders no switcher above the phone breakpoint", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Privacy and retention" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: en["settings.tab.privacy"],
+      }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /change section/ })).toBeNull();
   });
@@ -380,7 +381,7 @@ describe("Section switcher (the page title at phone width)", () => {
     expect(heading.contains(switcher)).toBe(true);
     // The visible word is the entry, and it is part of the name (WCAG 2.5.3), so
     // a reader driving the app by voice says what they can see.
-    expect(switcher.textContent).toContain("Privacy and retention");
+    expect(switcher.textContent).toContain(en["settings.tab.privacy"]);
     expect(switcher.getAttribute("aria-expanded")).toBe("false");
     // One heading, and the entry's name is in it once — not once in a heading
     // and again in a control under it.
@@ -630,7 +631,7 @@ describe("Shell", () => {
     render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
 
     const rail = await screen.findByRole("navigation", {
-      name: "Primary navigation",
+      name: en["shell.railAria"],
     });
     expect(
       await within(rail).findByRole("link", { name: "Account" }),
@@ -686,9 +687,9 @@ describe("Shell", () => {
     );
     const headings = screen.getAllByRole("heading", { level: 1 });
     expect(headings).toHaveLength(1);
-    expect(headings[0].textContent).toBe("Filters and views");
+    expect(headings[0].textContent).toBe(en["filters.title"]);
     expect(container.querySelector(".pagesub")?.textContent).toBe(
-      "Every saved view and list you can use, and where a new filter starts.",
+      en["filters.subtitle"],
     );
   });
 
@@ -736,12 +737,12 @@ describe("Shell", () => {
     window.location.hash = "#/contacts";
     render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
     expect(
-      screen.getByRole("button", { name: "Collapse sidebar" }),
+      screen.getByRole("button", { name: en["shell.collapse"] }),
     ).toBeTruthy();
 
     await user.keyboard("{Meta>}b{/Meta}");
     expect(
-      await screen.findByRole("button", { name: "Expand sidebar" }),
+      await screen.findByRole("button", { name: en["shell.expand"] }),
     ).toBeTruthy();
   });
 
@@ -760,9 +761,11 @@ describe("Shell", () => {
     await user.click(screen.getByRole("textbox", { name: "Note" }));
     await user.keyboard("{Meta>}b{/Meta}");
     expect(
-      screen.getByRole("button", { name: "Collapse sidebar" }),
+      screen.getByRole("button", { name: en["shell.collapse"] }),
     ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Expand sidebar" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["shell.expand"] }),
+    ).toBeNull();
   });
 
   // With no stored choice, a tablet starts folded and nothing is stored.
@@ -786,7 +789,7 @@ describe("Shell", () => {
       );
       const app = container.querySelector(".app");
       expect(app?.classList.contains("railexpanded")).toBe(
-        toggleName === "Collapse sidebar",
+        toggleName === en["shell.collapse"],
       );
       if (width > 700) {
         expect(screen.getByRole("button", { name: toggleName })).toBeTruthy();
@@ -861,7 +864,7 @@ describe("Shell", () => {
     // entries come from a capability read, so a rail asserted before it answers
     // is still the top-level one and would pass whatever the rule did.
     const rail = await screen.findByRole("navigation", {
-      name: "Primary navigation",
+      name: en["shell.railAria"],
     });
     expect(
       await within(rail).findByRole("link", { name: "Account" }),
@@ -899,7 +902,7 @@ describe("Shell", () => {
     // The section's rail replaces the destinations' one, so it is found anew.
     await waitFor(() =>
       expect(
-        screen.getByRole("navigation", { name: "Primary navigation" })
+        screen.getByRole("navigation", { name: en["shell.railAria"] })
           .className,
       ).toContain("leveled"),
     );
@@ -958,7 +961,7 @@ describe("Shell", () => {
     window.location.hash = "#/contacts";
     render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
     expect(
-      screen.getByRole("navigation", { name: "Primary navigation" }),
+      screen.getByRole("navigation", { name: en["shell.railAria"] }),
     ).toBeTruthy();
   });
 });

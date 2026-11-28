@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -43,7 +44,7 @@ async function openReach({
     }),
   );
   await within(canvasElement.ownerDocument.body).findByRole("table", {
-    name: "Companies you reach",
+    name: englishCopy["linkedinReach.accountsLabel"],
   });
 }
 
@@ -106,7 +107,9 @@ export const ReadFailed: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Could not load")).toBeVisible();
+    await expect(
+      await canvas.findByText(englishCopy["connectionOutcomes.unread"]),
+    ).toBeVisible();
     await expect(
       canvas.getByText("the reach index is rebuilding"),
     ).toBeVisible();

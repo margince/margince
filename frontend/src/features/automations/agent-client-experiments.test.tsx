@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { agentClientList } from "../../testing/agent-clients.fixtures";
 import { AgentClientExperimentsCard } from "./agent-client-experiments";
@@ -51,7 +52,9 @@ describe("Experiments", () => {
     const control = await screen.findByRole("switch", { name: CHECK });
     expect(control.getAttribute("aria-checked")).toBe("true");
     expect((control as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText("Only an admin can change these.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["agentClients.methods.readOnly"]),
+    ).toBeTruthy();
   });
 
   it("says a refused change, and names it from the switch", async () => {
@@ -69,7 +72,9 @@ describe("Experiments", () => {
     );
     renderWithClient(<AgentClientExperimentsCard />);
     await user.click(await screen.findByRole("switch", { name: CHECK }));
-    const refusal = await screen.findByText("The change was not saved");
+    const refusal = await screen.findByText(
+      englishCopy["agentClients.methods.saveFailed"],
+    );
     const callout = refusal.closest("[id]");
     const describedBy = screen
       .getByRole("switch", { name: CHECK })
@@ -116,9 +121,7 @@ describe("Experiments", () => {
       ADMIN_GRANTS,
     );
     renderWithClient(<AgentClientExperimentsCard />);
-    expect(
-      await screen.findByText("Could not load this view. Reload the page."),
-    ).toBeTruthy();
+    expect(await screen.findByText(englishCopy["common.error"])).toBeTruthy();
   });
 
   it("opens the explanation with the question to ask, and Escape closes it", async () => {
@@ -129,7 +132,7 @@ describe("Experiments", () => {
     );
     renderWithClient(<AgentClientExperimentsCard />);
     const trigger = await screen.findByRole("button", {
-      name: "About this experiment",
+      name: englishCopy["agentClients.experiments.about"],
     });
     await user.click(trigger);
     expect(await screen.findByText("How to test")).toBeTruthy();

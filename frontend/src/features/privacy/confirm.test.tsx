@@ -106,9 +106,13 @@ describe("the confirm page branches on what the link was for", () => {
 
     render(<ConfirmDetailsScreen token="tok-granted" />);
 
-    expect(await screen.findByText("You are subscribed")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Confirm subscription" }),
+      await screen.findByText(en["confirm.subscription.alreadyTitle"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: en["confirm.subscription.confirm"],
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -150,14 +154,18 @@ describe("the confirm page branches on what the link was for", () => {
     render(<ConfirmDetailsScreen token="tok-flaky" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Confirm subscription" }),
+      await screen.findByRole("button", {
+        name: en["confirm.subscription.confirm"],
+      }),
     );
 
     // Never the confirmed state, and the refusal is on screen rather than the
     // button simply re-enabling itself. The copy is the honest fallback: a 502
     // with no body genuinely reports no cause.
     await screen.findByText(/the request failed/i);
-    expect(screen.queryByText("You are subscribed")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(en["confirm.subscription.alreadyTitle"]),
+    ).not.toBeInTheDocument();
   });
 
   // A token that names nothing reads the same as one that expired or was
@@ -262,7 +270,7 @@ describe("a confirm page names the seeded purposes in the reader's language", ()
     ).toBeInTheDocument();
     expect(screen.getByText("Partner events")).toBeInTheDocument();
     expect(
-      screen.queryByText("Business correspondence"),
+      screen.queryByText(en["consent.purposeName.business_correspondence"]),
     ).not.toBeInTheDocument();
   });
 });
@@ -286,9 +294,7 @@ it("lets contact details be corrected without choosing marketing", async () => {
   await user.clear(name);
   await user.type(name, "Anna Meyer");
   expect(
-    screen.getByText(
-      "This choice is optional. You can correct your details without subscribing.",
-    ),
+    screen.getByText(en["confirm.marketing.optional"]),
   ).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Confirm" }));
   expect(submitted).toHaveLength(1);
@@ -403,9 +409,13 @@ describe("a privacy notice discloses who answers, why, what, to whom and for how
     expect(
       screen.getByText("Questions about your data: privacy@beispiel.test"),
     ).toBeInTheDocument();
-    expect(screen.getByText("You wrote to us first.")).toBeInTheDocument();
+    expect(
+      screen.getByText(en["privacynotice.basis.subjectInitiated"]),
+    ).toBeInTheDocument();
     expect(screen.getByText(/^Only with your agreement/)).toBeInTheDocument();
-    expect(screen.getByText("Your email address")).toBeInTheDocument();
+    expect(
+      screen.getByText(en["privacynotice.category.email"]),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(
         "Emails, meetings and calls with you: kept for 3 years from when they were recorded, " +
@@ -415,7 +425,7 @@ describe("a privacy notice discloses who answers, why, what, to whom and for how
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Staff who work with our CRM."),
+      screen.getByText(en["privacynotice.recipient.colleagues"]),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -430,10 +440,12 @@ describe("a privacy notice discloses who answers, why, what, to whom and for how
     render(<ConfirmDetailsScreen token="tok-object" />);
 
     expect(
-      await screen.findByRole("heading", { name: "Your right to object" }),
+      await screen.findByRole("heading", {
+        name: en["privacynotice.objection.title"],
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText("To object: Reply STOP")).toBeInTheDocument();
-    expect(screen.queryByText("Object to how we use it.")).toBeNull();
+    expect(screen.queryByText(en["privacynotice.right.objection"])).toBeNull();
   });
 });
 
@@ -461,7 +473,7 @@ describe("the confirm pages name the controller and sit in the public frame", ()
       await screen.findByText(/^Example Trading GmbH holds the details below/),
     ).toBeInTheDocument();
     expect(screen.queryByText(/an AI system/)).toBeNull();
-    expect(screen.getByText("Sent via Margince")).toBeInTheDocument();
+    expect(screen.getByText(en["prefs.sentVia"])).toBeInTheDocument();
   });
 
   it("names the controller on the subscription page", async () => {
@@ -472,10 +484,12 @@ describe("the confirm pages name the controller and sit in the public frame", ()
     render(<ConfirmDetailsScreen token="tok-subscription-named" />);
 
     expect(
-      await screen.findByRole("heading", { name: "Who is responsible" }),
+      await screen.findByRole("heading", {
+        name: en["privacynotice.controller.title"],
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText(/^Example Trading GmbH/)).toBeInTheDocument();
-    expect(screen.getByText("Sent via Margince")).toBeInTheDocument();
+    expect(screen.getByText(en["prefs.sentVia"])).toBeInTheDocument();
   });
 
   it("names every right and the controller's contact for them", async () => {

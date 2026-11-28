@@ -3,11 +3,8 @@
 
 package aicert
 
-// ONE run: the case driven, the answer scored, and everything the run cost
-// folded across every call it made. A run is not one model call — how many a
-// site sends is the site's own decision, a retry, a fallback or a whole tool
-// loop — so this file's job is to keep "the run" and "the last call" from ever
-// being the same thing.
+// A run includes every retry and tool-loop call. Costs are pooled across
+// those calls so the record does not report only the last call.
 
 import (
 	"context"
@@ -22,10 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// degradeGate voids the whole task when a run was served, or graded, on a
-// budget-degraded route. It is a gate rather than a lower band on purpose: a
-// demoted answer and a demoted grader are both measurements of something other
-// than the binding the record names.
+// A demoted candidate or judge cannot certify the binding named by the record.
 func degradeGate(task ai.Task, sc Scenario, run int, outcome runOutcome) error {
 	if outcome.Degraded {
 		return fmt.Errorf(
@@ -52,6 +46,7 @@ func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
 	stats := caseOf(set)
 	row := ScenarioRecord{
 		Scenario:            sc.Name,
+		Recovery:            summarizeRecovery(results),
 		Site:                sc.Site,
 		Stamp:               stamp,
 		Verdict:             caseVerdict(stats),
@@ -255,11 +250,23 @@ func scoreAnswer(ctx context.Context, prepared aitasks.PreparedCase, scope strin
 			return scoredAnswer{}, err
 		}
 	}
+	if validated.recovery == nil {
+		if reporting, ok := prepared.(interface {
+			RecoveryMeasure(aitasks.Trace) *aitasks.LoopRecoveryMeasure
+		}); ok {
+			validated.recovery = reporting.RecoveryMeasure(caseTrace)
+		}
+	}
+	if validated.recovery != nil && (pooled.Withheld != "" || pooled.Abandoned || pooled.Truncated) {
+		validated.recovery.Completed = false
+		validated.recovery.Recovered = false
+	}
 	entry := runEntry(pooled, validated)
 	outcome := candidateSideRun(candidateSide{
 		output: validated.output, outcome: entry.outcome, passed: entry.passed, scope: scope, pooled: pooled,
 	})
 	outcome.Leak = entry.leak
+	outcome.Recovery = validated.recovery
 	outcome.AnswerConfidence = keptConfidence(prepared, caseTrace, entry.passed)
 	if len(caseTrace.Requests) > 0 {
 		outcome.ContextOwed = requestOwesContext(task, caseTrace.Requests[0])
@@ -279,6 +286,7 @@ func scoreAnswer(ctx context.Context, prepared aitasks.PreparedCase, scope strin
 // validation is what the site's own validator and the scenario's caps made of
 // a run's reply.
 type validation struct {
+	recovery        *aitasks.LoopRecoveryMeasure
 	output, outcome string
 	// asExpected is the outcome the scenario named, inside its caps.
 	asExpected bool
@@ -292,7 +300,15 @@ type validation struct {
 func validateRun(ctx context.Context, prepared aitasks.PreparedCase, caseTrace aitasks.Trace, sc Scenario, task ai.Task,
 	pooled runCalls, log *slog.Logger,
 ) (validation, error) {
-	evaluated := prepared.Evaluate(caseTrace)
+	var evaluated aitasks.Outcome
+	var recovery *aitasks.LoopRecoveryMeasure
+	if reporting, ok := prepared.(interface {
+		EvaluateRecovery(aitasks.Trace) (aitasks.Outcome, *aitasks.LoopRecoveryMeasure)
+	}); ok {
+		evaluated, recovery = reporting.EvaluateRecovery(caseTrace)
+	} else {
+		evaluated = prepared.Evaluate(caseTrace)
+	}
 	if !aitasks.KnownOutcome(evaluated.Result) {
 		return validation{}, fmt.Errorf(
 			"the case for site %s/%s evaluated to %q, which is not one of the outcomes a reply can have — a run counted under no outcome would leave the record's own totals unable to add up",
@@ -300,10 +316,7 @@ func validateRun(ctx context.Context, prepared aitasks.PreparedCase, caseTrace a
 		)
 	}
 	capsOK, capFailures := checkCaps(sc.Expect.Caps, pooled)
-	// A run passes when what happened is what the scenario said should happen.
-	// Comparing against a fixed "accepted" instead would make expect.outcome a
-	// declaration the harness ignores — and would leave a scenario whose right
-	// answer is a refusal unable to say so.
+	// The scenario selects the expected outcome; caps independently bound cost.
 	outcomeAsExpected := evaluated.Result == sc.Expect.Outcome
 	if !outcomeAsExpected || !capsOK {
 		log.WarnContext(ctx, "aicert: run did not pass its validator/caps gate",
@@ -311,12 +324,14 @@ func validateRun(ctx context.Context, prepared aitasks.PreparedCase, caseTrace a
 			"outcome", evaluated.Result, "want_outcome", sc.Expect.Outcome,
 			"detail", evaluated.Detail, "cap_failures", capFailures)
 	}
-	// The judge reads what production's parsers read: the unfenced text (every
-	// serving path strips markdown fences before json.Unmarshal, so a fence is
-	// presentation, not a defect).
+	if recovery != nil && !capsOK {
+		recovery.Completed = false
+		recovery.Recovered = false
+	}
+	// Grade the same unfenced text that production parsers read.
 	return validation{
 		output: ai.Unfence(caseTrace.Output), outcome: evaluated.Result, asExpected: outcomeAsExpected && capsOK,
-		leak: evaluated.Leak,
+		leak: evaluated.Leak, recovery: recovery,
 	}, nil
 }
 

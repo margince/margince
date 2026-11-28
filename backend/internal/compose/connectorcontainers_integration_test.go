@@ -124,7 +124,7 @@ func TestListContainersDoesNotReachAColleaguesMailbox(t *testing.T) {
 // to, and the one a test can make without a vault.
 func seedListableConnection(t *testing.T, e *integration.Env, owner ids.UUID, auth []byte) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (provider, user_id, status, auth)
 			VALUES ('imap', $1, 'connected', $2)`, owner, auth)

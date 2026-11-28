@@ -485,7 +485,7 @@ var checkLiteralRe = regexp.MustCompile(`'([a-z_]+)'`)
 func entityTypeCheckValues(t *testing.T, f fixture, table string) map[string]bool {
 	t.Helper()
 	var def string
-	err := database.WithWorkspaceTx(f.ctx, f.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(f.ctx, f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx, `
 			SELECT pg_get_constraintdef(oid) FROM pg_constraint
 			 WHERE conrelid = $1::regclass AND contype = 'c'
@@ -520,7 +520,7 @@ func TestEveryEnumOverTheRecordVocabularyMatchesTheCheckConstraint(t *testing.T)
 	f := setupFixture(t)
 
 	var def string
-	err := database.WithWorkspaceTx(f.ctx, f.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(f.ctx, f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx, `
 			SELECT pg_get_constraintdef(oid) FROM pg_constraint
 			 WHERE conrelid = 'taggable'::regclass AND contype = 'c'

@@ -25,6 +25,7 @@ import { meFixture } from "../testing/mefixture";
 // A seat that may book, so the menu carries its booking link.
 const BOOKER = { allow: { activity: ["read", "create"] } } as const;
 
+import { en as englishCopy } from "../i18n/en";
 import { AccountMenu } from "./account";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
@@ -222,7 +223,7 @@ describe("AccountMenu", () => {
     );
     await openMenu(user, railTrigger());
     const link = screen.getByRole("menuitem", {
-      name: "Set up my booking link",
+      name: englishCopy["scheduling.setUpMyLink"],
     });
     expect(link.getAttribute("href")).toBe("/#/settings/meetings");
     expect(link.textContent).not.toContain("Paused");
@@ -380,9 +381,9 @@ describe("AccountMenu", () => {
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("Theme"));
     await user.keyboard("{ArrowDown}");
-    expect(document.activeElement).toBe(row("My booking link"));
+    expect(document.activeElement).toBe(row(englishCopy["scheduling.myLink"]));
     await user.keyboard("{ArrowDown}");
-    expect(document.activeElement).toBe(row("Help and feedback"));
+    expect(document.activeElement).toBe(row(englishCopy["shell.helpMenu"]));
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("Sign out"));
     // Wrapping, so the walk has no dead end.
@@ -636,8 +637,8 @@ describe("AccountMenu before /me names the seat", () => {
     }
     expect(walked).toEqual([
       "Theme",
-      "My booking link",
-      "Help and feedback",
+      englishCopy["scheduling.myLink"],
+      englishCopy["shell.helpMenu"],
       "Sign out",
       "Settings",
     ]);

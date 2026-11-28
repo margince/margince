@@ -7,6 +7,7 @@ import {
   mapCompanyUpdate,
 } from "../../components/companyform";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { company, jsonResponse } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { meFixture } from "../../testing/mefixture";
@@ -164,9 +165,7 @@ describe("CompanyScreen — a refused domain in the reader's words", () => {
     await user.click(within(about).getByRole("button", { name: "Save" }));
 
     expect(
-      await within(about).findByText(
-        "This is not a domain. Enter one such as example.com.",
-      ),
+      await within(about).findByText(englishCopy["create.domainMalformed"]),
     ).toBeTruthy();
     expect(within(about).queryByText(apiText)).toBeNull();
   });
@@ -258,7 +257,9 @@ describe("CompanyScreen — profile fields card (B5)", () => {
     await openProfile();
 
     await waitFor(() =>
-      expect(screen.getByText("Value proposition")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["co.profileField.value_proposition"]),
+      ).toBeTruthy(),
     );
     expect(screen.getByText("Fleet retrofits without downtime")).toBeTruthy();
     // The row has two controls for two acts. The value is the button that
@@ -281,7 +282,7 @@ describe("CompanyScreen — profile fields card (B5)", () => {
     // form, not a list of what a crawl found: a reader can only add what they
     // can see is missing.
     expect(
-      screen.getAllByText("Ideal customer profile").length,
+      screen.getAllByText(englishCopy["co.profileField.icp"]).length,
     ).toBeGreaterThan(0);
   });
 
@@ -304,7 +305,9 @@ describe("CompanyScreen — profile fields card (B5)", () => {
     await waitFor(() =>
       expect(screen.getAllByText("Offering").length).toBeGreaterThan(0),
     );
-    expect(screen.getAllByText("Sales motion").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(englishCopy["co.profileField.sales_motion"]).length,
+    ).toBeGreaterThan(0);
   });
 });
 
@@ -354,10 +357,14 @@ describe("CompanyScreen — facts card (B6)", () => {
     render(<CompanyScreen id="o-1" />);
     await openProfile();
 
-    await waitFor(() => expect(screen.getByText("Company facts")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(englishCopy["co.facts.title"])).toBeTruthy(),
+    );
     // Scoped to the facts card: the right rail has a Signals card of its own.
     // Which categories the site read produced is a question about this card.
-    const factsCard = screen.getByText("Company facts").closest("section");
+    const factsCard = screen
+      .getByText(englishCopy["co.facts.title"])
+      .closest("section");
     if (!factsCard) {
       throw new Error("the facts card has no section wrapper");
     }

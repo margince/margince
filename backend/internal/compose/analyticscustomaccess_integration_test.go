@@ -83,7 +83,7 @@ func TestTheRecordsBehindACustomGroupAreTheOnesItCounts(t *testing.T) {
 	ctx := ownDealsRep(e)
 
 	var explained AnalyticsExplanation
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		explained, err = ExplainAnalyticsCell(ctx, tx, analyticsquery.Explain{
 			Query: analyticsquery.Query{
@@ -119,7 +119,7 @@ func TestACustomFieldFilterThatSeparatesOutTooFewDealsIsRefused(t *testing.T) {
 	repDeals(t, e, fixture, "EMEA", 4)
 	ctx := e.Admin()
 
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := RunAnalyticsQuery(ctx, tx, analyticsquery.Query{
 			Entity:   "deals-by-stage",
 			Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll}},

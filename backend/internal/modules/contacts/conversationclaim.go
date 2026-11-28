@@ -184,7 +184,7 @@ func (s *Store) readClaims(
 	admission := currentCommitmentAdmission(s.clock(), arg)
 	extra := sqlAlwaysVisible
 	if onlyOpen {
-		extra = `c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review AND ` + admission
+		extra = `c.kind = 'commitment_ours' AND c.status = 'open' AND ` + admission
 	}
 
 	scope, err := claimContentClause(ctx, arg)
@@ -201,7 +201,7 @@ func (s *Store) readClaims(
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.kind, c.body, c.source_activity_id, c.source_quote,
 		       a.subject, a.occurred_at, a.occurred_precision, c.status, c.due_at,
- (c.needs_review OR (c.kind IN ('commitment_ours','commitment_theirs') AND NOT `+admission+`)),
+ (c.kind IN ('commitment_ours','commitment_theirs') AND NOT `+admission+`),
 		       c.corrected_at, c.task_activity_id, c.taken_by_user_id, taker.display_name, c.taken_at
 		FROM conversation_claim c
 		JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
@@ -302,10 +302,7 @@ type ProjectCommitment struct {
 // claim must be skipped and the next candidate win rather than the row
 // naming somebody this caller may not know of.
 //
-// status = 'open' AND NOT needs_review: a done or dismissed claim is settled,
-// and needs_review means the extractor found contradicting evidence — the
-// claim contract calls newest-wins no resolution, so presenting a disputed
-// claim as "they owe us this" would state a contested thing as a fact.
+// Only open claims passing the current evidence checks state an obligation.
 //
 // The bool is whether the caller could see EVERY contact a candidate claim was
 // made by. False means at least one was outside their scope and its claim was

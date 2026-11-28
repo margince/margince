@@ -38,7 +38,7 @@ func TestAnErasureTombstonesTheAttachmentsItPurged(t *testing.T) {
 	const subjectEmail = "collateral.subject@counterparty.test"
 
 	var contact, attachment ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
@@ -100,7 +100,7 @@ func TestAnErasureDeletesAWithheldFileWithoutAnObjectStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("logging the subject's mail: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return e.Activities.RecordWithheldFiles(e.Admin(), tx, ids.From[ids.ActivityKind](ids.UUID(mail.Id)),
 			activities.CapturedFileSource{
 				System: "imap", MessageID: "withheld-subject", CapturedBy: "connector:imap", Category: "email_attachment",

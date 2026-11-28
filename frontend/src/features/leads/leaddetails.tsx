@@ -26,6 +26,7 @@ import { formatDateAbbrev } from "../../format/format";
 import { industryWords } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { salutationLabel } from "../../lib/contactsalutation";
 import {
   addedViaFor,
   originLabelFor,
@@ -149,6 +150,13 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
 function useReachRows(lead: Lead): DetailRow[] {
   const t = useT();
   return [
+    {
+      key: "salutation",
+      term: t("create.salutation"),
+      empty: !lead.salutation,
+      value: salutationLabel(lead.salutation, t) ?? t("field.unset"),
+    },
+
     ...reachRows(lead, t, {
       email: <EmailValue lead={lead} />,
       // The number dials, as on a contact.

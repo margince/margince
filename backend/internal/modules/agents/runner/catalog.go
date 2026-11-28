@@ -75,7 +75,7 @@ func Catalog() []AgentSpec {
 		{
 			Name: "morning_brief",
 			Goal: "Prepare the existing Morning Brief of the user this run acts for. First call read_brief. " +
-				"Its items are the queue already ranked for them; do not assemble a workspace-wide list. " +
+				"Its items are the queue already ranked for them; do not assemble a company-wide list. " +
 				"Read every record an item cites in its evidence_ids, its activities as well as its deal, then call annotate_brief ONCE, with one concise narrative " +
 				"and a grounded finding for every item in that same call: why it matters, what changed and the next move. " +
 				"An item with a previous_rank was already on this queue on the run's previous_local_day: " +

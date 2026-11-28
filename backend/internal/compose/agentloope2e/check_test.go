@@ -100,6 +100,7 @@ func TestEveryFailureSaysWhatWentWrong(t *testing.T) {
 
 func TestEveryNamedCheckCanFireAndNoOtherDoes(t *testing.T) {
 	quiet := Scenario{Name: "n", Agent: OvernightSweep, NoWrites: true, Criteria: []string{"c"}}
+	quiet.Recovery = "bad_arguments"
 	var failures []Failure
 	failures = append(failures, Check(brief(), Snapshot{RunStatus: runner.OutcomeDegraded})...)
 	failures = append(failures, Check(brief(), completed(

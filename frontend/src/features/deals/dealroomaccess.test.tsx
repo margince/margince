@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { DealRoomAccess } from "./dealroomaccess";
@@ -143,9 +144,7 @@ describe("what became of the invitation mail", () => {
   it("tells the seller a failed mail is theirs to send", async () => {
     drawWithDownloads(0, { has_signed_in: false, delivery_state: "failed" });
     expect(
-      await screen.findByText(
-        "The invitation email failed. Issue a new link and send it yourself.",
-      ),
+      await screen.findByText(englishCopy["access.mail.failed"]),
     ).toBeTruthy();
   });
 

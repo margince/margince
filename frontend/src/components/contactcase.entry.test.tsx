@@ -8,6 +8,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { loadLocale } from "../i18n/catalogs";
+import { en as englishCopy } from "../i18n/en";
 import { contactQuery } from "../lib/contact.queries";
 import { routeHash } from "../lib/router";
 import {
@@ -116,7 +117,11 @@ describe("the door to a contact's duplicate case", () => {
       await screen.findByRole("checkbox", { name: /Mira Kovač/ }),
     );
     await user.click(screen.getByRole("radio", { name: "Mira Kovač stays" }));
-    await user.click(screen.getByRole("button", { name: "Preview merge" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["contactCase.previewVerb"],
+      }),
+    );
     await user.click(
       await screen.findByRole("button", { name: "Merge 2 contacts" }),
     );
@@ -129,6 +134,8 @@ describe("the door to a contact's duplicate case", () => {
         routeHash({ screen: "contacts", id: BEN }),
       ),
     );
-    expect(await screen.findByText("Contacts merged")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["contactCase.merged"]),
+    ).toBeVisible();
   });
 });

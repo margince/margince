@@ -340,7 +340,7 @@ func TestOnlyAProvenIdentityBindsASeatToACalendarEvent(t *testing.T) {
 		want    bool
 	}{{e.Rep2, declared, false}, {e.Rep3, delivered, false}, {e.Rep3, proved, true}} {
 		var got bool
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var err error
 			got, err = capture.SeatProvedAddressTx(e.Admin(), tx, tc.seat, tc.address)
 			return err

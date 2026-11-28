@@ -39,7 +39,7 @@ More than one endpoint serves one screen. Which one owns which part:
 ## One gated read
 
 `GET /companies/{id}/360` serves the whole page. All below is one composite read, built inside a single
-`database.WithWorkspaceTx`, and the response holds the `as_of` stamp of that read. The isolation level is
+`database.WithTx`, and the response holds the `as_of` stamp of that read. The isolation level is
 Read Committed (the posture of the platform). So a commit at the same time can land between two sections;
 the stamp makes that visible. No section opens a second transaction. That is why every module store the
 assembly calls offers a form of its read that takes the transaction.

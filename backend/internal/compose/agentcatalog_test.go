@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -257,22 +256,6 @@ func TestTheInaccessibleToolsAreListed(t *testing.T) {
 	}
 }
 
-// namedButNotOffered lists each tool that an agent's offered text names although
-// the agent is not offered it. Each is a sentence written for the whole tool
-// surface. Following one costs a refused step, so a new one must fail here.
-var namedButNotOffered = gatekit.Waive(map[string]string{
-	"morning_brief/describe_list_filters":           "the filters operand text of list_records points at the tool that lists filters",
-	"morning_brief/search_records":                  "a by-name operand of the read tools names the search tool that finds the same words",
-	"overnight_at_risk_sweep/describe_list_filters": "the filters operand text of list_records points at the tool that lists filters",
-	"overnight_at_risk_sweep/search_records":        "a by-name operand of the read tools names the search tool that finds the same words",
-	"overnight_at_risk_sweep/draft_outbound":        "the log_activity text says draft_outbound and send_outbound identify a conversation by its activity id",
-	"overnight_at_risk_sweep/send_outbound":         "the same log_activity sentence as draft_outbound",
-	"overnight_at_risk_sweep/relink_activity":       "the log_activity text says relink_activity links an unlinked note later",
-	"overnight_at_risk_sweep/read_relationships":    "the text of whats_slipping_this_week says read_relationships takes its stakeholders next",
-	"overnight_at_risk_sweep/read_view":             "the custom field operand says its column_name is the one read_view lists",
-	"overnight_at_risk_sweep/whoami":                "the prose note asks for whoami's prose_language, which this run cannot read, so it has no language to write in",
-})
-
 // An agent is told of no tool it is not offered. A run reads its goal and the
 // listing of its offered tools. A name in either that no offered tool answers to
 // sends the run to a step the allowlist refuses.
@@ -294,11 +277,9 @@ func TestAnAgentIsToldOfNoToolItIsNotOffered(t *testing.T) {
 			if slices.Contains(agent.Tools, spec.Name) {
 				continue
 			}
-			named := regexp.MustCompile(`\b` + regexp.QuoteMeta(spec.Name) + `\b`).MatchString(text)
-			if named && !namedButNotOffered.Waived(t, agent.Name+"/"+spec.Name) {
-				t.Errorf("agent %s is told of %s, which it is not offered: reword the sentence that names it", agent.Name, spec.Name)
+			if regexp.MustCompile(`\b` + regexp.QuoteMeta(spec.Name) + `\b`).MatchString(text) {
+				t.Errorf("agent %s is told of %s, which it is not offered, by a sentence the listing kept", agent.Name, spec.Name)
 			}
 		}
 	}
-	namedButNotOffered.AssertAllMatched(t)
 }

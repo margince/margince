@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ContractForm } from "./contractform";
 import { ContractRenewModal } from "./contractlifecycle";
 
@@ -80,7 +81,11 @@ it("refuses an edit whose start day cannot be read and keeps the stored day", as
   const box = await screen.findByLabelText(/^Starts/);
   await typeUnreadableDay(user, box);
 
-  await user.click(screen.getByRole("button", { name: "Save changes" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["contracts.form.saveEdit"],
+    }),
+  );
 
   expect(writes).toHaveLength(0);
   expect(box).toHaveAttribute("aria-invalid", "true");

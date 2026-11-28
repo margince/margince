@@ -273,8 +273,8 @@ it("shows a field scoped only to an archived pipeline and lets the admin remove 
     </QueryClientProvider>,
   );
   const control = screen.getByLabelText("Pipelines “Partner tier” shows in");
-  expect(control).toHaveTextContent("Archived pipeline");
-  expect(control).not.toHaveTextContent("Every pipeline");
+  expect(control).toHaveTextContent(en["cf.pipelinesArchived"]);
+  expect(control).not.toHaveTextContent(en["cf.pipelinesEvery"]);
   await toggleOptions(user, control, ["Archived pipeline"]);
   expect(onPipelines).toHaveBeenCalledWith(tier, []);
 });

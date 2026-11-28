@@ -401,7 +401,9 @@ const CUTS: readonly SelectOption[] = [
 function CardHeadFilter() {
   const [cut, setCut] = useState("all");
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div
+      style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
+    >
       <IconAction label="Search history" icon={<Search aria-hidden />} />
       <div style={{ inlineSize: "9rem" }}>
         <Select
@@ -437,6 +439,40 @@ export const Compact: Story = {
 export const CompactDark: Story = {
   globals: { theme: "dark" },
   render: () => <CardHeadFilter />,
+};
+
+// The page size on a phone. The face says the number, and the list and the
+// box's name say what it counts.
+const PAGE_SIZE_OPTIONS: readonly SelectOption[] = [25, 50, 100].map(
+  (size) => ({
+    value: String(size),
+    label: `${size} per page`,
+    faceLabel: String(size),
+  }),
+);
+
+/** A face shorter than the label: `faceLabel` on each option. */
+export const ShortFace: Story = {
+  render: () => {
+    function PageSize() {
+      const [value, setValue] = useState("25");
+      return (
+        <Select
+          aria-label="Rows per page"
+          value={value}
+          onChange={setValue}
+          options={PAGE_SIZE_OPTIONS}
+        />
+      );
+    }
+    return <PageSize />;
+  },
+  play: async ({ canvasElement }) => {
+    const face = within(canvasElement).getByRole("combobox", {
+      name: "Rows per page",
+    });
+    await expect(face).toHaveTextContent(/^25$/);
+  },
 };
 
 /**

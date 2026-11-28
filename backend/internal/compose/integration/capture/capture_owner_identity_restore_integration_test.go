@@ -38,7 +38,7 @@ func declareAndWithdraw(seat context.Context, t *testing.T, store *capturemod.Ow
 // the purge reads.
 func expireWithdrawals(t *testing.T, env captureEnv) {
 	t.Helper()
-	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_owner_identity_withdrawn SET withdrawn_at = now() - interval '11 minutes'`)
 		return err

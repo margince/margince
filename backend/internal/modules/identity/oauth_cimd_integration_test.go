@@ -100,7 +100,7 @@ func setupCIMD(t *testing.T, slug string) *cimdEnv {
 // client reads back the one row a document produced.
 func (e *cimdEnv) client(t *testing.T, clientID string) (name, via string, redirects []string, expires *time.Time) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx,
 			`SELECT client_name, created_via, redirect_uris, metadata_expires_at
 			   FROM oauth_client WHERE client_id = $1`, clientID).
@@ -192,7 +192,7 @@ func TestAStaleDocumentIsRefetchedAndItsNewContentWins(t *testing.T) {
 // expire backdates the cache so the next resolve has to fetch.
 func (e *cimdEnv) expire(t *testing.T, clientID string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.ctx,
 			`UPDATE oauth_client SET metadata_expires_at = now() - interval '1 hour' WHERE client_id = $1`, clientID)
 		return err
@@ -212,7 +212,7 @@ func TestADisabledClientIsNotFetchedAgain(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.expire(t, clientID)
-	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.ctx, `UPDATE oauth_client SET disabled_at = now() WHERE client_id = $1`, clientID)
 		return err
 	})
@@ -238,7 +238,7 @@ func TestADisabledClientIsNotFetchedAgain(t *testing.T) {
 func TestADocumentCannotTakeOverARegisteredClient(t *testing.T) {
 	e := setupCIMD(t, "cimd-takeover")
 	clientID := e.docs.URL + "/client.json"
-	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.ctx, `
 			INSERT INTO oauth_client (client_id, client_name, redirect_uris, created_via)
 			VALUES ($1, 'Registered', $2, 'dcr')`,
@@ -291,7 +291,7 @@ func TestARefusedDocumentLeavesNoRow(t *testing.T) {
 	}
 
 	var rows int
-	if err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx, `SELECT count(*) FROM oauth_client WHERE client_id = $1`, clientID).Scan(&rows)
 	}); err != nil {
 		t.Fatal(err)

@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { useLeadPartnerRow } from "./leadpartner";
 import type { Lead } from "./leads";
@@ -70,7 +71,9 @@ it("lets a partner manager accept the lead for its partner", async () => {
   );
   render(<Host record={{ ...lead, partner_company_id: "c-9" }} />);
   await user.click(
-    await screen.findByRole("button", { name: "Accept for partner" }),
+    await screen.findByRole("button", {
+      name: englishCopy["lead.partnerAccept"],
+    }),
   );
   await waitFor(() =>
     expect(calls).toContain("POST /v1/leads/l-1/partner-acceptance"),
@@ -86,7 +89,7 @@ it("offers no acceptance to a seat that may not change partners", async () => {
   render(<Host record={{ ...lead, partner_company_id: "c-9" }} />);
   expect(await screen.findByText("Referrer GmbH")).toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Accept for partner" }),
+    screen.queryByRole("button", { name: englishCopy["lead.partnerAccept"] }),
   ).toBeNull();
 });
 
@@ -106,6 +109,6 @@ it("shows the acceptance stamp in place of the verb", async () => {
     await screen.findByText(/Accepted for the partner on/),
   ).toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Accept for partner" }),
+    screen.queryByRole("button", { name: englishCopy["lead.partnerAccept"] }),
   ).toBeNull();
 });

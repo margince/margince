@@ -334,7 +334,7 @@ func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 // suite in grants_integration_test.go.
 func revokeShare(t *testing.T, e *SearchEnv, record, subject ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`DELETE FROM record_grant WHERE record_id = $1 AND subject_id = $2`, record, subject)
 		return err
@@ -362,7 +362,7 @@ func TestAnExpiredWriteShareConfersNothing(t *testing.T) {
 	store := contacts.NewStore(f.env.DB())
 	f.share(t, "write")
 
-	if err := database.WithWorkspaceTx(f.env.Admin(), f.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.env.Admin(), f.env.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE record_grant SET created_at = now() - interval '2 hours',
 			                        expires_at = now() - interval '1 hour' WHERE record_id = $1`, f.contact)
@@ -460,7 +460,7 @@ func dealActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []id
 func (f sharedContactFixture) fullName(t *testing.T) string {
 	t.Helper()
 	var name string
-	if err := database.WithWorkspaceTx(f.env.Admin(), f.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.env.Admin(), f.env.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT full_name FROM contact WHERE id = $1`, f.contact).Scan(&name)
 	}); err != nil {

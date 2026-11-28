@@ -176,7 +176,7 @@ describe("a mailbox import", () => {
     });
     await waitFor(() =>
       expect(container.querySelector(".arline")?.textContent).toBe(
-        "Importing mailbox history",
+        en["shell.capture.importing"],
       ),
     );
     expect(block(container).getAttribute("data-core-state")).toBe("ingest");
@@ -252,7 +252,7 @@ it("names an unlabelled connection that cannot be reached by its provider", asyn
   await waitFor(
     () =>
       expect(container.querySelector(".arline")?.textContent).toContain(
-        "Google Calendar",
+        en["connectors.provGcal"],
       ),
     { timeout: 3000 },
   );

@@ -91,7 +91,7 @@ function stageFields(
       required: true,
       maxLength: TEXT_LIMITS.label,
     },
-    ...translationFields(STAGE_NAME),
+    ...translationFields(STAGE_NAME, (values) => values.name),
     {
       key: "semantic",
       label: "stage.semantic",

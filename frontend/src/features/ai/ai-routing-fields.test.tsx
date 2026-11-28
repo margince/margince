@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ProviderSettingsForm } from "./ai-provider-settings";
 import { AdapterFields } from "./ai-routing-fields";
 
@@ -110,7 +111,10 @@ describe("a lane's fields", () => {
     const changes: Array<{ base_url?: string }> = [];
     mountLane("vllm", "embeddings", undefined, (next) => changes.push(next));
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText("Embeddings server"), "h");
+    await user.type(
+      screen.getByLabelText(englishCopy["aiRouting.embeddingsServer.label"]),
+      "h",
+    );
     expect(changes.at(-1)?.base_url).toBe("h");
   });
 });

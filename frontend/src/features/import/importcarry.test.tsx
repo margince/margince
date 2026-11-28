@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   jsonResponse,
   profile,
@@ -65,10 +66,12 @@ async function fixAndReupload(user: UserEvent, uploads: readonly object[]) {
   });
   renderAtImport(run.id);
   await user.click(
-    await screen.findByRole("button", { name: "Fix and re-upload" }),
+    await screen.findByRole("button", {
+      name: englishCopy["import.test.reupload"],
+    }),
   );
   await user.upload(
-    await screen.findByLabelText("Upload your data"),
+    await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
     new File(["Email\nada@x.test\n"], "export.csv"),
   );
   await screen.findByLabelText("Source name");

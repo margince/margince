@@ -84,7 +84,7 @@ func TestTheReminderClauseAnswersTheCaseTable(t *testing.T) {
 			asOf := c.readInstant(base)
 			id := writeReminderCase(ctx, t, store, e, c, base)
 			var matched bool
-			if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 				args := []any{}
 				arg := func(v any) int { args = append(args, v); return len(args) }
 				row := arg(id)

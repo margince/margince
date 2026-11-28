@@ -76,7 +76,7 @@ func newAuthorshipFixture(t *testing.T) *authorshipFixture {
 func (f *authorshipFixture) inboundMail(sender string) ids.UUID {
 	f.t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `INSERT INTO activity (kind, subject, direction, occurred_at, source, captured_by)
 			VALUES ('email', 'Budget', 'inbound', $1, 'gmail:seed', 'connector:gmail') RETURNING id`,
@@ -115,7 +115,7 @@ func (f *authorshipFixture) claim(mail ids.UUID, criterion string) ids.UUID {
 func (f *authorshipFixture) judged(mail ids.UUID) deals.AuthorSide {
 	f.t.Helper()
 	var side deals.AuthorSide
-	if err := database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
 		facts, err := deals.ReadActivityAuthorship(f.Admin(), tx, mail, ownDomainReader{store: f.own})
 		side = facts.AuthorSide
 		return err
@@ -221,7 +221,7 @@ func TestStageEvidenceFollowsAnOwnDomainAddedAndRemoved(t *testing.T) {
 func (f *authorshipFixture) unmetForAssurance() int {
 	f.t.Helper()
 	var unmet int
-	if err := database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
 		subjects, err := AssuranceSubjects(f.Admin(), tx, clocktest.Now(f.t), nil)
 		for _, s := range subjects {
 			if s.DealID == f.dealID.String() {

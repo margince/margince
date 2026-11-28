@@ -36,7 +36,7 @@ func LocalDayAt(ctx context.Context, tx pgx.Tx, user ids.UUID, now time.Time) (d
 // pass assembles their run unless their delivery window opens it sooner.
 func OvernightFrom(ctx context.Context, pool *pgxpool.Pool, user ids.UUID, now time.Time) (time.Time, error) {
 	var from time.Time
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		_, local, err := LocalDayAt(ctx, tx, user, now)
 		from = time.Date(local.Year(), local.Month(), local.Day(), 5, 0, 0, 0, local.Location())
 		return err

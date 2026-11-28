@@ -122,7 +122,7 @@ func (o *owedEnv) knownSender(t *testing.T, address string) {
 func (o *owedEnv) connectColleague(t *testing.T, seat ids.UUID) string {
 	t.Helper()
 	address := "colleague@ws.example"
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label, mail_posture)
 			VALUES ($1, 'gmail', 'connected', 'vault:test', $2, 'shared')
@@ -311,7 +311,7 @@ func TestAReplayKeepsTheFirstBccJudgement(t *testing.T) {
 	m := o.strangerMail("sender@example.com", "View the document", o.now.Add(-2*time.Hour))
 	m.to = "old-alias@ws.example"
 	message := o.capture(t, m)
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `INSERT INTO capture_owner_identity (user_id, kind, value, created_by)
 			VALUES ($1, 'address', 'old-alias@ws.example', 'test')`, o.owner)
 		return err
@@ -334,7 +334,7 @@ func TestMailWithNoCapturedFactsRanksAsBefore(t *testing.T) {
 	addressed := o.strangerMail("sender@example.com", "View the document", o.now.Add(-2*24*time.Hour))
 	addressed.to = o.seat
 	stranger := o.requestFrom(t, addressed)
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(),
 			`UPDATE activity SET foreign_link = NULL, sender_was_stranger = NULL WHERE id = $1`, stranger); err != nil {
 			return err

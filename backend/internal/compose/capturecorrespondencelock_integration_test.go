@@ -49,7 +49,7 @@ func TestTheCorrespondenceGuardAndAnAttestedSendSerializeOnOneKey(t *testing.T) 
 	done := make(chan error, 1)
 
 	go func() {
-		done <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		done <- database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			if _, err := capture.NewPendingStore(InstallationDB(e.Pool)).
 				CorrespondsWith(ctx, tx, victim); err != nil {
 				return err
@@ -64,7 +64,7 @@ func TestTheCorrespondenceGuardAndAnAttestedSendSerializeOnOneKey(t *testing.T) 
 	probe := func() bool {
 		t.Helper()
 		var free bool
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(ctx,
 				`SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))`,
 				correspondence.LockEntity+"_write", mailidentity.CorrespondenceLockKey(victim)).Scan(&free)
@@ -106,7 +106,7 @@ func TestTheCorrespondenceKeyIsOneKeyForBothSpellingsOfADomain(t *testing.T) {
 	release := make(chan struct{})
 	done := make(chan error, 1)
 	go func() {
-		done <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		done <- database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			if _, err := capture.NewPendingStore(InstallationDB(e.Pool)).
 				CorrespondsWith(ctx, tx, unicodeSpelling); err != nil {
 				return err
@@ -119,7 +119,7 @@ func TestTheCorrespondenceKeyIsOneKeyForBothSpellingsOfADomain(t *testing.T) {
 	<-held
 
 	var free bool
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))`,
 			correspondence.LockEntity+"_write",

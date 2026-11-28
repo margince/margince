@@ -127,7 +127,7 @@ export function DealsScreen({
   });
   // A refused dial the list can name is named, and no wider list is asked for.
   const roleRefusal = nameRefusal(refusedDials);
-  const { dealsQuery, stageColumns, stageTotalsQuery, readError, listRead } =
+  const { stageColumns, stageTotalsQuery, readError, tableRead } =
     useSurfaceReads(
       dealFilters,
       stages,
@@ -156,29 +156,18 @@ export function DealsScreen({
   const advance = useAdvanceDeal();
 
   const stageName = new Map(stages.map((stage) => [stage.id, stage.name]));
-  const loadedDeals = (dealsQuery.data?.pages ?? []).flatMap(
-    (page) => page.data,
-  );
   // Cleared after any bulk run except for the rows that refused, since every
   // other row's version has moved.
   const chosen = useRowSelection({
-    rows: loadedDeals,
+    rows: tableRead.held,
     keyOf: (deal) => deal.id,
     limit: BULK_MAX_ITEMS,
   });
 
   const dealsListState: ListState<Deal> = {
-    rows: loadedDeals,
     query,
     setQuery,
-    isPending: listRead.isPending,
-    isError: listRead.isError,
-    error: listRead.error,
-    refetch: () => listRead.refetch(),
-    hasMore: dealsQuery.hasNextPage,
-    loadMore: () => {
-      dealsQuery.fetchNextPage();
-    },
+    ...tableRead,
   };
 
   // Open-stage targets only: a deal is born open (INV-CLOSE-PAST twin rule);
@@ -243,9 +232,12 @@ export function DealsScreen({
     ? {
         ...dealsListState,
         rows: [],
+        held: [],
+        jumped: undefined,
         isPending: false,
         isError: false,
         hasMore: false,
+        total: undefined,
       }
     : dealsListState;
   const tagChips = useTagChips();
@@ -278,6 +270,7 @@ export function DealsScreen({
   return (
     <div className="wrap">
       <ListTable
+        customFieldsKind="deal"
         title={pageName}
         state={listState}
         unit="deals.unit"

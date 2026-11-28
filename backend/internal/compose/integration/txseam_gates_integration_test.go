@@ -71,7 +71,7 @@ func (f gateFixture) refusedInTx(ctx context.Context, t *testing.T, table string
 	t.Helper()
 	out := refused{rows: -1}
 	rollback := errors.New("rolling the probe back")
-	err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		out.err = create(tx)
 		if err := tx.QueryRow(ctx, `SELECT count(*) FROM `+table).Scan(&out.rows); err != nil {
 			return err

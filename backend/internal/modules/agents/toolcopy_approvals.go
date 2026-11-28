@@ -41,7 +41,7 @@ var readApprovalCopy = toolCopy{
 var decideApprovalCopy = toolCopy{
 	Purpose: "Answer one staged action for the colleague asking you: approve it, which lets it happen, " +
 		"or reject it, which discards it.",
-	Limits: "The verdict is theirs: take an explicit approve or reject rather than deciding what " +
+	Limits: "The decision is theirs: take an explicit approve or reject rather than deciding what " +
 		"they would have wanted. Approving runs a change the system staged now, including sending " +
 		"a message that was only drafted. Approving a call an agent staged only lets that agent " +
 		"repeat it: the item then reads awaiting_agent and nothing has changed until it does. A " +
@@ -72,7 +72,7 @@ var decideApprovalsCopy = toolCopy{
 	Purpose: "Answer staged actions for the colleague asking you: approve, which lets the change " +
 		"happen, or reject, which discards it. Name staged_action_id for one action, or bundle_id " +
 		"for every still-waiting proposal one act staged together.",
-	Limits: "The verdict is theirs: take an explicit approve or reject rather than deciding what " +
+	Limits: "The decision is theirs: take an explicit approve or reject rather than deciding what " +
 		"they would have wanted. Approving runs a change the system staged now, including sending " +
 		"a message that was only drafted. Approving a call an agent staged only lets that agent " +
 		"repeat it: the item then reads awaiting_agent and nothing has changed until it does. A " +

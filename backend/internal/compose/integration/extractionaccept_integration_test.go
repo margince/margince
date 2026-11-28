@@ -445,11 +445,10 @@ func TestAcceptAttachmentExtractionRefusesWhenNothingHasReadTheDocument(t *testi
 }
 
 // TestExtractionAcceptDealUpdateAndNotesShareOneTransaction pins the
-// accept-write's atomicity (the non-atomic write was the second finding
-// this suite closes): UpdateDealTx and LogActivityTx must run INSIDE the
-// caller's own transaction, not open (and durably commit) transactions of
-// their own. It drives the exact write phase Accept() runs — a deal
-// update followed by one note — through one database.WithWorkspaceTx,
+// accept-write's atomicity. UpdateDealTx and LogActivityTx must run inside the
+// caller's own transaction, not open and commit transactions of their own.
+// It drives the write phase Accept() runs, a deal update followed by one note,
+// through one database.WithTx,
 // then forces that shared transaction to roll back. If either Tx-suffixed
 // method still opened its own transaction under the hood (the pre-fix
 // shape, where the deal update committed before the notes ran), the
@@ -465,7 +464,7 @@ func TestExtractionAcceptDealUpdateAndNotesShareOneTransaction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the deal's active custom columns: %v", err)
 	}
-	err = database.WithWorkspaceTx(ctx, a.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, a.Pool, func(tx pgx.Tx) error {
 		if _, err := a.Deals.UpdateDealTx(ctx, tx, ids.From[ids.DealKind](a.deal), deals.UpdateDealInput{
 			Name: new("Rolled Back Name"),
 		}, active); err != nil {

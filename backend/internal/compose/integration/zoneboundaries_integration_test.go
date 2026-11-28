@@ -35,7 +35,7 @@ func useInstallationZone(t *testing.T, e *Env, zone string) {
 func inWorkspaceTx(t *testing.T, e *Env, fn func(ctx context.Context, tx pgx.Tx) error) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error { return fn(ctx, tx) }); err != nil {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error { return fn(ctx, tx) }); err != nil {
 		t.Fatal(err)
 	}
 }

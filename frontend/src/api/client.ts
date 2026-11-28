@@ -255,6 +255,8 @@ function reportAnswer(response: Response, request: Request): void {
 type ModelWait = "always" | "on-miss";
 
 const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
+  "GET /channel-links/{record_type}/{id}/delivery-preview": "always",
+  "POST /channel-links/{record_type}/{id}/notes": "always",
   "GET /activities/{id}/meeting-brief": "always",
   "GET /activities/{id}/task-explanation": "on-miss",
   "GET /deals/{id}/status": "on-miss",
@@ -272,6 +274,7 @@ const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "POST /filters/propose": "always",
   "POST /activities/{id}/reader-rendering": "on-miss",
   "POST /rewrites": "always",
+  "POST /label-translations": "on-miss",
   "POST /analytics/assessment": "on-miss",
   "POST /analytics/setup-proposal": "always",
   "POST /analytics/progress/summary": "on-miss",

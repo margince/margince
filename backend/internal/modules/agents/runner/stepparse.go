@@ -108,3 +108,16 @@ func isJSONObject(raw json.RawMessage) bool {
 	trimmed := bytes.TrimSpace(raw)
 	return len(trimmed) > 0 && trimmed[0] == '{'
 }
+
+// ToolStepName reads a model reply through the runner's own protocol parser.
+// Final answers and malformed envelopes are not tool calls.
+func ToolStepName(text string) (string, bool) {
+	step, err := parseStep(text)
+	return step.Tool, err == nil && step.Final == nil && step.Tool != ""
+}
+
+// IsFinalStep recognizes a final answer through the runner's own strict parser.
+func IsFinalStep(text string) bool {
+	step, err := parseStep(text)
+	return err == nil && step.Final != nil
+}

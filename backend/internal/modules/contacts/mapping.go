@@ -158,6 +158,7 @@ func contactVisibilityArg(v *crmcontracts.UpdateContactRequestVisibility) *strin
 func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64) UpdateContactInput {
 	in := UpdateContactInput{
 		FullName:       req.FullName,
+		Salutation:     req.Salutation,
 		FirstName:      req.FirstName,
 		LastName:       req.LastName,
 		Title:          req.Title,
@@ -222,7 +223,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		}
 	}
 	// `source` is nobody's to forge, the importer included.
-	if err := provenance.Refuse(auditKeySource, source); err != nil {
+	if err := provenance.RefuseSource(source); err != nil {
 		return CreateLeadInput{}, err
 	}
 	// After the namespace refusal, which names the reserved field more precisely.
@@ -243,6 +244,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 	}
 	in := CreateLeadInput{
 		FullName:            req.FullName,
+		Salutation:          req.Salutation,
 		Title:               req.Title,
 		CompanyName:         req.CompanyName,
 		CandidateCompanyKey: req.CandidateCompanyKey,
@@ -305,6 +307,7 @@ func isJSONNull(raw json.RawMessage) bool {
 func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 	in := UpdateLeadInput{
 		FullName:            req.FullName,
+		Salutation:          req.Salutation,
 		Title:               req.Title,
 		CompanyName:         req.CompanyName,
 		CandidateCompanyKey: req.CandidateCompanyKey,

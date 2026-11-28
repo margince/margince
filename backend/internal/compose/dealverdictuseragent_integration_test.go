@@ -25,7 +25,7 @@ func TestAUsersAgentEditProtectsTheDealFromNightlyChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	var read dealVerdictRead
-	if err := database.WithWorkspaceTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
 		return readVerdictEdits(v.Admin(), tx, v.deal, &read)
 	}); err != nil {
 		t.Fatal(err)
@@ -46,7 +46,7 @@ func TestTheVerdictWriteRechecksAUsersAgentEdit(t *testing.T) {
 		t.Fatal(err)
 	}
 	var read dealVerdictRead
-	if err := database.WithWorkspaceTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
 		var err error
 		read, err = readDealVerdict(v.Admin(), tx, v.deal, nil, v.now, v.now)
 		return err
@@ -89,7 +89,7 @@ func TestAutomaticDealEditsDoNotBecomeUserEdits(t *testing.T) {
 		t.Fatal(err)
 	}
 	var read dealVerdictRead
-	if err := database.WithWorkspaceTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
 		return readVerdictEdits(v.Admin(), tx, v.deal, &read)
 	}); err != nil {
 		t.Fatal(err)

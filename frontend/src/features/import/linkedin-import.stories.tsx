@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -68,7 +69,9 @@ function panelStory(
 
 async function dropTheExport(canvasElement: HTMLElement) {
   await userEvent.upload(
-    await within(canvasElement).findByLabelText("Import Connections.csv"),
+    await within(canvasElement).findByLabelText(
+      englishCopy["linkedinImport.choose"],
+    ),
     new File(["First Name,Last Name\n"], "Connections.csv", {
       type: "text/csv",
     }),
@@ -141,7 +144,9 @@ export const Importing: Story = {
   }),
   play: async ({ canvasElement }) => {
     await dropTheExport(canvasElement);
-    await within(canvasElement).findByText("Reading export…");
+    await within(canvasElement).findByText(
+      englishCopy["linkedinImport.working"],
+    );
   },
 };
 
@@ -158,7 +163,7 @@ export const ImportFailed: Story = {
   play: async ({ canvasElement }) => {
     await dropTheExport(canvasElement);
     await within(canvasElement).findByText(
-      "The export was not imported. Retry.",
+      englishCopy["linkedinImport.importFailed"],
     );
   },
 };

@@ -52,52 +52,6 @@ type CreateProductInput struct {
 	Source        string
 }
 
-func (s *Store) CreateProduct(ctx context.Context, in CreateProductInput) (crmcontracts.Product, error) {
-	if err := auth.Require(ctx, "product", principal.ActionCreate); err != nil {
-		return crmcontracts.Product{}, err
-	}
-	by, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return crmcontracts.Product{}, err
-	}
-	plan, err := prepareProductCreation(in)
-	if err != nil {
-		return crmcontracts.Product{}, err
-	}
-	in = plan.Input
-
-	var out crmcontracts.Product
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := refuseClaimedProductSKU(ctx, tx, in.SKU); err != nil {
-			return err
-		}
-		id := ids.New[ids.ProductKind]()
-		_, err := tx.Exec(ctx,
-			`INSERT INTO product (id, name, sku, description, unit, unit_price_minor,
-			                      currency, default_tax_rate, active, source, captured_by,
-			                      billing_model, billing_interval_months, component_kind, tax_category)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-			id, in.Name, in.SKU, in.Description, *in.Unit,
-			in.UnitPriceMinor, in.Currency, plan.TaxRate, *in.Active, in.Source, by,
-			in.BillingModel, in.BillingIntervalMonths, in.ComponentKind, in.TaxCategory)
-		if err != nil {
-			if storekit.IsUniqueViolation(err) {
-				// uq_product_sku: the SKU already names a live product.
-				return fmt.Errorf("sku already in use by a live product: %w", apperrors.ErrConflict)
-			}
-			return fmt.Errorf("insert product: %w", err)
-		}
-		if _, err := storekit.Audit(ctx, tx, "create", "product", id.UUID, nil, map[string]any{"name": in.Name}); err != nil {
-			return fmt.Errorf("audit product create: %w", err)
-		}
-		if out, err = readProduct(ctx, tx, id, storekit.LiveOnly); err != nil {
-			return fmt.Errorf("read created product: %w", err)
-		}
-		return nil
-	})
-	return out, err
-}
-
 type UpdateProductInput struct {
 	Name           *string
 	SKU            *string
@@ -280,14 +234,24 @@ func (s *Store) ArchiveProduct(ctx context.Context, id ids.ProductID) (crmcontra
 	return s.ArchiveProductAt(ctx, id, nil)
 }
 
-// ArchiveProductAt keeps a stale review from retiring a changed product.
-func (s *Store) ArchiveProductAt(ctx context.Context, id ids.ProductID, ifVersion *int64) (crmcontracts.Product, error) {
+// ArchiveProductAt keeps a stale review from retiring a changed product. A guard
+// refuses the archive when a colleague acted on the product since the import
+// landed it, asked under the row lock the archive holds.
+func (s *Store) ArchiveProductAt(ctx context.Context, id ids.ProductID, ifVersion *int64, guards ...storekit.ArchiveGuard) (crmcontracts.Product, error) {
 	if err := auth.Require(ctx, "product", principal.ActionDelete); err != nil {
 		return crmcontracts.Product{}, err
 	}
 	var out crmcontracts.Product
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := readProduct(ctx, tx, id, storekit.LiveOnly); err != nil {
+			return err
+		}
+		// The row lock first: a colleague's edit then lands wholly before the
+		// guard's question or after this archive commits.
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM product WHERE id = $1 FOR UPDATE`, id); err != nil {
+			return fmt.Errorf("lock product: %w", err)
+		}
+		if err := storekit.RefuseIfHumanActedSince(ctx, tx, "product", id.UUID, guards...); err != nil {
 			return err
 		}
 		patch := storekit.NewPatch()

@@ -382,7 +382,9 @@ describe("a first page of many", () => {
       { wrapper },
     );
 
-    expect(screen.getByText(/1 to 25 of 214 contacts/)).toBeTruthy();
+    expect(document.querySelector(".lt-count")).toHaveTextContent(
+      /^1-25 of 214/,
+    );
   });
 
   it("asks for the next page once the reader steps past the rows in hand", async () => {
@@ -420,7 +422,9 @@ describe("a first page of many", () => {
 
     await user.click(screen.getByRole("button", { name: "Next" }));
 
-    expect(screen.getByText(/26 to 50 of 214 contacts/)).toBeInTheDocument();
+    expect(document.querySelector(".lt-count")).toHaveTextContent(
+      /^26-50 of 214/,
+    );
     expect(screen.getByText(en["filters.resultsCaption"])).toBeInTheDocument();
   });
 });

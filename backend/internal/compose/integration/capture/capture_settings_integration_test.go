@@ -55,7 +55,7 @@ func TestCaptureSettingsStore(t *testing.T) {
 
 	auditCount := func() int {
 		var n int
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
 				`SELECT count(*) FROM audit_log WHERE entity_type = 'capture_settings'`).Scan(&n)
 		}); err != nil {
@@ -148,7 +148,7 @@ func TestTheWebsiteReadingLimitsAreSettingsOnlyTheUpdateGrantChanges(t *testing.
 
 	audits := func() int {
 		var n int
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
 				`SELECT count(*) FROM audit_log WHERE entity_type = 'capture_settings'`).Scan(&n)
 		}); err != nil {
@@ -214,7 +214,7 @@ func TestTheConfidentialityPassCapIsASettingOnlyTheUpdateGrantChanges(t *testing
 	}
 
 	var audits int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM audit_log WHERE entity_type = 'capture_settings'`).Scan(&audits)
 	}); err != nil {
@@ -285,7 +285,7 @@ func TestTheOtherPassCapsAreSettingsOnlyTheUpdateGrantChanges(t *testing.T) {
 			t.Errorf("%s: admin update returned %d (err %v), want %d", tc.name, tc.read(updated), err, saved)
 		}
 		var events int
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `SELECT count(*) FROM event_outbox
 				 WHERE envelope->>'type' = 'capture_settings.updated' AND envelope::text LIKE '%' || $1 || '%'`,
 				tc.entry.Key()).Scan(&events)

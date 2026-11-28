@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { ListColumn } from "../design-system/listtable";
 import { ProblemError } from "../lib/problem";
 import {
@@ -12,11 +13,12 @@ import {
 import {
   type FilterSpec,
   type ListPage,
-  type ListQuery,
   ListTable,
+  listFetchLimit,
   useListQuery,
   type ViewSpec,
 } from "./listquery";
+import type { ListFetchPage } from "./listquery.options";
 
 // ListTable (components/listquery.tsx) binds useListQuery's server-query state
 // to the design-system list surface (ListTable in listtable.tsx, imported
@@ -85,18 +87,18 @@ function Harness({
   fetchPage,
   chips,
   views,
+  readsAtOffset,
 }: Readonly<{
-  fetchPage: (
-    query: ListQuery,
-    cursor: string | null,
-  ) => Promise<ListPage<Row>>;
+  fetchPage: ListFetchPage<Row>;
   chips?: readonly FilterSpec[];
   views?: readonly ViewSpec[];
+  readsAtOffset?: boolean;
 }>) {
   const state = useListQuery<Row>({
     key: "story-list",
     initialSort: "-created_at",
     fetchPage,
+    readsAtOffset: readsAtOffset ? { rowKey: (row) => row.id } : undefined,
   });
   return (
     <ListTable
@@ -187,6 +189,60 @@ export const ViewsChipsAndPaging: Story = {
           filters: { region: "EU" },
         },
       ]}
+    />
+  ),
+};
+
+const COUNTED = 3412;
+
+// A counted list whose endpoint reads at an offset, as /contacts does. A cursor
+// names the row it resumes at.
+const countedAtOffset: ListFetchPage<Row> = async (
+  query,
+  cursor,
+  _signal,
+  reach,
+) => {
+  const from = reach?.offset ?? Number(cursor ?? 0);
+  const to = Math.min(COUNTED, from + listFetchLimit(query.perPage, reach));
+  return {
+    data: rows(to - from, from),
+    page: {
+      next_cursor: to < COUNTED ? String(to) : null,
+      has_more: to < COUNTED,
+      total: cursor === null ? COUNTED : undefined,
+    },
+  };
+};
+
+// The pager numbers the last page the count names, and a press on it reads
+// that page at its offset in one request.
+export const CountedAndReadAtAnOffset: Story = {
+  render: () => <Harness fetchPage={countedAtOffset} readsAtOffset />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Page 137" }),
+    );
+    await expect(await canvas.findByText("Contact 3401")).toBeVisible();
+    await expect(canvasElement.querySelector(".lt-range")?.textContent).toBe(
+      "3,401-3,412 of 3,412",
+    );
+    await expect(canvas.getByRole("button", { name: "Next" })).toBeDisabled();
+  },
+};
+
+// A list that sends no count: the pages in hand, then a gap while more follow.
+export const NotCounted: Story = {
+  render: () => (
+    <Harness
+      fetchPage={async (_query, cursor) => {
+        const from = Number(cursor ?? 0);
+        return {
+          data: rows(50, from),
+          page: { next_cursor: String(from + 50), has_more: true },
+        };
+      }}
     />
   ),
 };

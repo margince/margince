@@ -67,7 +67,7 @@ func TestBillingContactsHideAContactTheReaderMayNotSee(t *testing.T) {
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, billingReaderPerms)
 	var got []string
-	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		rows, err := e.Contacts.BillingContactsFor(rep, tx, ids.From[ids.CompanyKind](company))
 		if err != nil {
 			return err
@@ -101,7 +101,7 @@ func TestBillingRolesHideACompanyTheReaderMayNotSee(t *testing.T) {
 	// team this reader is not on.
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, billingReaderPerms)
 	var got []string
-	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		rows, err := e.Contacts.BillingRolesOf(rep, tx, ids.From[ids.ContactKind](contact))
 		if err != nil {
 			return err

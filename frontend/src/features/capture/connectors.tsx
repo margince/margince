@@ -36,6 +36,7 @@ import "./connectors.css";
 
 // The Connections family has one entry for the Settings screen: the mailbox card
 // and the workspace bot beside it on Integrations.
+export { BusinessAccountsPanel } from "./connectors.business";
 export { WorkspaceBotPanel } from "./connectors.telegram";
 export { TelegramBusinessPanel } from "./connectors.telegrambusiness";
 

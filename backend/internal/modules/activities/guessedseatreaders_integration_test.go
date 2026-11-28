@@ -64,7 +64,7 @@ func TestAGuessedSeatIsNoColleagueAndNoParty(t *testing.T) {
 	e.asCapturedForRep(t, captured)
 
 	ctx := e.followUpReader()
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		for _, tc := range []struct {
 			name     string
 			activity ids.UUID
@@ -107,7 +107,7 @@ func TestAHeldActivityNamesNoColleagues(t *testing.T) {
 		WHERE id = $1`, held)
 
 	ctx := e.followUpReader()
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		seats, err := ColleagueSeats(ctx, tx, held)
 		if err != nil {
 			return err

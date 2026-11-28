@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import {
   ANA,
   BEN,
@@ -71,14 +72,20 @@ describe("the review form", () => {
     await user.click(
       await screen.findByRole("checkbox", { name: /Mira Kovač/ }),
     );
-    const email = screen.getByRole("combobox", { name: "Primary email" });
+    const email = screen.getByRole("combobox", {
+      name: englishCopy["contactCase.prefer.email"],
+    });
     expect(email).toHaveTextContent("mira@northwind.de");
     await user.click(email);
     await user.click(
       await screen.findByRole("option", { name: "m.kovac@northwind.de" }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Preview merge" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["contactCase.previewVerb"],
+      }),
+    );
     await waitFor(() =>
       expect(previews).toEqual([
         expect.objectContaining({ prefer: { email: BEN } }),

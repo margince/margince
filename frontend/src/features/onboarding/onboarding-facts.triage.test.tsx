@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   type CompanyFieldName,
   type CompanyForm,
@@ -79,7 +80,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
   it("navigates by section name, badging only what blocks, not a grid of squares", () => {
     renderTriage(["icp"]);
 
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     const identityLink = within(nav).getByRole("button", {
       name: /Legal company/,
     });
@@ -95,7 +98,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
   it("lists a section's outstanding fields by name, exactly the ones its count counts", () => {
     renderTriage(["icp"]);
 
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     const identityLink = within(nav).getByRole("button", {
       name: /Legal company/,
     });
@@ -113,11 +118,11 @@ describe("CompanyConfirmCard as a triage surface", () => {
       .map((button) => button.querySelector("span:not(.sr-only)")?.textContent);
 
     expect(named).toEqual([
-      "Company name",
-      "Registered address",
-      "Register and VAT ID",
+      englishCopy["ob.field.display_name"],
+      englishCopy["ob.field.registered_address"],
+      englishCopy["ob.field.register_vat"],
       "Legal form",
-      "Register court",
+      englishCopy["ob.field.register_court"],
     ]);
   });
 
@@ -126,7 +131,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
   it("names a field with no visible status phrase, while its accessible name still carries the tier", () => {
     renderTriage(["icp"]);
 
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     // The accessible name (both matchers below succeed) proves the tier
     // reaches assistive tech. The visible span is checked on its own, to prove
     // it carries the field name alone.
@@ -134,17 +141,17 @@ describe("CompanyConfirmCard as a triage surface", () => {
       name: /Company name.*Needed to continue/,
     });
     expect(blockingItem.querySelector("span:not(.sr-only)")).toHaveTextContent(
-      "Company name",
+      englishCopy["ob.field.display_name"],
     );
     expect(blockingItem.querySelector(".sr-only")).toHaveTextContent(
-      "Needed to continue",
+      englishCopy["ob.conv.triage.blockingHead"],
     );
 
     const advisoryItem = within(nav).getByRole("button", {
       name: /Register court.*To review/,
     });
     expect(advisoryItem.querySelector("span:not(.sr-only)")).toHaveTextContent(
-      "Register court",
+      englishCopy["ob.field.register_court"],
     );
     expect(advisoryItem.querySelector(".sr-only")).toHaveTextContent(
       "To review",
@@ -180,7 +187,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
     const user = userEvent.setup();
     renderTriage(["icp"]);
 
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     await user.click(
       within(nav).getByRole("button", { name: /^Register court/ }),
     );
@@ -201,7 +210,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
   it("marks exactly one section current, never zero and never more than one", () => {
     renderTriage(["icp"]);
 
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     const current = within(nav)
       .getAllByRole("button")
       .filter((button) => button.getAttribute("aria-current") === "true");
@@ -242,7 +253,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
       />,
     );
 
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     const salesLink = within(nav).getByRole("button", {
       name: /Positioning and sales/,
     });
@@ -256,7 +269,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
   it("promotes contacts found on the site to their own section on the board", () => {
     renderTriage([], { ...readWith([]), contacts: [FOUNDER] });
 
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     expect(
       within(nav).getByRole("button", { name: /^Contacts/ }),
     ).toBeInTheDocument();
@@ -283,13 +298,15 @@ describe("CompanyConfirmCard as a triage surface", () => {
       throw new Error("expected the Contacts section to exist");
     }
     expect(
-      within(section).getByText("No contacts found on your site."),
+      within(section).getByText(englishCopy["ob.conv.triage.contactsEmpty"]),
     ).toBeInTheDocument();
     // No bare digit stands in for the sentence. The section carries no
     // outstanding count in the nav either, since nothing here is the human's
     // to resolve.
     expect(within(section).queryByText(/^\d+$/)).not.toBeInTheDocument();
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     const contactsLink = within(nav).getByRole("button", { name: /^Contacts/ });
     expect(within(contactsLink).queryByText(/^\d+$/)).not.toBeInTheDocument();
   });
@@ -301,7 +318,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
     const found = [FOUNDER, { ...FOUNDER, name: "Alex Chen", role: "COO" }];
     renderTriage([], { ...readWith([]), contacts: found });
 
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     const contactsLink = within(nav).getByRole("button", {
       name: /^Contacts.*2 found/,
     });
@@ -338,7 +357,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
       />,
     );
 
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     const factsLink = within(nav).getByRole("button", {
       name: /^Facts.*3 found/,
     });
@@ -353,8 +374,12 @@ describe("CompanyConfirmCard as a triage surface", () => {
   it("keeps the read's coverage honesty in the tail, since it is provenance, not a company fact", () => {
     renderTriage([], readWith([]));
 
-    expect(screen.getByText("Pages read and skipped")).toBeInTheDocument();
-    expect(screen.getByText("Background information")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["ob.live.cardCoverage"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["ob.conv.triage.restTitle"]),
+    ).toBeInTheDocument();
     expect(
       screen.queryByText("Everything else I found"),
     ).not.toBeInTheDocument();
@@ -410,9 +435,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     await user.click(within(row).getByRole("button", { name: "Show less" }));
 
     expect(
-      within(row).getByText(
-        "Not stated on your legal notice or imprint page. Add it manually.",
-      ),
+      within(row).getByText(englishCopy["ob.conv.triage.legalNotPublished"]),
     ).toBeInTheDocument();
   });
 
@@ -427,9 +450,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     await user.click(within(row).getByRole("button", { name: "Show less" }));
 
     expect(
-      within(row).getByText(
-        "I found no legal notice or imprint page on your site. Add it manually.",
-      ),
+      within(row).getByText(englishCopy["ob.conv.triage.legalNotChecked"]),
     ).toBeInTheDocument();
   });
 
@@ -437,7 +458,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
     const user = userEvent.setup();
     render(<TriageHarness />);
 
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     const identityLink = within(nav).getByRole("button", {
       name: /Legal company/,
     });
@@ -521,7 +544,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     // between an open question and confirm.
     expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
     expect(
-      screen.getByText("A decision is still open. Answer it to continue."),
+      screen.getByText(englishCopy["ob.conv.review.confirmQuestionOpen"]),
     ).toBeInTheDocument();
   });
 
@@ -739,7 +762,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
     expect(screen.getByText("founded year")).toBeInTheDocument();
     expect(screen.getByText("service")).toBeInTheDocument();
     // The section is navigable like any other.
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     expect(
       within(nav).getByRole("button", { name: /^Facts/ }),
     ).toBeInTheDocument();

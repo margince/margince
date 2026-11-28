@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/story-utils";
 import { ExtensionReports } from "./extensionreports";
 
@@ -65,7 +66,7 @@ describe("ExtensionReports", () => {
     expect(screen.getByText("13")).toBeInTheDocument();
     expect(screen.getByText("north")).toBeInTheDocument();
     expect(
-      screen.getByText("Withheld: too few records to show"),
+      screen.getByText(englishCopy["extensionReports.withheld"]),
     ).toBeInTheDocument();
   });
 
@@ -114,13 +115,11 @@ describe("ExtensionReports", () => {
     ]);
     expect(await screen.findByText("Visits by site")).toBeInTheDocument();
     expect(
-      screen.getByText("This report could not be loaded."),
+      screen.getByText(englishCopy["extensionReports.unavailable"]),
     ).toBeInTheDocument();
     expect(screen.getByText("13")).toBeInTheDocument();
     expect(
-      screen.queryByText(
-        "The reports your extensions add could not be loaded.",
-      ),
+      screen.queryByText(englishCopy["extensionReports.failed"]),
     ).not.toBeInTheDocument();
   });
 

@@ -120,7 +120,7 @@ describe("a promise our last email may have kept", () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByRole("button", { name: "Done" }));
-    expect(await screen.findByText("Task completed")).toBeTruthy();
+    expect(await screen.findByText(en["worklist.verb.completed"])).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Undo" }));
 
     await waitFor(() => expect(writes).toHaveLength(2));

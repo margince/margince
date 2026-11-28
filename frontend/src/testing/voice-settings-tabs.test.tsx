@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsScreen } from "../features/settings/settings";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { parseHash } from "../lib/router";
 import { meFixture } from "./mefixture";
 import { ReviewActionsProvider } from "./reviewactions";
@@ -82,7 +83,9 @@ describe("the Writing voice page across its tabs", () => {
     );
     const page = settingsVoicePage();
     const view = rtlRender(page("samples"));
-    await screen.findByRole("heading", { name: "Make it sharper" });
+    await screen.findByRole("heading", {
+      name: englishCopy["settings.voice.sharpenTitle"],
+    });
     await user.upload(
       fileInput(),
       new File(["Lars: we ship Friday. Sam: agreed."], "standup.vtt", {
@@ -158,7 +161,9 @@ describe("the Writing voice page across its tabs", () => {
     );
     const page = settingsVoicePage();
     const view = rtlRender(page("samples"));
-    await screen.findByRole("heading", { name: "Make it sharper" });
+    await screen.findByRole("heading", {
+      name: englishCopy["settings.voice.sharpenTitle"],
+    });
     await user.upload(
       fileInput(),
       new File(["We ship on Friday."], "notes.txt", { type: "text/plain" }),

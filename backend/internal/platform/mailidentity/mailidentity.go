@@ -255,7 +255,7 @@ func SeatAddressKey(label, source string) string {
 // NormalizeDomain does, so a unicode domain and its punycode form are one
 // address. Plus-addressing is kept: `me+news@` is another address.
 func FoldAddress(address string) string {
-	folded := strings.ToLower(strings.TrimSpace(address))
+	folded := correspondence.Fold(address)
 	at := strings.LastIndex(folded, "@")
 	if at < 0 {
 		return folded

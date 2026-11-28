@@ -34,6 +34,7 @@ var settingsDefineExceptions = map[string]string{
 	"capture.internal_mail_policy": productState,
 	"capture.google_app":           bootFieldsApart,
 	"capture.microsoft_app":        bootFieldsApart,
+	"capture.slack_app":            "installation application setup state uses the installation-identity and sealed-reference markers of settings.Entry, consumed by ConnectorAppStore",
 	"capture.unit_apps":            keyedByUnit,
 
 	"identity.extension_overwrites_edited_fields": keyedByUnit,

@@ -74,7 +74,7 @@ func (s *Store) SetContract(ctx context.Context, now time.Time, in ContractEdit)
 	}
 
 	var out Plan
-	err = database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		// Opens the week if the rep has not started one. Writing their risks IS
 		// starting to plan, and refusing until they have added a commitment
 		// would make the first thing they type the one thing they cannot save.

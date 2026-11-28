@@ -39,7 +39,7 @@ func TestOlderQualifyTasksLearnTheirTemplate(t *testing.T) {
 	// Other tests in the package leave qualify tasks too, so every page is read.
 	for after := ids.Nil; ; {
 		var scanned []ids.UUID
-		if err := database.WithWorkspaceTx(asClassifier(e), e.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(asClassifier(e), e.pool, func(tx pgx.Tx) error {
 			var err error
 			scanned, _, err = DescribeQualifyTaskTextTx(asClassifier(e), tx, after, 10)
 			return err

@@ -88,7 +88,7 @@ func (s *Service) setAside(ctx context.Context, dealID ids.DealID, fingerprint, 
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// Setting aside a move on a deal the caller cannot read would confirm
 		// the deal exists, so the row gate comes first.
 		if err := auth.EnsureVisible(ctx, tx, "deal", dealID.UUID); err != nil {
@@ -126,7 +126,7 @@ func (s *Service) withSetAside(
 	}
 	card.Next = &next
 	var setAside map[ids.UUID]bool
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		setAside, err = MovesSetAside(ctx, tx, map[ids.UUID]crmcontracts.DealStatusCardMove{dealID.UUID: next})
 		return err

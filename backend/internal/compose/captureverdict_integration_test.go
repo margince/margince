@@ -280,7 +280,7 @@ func queueMail(batch *pgx.Batch, id ids.UUID, from, subject string, bulkAttested
 // sendSeed runs a queued seed in one workspace transaction and one round trip.
 func sendSeed(t *testing.T, e *integration.Env, batch *pgx.Batch, what string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.SendBatch(context.Background(), batch).Close()
 	})
 	if err != nil {
@@ -293,7 +293,7 @@ func sendSeed(t *testing.T, e *integration.Env, batch *pgx.Batch, what string) {
 func seedPendingDisposition(t *testing.T, e *integration.Env, email, domain string, activityID ids.UUID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_pending_counterparty
 			  (id, email, domain, display_name, activity_id, owner_id, status, next_attempt_at)
@@ -310,7 +310,7 @@ func seedPendingDisposition(t *testing.T, e *integration.Env, email, domain stri
 func dispositionStatus(t *testing.T, e *integration.Env, id ids.UUID) string {
 	t.Helper()
 	var status string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&status)
 	})
@@ -323,7 +323,7 @@ func dispositionStatus(t *testing.T, e *integration.Env, id ids.UUID) string {
 func countIn(t *testing.T, e *integration.Env, query string, args ...any) int {
 	t.Helper()
 	var n int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&n)
 	})
 	if err != nil {
@@ -482,7 +482,7 @@ func rawCaptureRows(t *testing.T, e *integration.Env, activityID ids.UUID) int {
 // sweep actually reads.
 func backdateArchive(t *testing.T, e *integration.Env, id ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET archived_at = now() - $2::interval WHERE id = $1`,
 			id, (capture.NoiseUndoWindow + time.Hour).String())
@@ -527,7 +527,7 @@ func TestAnAddressErasedBeforeTheVerdictRecordsSuppressedNotReal(t *testing.T) {
 // an Art. 17 erasure leaves behind.
 func suppressAddress(t *testing.T, e *integration.Env, email string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO erasure_suppression (kind, value_hash)
 			VALUES ('email', $1)`, storekit.SuppressionHash(email))
@@ -592,7 +592,7 @@ func TestOnlyTheContactKindCreatesAContact(t *testing.T) {
 			}
 			// The ledger records WHO wrote, not just what happened to the row.
 			var kind string
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(),
 					`SELECT COALESCE(kind, '') FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&kind)
 			}); err != nil {
@@ -636,7 +636,7 @@ func TestARoleMailboxIsSettledWithoutAskingTheModel(t *testing.T) {
 				t.Errorf("%d model calls for a role mailbox, want 0 — the address already answers", brain.calls)
 			}
 			var kind string
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(),
 					`SELECT COALESCE(kind, '') FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&kind)
 			}); err != nil {
@@ -794,7 +794,7 @@ func TestAWeakContactAnswerAsksAHumanWhileAWeakNoiseAnswerStands(t *testing.T) {
 func dispositionConfidence(t *testing.T, e *integration.Env, id ids.UUID) *float64 {
 	t.Helper()
 	var confidence *float64
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT confidence FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&confidence)
 	}); err != nil {

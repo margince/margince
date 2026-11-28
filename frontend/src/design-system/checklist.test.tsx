@@ -4,6 +4,7 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { Badge, Button } from "./atoms";
 import { Checklist, ChecklistStep } from "./checklist";
 
@@ -69,7 +70,7 @@ describe("Checklist", () => {
     render(<Setup />);
     const [, current, open] = screen.getAllByRole("listitem");
     const button = within(current).getByRole("button", {
-      name: "Connect calendar",
+      name: englishCopy["connectors.connectCalendar"],
     });
     expect(button.closest(".checklist-action")).not.toBeNull();
     const body = within(open).getByText("Your link already exists.");

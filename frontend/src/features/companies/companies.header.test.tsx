@@ -50,9 +50,13 @@ async function openRecordMenu(
   testId: string,
 ): Promise<HTMLElement> {
   await waitFor(() =>
-    expect(screen.getByRole("button", { name: "More actions" })).toBeTruthy(),
+    expect(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    ).toBeTruthy(),
   );
-  await user.click(screen.getByRole("button", { name: "More actions" }));
+  await user.click(
+    screen.getByRole("button", { name: en["record.moreActions"] }),
+  );
   await waitFor(() => expect(screen.getByTestId(testId)).toBeTruthy());
   return screen.getByTestId(testId);
 }

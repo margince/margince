@@ -43,7 +43,7 @@ func seedChatMessage(t *testing.T) ids.ActivityID {
 func stampRoster(t *testing.T, e *Env, activity ids.ActivityID, attested bool, parties ...connector.MessageParticipant) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return capture.StampFurtherParticipants(ctx, tx, activity, "message", rosterProvider, attested, parties)
 	}); err != nil {
 		t.Fatalf("StampFurtherParticipants: %v", err)

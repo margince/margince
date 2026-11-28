@@ -33,7 +33,7 @@ import (
 func (e *scoutEnv) record(ctx context.Context, t *testing.T, draft deals.SuggestionDraft) (bool, error) {
 	t.Helper()
 	var raised bool
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		raised, err = deals.RecordSuggestionTx(ctx, tx, draft)
 		return err
@@ -69,7 +69,7 @@ func TestOnlyTheSystemRecordsAWellFormedSuggestion(t *testing.T) {
 			t.Errorf("a draft with %s = %v, want it refused as malformed", name, err)
 		}
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := deals.SupersedeStaleSuggestionsTx(e.Admin(), tx, nil)
 		return err
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -172,7 +172,7 @@ func (e *scoutEnv) twinsOf(t *testing.T, company ids.UUID) []ids.UUID {
 	t.Helper()
 	ctx := e.system()
 	var twins []ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		twins, err = contacts.OpenDuplicateCompaniesTx(ctx, tx, company)
 		return err
@@ -187,7 +187,7 @@ func (e *scoutEnv) meetingDraft(t *testing.T, company, meeting ids.UUID) deals.S
 	t.Helper()
 	at := e.daysAgo(3).Truncate(time.Microsecond)
 	var meetingAt time.Time
-	if err := database.WithWorkspaceTx(e.system(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.system(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.system(), `SELECT occurred_at FROM activity WHERE id = $1`, meeting).Scan(&meetingAt)
 	}); err != nil {
 		t.Fatal(err)
@@ -395,7 +395,7 @@ func TestTwinsRecordedAtOnceRaiseOneSuggestion(t *testing.T) {
 	releaseFirst := func() { releaseOnce.Do(func() { close(release) }) }
 	t.Cleanup(releaseFirst)
 	go func() {
-		firstDone <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		firstDone <- database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			if _, err := deals.RecordSuggestionTx(ctx, tx, namedDraft); err != nil {
 				return err
 			}
@@ -461,7 +461,7 @@ func TestAReviewerAnsweringAPairWaitsForTheScoutActingOnIt(t *testing.T) {
 	releaseScout := func() { releaseOnce.Do(func() { close(release) }) }
 	t.Cleanup(releaseScout)
 	go func() {
-		scoutDone <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		scoutDone <- database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			if _, err := contacts.OpenDuplicateCompanyPairsTx(ctx, tx); err != nil {
 				return err
 			}
@@ -546,7 +546,7 @@ func TestAClaimantWaitsForTheWithdrawalThatTrustsIt(t *testing.T) {
 	releaseScout := func() { releaseOnce.Do(func() { close(release) }) }
 	t.Cleanup(releaseScout)
 	go func() {
-		scoutDone <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		scoutDone <- database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			if _, err := deals.SupersedeDuplicateSuggestionsTx(ctx, tx, [][2]ids.UUID{{named, twin}}); err != nil {
 				return err
 			}

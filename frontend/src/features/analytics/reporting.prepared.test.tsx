@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   reportingStoryCatalog,
   reportingStoryReport,
@@ -91,9 +92,9 @@ function draw(ownLens = false) {
 it("previews a prepared report with its own question and opens a save for a copy", async () => {
   const asked = draw();
   const user = userEvent.setup();
-  const row = (await screen.findByText("Weekly sales review")).closest(
-    ".panel-row, [class*='row']",
-  ) as HTMLElement;
+  const row = (
+    await screen.findByText(englishCopy["reporting.prepared.weeklyTitle"])
+  ).closest(".panel-row, [class*='row']") as HTMLElement;
   await user.click(within(row).getByRole("button", { name: "Preview" }));
   await screen.findAllByText(/Sales won/);
   const evaluate = asked.find((url) => url.includes("/analytics/evaluate"));
@@ -106,9 +107,9 @@ it("previews a prepared report with its own question and opens a save for a copy
 
 it("opens the section that already holds a prepared report", async () => {
   draw();
-  const row = (await screen.findByText("Delivery review")).closest(
-    ".panel-row, [class*='row']",
-  ) as HTMLElement;
+  const row = (
+    await screen.findByText(englishCopy["reporting.prepared.deliveryTitle"])
+  ).closest(".panel-row, [class*='row']") as HTMLElement;
   await userEvent
     .setup()
     .click(within(row).getByRole("link", { name: "Open" }));
@@ -131,11 +132,15 @@ it("names a pipeline only for a question with stage charts", () => {
 
 it("offers personal outcomes only to a reader whose lens is their own records", async () => {
   draw(false);
-  await screen.findByText("Delivery review");
-  expect(screen.queryByText("Personal outcomes")).toBeNull();
+  await screen.findByText(englishCopy["reporting.prepared.deliveryTitle"]);
+  expect(
+    screen.queryByText(englishCopy["reporting.prepared.personalTitle"]),
+  ).toBeNull();
   cleanup();
   draw(true);
-  expect(await screen.findByText("Personal outcomes")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["reporting.prepared.personalTitle"]),
+  ).toBeInTheDocument();
 });
 
 // The prospecting template asks what the catalog's sdr preset asks, whatever
@@ -227,9 +232,9 @@ describe("saving a copy", () => {
       </StoryProviders>,
     );
     const user = userEvent.setup();
-    const row = (await screen.findByText("Weekly sales review")).closest(
-      ".panel-row, [class*='row']",
-    ) as HTMLElement;
+    const row = (
+      await screen.findByText(englishCopy["reporting.prepared.weeklyTitle"])
+    ).closest(".panel-row, [class*='row']") as HTMLElement;
     await user.click(
       await within(row).findByRole("button", { name: "Save a copy" }),
     );

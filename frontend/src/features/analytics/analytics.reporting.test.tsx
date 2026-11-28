@@ -2,6 +2,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
@@ -30,12 +31,18 @@ it.each([
     installFetchStub(reportingStoryRoutes());
     render(<AnalyticsScreen />);
     expect(
-      await screen.findByRole("heading", { name: "Sales won over time" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["reporting.bookings_trend"],
+      }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Reports" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Setup" })).toBeTruthy();
-    expect(screen.queryByText("Won and lost")).toBeNull();
-    expect(screen.queryByText("Time in stage")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["analytics.reportWinLoss"]),
+    ).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["analytics.reportStageAge"]),
+    ).toBeNull();
   },
 );
 
@@ -46,7 +53,9 @@ it("opens the saved report library with the same reporting implementation", asyn
   render(<AnalyticsScreen />);
   await user.click(await screen.findByRole("button", { name: "Reports" }));
   expect(
-    await screen.findByRole("link", { name: "Create from Performance" }),
+    await screen.findByRole("link", {
+      name: englishCopy["reporting.createReport"],
+    }),
   ).toBeTruthy();
 });
 
@@ -123,7 +132,11 @@ it.each([
   expect(screen.queryByRole("button", { name: "Reports" })).toBeNull();
   // Without saved reports there is no Reports tab to open a custom report
   // from, so custom reports keep a tab of their own.
-  expect(screen.getByRole("button", { name: "Custom reports" })).toBeTruthy();
+  expect(
+    screen.getByRole("button", {
+      name: englishCopy["analytics.sectionQuestions"],
+    }),
+  ).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Setup" })).toBeNull();
   expect(forbidden).not.toHaveBeenCalled();
 });

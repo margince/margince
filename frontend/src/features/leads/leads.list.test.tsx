@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { openFilterValues } from "../../testing/listquery.testkit";
 import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
@@ -328,7 +329,9 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
       expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
     );
     await user.click(
-      screen.getByRole("button", { name: "New and unassigned" }),
+      screen.getByRole("button", {
+        name: englishCopy["lead.viewNewUnassigned"],
+      }),
     );
 
     await waitFor(() =>
@@ -386,7 +389,10 @@ describe("LeadsScreen — rich create (P-15)", () => {
     await user.type(form.getByLabelText("Full name *"), "Otto Fischer");
     await user.type(form.getByLabelText("Email"), "otto@example.test");
     const linkedin = "https://linkedin.com/in/otto";
-    await user.type(form.getByLabelText("LinkedIn URL"), linkedin);
+    await user.type(
+      form.getByLabelText(englishCopy["create.linkedinUrl"]),
+      linkedin,
+    );
     await user.type(form.getByLabelText("Company"), "Otto Fischer GmbH");
     await user.click(screen.getByRole("button", { name: "Create" }));
 
@@ -466,7 +472,7 @@ describe("LeadsScreen — rich create (P-15)", () => {
     const form = within(screen.getByRole("dialog"));
     await user.type(form.getByLabelText("Full name *"), "Otto Fischer");
     await user.click(
-      await form.findByRole("combobox", { name: "Referred by partner" }),
+      await form.findByRole("combobox", { name: englishCopy["lead.partner"] }),
     );
     await user.click(
       await screen.findByRole("option", { name: "Referrer GmbH" }),
@@ -536,7 +542,7 @@ describe("LeadsScreen — rich create (P-15)", () => {
     render(<LeadsScreen />);
     const step = within(await openViewStep(user, "Columns"));
     await user.click(
-      await step.findByRole("checkbox", { name: "Referred by partner" }),
+      await step.findByRole("checkbox", { name: englishCopy["lead.partner"] }),
     );
 
     expect(await screen.findByText("Former Partner AG")).toBeTruthy();
@@ -570,9 +576,11 @@ describe("LeadsScreen — rich create (P-15)", () => {
     await user.type(screen.getByLabelText("Email"), "duplicate@example.test");
     await user.click(screen.getByRole("button", { name: "Create" }));
 
-    expect(await screen.findByText("View existing record")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["dedupe.viewExisting"]),
+    ).toBeTruthy();
     expect(postCount).toBe(0);
-    await user.click(screen.getByText("View existing record"));
+    await user.click(screen.getByText(englishCopy["dedupe.viewExisting"]));
     expect(window.location.hash).toBe("#/leads/existing-lead");
   });
 
@@ -608,7 +616,7 @@ describe("LeadsScreen — rich create (P-15)", () => {
     expect(
       await screen.findByText(/open a deal on the contact/),
     ).toBeInTheDocument();
-    await user.click(screen.getByText("View existing record"));
+    await user.click(screen.getByText(englishCopy["dedupe.viewExisting"]));
     expect(window.location.hash).toBe("#/contacts/held-contact");
   });
 });
@@ -632,23 +640,28 @@ describe("LeadsScreen — archived marking (P-3)", () => {
       expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
     );
     const warned = screen
-      .getAllByText("Disqualified", { selector: ".badge-label" })
+      .getAllByText(englishCopy["lead.disqualified"], {
+        selector: ".badge-label",
+      })
       .filter((label) => label.closest(".badge.badge-warning"));
     expect(warned).toHaveLength(1);
   });
 });
 
 describe("LeadsScreen — the count line", () => {
-  it("names one lead in the singular", async () => {
+  it("counts one lead as a range with no noun", async () => {
     stubFetch(async () =>
       jsonResponse({
         data: [lead],
         page: { next_cursor: null, has_more: false },
       }),
     );
-    render(<LeadsScreen />);
-    expect(await screen.findByText(/1 to 1 of 1 lead\b/)).toBeTruthy();
-    expect(screen.queryByText(/of 1 leads/)).toBeNull();
+    const { container } = render(<LeadsScreen />);
+    await waitFor(() =>
+      expect(container.querySelector(".lt-count")).toHaveTextContent(
+        /^1-1 of 1/,
+      ),
+    );
   });
 });
 
@@ -786,9 +799,9 @@ describe("LeadsScreen — dedupe view-existing link (P-16)", () => {
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() =>
-      expect(screen.getByText("View existing record")).toBeTruthy(),
+      expect(screen.getByText(englishCopy["dedupe.viewExisting"])).toBeTruthy(),
     );
-    await user.click(screen.getByText("View existing record"));
+    await user.click(screen.getByText(englishCopy["dedupe.viewExisting"]));
     expect(window.location.hash).toBe("#/leads/01X");
   });
 });

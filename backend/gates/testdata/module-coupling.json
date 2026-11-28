@@ -32,10 +32,15 @@
     "assurance_task_item.assurance_task_item_task_activity_id_fkey": "FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE CASCADE"
   },
   "chatlinks": {
+    "chat_channel_watch.chat_channel_watch_connection_id_fkey": "FOREIGN KEY (connection_id) REFERENCES channel_connection(id) ON DELETE CASCADE",
+    "chat_link.chat_link_company_id_fkey": "FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE",
     "chat_link.chat_link_connection_id_fkey": "FOREIGN KEY (connection_id) REFERENCES channel_connection(id) ON DELETE RESTRICT",
     "chat_link.chat_link_deal_id_fkey": "FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE",
     "chat_link.chat_link_linked_by_fkey": "FOREIGN KEY (linked_by) REFERENCES app_user(id) ON DELETE RESTRICT",
-    "chat_link.chat_link_project_id_fkey": "FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE"
+    "chat_link.chat_link_project_id_fkey": "FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE",
+    "chat_member_grant.chat_member_grant_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE",
+    "chat_root.chat_root_activity_id_fkey": "FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE SET NULL",
+    "chat_send_attempt.chat_send_attempt_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE"
   },
   "commissions": {
     "commission_entry.commission_entry_deal_id_fkey": "FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE",

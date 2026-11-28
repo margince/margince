@@ -136,7 +136,7 @@ func TestAHeldThreadCarriesItsSubjectOnlyWhenTheReaderMayReadIt(t *testing.T) {
 func TestAHeldThreadWithholdsAMessageTheReaderIsNotOn(t *testing.T) {
 	e := integration.Setup(t)
 	var activityID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		activityID = ids.NewV7()
 		// Captured by SOMEBODY ELSE and held to its participants, so the
 		// caller is outside the audience.
@@ -148,7 +148,7 @@ func TestAHeldThreadWithholdsAMessageTheReaderIsNotOn(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("seeding a colleague's message: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, attempts, first_activity_id)
 			VALUES ('thread-colleagues', $1, 'held', 'personnel', 1, $2)`, e.Rep1, activityID)
@@ -168,7 +168,7 @@ func TestAHeldThreadWithholdsAMessageTheReaderIsNotOn(t *testing.T) {
 func TestAHeldThreadCarriesTheMessageItsReaderMayOpen(t *testing.T) {
 	e := integration.Setup(t)
 	activityID := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, audience)
 			VALUES ($1, 'email', 'Rechnung Q3', now(), 'gmail', $2, 'workspace')`,
@@ -177,7 +177,7 @@ func TestAHeldThreadCarriesTheMessageItsReaderMayOpen(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("seeding the message: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, attempts, first_activity_id)
 			VALUES ('thread-openable', $1, 'held', 'financial_corporate', 1, $2)`,
@@ -235,7 +235,7 @@ func seedVerdictWithActivity(t *testing.T, e *integration.Env, user ids.UUID,
 	threadKey, status, kind string, attempts int, withActivity bool,
 ) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		var activityID *ids.UUID
 		if withActivity {

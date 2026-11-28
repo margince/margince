@@ -191,13 +191,13 @@ func countAICertFamily(fam *aiCertFamily) {
 }
 
 // familyAnswer grades a family, and both halves of the page state its rule.
-// Under half the features covered reads not enough tested. Every graded one
+// Under half the features covered, or none graded, reads not enough tested. Every graded one
 // ready reads yes, familyMostlyPercent usable reads mostly, else not yet.
 // A place with too few tries to grade alone counts toward coverage and no grade.
 func familyAnswer(fam *aiCertFamily) string {
 	graded := fam.SitesMeasured - fam.TooFewRuns
 	switch {
-	case fam.SitesMeasured*familyCoverageDivisor < fam.SitesShipped:
+	case fam.SitesMeasured*familyCoverageDivisor < fam.SitesShipped, graded == 0:
 		return familyNotEnough
 	case fam.Ready == graded:
 		return familyYes
@@ -249,6 +249,10 @@ func familyAnswerWords(answer string) string {
 // familyPlainWords is the sentence for a reader without the vocabulary.
 // It is built from the counts, the same ones the answer beside it reads.
 func familyPlainWords(fam aiCertFamily) string {
+	if fam.Answer == familyNotEnough && fam.SitesMeasured == fam.TooFewRuns && fam.SitesMeasured > 0 {
+		return fmt.Sprintf("Tested in %d of the %d places, each on too few tries to grade. Ask before relying on it.",
+			fam.SitesMeasured, fam.SitesShipped)
+	}
 	if fam.Answer == familyNotEnough {
 		return fmt.Sprintf("Tested in only %d of the %d places. Ask before relying on it.",
 			fam.SitesMeasured, fam.SitesShipped)
@@ -262,6 +266,10 @@ func familyPlainWords(fam aiCertFamily) string {
 	}
 	if fam.TooFewRuns > 0 {
 		words += fmt.Sprintf("; %d more right every time, on too few tries to grade alone", fam.TooFewRuns)
+	}
+	if fam.RecheckPending > 0 {
+		words += fmt.Sprintf(". Re-check pending for %d of these, measured on an older version of the product",
+			fam.RecheckPending)
 	}
 	return words + "."
 }
@@ -307,9 +315,10 @@ func writeAICertFamilySummary(page *strings.Builder, families []aiCertFamily) {
 			"answer is, and two judges do not score on one scale. Until one judge has scored them all, compare families on\n" +
 			"*Tries right*: how often the answer passed its mechanical check, which no judge decides.\n\n")
 	}
-	fmt.Fprintf(page, "A family rated **Yes** is ready in every place we tested. One rated **Mostly** has at least %d in every 100 "+
-		"tested places ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** "+
-		"when we tested it in under half of the places. A family is judged on its best "+
+	fmt.Fprintf(page, "A family rated **Yes** is ready in every place we graded. One rated **Mostly** has at least %d in every 100 "+
+		"graded places ready or working with a check, and one rated **Not yet** has fewer. A place with too few tries to "+
+		"grade alone counts as tested but not as graded. We say **Not enough tested yet** "+
+		"when we tested it in under half of the places, or could grade none of them. A family is judged on its best "+
 		"model for each place, and only on the models a model setup uses, each in the places that setup "+
 		"sends to it.\n\n", familyMostlyPercent)
 }
@@ -364,10 +373,6 @@ func writeAICertFamilyDetail(page *strings.Builder, families []aiCertFamily) {
 func writeAICertFamilySection(page *strings.Builder, fam aiCertFamily) {
 	fmt.Fprintf(page, "### %s\n\n", fam.Name)
 	fmt.Fprintf(page, "%s: %s\n\n", familyAnswerWords(fam.Answer), familyPlainWords(fam))
-	if fam.RecheckPending > 0 {
-		fmt.Fprintf(page, "%d of these results were measured on an older version of the product and are re-check pending.\n\n",
-			fam.RecheckPending)
-	}
 	page.WriteString("| Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |\n|---|---|---:|---:|---:|---:|---|\n")
 	for _, m := range fam.Models {
 		fmt.Fprintf(page, "| `%s` | `%s` | %d | %d | %d | %d | %s |\n", m.Binding.Model, m.Binding.Env,
@@ -461,6 +466,7 @@ func TestFamilyAnswerNeedsCoverageBeforeItGrades(t *testing.T) {
 		{"seven in ten usable", aiCertFamily{SitesShipped: 10, SitesMeasured: 10, Ready: 5, UsableWithCare: 2, NotReliableYet: 3}, familyNotYet},
 		{"under half measured", aiCertFamily{SitesShipped: 10, SitesMeasured: 4, Ready: 4}, familyNotEnough},
 		{"exactly half measured", aiCertFamily{SitesShipped: 10, SitesMeasured: 5, Ready: 5}, familyYes},
+		{"every measured place on too few tries", aiCertFamily{SitesShipped: 10, SitesMeasured: 6, TooFewRuns: 6}, familyNotEnough},
 	}
 	for _, tc := range cases {
 		if got := familyAnswer(&tc.fam); got != tc.want {

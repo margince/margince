@@ -116,9 +116,9 @@ func (s *Store) SaveResearchClaims(ctx context.Context, contactID ids.ContactID,
 	}
 	saved := 0
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// Reset inside the closure: WithWorkspaceTx may run it again, and a
-		// counter that survived the retry would tell the caller more claims
-		// landed than exist — and put that inflated number in the audit row.
+		// Reset inside the closure: WithTx may run it again. A counter that
+		// survived the retry would tell the caller more claims landed than
+		// exist, and would put that inflated number in the audit row.
 		saved = 0
 		var landedClaims []ResearchClaimInput
 		if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {

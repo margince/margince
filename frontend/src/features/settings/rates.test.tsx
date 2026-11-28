@@ -234,8 +234,8 @@ describe("the rate sheets", () => {
 
     // The table's name says which rates these are; its headers name columns.
     expect(
-      within(rateCard("Currency rates")).getByRole("table", {
-        name: "Rates in force",
+      within(rateCard(en["settings.rates.fxTitle"])).getByRole("table", {
+        name: en["settings.rates.fxTableLabel"],
       }),
     ).toBeTruthy();
   });
@@ -290,14 +290,16 @@ describe("the rate sheets", () => {
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
 
     await user.click(
-      within(rateCard("Currency rates")).getByRole("button", {
+      within(rateCard(en["settings.rates.fxTitle"])).getByRole("button", {
         name: "Set rate",
       }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("textbox", { name: "From" })).toBeTruthy();
     expect(
-      within(dialog).getByRole("textbox", { name: "Rate (to base currency)" }),
+      within(dialog).getByRole("textbox", {
+        name: en["settings.rates.rateToBase"],
+      }),
     ).toBeTruthy();
     expect(
       within(dialog).getByRole("textbox", { name: "Effective" }),
@@ -324,8 +326,8 @@ describe("the rate sheets", () => {
     );
 
     await user.click(
-      within(rateCard("Model prices")).getByRole("button", {
-        name: "Add model rate",
+      within(rateCard(en["aiPriceSync.title"])).getByRole("button", {
+        name: en["settings.rates.modelAdd"],
       }),
     );
     const dialog = await screen.findByRole("dialog");
@@ -373,14 +375,14 @@ describe("the rate sheets", () => {
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
 
     await user.click(
-      within(rateCard("Currency rates")).getByRole("button", {
+      within(rateCard(en["settings.rates.fxTitle"])).getByRole("button", {
         name: "Set rate",
       }),
     );
     const dialog = within(await screen.findByRole("dialog"));
     await user.type(dialog.getByRole("textbox", { name: "From" }), "GBP");
     await user.type(
-      dialog.getByRole("textbox", { name: "Rate (to base currency)" }),
+      dialog.getByRole("textbox", { name: en["settings.rates.rateToBase"] }),
       "1.17",
     );
     await user.click(dialog.getByRole("button", { name: /^Choose date/ }));
@@ -409,14 +411,14 @@ describe("the rate sheets", () => {
     render(<RateSheets />);
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
     await user.click(
-      within(rateCard("Currency rates")).getByRole("button", {
+      within(rateCard(en["settings.rates.fxTitle"])).getByRole("button", {
         name: "Set rate",
       }),
     );
     const dialog = within(await screen.findByRole("dialog"));
     await user.type(dialog.getByRole("textbox", { name: "From" }), "GBP");
     const rate = dialog.getByRole("textbox", {
-      name: "Rate (to base currency)",
+      name: en["settings.rates.rateToBase"],
     });
     await user.type(rate, "1.170,5");
     expect(
@@ -450,7 +452,7 @@ describe("the rate sheets", () => {
     render(<RateSheets />);
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
     await user.click(
-      within(rateCard("Currency rates")).getByRole("button", {
+      within(rateCard(en["settings.rates.fxTitle"])).getByRole("button", {
         name: "Set rate",
       }),
     );
@@ -458,7 +460,7 @@ describe("the rate sheets", () => {
     const from = dialog.getByRole("textbox", { name: "From" });
     await user.type(from, "ZZZ");
     await user.type(
-      dialog.getByRole("textbox", { name: "Rate (to base currency)" }),
+      dialog.getByRole("textbox", { name: en["settings.rates.rateToBase"] }),
       "0",
     );
     await user.click(dialog.getByRole("button", { name: "Save" }));
@@ -506,14 +508,14 @@ describe("the rate sheets", () => {
     render(<RateSheets />);
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
     await user.click(
-      within(rateCard("Currency rates")).getByRole("button", {
+      within(rateCard(en["settings.rates.fxTitle"])).getByRole("button", {
         name: "Set rate",
       }),
     );
     const dialog = within(await screen.findByRole("dialog"));
     await user.type(dialog.getByRole("textbox", { name: "From" }), "GBP");
     await user.type(
-      dialog.getByRole("textbox", { name: "Rate (to base currency)" }),
+      dialog.getByRole("textbox", { name: en["settings.rates.rateToBase"] }),
       "1.17",
     );
     await user.click(dialog.getByRole("button", { name: "Save" }));
@@ -532,8 +534,8 @@ describe("the rate sheets", () => {
     await screen.findByText("claude-opus-4-8");
 
     await user.click(
-      within(rateCard("Model prices")).getByRole("button", {
-        name: "Add model rate",
+      within(rateCard(en["aiPriceSync.title"])).getByRole("button", {
+        name: en["settings.rates.modelAdd"],
       }),
     );
     const dialog = within(await screen.findByRole("dialog"));
@@ -551,8 +553,8 @@ describe("the rate sheets", () => {
     mount(RATE_SETTER);
     await screen.findByText("claude-opus-4-8");
     await user.click(
-      within(rateCard("Model prices")).getByRole("button", {
-        name: "Add model rate",
+      within(rateCard(en["aiPriceSync.title"])).getByRole("button", {
+        name: en["settings.rates.modelAdd"],
       }),
     );
     const dialog = within(await screen.findByRole("dialog"));
@@ -581,8 +583,8 @@ describe("the rate sheets", () => {
     mount(RATE_SETTER);
     await screen.findByText("claude-opus-4-8");
     await user.click(
-      within(rateCard("Model prices")).getByRole("button", {
-        name: "Add model rate",
+      within(rateCard(en["aiPriceSync.title"])).getByRole("button", {
+        name: en["settings.rates.modelAdd"],
       }),
     );
     const dialog = within(await screen.findByRole("dialog"));
@@ -597,14 +599,16 @@ describe("the rate sheets", () => {
     mount(PRICE_ADMIN);
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
     expect(screen.getByRole("button", { name: "Set rate" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Add model rate" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: en["settings.rates.modelAdd"] }),
+    ).toBeTruthy();
     // Each card exposes its own refresh to an admin: the currency sheet asks
     // for proposals, the model sheet re-prices from the catalogue.
     expect(
-      screen.getAllByRole("button", { name: "Refresh from sources" }),
+      screen.getAllByRole("button", { name: en["settings.rates.refresh"] }),
     ).toHaveLength(1);
     expect(
-      screen.getAllByRole("button", { name: "Refresh model prices" }),
+      screen.getAllByRole("button", { name: en["aiRates.refresh.button"] }),
     ).toHaveLength(1);
     // And nothing about reading is withheld or read-only for them.
     expect(screen.queryByText(/your role cannot change rates/i)).toBeNull();
@@ -646,7 +650,7 @@ describe("the rate sheets", () => {
     const user = userEvent.setup();
     mount(PRICE_ADMIN);
     await user.click(
-      await screen.findByRole("button", { name: "Refresh model prices" }),
+      await screen.findByRole("button", { name: en["aiRates.refresh.button"] }),
     );
     const report = await screen.findByRole("status");
     expect(report.textContent).toContain("2 prices written");
@@ -657,7 +661,9 @@ describe("the rate sheets", () => {
     mount(RATE_READER);
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
     expect(screen.queryByRole("button", { name: "Set rate" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Add model rate" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["settings.rates.modelAdd"] }),
+    ).toBeNull();
   });
 
   // One object at a time. A fixture that grants both sheets at once cannot tell
@@ -671,7 +677,7 @@ describe("the rate sheets", () => {
     const fx = rateCard("Currency rates");
     expect(within(fx).getByRole("button", { name: "Set rate" })).toBeTruthy();
     expect(
-      within(fx).getByRole("button", { name: "Refresh from sources" }),
+      within(fx).getByRole("button", { name: en["settings.rates.refresh"] }),
     ).toBeTruthy();
 
     // The model sheet still renders its rows — it is the WRITING that is
@@ -679,10 +685,14 @@ describe("the rate sheets", () => {
     const model = rateCard("Model prices");
     expect(within(model).getByText("claude-opus-4-8")).toBeTruthy();
     expect(
-      within(model).queryByRole("button", { name: "Add model rate" }),
+      within(model).queryByRole("button", {
+        name: en["settings.rates.modelAdd"],
+      }),
     ).toBeNull();
     expect(
-      within(model).queryByRole("button", { name: "Refresh model prices" }),
+      within(model).queryByRole("button", {
+        name: en["aiRates.refresh.button"],
+      }),
     ).toBeNull();
   });
 
@@ -694,18 +704,22 @@ describe("the rate sheets", () => {
 
     const model = rateCard("Model prices");
     expect(
-      within(model).getByRole("button", { name: "Add model rate" }),
+      within(model).getByRole("button", {
+        name: en["settings.rates.modelAdd"],
+      }),
     ).toBeTruthy();
     // A refresh also adds rows, which an update grant alone would be refused.
     expect(
-      within(model).queryByRole("button", { name: "Refresh model prices" }),
+      within(model).queryByRole("button", {
+        name: en["aiRates.refresh.button"],
+      }),
     ).toBeNull();
 
     const fx = rateCard("Currency rates");
     expect(within(fx).getByText("USD")).toBeTruthy();
     expect(within(fx).queryByRole("button", { name: "Set rate" })).toBeNull();
     expect(
-      within(fx).queryByRole("button", { name: "Refresh from sources" }),
+      within(fx).queryByRole("button", { name: en["settings.rates.refresh"] }),
     ).toBeNull();
   });
 
@@ -718,25 +732,27 @@ describe("the rate sheets", () => {
     expect(screen.getByText("claude-opus-4-8")).toBeTruthy();
 
     expect(screen.queryByRole("button", { name: "Set rate" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Add model rate" })).toBeNull();
     expect(
-      screen.queryAllByRole("button", { name: "Refresh from sources" }),
+      screen.queryByRole("button", { name: en["settings.rates.modelAdd"] }),
+    ).toBeNull();
+    expect(
+      screen.queryAllByRole("button", { name: en["settings.rates.refresh"] }),
     ).toEqual([]);
     expect(
-      screen.queryAllByRole("button", { name: "Refresh model prices" }),
+      screen.queryAllByRole("button", { name: en["aiRates.refresh.button"] }),
     ).toEqual([]);
 
     // The read-only posture is stated once per readable sheet, and the withheld
     // reason is not. Stacking both would explain one denial twice, two ways.
     // The model prices say it on their switch.
     expect(
-      within(rateCard("Currency rates")).getByText(
+      within(rateCard(en["settings.rates.fxTitle"])).getByText(
         /your role cannot change rates/i,
       ),
     ).toBeTruthy();
     expect(
-      within(rateCard("Model prices")).getByText(
-        "Your role cannot change this.",
+      within(rateCard(en["aiPriceSync.title"])).getByText(
+        en["aiPriceSync.adminOnly"],
       ),
     ).toBeTruthy();
     expect(
@@ -783,7 +799,7 @@ describe("the rate sheets", () => {
 
     // Awaited on the readable sibling, for the same reason as above.
     expect(await screen.findByText("USD")).toBeTruthy();
-    expect(screen.getByText("Model prices are not yours to see.")).toBeTruthy();
+    expect(screen.getByText(en["aiPriceSync.withheld"])).toBeTruthy();
     const model = rateCard("Model prices");
     expect(within(model).queryByText("claude-opus-4-8")).toBeNull();
     expect(
@@ -810,18 +826,20 @@ describe("the rate sheets", () => {
       screen.queryByText(/only an administrator or operations user can see/i),
     ).toBeNull();
     expect(
-      within(rateCard("Currency rates")).getByText(
+      within(rateCard(en["settings.rates.fxTitle"])).getByText(
         /your role cannot change rates/i,
       ),
     ).toBeTruthy();
     const model = rateCard("Model prices");
+    expect(within(model).getByText(en["aiPriceSync.adminOnly"])).toBeTruthy();
     expect(
-      within(model).getByText("Your role cannot change this."),
-    ).toBeTruthy();
-    expect(
-      within(model).getByRole("switch", { name: "Auto-sync daily" }),
+      within(model).getByRole("switch", {
+        name: en["aiPriceSync.autoSync.label"],
+      }),
     ).toHaveProperty("disabled", true);
     expect(screen.queryByRole("button", { name: "Set rate" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Add model rate" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["settings.rates.modelAdd"] }),
+    ).toBeNull();
   });
 });

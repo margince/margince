@@ -572,7 +572,7 @@ each item alone.
 | Closed answer list | such as `confidentialitySchema` in `backend/internal/compose/confidentialityverdictask.go` |
 | Matching answers to items | `backend/internal/compose/batchfidelity.go`, `checkBatchFidelity` |
 | Short refs for records | `backend/internal/shared/kernel/promptref`: `New`, `For`, `ID`, `NamedIn`, `Mint`, `Rewrite` |
-| No site shows a UUID | `backend/internal/compose/aishortrefs_test.go`, `TestNoSiteShowsTheModelARecordUUID` |
+| No site shows a UUID | `backend/internal/compose/aitasks/aishortrefs_test.go`, `TestNoSiteShowsTheModelARecordUUID` |
 | A task that batches | `backend/internal/compose/captureclassify.go`, `classifyBatchSize` |
 | A task that refuses, and why | `backend/internal/compose/captureverdict.go`, `judgeClaimed` doc comment |
 | The other task that refuses | `backend/internal/compose/confidentialityverdictask.go`, `confidentialityRequest` doc comment |

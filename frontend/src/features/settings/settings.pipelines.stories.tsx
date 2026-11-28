@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   jsonResponse,
   StoryProviders,
@@ -168,10 +169,10 @@ export const NoCriteriaYet: Story = {
       }),
     );
     await expect(
-      await canvas.findByText("No exit criteria yet."),
+      await canvas.findByText(englishCopy["stage.criteria.none"]),
     ).toBeInTheDocument();
     await expect(
-      canvas.getByRole("button", { name: "Add criterion" }),
+      canvas.getByRole("button", { name: englishCopy["stage.criteria.add"] }),
     ).toBeInTheDocument();
   },
 };

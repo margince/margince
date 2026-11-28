@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { AuthExperience } from "../../components/auth-core";
 import type { Locale } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -344,11 +345,11 @@ async function submitNewPassword(canvasElement: HTMLElement) {
   // Twelve characters is the form's minimum and the submit stays disabled below
   // it, so a shorter one would screenshot an untouched form and read as a pass.
   await userEvent.type(
-    canvas.getByLabelText("New password"),
+    canvas.getByLabelText(englishCopy["auth.newPassword"]),
     "a decent new password",
   );
   await userEvent.click(
-    canvas.getByRole("button", { name: "Set new password" }),
+    canvas.getByRole("button", { name: englishCopy["auth.setNewPassword"] }),
   );
 }
 
@@ -377,7 +378,7 @@ export const ResetLinkSpent: Story = {
   play: async ({ canvasElement }) => {
     await submitNewPassword(canvasElement);
     await within(canvasElement).findByRole("button", {
-      name: "Request a new link",
+      name: englishCopy["auth.requestNewLink"],
     });
   },
 };

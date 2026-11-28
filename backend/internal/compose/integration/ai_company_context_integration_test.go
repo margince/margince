@@ -95,7 +95,7 @@ func TestCompanyContextBindsPromptCacheAndAICallTrace(t *testing.T) {
 func readCompanyContextTraces(ctx context.Context, t *testing.T, e *Env, task string) []companyContextTrace {
 	t.Helper()
 	var traces []companyContextTrace
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT context_scopes, context_fingerprint, cache_hit
 			FROM ai_call
@@ -138,7 +138,7 @@ func TestPolicyNoneTraceCarriesEmptyCompanyContext(t *testing.T) {
 	var scopes []string
 	var fingerprint string
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
-	err = database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(wsCtx, `
 			SELECT context_scopes, context_fingerprint
 			FROM ai_call WHERE task = 'cold_start'`).Scan(&scopes, &fingerprint)
@@ -172,7 +172,7 @@ func TestDraftReplyCarriesItsBoundedCompanyContextPolicy(t *testing.T) {
 	}
 	var scopes []string
 	var fingerprint string
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
 			SELECT context_scopes, context_fingerprint
 			FROM ai_call WHERE task = 'draft_reply'`).Scan(&scopes, &fingerprint)

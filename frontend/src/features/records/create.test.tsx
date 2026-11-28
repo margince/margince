@@ -644,11 +644,13 @@ describe("the deal form's partner fields", () => {
     render(<DealsScreen startCreating />);
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
-    await userEvent.setup().click(inForm().getByLabelText("Referring partner"));
+    await userEvent
+      .setup()
+      .click(inForm().getByLabelText(en["deal.partnerCompany"]));
     expect(
       await screen.findByRole("option", { name: en["deal.partnerNoneYet"] }),
     ).toBeTruthy();
-    expect(inForm().queryByLabelText("Partner attribution")).toBeNull();
+    expect(inForm().queryByLabelText(en["deal.partnerAttribution"])).toBeNull();
   });
 
   it("offers the partner once one exists, and asks what they did only after one is picked", async () => {
@@ -657,14 +659,16 @@ describe("the deal form's partner fields", () => {
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
     const user = userEvent.setup();
-    const partner = await inForm().findByLabelText("Referring partner");
+    const partner = await inForm().findByLabelText(en["deal.partnerCompany"]);
     // The claim is a question about a partner, so it is not asked before one
     // is named.
-    expect(inForm().queryByLabelText("Partner attribution")).toBeNull();
+    expect(inForm().queryByLabelText(en["deal.partnerAttribution"])).toBeNull();
 
     await pickOption(user, partner, "VietnamPartner JSC");
 
-    expect(await inForm().findByLabelText("Partner attribution")).toBeTruthy();
+    expect(
+      await inForm().findByLabelText(en["deal.partnerAttribution"]),
+    ).toBeTruthy();
   });
 
   // Only actual partners: the picker once listed every company, which let
@@ -684,7 +688,7 @@ describe("the deal form's partner fields", () => {
     const user = userEvent.setup();
     render(<DealsScreen startCreating />);
     const form = within(await screen.findByRole("dialog"));
-    const partner = await form.findByLabelText("Referring partner");
+    const partner = await form.findByLabelText(en["deal.partnerCompany"]);
     await user.click(partner);
 
     const offered = within(screen.getByRole("listbox"))

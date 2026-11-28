@@ -184,7 +184,7 @@ func (h connectorAppHandlers) SetOauthApp(w http.ResponseWriter, r *http.Request
 		httperr.Write(w, r, err)
 		return
 	}
-	err := h.store.Set(r.Context(), p, body.ClientId, sent(body.ClientSecret), sent(body.Tenant))
+	err := h.store.SetWithSigningSecret(r.Context(), p, body.ClientId, sent(body.ClientSecret), sent(body.Tenant), sent(body.SigningSecret))
 	if err != nil {
 		if errors.Is(err, capture.ErrNoVault) {
 			httperr.ServiceUnavailable(w, r, err.Error())

@@ -59,7 +59,7 @@ func currentHealth(t *testing.T, e *Env, id ids.ProjectID) *crmcontracts.Project
 	t.Helper()
 	var current *crmcontracts.ProjectHealthAssessment
 	admin := e.Admin()
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		current, err = e.Projects.CurrentHealthTx(admin, tx, id)
 		return err
@@ -282,7 +282,7 @@ func TestAUsersReadingRacingTheJobIsKept(t *testing.T) {
 	var holder int32
 	go func() {
 		defer close(written)
-		writer <- database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		writer <- database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 			if _, err := e.Projects.RecordHealthTx(admin, tx, projects.RecordHealthInput{
 				ProjectID: erp, State: crmcontracts.ProjectHealthStateOnTrack,
 			}); err != nil {

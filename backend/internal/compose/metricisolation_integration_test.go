@@ -44,7 +44,7 @@ func TestAFailedMetricQueryLeavesTheOtherMetricsReadable(t *testing.T) {
 		return err
 	})
 
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, coverage, err := metricEvaluator{}.readIsolated(ctx, tx, failing, crmcontracts.ReportingContext{}, crmcontracts.ReportingFramework{})
 		if err != nil {
 			t.Fatalf("a failing query failed the evaluation: %v", err)
@@ -72,7 +72,7 @@ func TestARefusedMetricStillFailsTheEvaluation(t *testing.T) {
 	ctx := e.Admin()
 	refused := readerThat(func(context.Context, pgx.Tx) error { return apperrors.ErrPermissionDenied })
 
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, _, err := metricEvaluator{}.readIsolated(ctx, tx, refused, crmcontracts.ReportingContext{}, crmcontracts.ReportingFramework{})
 		return err
 	})

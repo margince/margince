@@ -27,7 +27,7 @@ const (
 // transaction and has no effect outside it — the condition a caller opts into
 // by wrapping its Tx here. The last attempt's error is returned as it came.
 func RetryLockCycles(ctx context.Context, run func() error) error {
-	if database.InWorkspaceTransaction(ctx) {
+	if database.InTransaction(ctx) {
 		return run()
 	}
 	var err error

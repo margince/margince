@@ -19,7 +19,7 @@ import (
 func ReadTaskExplanation(ctx context.Context, pool *pgxpool.Pool, reader ids.UserID, task ids.ActivityID) (Entry, bool, error) {
 	var entry Entry
 	found := true
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			SELECT fingerprint, generated_at, generated_by, payload
 			  FROM task_explanation WHERE user_id = $1 AND activity_id = $2`, reader, task).Scan(

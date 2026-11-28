@@ -65,7 +65,7 @@ func TestCommitmentMeaningControlsTheRealWriterAndSurvivesReplay(t *testing.T) {
 				want = CommitmentTaskWritten
 			}
 			for pass := range 2 {
-				err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+				err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 					got, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 					if err == nil && got != want && (pass != 1 || state != "open" || got != CommitmentRemembered) {
 						t.Errorf("dispatch = %s, want %s", got, want)

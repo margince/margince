@@ -56,10 +56,10 @@ describe("the small changes on Home", () => {
       "false",
     );
     expect(summaryOf("5 small changes").textContent).not.toContain(
-      "Archived email or meeting",
+      en["magic.action.archive_activity"],
     );
     expect(summaryOf("5 small changes").textContent).not.toContain(
-      "Saved email or meeting",
+      en["magic.action.create_activity"],
     );
     expect(screen.queryByText(en["magic.lane.done"])).toBeNull();
   });

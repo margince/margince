@@ -125,6 +125,8 @@ function escaped(text: string): string {
 }
 
 const WEB_ADDRESS = /[a-z][a-z\d+.-]*:\/\/[^\s“”()]+/gu;
+// A key that names a lost deal, whose outcome word is "Thất bại".
+const LOST_DEAL_KEY = /lost|loss/i;
 const FILE_NAME = /[^\s“”(),]+\.[a-z][a-z\d]{0,4}(?![\p{L}\d])/gu;
 
 // A file name or a URL keeps the spelling the reader must type.
@@ -286,6 +288,17 @@ export function copyFindings(
       .filter((token) => /\p{L}/u.test(token)).length;
 
   return [
+    ...offenders(
+      "uses kho lưu trữ for archive and reserves lưu trữ for retention",
+      ([source, key, value]) =>
+        /archiv/iu.test(englishOf(source)[key] ?? "") &&
+        /(?<!kho )lưu trữ/iu.test(
+          prose(value).replace(
+            /(?:thời hạn|quy tắc|nghĩa vụ) lưu trữ|lưu trữ pháp lý/giu,
+            "",
+          ),
+        ),
+    ),
     ...offenders("is NFC", ([, , value]) => value !== value.normalize("NFC")),
     ...matching(
       "marks the tone of an open oa, oe and uy on the first vowel",
@@ -300,7 +313,8 @@ export function copyFindings(
     ...matching(
       "uses no en dash, em dash, double hyphen or spaced hyphen",
       /[–—]|--|\s-\s/,
-      { text: (value) => ` ${prose(value)} ` },
+      // A placeholder stands for a figure, so "{first}-{last}" reads as a range.
+      { text: (value) => ` ${value.replace(/\{[^}]*\}/g, "0")} ` },
     ),
     ...matching("spells an ellipsis as the one character …", /\.\.\./),
     ...matching("uses no exclamation mark", /!/),
@@ -397,10 +411,15 @@ export function copyFindings(
       wording: true,
     }),
     // A short value is a title, label, status or counter, where a failure is
-    // "bị lỗi" or "không thành công".
+    // "bị lỗi" or "không thành công". A lost deal is the one exception: its
+    // outcome reads "Thất bại", so a key or placeholder that names it is kept.
     ...offenders(
       "says thất bại only in a sentence, never in a short value",
-      ([, , value]) => word("thất bại").test(value) && wordsIn(value) <= 8,
+      ([, key, value]) =>
+        word("thất bại").test(value) &&
+        wordsIn(value) <= 8 &&
+        !LOST_DEAL_KEY.test(key) &&
+        !value.includes("{lost}"),
     ),
     ...copies
       .filter(({ catalog }) => Object.keys(catalog).length === 0)

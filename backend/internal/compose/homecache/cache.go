@@ -141,7 +141,7 @@ func readKept[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Rea
 	var ageSeconds float64
 	var standing Kept
 	var valid bool
-	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, c.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT c.payload, extract(epoch FROM now() - c.computed_at)::float8,
 			       EXISTS (SELECT 1 FROM home_read_forgotten fg
@@ -289,7 +289,7 @@ func (c *Cache) Settle() { c.background.Wait() }
 func (c *Cache) Stamp(ctx context.Context) (Stamp, error) {
 	actor, _ := principal.Actor(ctx)
 	var s Stamp
-	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, c.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT f.generation, now(),
 			       least(now() + make_interval(secs => $1),
@@ -319,7 +319,7 @@ func Store[A Answer](
 	if err != nil {
 		return fmt.Errorf("homecache: encoding a %s answer: %w", read, err)
 	}
-	err = database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, c.pool, func(tx pgx.Tx) error {
 		// Nothing else deletes an answer that outlived its day, and it holds display text.
 		if _, err := tx.Exec(ctx, `DELETE FROM home_read_cache WHERE reader_id = $1 AND valid_until <= now()`, reader); err != nil {
 			return err
@@ -363,7 +363,7 @@ func (c *Cache) end(ctx context.Context, readers []ids.UUID, drop bool) error {
 	}
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), forgetTimeout)
 	defer cancel()
-	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, c.pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO home_read_forgotten (reader_id, at)
 			SELECT r, clock_timestamp() FROM unnest($1::uuid[]) r

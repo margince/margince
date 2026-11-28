@@ -97,14 +97,12 @@ public.activity_review_response.captured_by document
 public.activity_review_response.outcome document
 public.activity_review_response.source document
 public.activity_review_response.template_key document
-public.activity_review_template.captured_by document
 public.activity_review_template.key document
 public.activity_review_template.label label
 public.activity_review_template.label_key exempt generated from independently checked source columns
 public.activity_review_template.outcome document
 public.activity_review_template.shipped_label label
 public.activity_review_template.shipped_label_key document
-public.activity_review_template.source document
 public.activity_sales_state.channel_provider document
 public.activity_sales_state.kind document
 public.activity_sales_state.thread_key document
@@ -366,15 +364,67 @@ public.channel_provider.credential_model document
 public.channel_provider.label label
 public.channel_provider.provider exempt bounded provider identifiers follow the shared connector grammar
 public.channel_provider.transport document
+public.chat_bot_delivery.audience_hash label
+public.chat_bot_delivery.content_hash label
+public.chat_bot_delivery.message_id document
+public.chat_bot_delivery.request_key document
+public.chat_bot_delivery.state label
+public.chat_channel_watch.app_id document
+public.chat_channel_watch.channel_id document
+public.chat_channel_watch.credential_ref document
+public.chat_channel_watch.last_error label
+public.chat_channel_watch.notification_url document checked: validated HTTPS notification endpoint, bounded before subscription creation
+public.chat_channel_watch.subscription_id document
+public.chat_channel_watch.tenant_id document
 public.chat_link.card_fingerprint label
 public.chat_link.card_message_id line
 public.chat_link.channel_name line
 public.chat_link.channel_slug line
+public.chat_link.last_post_error label
+public.chat_link.message_detail label
+public.chat_link.native_cursor document
+public.chat_link.native_scan_error label
 public.chat_link.provider document
+public.chat_link.root_id document
 public.chat_link.status document
 public.chat_link.verbosity document
+public.chat_member_grant.address document
+public.chat_member_grant.credential_ref document
+public.chat_member_grant.provider label
+public.chat_member_grant.provider_user document
+public.chat_member_grant.provider_workspace document
+public.chat_member_grant.status label
+public.chat_member_room.conversation_id document
+public.chat_member_room.record_type label
+public.chat_member_room.roster_hash label
 public.chat_post_item.event_type document
+public.chat_post_item.last_error label
+public.chat_post_item.message_detail label
 public.chat_post_item.message_id line
+public.chat_root.applied_revision document
+public.chat_root.content_digest document
+public.chat_root.last_error label
+public.chat_root.notice_revision document
+public.chat_root.revision document
+public.chat_root.root_id document
+public.chat_send_attempt.audience_hash label
+public.chat_send_attempt.content_hash label
+public.chat_send_attempt.conversation_id document
+public.chat_send_attempt.failure_code label
+public.chat_send_attempt.provider_message_id document
+public.chat_send_attempt.record_type label
+public.chat_send_attempt.root_id document
+public.chat_send_attempt.state label
+public.chat_team_installation.app_id document
+public.chat_team_installation.bot_member_id document
+public.chat_team_installation.native_team_id document
+public.chat_team_installation.service_url document checked: verified Bot Framework service endpoint, bounded before installation storage
+public.chat_team_installation.team_id document
+public.chat_team_installation.team_name document
+public.chat_team_installation.tenant_id document
+public.chat_team_thread.channel_id document
+public.chat_team_thread.conversation_id document
+public.chat_team_thread.root_id document
 public.close_date_run.captured_by document
 public.close_date_run.status document
 public.close_date_run_member.outcome document
@@ -439,7 +489,6 @@ public.communication_override.captured_by document
 public.communication_override.category document
 public.communication_override.decided_by_level document
 public.communication_override.reason note
-public.communication_review.kind document
 public.communication_review.reason_code note
 public.communication_review.state document
 public.communication_suppression.address document
@@ -584,6 +633,7 @@ public.contact.quarantine_cleared_by document
 public.contact.quarantine_reason document
 public.contact.relationship_mark document
 public.contact.relationship_mark_set_by document
+public.contact.salutation exempt closed enum is bounded by contact_salutation_check
 public.contact.source document
 public.contact.source_author_name exempt imported source attribution retains the original author identity
 public.contact.source_id exempt bounded imported identities keep the existing indexed wire contract
@@ -894,7 +944,6 @@ public.import_run.error document checked: fixed stop causes only
 public.import_run.job_status document
 public.import_run.phase document
 public.import_run.phase_object document
-public.import_run.source document
 public.import_run.source_name exempt generated from independently checked source columns
 public.import_run.source_ref document
 public.import_run.status document
@@ -927,6 +976,9 @@ public.knowledge_document.ingest_detail document checked: fixed sentences and nu
 public.knowledge_document.ingest_status document
 public.knowledge_document.managed_source document
 public.knowledge_document.storage_key document
+public.language.code exempt bounded by a two-letter shape CHECK
+public.language.label label
+public.language.source document
 public.lawful_basis_confirmation.country document
 public.lead.arrival_origin document
 public.lead.candidate_company_key document
@@ -942,6 +994,7 @@ public.lead.origin document
 public.lead.origin_detail line
 public.lead.partner_accepted_by document
 public.lead.phone document
+public.lead.salutation exempt closed enum is bounded by lead_salutation_check
 public.lead.score_override_reason note
 public.lead.source document
 public.lead.source_author_name exempt imported source attribution retains the original author identity
@@ -950,9 +1003,6 @@ public.lead.source_system document
 public.lead.status document
 public.lead.status_set_by document
 public.lead.title label
-public.language.code exempt bounded by a two-letter shape CHECK
-public.language.label label
-public.language.source document
 public.lead_disqualify_reason.label label
 public.lead_disqualify_reason.label_key exempt generated from independently checked source columns
 public.lead_disqualify_reason.shipped_label label
@@ -1291,7 +1341,6 @@ public.sales_target.scope_kind document
 public.sales_target.unit document
 public.saved_view.name label
 public.saved_view.resource document
-public.saved_view.shared_scope document
 public.scheduled_send.agent_actor_id document
 public.scheduled_send.held_reason note
 public.scheduled_send.origin_kind document

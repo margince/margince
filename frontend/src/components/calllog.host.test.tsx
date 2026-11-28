@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CallAction } from "../design-system/callaction";
 import { telUri } from "../format/contacturi";
+import { en as englishCopy } from "../i18n/en";
 import { type CallStart, CallStartProvider } from "../lib/callstart";
 import { useMe } from "../lib/session";
 import {
@@ -72,13 +73,15 @@ describe("a call started under the shell's host", () => {
 
     expect(link.getAttribute("href")).toBe(telUri(DIALS));
     expect(fireEvent.click(link)).toBe(true);
-    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    const dialog = await screen.findByRole("dialog", {
+      name: englishCopy["log.title"],
+    });
     expect(
       within(dialog).getByRole("combobox", { name: "Type" }).textContent,
     ).toContain("Call");
     expect(
       await screen.findByRole("dialog", {
-        name: "Log activity",
+        name: englishCopy["log.title"],
         description: "Dana Buyer",
       }),
     ).toBe(dialog);
@@ -102,7 +105,9 @@ describe("a call started under the shell's host", () => {
     );
     await screen.findByText("session answered");
     fireEvent.click(screen.getByRole("link", { name: DIALS }));
-    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    const dialog = await screen.findByRole("dialog", {
+      name: englishCopy["log.title"],
+    });
     await user.type(
       within(dialog).getByRole("textbox", { name: "Subject" }),
       "Busy",
@@ -110,10 +115,9 @@ describe("a call started under the shell's host", () => {
 
     rerender(page(<p>Another screen</p>));
     expect(
-      within(screen.getByRole("dialog", { name: "Log activity" })).getByRole(
-        "textbox",
-        { name: "Subject" },
-      ),
+      within(
+        screen.getByRole("dialog", { name: englishCopy["log.title"] }),
+      ).getByRole("textbox", { name: "Subject" }),
     ).toHaveProperty("value", "Busy");
   });
 
@@ -123,7 +127,9 @@ describe("a call started under the shell's host", () => {
     const { link } = await mountHost();
 
     fireEvent.click(link);
-    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    const dialog = await screen.findByRole("dialog", {
+      name: englishCopy["log.title"],
+    });
     await user.click(within(dialog).getByRole("button", { name: "Close" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -135,7 +141,9 @@ describe("a call started under the shell's host", () => {
     const { posted, link } = await mountHost();
 
     await user.click(link);
-    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    const dialog = await screen.findByRole("dialog", {
+      name: englishCopy["log.title"],
+    });
     await user.type(
       within(dialog).getByRole("textbox", { name: "Subject" }),
       "No answer",
@@ -156,7 +164,9 @@ describe("a call started under the shell's host", () => {
 
     link.focus();
     await user.keyboard("{Enter}");
-    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    const dialog = await screen.findByRole("dialog", {
+      name: englishCopy["log.title"],
+    });
     await waitFor(() =>
       expect(dialog.contains(document.activeElement)).toBe(true),
     );
@@ -221,12 +231,14 @@ describe("a call started inside a surface that logs in place", () => {
       entityType: "contact",
       entityId: "p-2",
     });
-    expect(screen.queryByRole("region", { name: "Log activity" })).toBeNull();
+    expect(
+      screen.queryByRole("region", { name: englishCopy["log.title"] }),
+    ).toBeNull();
 
     fireEvent.click(screen.getByRole("link", { name: "Call own" }));
     expect(outer).toHaveBeenCalledTimes(1);
     expect(
-      await screen.findByRole("region", { name: "Log activity" }),
+      await screen.findByRole("region", { name: englishCopy["log.title"] }),
     ).toBeTruthy();
   });
 
@@ -244,7 +256,9 @@ describe("a call started inside a surface that logs in place", () => {
 
     fireEvent.click(own);
     // The form is a lazy chunk, so the first case to open it waits for it.
-    const log = await screen.findByRole("region", { name: "Log activity" });
+    const log = await screen.findByRole("region", {
+      name: englishCopy["log.title"],
+    });
     await waitFor(() =>
       expect(log.contains(document.activeElement)).toBe(true),
     );
@@ -268,7 +282,9 @@ describe("a call started inside a surface that logs in place", () => {
     mountInline(vi.fn());
 
     fireEvent.click(screen.getByRole("link", { name: "Call own" }));
-    const log = await screen.findByRole("region", { name: "Log activity" });
+    const log = await screen.findByRole("region", {
+      name: englishCopy["log.title"],
+    });
     await user.type(
       within(log).getByRole("textbox", { name: "Subject" }),
       "Busy",
@@ -276,22 +292,26 @@ describe("a call started inside a surface that logs in place", () => {
     await user.click(within(log).getByRole("button", { name: "Close" }));
 
     const question = await screen.findByRole("dialog", {
-      name: "Discard unsaved changes?",
+      name: englishCopy["unsaved.title"],
     });
     await user.click(within(question).getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(
-      await screen.findByRole("region", { name: "Log activity" }),
+      await screen.findByRole("region", { name: englishCopy["log.title"] }),
     ).toBeTruthy();
 
     await user.click(within(log).getByRole("button", { name: "Close" }));
     await user.click(
       within(
-        await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
-      ).getByRole("button", { name: "Discard changes" }),
+        await screen.findByRole("dialog", {
+          name: englishCopy["unsaved.title"],
+        }),
+      ).getByRole("button", { name: englishCopy["unsaved.discard"] }),
     );
     await waitFor(() =>
-      expect(screen.queryByRole("region", { name: "Log activity" })).toBeNull(),
+      expect(
+        screen.queryByRole("region", { name: englishCopy["log.title"] }),
+      ).toBeNull(),
     );
   });
 });

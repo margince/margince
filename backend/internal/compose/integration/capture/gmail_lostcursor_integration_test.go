@@ -85,7 +85,7 @@ func (g *stalledGmail) serve(t *testing.T, owner string) *httptest.Server {
 // unreadPeriod is the span the connection records as read by no sync.
 func unreadPeriod(t *testing.T, e *integration.SearchEnv, connection ids.UUID) (from, to *time.Time) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT unread_from, unread_to FROM capture_connection WHERE id = $1`, connection).Scan(&from, &to)
 	}); err != nil {

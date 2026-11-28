@@ -48,7 +48,7 @@ type recordedAction struct {
 // activity is recorded without a model call.
 func (p dealVerdictPass) judge(ctx context.Context, c verdictCandidate, night verdictNight) error {
 	var read dealVerdictRead
-	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
 		if read, err = readDealVerdict(ctx, tx, c.deal, c.prior, night.today, p.now()); err != nil {
 			return err
@@ -111,7 +111,7 @@ func (p dealVerdictPass) decide(
 	ctx context.Context, read dealVerdictRead, payload dealverdict.Payload, at time.Time,
 ) ([]dealverdict.Decision, error) {
 	var decisions []dealverdict.Decision
-	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		base, err := identity.BaseCurrencyOf(ctx, tx)
 		if err != nil {
 			return err
@@ -268,7 +268,7 @@ func (p dealVerdictPass) record(
 	if err != nil {
 		return fmt.Errorf("compose: encoding the verdict: %w", err)
 	}
-	return database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		verdict := assurance.DealVerdict{
 			DealID: c.deal, BasisDigest: c.digest,
 			AssessedAt: p.now(), Actions: encoded,

@@ -362,7 +362,7 @@ func (m *CallMeter) recordAttempts(ctx context.Context, tx pgx.Tx, attempts []Ca
 // EnsureConfig plants snap's row in ai_call_config if it does not already
 // exist.
 func (m *CallMeter) EnsureConfig(ctx context.Context, snap ConfigSnapshot) error {
-	// rls-exempt: ai_call_config is a global config-snapshot dimension (spec §4) — no RLS policy, so this write must not ride the per-workspace GUC transaction.
+	// pool-exempt: ai_call_config is a shared config-snapshot dimension with no audit or outbox row; the insert is idempotent and commits on its own.
 	_, err := m.db.Pool().Exec(ctx, `
 		INSERT INTO ai_call_config (hash, task_contract_hash, routing_config_hash, prompt_version, provider_params)
 		VALUES ($1, $2, $3, $4, $5)

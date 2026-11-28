@@ -5,6 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ForcedMfaScreen } from "./forcedmfa";
 
 const SECRET = "JBSWY3DPEHPK3PXP";
@@ -77,7 +78,7 @@ describe("the forced two-step setup", () => {
     );
     await user.click(screen.getByRole("button", { name: "Turn on" }));
     const codes = await screen.findByRole("textbox", {
-      name: "Recovery codes",
+      name: englishCopy["mfa.codesLabel"],
     });
     expect(codes).toHaveTextContent(CODES[0]);
     await waitFor(() => expect(codes).toHaveFocus());

@@ -86,7 +86,7 @@ func importedContact(t *testing.T, e *integration.Env, in contacts.CreateContact
 	t.Helper()
 	ctx := importAdmin(e)
 	run, err := migration.NewRunStore(e.DB()).CreateDraftRun(ctx, migration.CreateDraftRunInput{
-		SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api", FileName: "names.csv",
+		SourceRef: "ws/import/" + ids.NewV7().String(), FileName: "names.csv",
 		Profile: json.RawMessage(`{"files":[{"name":"names.csv","row_count":1}]}`),
 		Mapping: migration.RunMapping{Object: migration.ObjectContact, Fields: map[string]string{"First": "first_name"}, SourceKey: "First"},
 	})
@@ -100,7 +100,7 @@ func importedContact(t *testing.T, e *integration.Env, in contacts.CreateContact
 	w := newCSVWriters(e.DB(), run.ID, migration.PartMapping{Object: migration.ObjectContact},
 		runOptions{}, &linkResolver{sourceSystem: "csv:names"}, importColumns{})
 	id := ids.UUID(created.Id)
-	if err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
 		return w.identities.RecordIdentityTx(ctx, tx, run.ID, w.sourceSystem, w.object, importedRow, id, migration.OriginCreated)
 	}); err != nil {
 		t.Fatalf("recording the import's identity: %v", err)

@@ -83,7 +83,7 @@ func TestReplacingTheClientIDIsRefusedWhileConnectionsHoldTokensFromTheOldOne(t 
 
 	// A DISCONNECTED mailbox strands nobody, so the change goes through once
 	// the operator has done what the refusal asked.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_connection SET status = 'disconnected' WHERE provider = 'gmail'`)
 		return err
@@ -115,7 +115,7 @@ func TestAnErroredConnectionStillRefusesAChangedClientID(t *testing.T) {
 		t.Fatalf("storing the app: %v", err)
 	}
 	seedGmailConnection(ctx, t, e)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE capture_connection SET status = 'error' WHERE provider = 'gmail'`)
 		return err
 	}); err != nil {
@@ -140,7 +140,7 @@ func TestAnErroredConnectionStillRefusesAChangedClientID(t *testing.T) {
 
 func seedGmailConnection(ctx context.Context, t *testing.T, e *SearchEnv) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO capture_connection (provider, user_id, status, auth)
 			VALUES ('gmail', $1, 'connected', $2)`,

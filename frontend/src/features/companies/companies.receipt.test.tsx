@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   company360,
   companyBackstop,
@@ -166,7 +167,9 @@ describe("a cited receipt on the company page opens the page's drawer", () => {
     drawAccount();
     await user.click(await screen.findByRole("button", { name: "Profile" }));
     await user.click(
-      await screen.findByRole("button", { name: "What is open here?" }),
+      await screen.findByRole("button", {
+        name: englishCopy["co.ask.q.whats_open"],
+      }),
     );
 
     await user.click(await screen.findByRole("button", { name: "fact" }));

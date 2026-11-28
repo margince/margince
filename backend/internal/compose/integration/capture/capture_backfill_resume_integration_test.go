@@ -178,7 +178,7 @@ func TestARunCountsTheMessagesItCouldNotCapture(t *testing.T) {
 		t.Fatalf("page: %v", err)
 	}
 	var failed int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT failed FROM capture_backfill WHERE id = $1`, run.ID).Scan(&failed)
 	}); err != nil {
 		t.Fatal(err)

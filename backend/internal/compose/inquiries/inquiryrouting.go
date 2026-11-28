@@ -40,11 +40,18 @@ type Routing struct {
 	db       *database.DB
 	fence    webforms.HandlingFence
 	provider datasource.SystemOfRecordProvider
+	arrival  func(context.Context, ids.UUID, ids.UUID, datasource.EntityRef) error
 }
 
 // NewRouting reads records through provider and holds each form under fence.
 func NewRouting(db *database.DB, fence webforms.HandlingFence, provider datasource.SystemOfRecordProvider) Routing {
 	return Routing{db: db, fence: fence, provider: provider}
+}
+
+// WithArrival tells an active record owner after the handling plan assigns it.
+func (r Routing) WithArrival(arrival func(context.Context, ids.UUID, ids.UUID, datasource.EntityRef) error) Routing {
+	r.arrival = arrival
+	return r
 }
 
 var _ automation.InquiryRouting = Routing{}
@@ -106,7 +113,11 @@ func (r Routing) validatePolicy(ctx context.Context, policy crmcontracts.Website
 // Choose picks the recipient of an inquiry and the reason, and writes the lead
 // routing it decides.
 func (r Routing) Choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, source ids.UUID) (ids.UUID, string, error) {
-	return r.pickRecipient(ctx, admit, policy, target, source, true)
+	recipient, reason, err := r.pickRecipient(ctx, admit, policy, target, source, true)
+	if err == nil && r.arrival != nil {
+		err = r.arrival(ctx, ids.UUID(policy.FormId), source, target)
+	}
+	return recipient, reason, err
 }
 
 // Preview picks the recipient as Choose does and writes nothing.

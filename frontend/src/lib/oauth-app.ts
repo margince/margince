@@ -16,7 +16,7 @@ import { AUTHENTICATION_POLICY_KEY } from "./sign-in-policy";
 // The reads and writes of the installation's OAuth apps, with the lock rule
 // that decides which app a card shows. The cards live with their screens.
 
-export type Vendor = "google" | "microsoft";
+export type Vendor = "google" | "microsoft" | "slack";
 
 // vendorCopy is each vendor's own wording, as literal message keys.
 //
@@ -25,6 +25,15 @@ export type Vendor = "google" | "microsoft";
 // plain string. A missing translation would then reach a reader as a raw key
 // instead of failing the build.
 export const vendorCopy = {
+  slack: {
+    title: "oauthApp.slack.title",
+    sub: "oauthApp.slack.sub",
+    absent: "oauthApp.slack.absent",
+    redirectSub: "oauthApp.slack.redirectSub",
+    clientIdPlaceholder: "oauthApp.slack.clientIdPlaceholder",
+    removeConfirmTitle: "oauthApp.slack.removeConfirmTitle",
+    removeConfirmBody: "oauthApp.slack.removeConfirmBody",
+  },
   google: {
     title: "oauthApp.google.title",
     sub: "oauthApp.google.sub",
@@ -47,6 +56,7 @@ export const vendorCopy = {
 
 // The setting key a deployment's own app locks, per vendor.
 export const appKey = {
+  slack: "capture.slack_app",
   google: "capture.google_app",
   microsoft: "capture.microsoft_app",
 } as const satisfies Record<Vendor, string>;
@@ -78,12 +88,15 @@ export function vendorAppState(
 }
 
 /** Narrows a sign-in provider key to a vendor whose app this page reads. */
-export function isVendor(key: string): key is Vendor {
+export function isVendor(
+  key: string,
+): key is Extract<Vendor, "google" | "microsoft"> {
   return key === "google" || key === "microsoft";
 }
 
 /** Where each vendor's client is created and its two values are read. */
 export const VENDOR_CONSOLE: Readonly<Record<Vendor, string>> = {
+  slack: "https://api.slack.com/apps",
   google: "https://console.cloud.google.com/apis/credentials",
   microsoft:
     "https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
@@ -111,6 +124,8 @@ async function refreshAfterAppWrite(
     queryClient.invalidateQueries({ queryKey: ["installation-setup"] }),
     queryClient.invalidateQueries({ queryKey: ["connectors"] }),
     queryClient.invalidateQueries({ queryKey: AUTHENTICATION_POLICY_KEY }),
+    queryClient.invalidateQueries({ queryKey: ["messenger-setup"] }),
+    queryClient.invalidateQueries({ queryKey: ["messenger-identity"] }),
   ]);
 }
 
@@ -140,6 +155,7 @@ export function useSetOAuthApp(provider: string) {
     mutationFn: async (vars: {
       clientId: string;
       clientSecret: string;
+      signingSecret?: string;
       tenant: string;
     }) => {
       unwrap(
@@ -148,6 +164,9 @@ export function useSetOAuthApp(provider: string) {
           body: {
             client_id: vars.clientId,
             client_secret: vars.clientSecret,
+            ...(vars.signingSecret
+              ? { signing_secret: vars.signingSecret }
+              : {}),
             // Omitted rather than sent empty: the server refuses a tenant on a
             // vendor that has no directories, and an empty string is a value.
             ...(vars.tenant === "" ? {} : { tenant: vars.tenant }),

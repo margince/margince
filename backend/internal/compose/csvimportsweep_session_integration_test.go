@@ -40,7 +40,7 @@ func storedDraft(t *testing.T, e *integration.Env, blob blobstore.Store) migrati
 		t.Fatalf("storing the source: %v", err)
 	}
 	draft, err := runs.CreateDraftRun(ctx, migration.CreateDraftRunInput{
-		SourceRef: key, Source: importSourceProvenance, FileName: "leads.csv", Profile: []byte(`{"files":[]}`),
+		SourceRef: key, FileName: "leads.csv", Profile: []byte(`{"files":[]}`),
 	})
 	if err != nil {
 		t.Fatalf("CreateDraftRun: %v", err)

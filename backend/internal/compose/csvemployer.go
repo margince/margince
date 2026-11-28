@@ -125,7 +125,7 @@ func (r *linkResolver) estateEmployer(ctx context.Context, key string) (employer
 		return hit, nil
 	}
 	var found employerCandidate
-	if err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		matches, err := contacts.EmployerNameMatchesTx(ctx, tx, key)
 		if err != nil {
 			return err
@@ -211,7 +211,9 @@ type rowLink struct {
 func (w *csvWriters) linkProblemOf(ctx context.Context, row migration.Row) (rowLink, error) {
 	switch w.object {
 	case migration.ObjectDeal:
-		return w.dealLinkProblemOf(ctx, row)
+		return w.edgeLinkProblemOf(ctx, row, w.dealEdges())
+	case migration.ObjectProject:
+		return w.edgeLinkProblemOf(ctx, row, w.projectEdges())
 	case migration.ObjectActivity:
 		return w.activityLinkProblemOf(ctx, row)
 	}

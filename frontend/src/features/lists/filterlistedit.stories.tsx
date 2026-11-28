@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import type { List } from "../../lib/lists.queries";
 import {
   LIVE_ID,
@@ -74,10 +75,12 @@ export const Changed: Story = {
   render: listFilter(),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const industry = await canvas.findByDisplayValue("Manufacturing");
+    const industry = await canvas.findByDisplayValue(
+      englishCopy["industry.manufacturing"],
+    );
     await userEvent.clear(industry);
     await userEvent.type(industry, "Retail");
-    await canvas.findByText("Unsaved changes");
+    await canvas.findByText(englishCopy["filters.unsavedChanges"]);
   },
 };
 

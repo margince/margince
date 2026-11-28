@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -56,7 +57,7 @@ export const Pending: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       await within(canvasElement).findByRole("button", {
-        name: "File it there",
+        name: englishCopy["linkSuggestions.accept"],
       }),
     ).toBeInTheDocument();
   },

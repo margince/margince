@@ -17,6 +17,7 @@ import { stable } from "../../format/collate";
 import { formatMoneyCompact } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { showLayout } from "../../testing/listquery.testkit";
 import { openView } from "../../testing/listview.testkit";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
@@ -85,9 +86,7 @@ describe("DealsScreen", () => {
     vi.stubGlobal("fetch", stubBackend([deal({})]));
     render(<DealsScreen />);
     await showLayout(userEvent.setup(), "Table");
-    expect(
-      await screen.findByText(/^1 to 1 of 1 deals in Sales/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/^1-1 of 1 in Sales/)).toBeInTheDocument();
   });
 
   // A view saved on the deals list is a server row, and the tab rail has to
@@ -231,10 +230,16 @@ describe("DealsScreen", () => {
       screen.getByRole("combobox", { name: "New owner" }),
       "Me",
     );
-    await user.click(screen.getByRole("button", { name: "Assign owner" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: en["approval.kind.assign_owner"],
+      }),
+    );
     const dialog = await screen.findByRole("dialog");
     await user.click(
-      await within(dialog).findByRole("button", { name: "Change owner" }),
+      await within(dialog).findByRole("button", {
+        name: en["bulk.confirmReassign"],
+      }),
     );
 
     await waitFor(() => expect(bulk).toHaveLength(2));
@@ -283,7 +288,7 @@ describe("DealsScreen", () => {
     );
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Move to stage" }),
+      screen.getByRole("combobox", { name: en["deals.bulkStage"] }),
       "Proposal",
     );
     await user.click(screen.getByRole("button", { name: "Move" }));
@@ -505,9 +510,7 @@ describe("DealsScreen", () => {
     // sentence reads as a board of errors.
     await waitFor(() =>
       expect(
-        screen.getAllByText(
-          "Loaded deals only. Only an administrator can let you measure this owner’s totals.",
-        ).length,
+        screen.getAllByText(en["deals.totalsOwnerNotMeasurable"]).length,
       ).toBe(1),
     );
   });
@@ -530,11 +533,7 @@ describe("DealsScreen", () => {
     render(<DealsScreen />);
     await waitFor(() => expect(totalsAsked).toBe(true));
     expect(await screen.findAllByText("Fleet retrofit")).not.toHaveLength(0);
-    expect(
-      screen.queryByText(
-        "Loaded deals only. Only an administrator can let you measure this owner’s totals.",
-      ),
-    ).toBeNull();
+    expect(screen.queryByText(en["deals.totalsOwnerNotMeasurable"])).toBeNull();
   });
 
   // A tag filter withholds totals too, since the report has no tag field and
@@ -548,11 +547,7 @@ describe("DealsScreen", () => {
     );
 
     // Only the column holding a deal (s1) says so; empty columns stay quiet.
-    expect(
-      screen.getAllByText(
-        "Loaded deals only. No total while a tag filter is on.",
-      ).length,
-    ).toBe(1);
+    expect(screen.getAllByText(en["deals.totalsNoTagFilter"]).length).toBe(1);
   });
 
   it.each([
@@ -663,7 +658,8 @@ describe("DealsScreen", () => {
     dropOnStage("s3");
     await askedToClose("Won");
 
-    await screen.findByText("How was it won?");
+    // Asked on opening, and Confirm waits for the answer. Nothing is posted yet.
+    await screen.findByText(en["deals.winReason"]);
     expect(
       screen.getByRole("button", { name: "Confirm" }).hasAttribute("disabled"),
     ).toBe(true);
@@ -671,7 +667,7 @@ describe("DealsScreen", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "How was it won?" }),
+      screen.getByRole("combobox", { name: en["deals.winReason"] }),
       "On a purchase order",
     );
     await user.click(screen.getByRole("button", { name: "Confirm" }));
@@ -682,7 +678,7 @@ describe("DealsScreen", () => {
       status: "won",
       won_without_contract_reason: "purchase_order",
     });
-    expect(await screen.findByText("Closed as won")).toBeTruthy();
+    expect(await screen.findByText(en["deals.closedWon"])).toBeTruthy();
   });
 
   it("a deal with a contract is never asked how it was won", async () => {
@@ -702,7 +698,7 @@ describe("DealsScreen", () => {
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(advances).toHaveLength(1));
-    expect(screen.queryByText("How was it won?")).toBeNull();
+    expect(screen.queryByText(en["deals.winReason"])).toBeNull();
     expect(advances[0]).toEqual({ to_stage_id: "s3", status: "won" });
   });
 
@@ -727,12 +723,12 @@ describe("DealsScreen", () => {
 
     dropOnStage("s3");
     await askedToClose("Won");
-    expect(screen.queryByText("How was it won?")).toBeNull();
+    expect(screen.queryByText(en["deals.winReason"])).toBeNull();
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     // The dialog stays open rather than dropping the reader back on a board
     // that has snapped the card home.
-    await screen.findByText("How was it won?");
+    await screen.findByText(en["deals.winReason"]);
     expect(screen.getByText("Move to Won?")).toBeTruthy();
     expect(advances).toHaveLength(1);
     expect(
@@ -741,7 +737,7 @@ describe("DealsScreen", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "How was it won?" }),
+      screen.getByRole("combobox", { name: en["deals.winReason"] }),
       "On a purchase order",
     );
     await user.click(screen.getByRole("button", { name: "Confirm" }));
@@ -771,7 +767,7 @@ describe("DealsScreen", () => {
     dropOnStage("s3");
     await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
-    await screen.findByText("How was it won?");
+    await screen.findByText(en["deals.winReason"]);
   });
 
   // "Other" is the one member that explains nothing on its own, so the
@@ -794,11 +790,11 @@ describe("DealsScreen", () => {
 
     dropOnStage("s3");
     await askedToClose("Won");
-    await screen.findByText("How was it won?");
+    await screen.findByText(en["deals.winReason"]);
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "How was it won?" }),
+      screen.getByRole("combobox", { name: en["deals.winReason"] }),
       "Other",
     );
 
@@ -841,7 +837,7 @@ describe("DealsScreen", () => {
     dropOnStage("s3");
     await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
-    await screen.findByText("How was it won?");
+    await screen.findByText(en["deals.winReason"]);
 
     // Walk away from that deal without answering.
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -849,7 +845,7 @@ describe("DealsScreen", () => {
 
     dropOnStage("s3", "d2");
     await askedToClose("Won");
-    expect(screen.queryByText("How was it won?")).toBeNull();
+    expect(screen.queryByText(en["deals.winReason"])).toBeNull();
   });
 
   // A win that succeeds on the first confirm has nothing left to ask, so the
@@ -890,11 +886,11 @@ describe("DealsScreen", () => {
 
     dropOnStage("s3");
     await askedToClose("Won");
-    await screen.findByText("How was it won?");
+    await screen.findByText(en["deals.winReason"]);
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "How was it won?" }),
+      screen.getByRole("combobox", { name: en["deals.winReason"] }),
       "Other",
     );
     await user.type(screen.getByLabelText("Details"), "a barter deal");
@@ -902,7 +898,7 @@ describe("DealsScreen", () => {
     // Change your mind: the detail field disappears, and so must its text.
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "How was it won?" }),
+      screen.getByRole("combobox", { name: en["deals.winReason"] }),
       "On a purchase order",
     );
     expect(screen.queryByLabelText("Details")).toBeNull();
@@ -932,11 +928,11 @@ describe("DealsScreen", () => {
 
     dropOnStage("s3");
     await askedToClose("Won");
-    await screen.findByText("How was it won?");
+    await screen.findByText(en["deals.winReason"]);
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "How was it won?" }),
+      screen.getByRole("combobox", { name: en["deals.winReason"] }),
       "Other",
     );
     await user.type(screen.getByLabelText("Details"), "​​");

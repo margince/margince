@@ -17,6 +17,7 @@ type ConsoleStep = Readonly<{
 /** Where in the vendor's console the redirect URIs go, for every screen that
  * lists them. */
 export const REDIRECTS_HOW_TO = {
+  slack: "oauthApp.drawer.slack.redirects",
   google: "oauthApp.drawer.google.step2Body",
   microsoft: "oauthApp.drawer.microsoft.step2Body",
 } as const satisfies Record<Vendor, MessageKey>;
@@ -34,6 +35,29 @@ const VENDOR_STEPS: Readonly<
     }>
   >
 > = {
+  slack: {
+    before: [
+      {
+        title: "oauthApp.drawer.slack.step1Title",
+        body: "oauthApp.drawer.slack.step1Body",
+        link: {
+          href: VENDOR_CONSOLE.slack,
+          label: "oauthApp.drawer.slack.step1Link",
+        },
+      },
+    ],
+    redirects: REDIRECTS_HOW_TO.slack,
+    after: [
+      {
+        title: "oauthApp.drawer.slack.scopesTitle",
+        body: "oauthApp.drawer.slack.scopesBody",
+      },
+    ],
+    paste: {
+      title: "oauthApp.drawer.step3Title",
+      body: "oauthApp.drawer.slack.pasteBody",
+    },
+  },
   google: {
     before: [
       {

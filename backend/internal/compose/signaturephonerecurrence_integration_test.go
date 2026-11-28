@@ -42,7 +42,7 @@ func narrowSignatureMail(t *testing.T, e *integration.Env, mail ids.UUID) {
 
 func restorePhoneContact(t *testing.T, e *integration.Env, contact ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := e.Contacts.RestoreContactTx(e.Admin(), tx, ids.From[ids.ContactKind](contact), nil, unarchiveWith(nil))
 		return err
 	}); err != nil {

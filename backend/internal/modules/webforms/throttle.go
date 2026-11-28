@@ -71,6 +71,7 @@ func NewThrottle(limits ThrottleLimits, now func() time.Time, log *slog.Logger, 
 // means its key names no form, which the edge answers itself.
 type ThrottleVerdict struct {
 	Refused    bool
+	Limit      int
 	Unknown    bool
 	RetryAfter time.Duration
 	Level      ThrottleLevel
@@ -78,11 +79,13 @@ type ThrottleVerdict struct {
 
 // Refusal is the verdict as the error AnswerRefusal states to the visitor.
 func (v ThrottleVerdict) Refusal() error {
-	return &throttledError{wait: int(math.Ceil(v.RetryAfter.Seconds()))}
+	return &throttledError{wait: max(1, int(math.Ceil(v.RetryAfter.Seconds()))), limit: v.Limit}
 }
 
 // throttledError refuses a post the throttle turned away for wait seconds.
-type throttledError struct{ wait int }
+type throttledError struct{ wait, limit int }
+
+func (e *throttledError) RateLimit() (int, int) { return e.limit, e.wait }
 
 func (e *throttledError) Error() string {
 	return fmt.Sprintf("webforms: too many submissions, retry in %d seconds", e.wait)
@@ -106,7 +109,7 @@ func (t *Throttle) wide(workspace, formKey string) []throttleStep {
 func (t *Throttle) blocked(workspace, formKey string) (ThrottleVerdict, bool) {
 	for _, step := range t.wide(workspace, formKey) {
 		if until, refused := step.esc.BlockedUntil(step.key); refused {
-			return ThrottleVerdict{Refused: true, RetryAfter: until.Sub(t.known.now()), Level: step.level}, true
+			return ThrottleVerdict{Refused: true, RetryAfter: until.Sub(t.known.now()), Level: step.level, Limit: step.esc.Limit()}, true
 		}
 	}
 	return ThrottleVerdict{}, false
@@ -177,7 +180,7 @@ func (t *Throttle) count(step throttleStep, formKey, address string) ThrottleVer
 		return ThrottleVerdict{}
 	}
 	t.logChange(step.level, formKey, v)
-	return ThrottleVerdict{Refused: true, RetryAfter: v.RetryAfter, Level: step.level}
+	return ThrottleVerdict{Refused: true, RetryAfter: v.RetryAfter, Level: step.level, Limit: step.esc.Limit()}
 }
 
 func (t *Throttle) logChange(level ThrottleLevel, formKey string, v ratelimit.Verdict) {

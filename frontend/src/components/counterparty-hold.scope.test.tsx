@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import {
@@ -47,7 +48,11 @@ function renderRow(scope: HoldScope, holds: unknown[] = []): unknown[] {
 
 async function confirm(pressed: RegExp): Promise<void> {
   fireEvent.click(await screen.findByRole("button", { name: pressed }));
-  fireEvent.click(await screen.findByRole("button", { name: "Keep private" }));
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: englishCopy["hold.confirmVerb"],
+    }),
+  );
 }
 
 describe("an address scope", () => {

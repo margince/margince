@@ -111,7 +111,7 @@ func foldTuesdayOntoMonday(t *testing.T, e *integration.Env, before func(monday,
 		before(monday, tuesday)
 	}
 	meetings := activities.NewStore(e.DB())
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return meetings.RetireMeetingCopyTx(ctx, tx, ids.From[ids.ActivityKind](tuesday), ids.From[ids.ActivityKind](monday))
 	}); err != nil {
 		t.Fatal(err)
@@ -157,7 +157,7 @@ func rerunSeriesSlotSteps(ctx context.Context, t *testing.T, e *integration.Env)
 		in := datatask.BatchIn{Limit: 1, RunID: ids.NewV7()}
 		for range 50 {
 			var out datatask.BatchOut
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				var err error
 				out, err = step.Batch(ctx, tx, in)
 				return err
@@ -239,7 +239,7 @@ func foldTheOlderWay(t *testing.T, e *integration.Env, monday, tuesday ids.UUID,
 		statements = append(statements, `INSERT INTO activity_participant (activity_id, address, role)
 			SELECT $1, 'stranger@acme.test', 'attendee' WHERE $2::uuid IS NOT NULL`)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		for _, statement := range statements {
 			if _, err := tx.Exec(ctx, statement, monday, tuesday); err != nil {
 				return err
@@ -393,7 +393,7 @@ func TestAMeetingClaimRetiresOnlyItsOwnRowsKeysInTheSeries(t *testing.T) {
 	holdIdentity(t, e, colleagues, slotKey(tuesdaySlot))
 
 	var won bool
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		won, err = activities.ClaimIdentity(ctx, tx, ids.From[ids.ActivityKind](mine),
 			activities.IdentityKindMeeting, slotKey(tuesdaySlot), "connector:gcal")

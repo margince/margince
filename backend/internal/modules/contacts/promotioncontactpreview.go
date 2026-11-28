@@ -36,6 +36,7 @@ func promotionContactSpec(lead crmcontracts.Lead, employer EmployerChoice, name,
 		Employer:            employer,
 		Acquisition:         Acquisition{Kind: AcquiredUnknownLegacy},
 		Title:               lead.Title,
+		Salutation:          lead.Salutation,
 		OwnerID:             ownerFromUUID(uuidPtrToIDs(lead.OwnerId)),
 		ConvertedFromLeadID: &leadID,
 		converting:          []ids.LeadID{ids.From[ids.LeadKind](leadID)},
@@ -90,6 +91,10 @@ func promotionContactChange(lead crmcontracts.Lead, current crmcontracts.Contact
 	if current.ConvertedFromLeadId == nil {
 		p.Set("converted_from_lead_id", nil, ids.UUID(lead.Id))
 		current.ConvertedFromLeadId = new(lead.Id)
+	}
+	if current.Salutation == nil && lead.Salutation != nil {
+		p.Set("salutation", nil, string(*lead.Salutation))
+		current.Salutation = lead.Salutation
 	}
 	if current.Title == nil && lead.Title != nil {
 		p.Set(fieldTitle, nil, *lead.Title)

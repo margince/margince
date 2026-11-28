@@ -42,7 +42,7 @@ func identifiedCalendarSink(e *integration.Env) *capture.Sink {
 func importMeeting(t *testing.T, e *integration.Env, capturedBy string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, occurred_at, source_system, source_id, source, captured_by)
 			VALUES ($1, 'meeting', 'Consulting Monthly', $2, 'mirror:hubspot', $3, 'import', $4)`,
@@ -135,7 +135,7 @@ func TestANonCalendarConnectorCannotCancelByIdentity(t *testing.T) {
 func TestAnArchivedRowUnderTheKeyStopsTheFallback(t *testing.T) {
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET archived_at = now() WHERE id = $1`, captured)
 		return err
 	}); err != nil {

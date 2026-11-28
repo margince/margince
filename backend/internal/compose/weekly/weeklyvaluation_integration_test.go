@@ -40,7 +40,7 @@ func TestWeeklyClosedMoneyAddsTheWinsThatConvertAndNamesTheOnesThatCannotBePrice
 	var last Money
 	read := func(wantKnown bool) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			money, err := countWeekMoney(ctx, tx, e.Rep1, date.Add(-time.Hour), date.Add(time.Hour))
 			if err != nil {
 				return err
@@ -104,7 +104,7 @@ func TestWeeklyMoneyIsValuedAtTheWeeksLastInstant(t *testing.T) {
 	}
 	e.WsExec(t, `UPDATE deal SET created_at = $2 WHERE id = $1`, row.Id, day(4).Add(10*time.Hour))
 	start, end := day(2), day(9)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		money, err := countWeekMoney(ctx, tx, e.Rep1, start, end)
 		if err != nil {
 			return err
@@ -140,7 +140,7 @@ func TestWeeklyOpenedPipelineNamesNoCurrencyOfAMaskedDeal(t *testing.T) {
 	e.WsExec(t, `UPDATE deal SET created_at = $2 WHERE id = $1`, row.Id, created)
 	week := func(ctx context.Context) Money {
 		var money Money
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			money, err = countWeekMoney(ctx, tx, e.Rep1, created.Add(-time.Hour), created.Add(24*time.Hour))
 			return err

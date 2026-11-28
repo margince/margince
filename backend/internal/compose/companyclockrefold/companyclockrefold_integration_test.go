@@ -61,7 +61,7 @@ func newAccount(t *testing.T) account {
 func (a account) clock(t *testing.T) *time.Time {
 	t.Helper()
 	var got *time.Time
-	if err := database.WithWorkspaceTx(a.e.Admin(), a.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(a.e.Admin(), a.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(a.e.Admin(), `SELECT last_activity_at FROM company WHERE id = $1`, a.company).Scan(&got)
 	}); err != nil {
 		t.Fatalf("reading the company clock: %v", err)

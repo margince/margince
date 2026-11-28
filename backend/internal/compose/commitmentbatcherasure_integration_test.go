@@ -53,7 +53,7 @@ func TestErasingOneConversationWithdrawsItsTasksAndPendingPromises(t *testing.T)
 			Locator:  commitmentLocator(source, claimKindOurs, "seat:"+e.Rep1.String(), quote),
 			Evidence: approvals.Evidence{SourceType: "activity", SourceID: source, Snippet: quote},
 		}
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			outcome, work, err := dispatcher.DispatchTx(e.Admin(), tx, c, ids.NewV7())
 			if err == nil && outcome == CommitmentProposed {
 				proposals = append(proposals, work)

@@ -77,7 +77,7 @@ func mailboxFor(t *testing.T, e *integration.SearchEnv, user ids.UUID, label str
 // keeps it, so a second mailbox of the first seat can be connected too.
 func seedCaptureRoleFor(t *testing.T, e *integration.SearchEnv, user ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO role_assignment (role_id, user_id)
 			SELECT id, $1 FROM role WHERE key = 'capture_rep'
@@ -93,7 +93,7 @@ func seedCaptureRoleFor(t *testing.T, e *integration.SearchEnv, user ids.UUID) {
 func importRowsOf(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) []ids.UUID {
 	t.Helper()
 	var users []ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT user_id FROM capture_import WHERE activity_id = $1 ORDER BY user_id`, activityID)
 		if err != nil {
@@ -120,7 +120,7 @@ func audienceOf(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) (st
 	t.Helper()
 	var audience string
 	var reason *string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT audience, audience_reason FROM activity WHERE id = $1`, activityID).
 			Scan(&audience, &reason)
@@ -139,7 +139,7 @@ func audienceOf(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) (st
 // set directly, because what is under test is the derivation over them.
 func setImportDecision(t *testing.T, e *integration.SearchEnv, activityID, user ids.UUID, posture, status string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(context.Background(), `
 			UPDATE capture_import
 			   SET posture_at_import = NULLIF($3, ''),
@@ -165,7 +165,7 @@ func setImportDecision(t *testing.T, e *integration.SearchEnv, activityID, user 
 func oneActivityID(t *testing.T, e *integration.SearchEnv) ids.UUID {
 	t.Helper()
 	var found []ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT id FROM activity WHERE kind = 'email' ORDER BY id`)
 		if err != nil {
@@ -227,7 +227,7 @@ func TestASecondImportingMailboxIsRecordedOnAMessageStoredOnce(t *testing.T) {
 	// And the second seat is a participant, which is how they read the message
 	// once anybody's decision holds it.
 	var participants int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND user_id = $2`,
 			activityID, e.Rep3).Scan(&participants)
@@ -352,7 +352,7 @@ func TestAHumanSelectedAudienceIsNotMovedByADerivation(t *testing.T) {
 	// A contact named a specific set of readers. No contribution below knows
 	// how to rebuild that set, so a derivation that moved the row would either
 	// publish what they narrowed or discard the names they chose.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET audience = 'selected' WHERE id = $1`, activityID)
 		return err
@@ -376,7 +376,7 @@ func recompute(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) {
 	// sink's own context carries it, and a fixture without one would be testing
 	// a shape production never runs.
 	ctx := principal.WithCorrelationID(e.Admin(), ids.NewV7())
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](activityID))
 	})
 	if err != nil {
@@ -391,7 +391,7 @@ type writeCounts struct{ audit, outbox int }
 func auditAndOutboxCounts(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) writeCounts {
 	t.Helper()
 	var c writeCounts
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1`,
 			activityID).Scan(&c.audit); err != nil {
@@ -483,7 +483,7 @@ func TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay(t *testing.T) {
 
 	sync(t, email("dse@eu.docusign.net", "DocuSign EU", captureOwner, "mirror-linkless@docusign.net", ""))
 	var linkLess ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE source_id = $1`, "mirror-linkless@docusign.net").Scan(&linkLess)
 	}); err != nil {
@@ -558,7 +558,7 @@ func TestAForgedMessageIDBuysNoAccessToAColleaguesHeldMail(t *testing.T) {
 	// gets their import row from the same code path.
 	sync(t, customerMailToBoth("forge-admit@acme.example"))
 	var admitted ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE source_id = $1`, "forge-admit@acme.example").Scan(&admitted)
 	}); err != nil {
@@ -664,7 +664,7 @@ func TestACapturedRowRefusesTheDirectWriteAndAManualWideningDoesNotStand(t *test
 	// The row this refusal exists to protect: a widening already recorded as
 	// `manual`, the only shape a database migrated from before #3388 can still
 	// carry. Written directly, since the store above no longer will.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET audience = 'workspace', audience_reason = 'manual' WHERE id = $1`,
 			activityID)
@@ -694,7 +694,7 @@ func TestAMessageWithNoRecoverableImporterIsLeftAsItIs(t *testing.T) {
 	// contributor to derive from, and deriving "no contributor asks for a hold"
 	// into "workspace" would publish a message on the strength of not knowing
 	// anything about it.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(),
 			`DELETE FROM capture_import WHERE activity_id = $1`, activityID); err != nil {
 			return err
@@ -756,7 +756,7 @@ func TestARowNarrowedBeforeThisFeatureIsNotPublishedByTheFirstRecompute(t *testi
 	// reason. This test builds the old shape deliberately, because the
 	// derivation reading it as "no contributor asks for a hold" would publish
 	// every already-private message in the installation on the next sync.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET audience = 'participants', audience_reason = NULL WHERE id = $1`,
 			activityID)
@@ -776,7 +776,7 @@ func TestARowNarrowedBeforeThisFeatureIsNotPublishedByTheFirstRecompute(t *testi
 // exercises the statement that ships rather than a paraphrase of it.
 func backfillReasons(t *testing.T, e *integration.SearchEnv) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE activity SET audience_reason = 'manual'
 			 WHERE audience <> 'workspace' AND audience_reason IS NULL`)
@@ -790,7 +790,7 @@ func backfillReasons(t *testing.T, e *integration.SearchEnv) {
 func activityIDOf(t *testing.T, e *integration.SearchEnv, sourceID string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE source_id = $1`, sourceID).Scan(&id)
 	}); err != nil {

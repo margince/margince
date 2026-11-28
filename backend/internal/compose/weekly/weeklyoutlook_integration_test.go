@@ -249,7 +249,7 @@ func TestFreezingAnOutlookTwiceLeavesOneSetOfBars(t *testing.T) {
 	}
 
 	// The same freeze again, against the review that already has one.
-	if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		return writeOutlook(e.repCtx, tx, written.ID,
 			stub.outlooks, stub.movements, stub.drivers)
 	}); err != nil {

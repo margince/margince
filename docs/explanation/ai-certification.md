@@ -169,3 +169,28 @@ average, and three only on a close score where the two first scores disagree. A 
 can run up to 12 tries, so the judge is still most of the cost. On the default `claude_cli` judge that is
 use of a subscription, not money. The subscription's session limit is shared with all else that uses
 it, so keep a sweep to two or three tasks at the same time.
+
+## Refusal recovery after a tool call
+
+The `refusal_recovery` band starts with one refused read before the first model
+reply. The real runner makes that call. Three cases use the decoder from
+`read_record`. One case answers `unsupported_by_sor`. The model receives the real
+refusal.
+
+This seeded call is marked in the trace and costs no model request.
+Normal cases keep their production budget. Recovery cases have at most six
+runner turns, including the seeded call and final answer.
+
+The report keeps the first reply's result apart from whether the run ends with
+all required writes. Both rates count every run in the band. The judge grades
+the finding separately and sees no recovery result made by the code.
+The report also counts refused calls, repairs and repeated terminal calls.
+
+Only the case's selected refusal type counts as a recovery event. Missing
+records and other refusals do not count. A final answer cannot hide a repeated
+terminal call or a missing required write. Failed and `withheld` replies still
+count in both rates.
+
+Local replay tests check all four refusal types. They call no model and write
+no real records. Model certification needs a requested run. The live worker
+lane starts from real records; the fixture runner owns this recovery band.

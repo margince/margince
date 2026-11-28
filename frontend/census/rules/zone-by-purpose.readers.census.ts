@@ -68,6 +68,7 @@ export const companyZoneSites: { file: string; why: string }[] = [
     "features/companies/companynextbar.tsx",
     "features/contacts/contacttoday.tsx",
     "features/deals/deal360/dealfigures.tsx",
+    "features/deals/dealdeliveryhandoff.tsx",
     "features/deals/deals.overview.tsx",
     "components/opentaskrow.tsx",
     "components/taskwrite.ts",

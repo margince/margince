@@ -2,6 +2,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { AnalyticsScreen } from "./analytics";
 import { render, reportsStub } from "./analytics.testkit";
 
@@ -71,7 +72,7 @@ describe("a report the server answered in full", () => {
     const card = await reportCard("Open deals per company");
     expect(await card.findByRole("link", { name: "4" })).toBeTruthy();
     expect(card.queryByText(/more not shown/)).toBeNull();
-    expect(card.queryByText("Showing part of the list")).toBeNull();
+    expect(card.queryByText(englishCopy["state.partial"])).toBeNull();
   });
 
   it("states no remainder when the server sends no total", async () => {

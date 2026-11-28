@@ -46,7 +46,7 @@ func (s *Service) standingCitations(
 		return map[ids.UUID]bool{}, nil
 	}
 	var standing map[ids.UUID]bool
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var readErr error
 		standing, readErr = activities.StandingActivities(ctx, tx, cited)
 		return readErr

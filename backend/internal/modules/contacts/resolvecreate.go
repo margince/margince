@@ -98,6 +98,7 @@ type ContactSpec struct {
 	CaptureEmployer  *EnsureCounterpartyInput
 	EmployerResult   *EnsureCounterpartyResult
 	FullName         string
+	Salutation       *crmcontracts.Salutation
 	FirstName        *string
 	LastName         *string
 	Title            *string
@@ -163,6 +164,9 @@ func createContact(ctx context.Context, tx pgx.Tx, s *Store, match ContactResolu
 	if match.Decision == DecisionExactCollision && match.MatchedLane != lanePhone {
 		return ids.ContactID{}, refusedContactCreate(ctx, tx, match, spec)
 	}
+	if err := checkSalutation(spec.Salutation); err != nil {
+		return ids.ContactID{}, err
+	}
 	wsID := workspaceID(ctx)
 	id := ids.New[ids.ContactKind]()
 	addr := addressColumns(spec.Address)
@@ -174,17 +178,17 @@ func createContact(ctx context.Context, tx pgx.Tx, s *Store, match ContactResolu
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.Visibility, spec.QuarantineReason, spec.ConvertedFromLeadID,
 		spec.SourceSystem, spec.Narrowing, string(spec.RelationshipMark), spec.RelationshipMarkSetBy,
-		spec.CreatedFromActivityID,
+		spec.CreatedFromActivityID, spec.Salutation,
 	})
 	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, spec.Active, spec.CustomFields, base)
 	if err != nil {
 		return ids.ContactID{}, err
 	}
 	if err := storekit.ExecSourceInsert(ctx, tx, contactEntity,
-		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, quarantine_reason, converted_from_lead_id, source_system, narrowing_reason, relationship_mark, relationship_mark_set_by, created_from_activity_id`+provenanceCols+cfCols+`)
+		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, quarantine_reason, converted_from_lead_id, source_system, narrowing_reason, relationship_mark, relationship_mark_set_by, created_from_activity_id, salutation`+provenanceCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
 		         coalesce(NULLIF($15, ''), 'workspace'),
-		         CASE WHEN $16 <> '' THEN now() END, NULLIF($16, ''), $17, $18, NULLIF($19, ''), NULLIF($20, ''), NULLIF($21, ''), $22`+provenanceHolders+cfHolders+`)`,
+		         CASE WHEN $16 <> '' THEN now() END, NULLIF($16, ''), $17, $18, NULLIF($19, ''), NULLIF($20, ''), NULLIF($21, ''), $22, $23`+provenanceHolders+cfHolders+`)`,
 		args); err != nil {
 		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
 	}

@@ -24,7 +24,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -42,8 +43,7 @@ type env struct {
 	pool  *pgxpool.Pool
 	vault keyvault.Vault
 
-	ws, user           ids.UUID
-	otherWS, otherUser ids.UUID
+	ws, user ids.UUID
 }
 
 // setup migrates once per process, resets the data, and seeds the two
@@ -75,16 +75,17 @@ func setup(t *testing.T) *env {
 	}
 
 	e := &env{
-		owner:     owner,
-		vault:     keyvault.NewMemory(),
-		ws:        ids.NewV7(),
-		user:      ids.NewV7(),
-		otherWS:   ids.NewV7(),
-		otherUser: ids.NewV7(),
+		owner: owner,
+		vault: keyvault.NewMemory(),
+		ws:    ids.NewV7(),
+		user:  ids.NewV7(),
 	}
 	seed := func(ws, user ids.UUID, mailLabel string) {
 		if _, err := owner.Exec(ctx,
 			`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
+			t.Fatal(err)
+		}
+		if err := storekit.RecordInstallationTx(ctx, owner, ws, clocktest.Now(t)); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := owner.Exec(ctx,
@@ -93,7 +94,6 @@ func setup(t *testing.T) *env {
 		}
 	}
 	seed(e.ws, e.user, "extsecrets")
-	seed(e.otherWS, e.otherUser, "extsecrets-other")
 
 	pool, err := testdb.OwnPool(ctx, appDSN)
 	if err != nil {
@@ -334,9 +334,6 @@ func TestSecretsRefuseUnusableInput(t *testing.T) {
 	if _, err := s.GetUser(ctx, extension.UserID("not-a-uuid"), "token"); !errors.Is(err, extsecrets.ErrInvalidUserID) {
 		t.Fatalf("malformed user id: err=%v, want ErrInvalidUserID", err)
 	}
-	if _, err := s.Get(context.Background(), "signing"); !errors.Is(err, database.ErrNoWorkspace) {
-		t.Fatalf("unbound workspace: err=%v, want ErrNoWorkspace", err)
-	}
 	if err := extsecrets.For("notes", e.pool, nil).Put(ctx, "signing", []byte("x")); !errors.Is(err, extsecrets.ErrNoCustodian) {
 		t.Fatalf("no vault configured: err=%v, want ErrNoCustodian", err)
 	}
@@ -429,5 +426,28 @@ func TestSecretsLeaveAnAuditTrail(t *testing.T) {
 	}
 	if leaked {
 		t.Fatal("a system_log detail carries the secret's plaintext")
+	}
+}
+
+// A secret sealed before the stored-key id moved into installation_state was
+// scoped by the workspace id of its day. It must still unseal, for a caller
+// whose context binds no workspace at all.
+func TestASecretSealedUnderTheCompanyIdIsStillFound(t *testing.T) {
+	e := setup(t)
+	ctx := principal.SystemActing(context.Background(), "system:extsecrets-test")
+	ref, err := e.vault.Put(ctx, ids.From[ids.WorkspaceKind](e.ws), []byte("sealed-before"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx,
+		`INSERT INTO extension_secret (extension_name, key, vault_ref) VALUES ('notes', 'old-token', $1)`, string(ref)); err != nil {
+		t.Fatal(err)
+	}
+	got, err := extsecrets.For("notes", e.pool, e.vault).Get(ctx, "old-token")
+	if err != nil {
+		t.Fatalf("a secret sealed under the company id was lost: %v", err)
+	}
+	if string(got) != "sealed-before" {
+		t.Fatalf("read back %q, want sealed-before", got)
 	}
 }

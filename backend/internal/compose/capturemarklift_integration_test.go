@@ -40,7 +40,7 @@ func markedVendor(t *testing.T, e *integration.Env, sender, domain string) {
 // the contact (nil means the contact holding the address). age is how long ago it was sent.
 func sendFiled(t *testing.T, e *integration.Env, sourceID, address, thread, body string, under *ids.UUID, age time.Duration) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var activity ids.UUID
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO activity (kind, subject, body, direction, source_system, source_id,
@@ -123,7 +123,7 @@ func TestAHandSetMarkSurvivesCorrespondence(t *testing.T) {
 	e := integration.Setup(t)
 	const sender = "kai@listbuilder.example"
 	markedVendor(t, e, sender, "listbuilder.example")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE contact SET relationship_mark_set_by = 'human:' || $2::text
 			 WHERE id = (SELECT contact_id FROM contact_email WHERE email = $1)`, sender, e.Rep1)
@@ -200,21 +200,21 @@ func TestAnAddressThatMovedAwayLeavesTheOldContactsMark(t *testing.T) {
 	sendFiled(t, e, "mv-1", sender, "mv-t1", "Anbei.", nil, 0)
 	sendFiled(t, e, "mv-2", sender, "mv-t2", "Anbei.", nil, 0)
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, oldID)
 		return err
 	}); err != nil {
 		t.Fatalf("moving the address away: %v", err)
 	}
-	err := database.WithWorkspaceTx(principal.WithWorkspaceID(e.Admin(), e.WS), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(principal.WithWorkspaceID(e.Admin(), e.WS), e.Pool, func(tx pgx.Tx) error {
 		return liftVendorMarkTx(e.Admin(), tx, newCounterpartyStore(e.Pool), ids.From[ids.ContactKind](oldID), sender)
 	})
 	if err != nil {
 		t.Fatalf("clearing with a stale (contact, address) pair: %v", err)
 	}
 	var mark *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT relationship_mark FROM contact WHERE id = $1`, oldID).Scan(&mark)
 	}); err != nil {
 		t.Fatalf("reading the mark: %v", err)
@@ -276,7 +276,7 @@ func TestWorklistProducersExcludeMarkedSendersEvenWithACompanyLink(t *testing.T)
 
 	setMark := func(mark any) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(), `
 				UPDATE contact SET relationship_mark = $2,
 				       relationship_mark_set_by = CASE WHEN $2::text IS NULL THEN NULL ELSE $3 END
@@ -336,7 +336,7 @@ func TestTheReconnectLaneFollowsTheMarkNotTheLedgerKind(t *testing.T) {
 func contactIDOf(t *testing.T, e *integration.Env, email string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT contact_id FROM contact_email WHERE email = $1`, email).Scan(&id)
 	}); err != nil {
 		t.Fatalf("finding the contact of %s: %v", email, err)

@@ -135,7 +135,7 @@ func TestDirectSenderCorrectionRollsBackWithItsProgress(t *testing.T) {
 	task := subjectMailDataTask(func() time.Time { return clocktest.Now(t) })
 	batch := task.Steps[1].Batch
 	interrupted := errors.New("interrupt after domain changes")
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := batch(ctx, tx, datatask.BatchIn{Limit: 1}); err != nil {
 			return err
 		}
@@ -150,7 +150,7 @@ func TestDirectSenderCorrectionRollsBackWithItsProgress(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM contact_acquisition_evidence WHERE kind = 'subject_initiated'`); got != 0 {
 		t.Fatal("acquisition escaped rollback")
 	}
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := batch(ctx, tx, datatask.BatchIn{Limit: 1, Cursor: json.RawMessage(`"bad cursor"`)})
 		return err
 	})

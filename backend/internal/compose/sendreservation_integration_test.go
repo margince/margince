@@ -201,7 +201,7 @@ func dealBeside(t *testing.T, a approvalNotifyEnv, name string, owner ids.UUID) 
 func digestWindow(seatCtx context.Context, t *testing.T, d *digestEnv) notices.Window {
 	t.Helper()
 	var window notices.Window
-	if err := database.WithWorkspaceTx(seatCtx, d.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(seatCtx, d.Pool, func(tx pgx.Tx) error {
 		var err error
 		actor, _ := principal.Actor(seatCtx)
 		window, err = notificationWindow(seatCtx, tx, occurredday.Personal, actor.UserID, digestMorning)
@@ -377,7 +377,7 @@ func TestTakingTheRecipientOffATeamWaitsForTheReservation(t *testing.T) {
 	var holder int32
 	go func() {
 		defer close(ended)
-		reserved <- database.WithWorkspaceTx(reader, a.e.Pool, func(tx pgx.Tx) error {
+		reserved <- database.WithTx(reader, a.e.Pool, func(tx pgx.Tx) error {
 			if err := holdSendBasisTx(reader, tx, basis, func() time.Time { return clocktest.Now(t) }); err != nil {
 				return err
 			}
@@ -641,7 +641,7 @@ func TestADecisionWhoseMailIsNoLongerReadInFullIsNotReserved(t *testing.T) {
 func readBasis(reader context.Context, t *testing.T, e *integration.Env, seat ids.UUID, refs sendRefs, now time.Time) sendBasis {
 	t.Helper()
 	var basis sendBasis
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		basis, err = readSendBasis(reader, tx, seat, nil, refs, now)
 		return err
@@ -652,7 +652,7 @@ func readBasis(reader context.Context, t *testing.T, e *integration.Env, seat id
 }
 
 func holdBasis(reader context.Context, e *integration.Env, basis sendBasis, at time.Time) error {
-	return database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	return database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		return holdSendBasisTx(reader, tx, basis, func() time.Time { return at })
 	})
 }

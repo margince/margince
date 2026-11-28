@@ -80,6 +80,7 @@ type ReplyAddressee struct {
 	// there is no readable contact or none was set. Read here so a draft's
 	// register comes from the contact the mail is delivered to.
 	GreetingRegister greetingregister.Register
+	Salutation       string
 }
 
 // ReplyAddresseeFor answers the single address a reply to this activity is
@@ -163,7 +164,7 @@ func (s *Store) deliveryOf(ctx context.Context, id ids.ActivityID, colleague fun
 		defer rows.Close()
 		to.ReplyAddressee, err = firstOutside(rows, colleague, top.participant)
 		rows.Close()
-		to.Counterparty, to.GreetingRegister = top.contact, top.register
+		to.Counterparty, to.GreetingRegister, to.Salutation = top.contact, top.register, top.salutation
 		// No address to answer is an outcome to report beside the counterparty,
 		// not a failure that discards who they are.
 		if _, none := errors.AsType[*NoReplyAddressError](err); none {
@@ -243,6 +244,7 @@ type counterpartyHead struct {
 	participant ids.UUID
 	contact     string
 	register    greetingregister.Register
+	salutation  string
 }
 
 // firstCounterparty finds the first participant, in rank order, that is not a
@@ -266,7 +268,7 @@ func firstCounterparty(ctx context.Context, tx pgx.Tx, id ids.ActivityID, collea
 		readable = sqlTrue
 	}
 	rows, err := tx.Query(ctx, counterpartyCTE()+`
-		SELECT c.id, coalesce(c.address, ''), r.id, coalesce(r.greeting_register, '')
+		SELECT c.id, coalesce(c.address, ''), r.id, coalesce(r.greeting_register, ''), coalesce(r.salutation, '')
 		  FROM counterparty c
 		  LEFT JOIN contact r ON r.id = c.contact_id AND r.archived_at IS NULL AND (`+readable+`)
 		 ORDER BY c.rank, c.created_at, c.id`, args...)
@@ -278,7 +280,7 @@ func firstCounterparty(ctx context.Context, tx pgx.Tx, id ids.ActivityID, collea
 		var head counterpartyHead
 		var contact *ids.UUID
 		var address string
-		if err := rows.Scan(&head.participant, &address, &contact, &head.register); err != nil {
+		if err := rows.Scan(&head.participant, &address, &contact, &head.register, &head.salutation); err != nil {
 			return counterpartyHead{}, fmt.Errorf("resolve who a reply is delivered to: %w", err)
 		}
 		if strings.TrimSpace(address) != "" && colleague != nil && colleague(address) {
@@ -287,7 +289,7 @@ func firstCounterparty(ctx context.Context, tx pgx.Tx, id ids.ActivityID, collea
 		if contact != nil {
 			head.contact = contact.String()
 		} else {
-			head.register = ""
+			head.register, head.salutation = "", ""
 		}
 		return head, rows.Err()
 	}

@@ -18,10 +18,10 @@ import (
 )
 
 type jobHistoryCursor struct {
-	Workspace, Reader, Kind, State string
-	Days                           int
-	Cutoff                         time.Time
-	Before                         int64
+	Reader, Kind, State string
+	Days                int
+	Cutoff              time.Time
+	Before              int64
 }
 
 func (h jobHealthHandlers) GetJobHealthHistory(w http.ResponseWriter, r *http.Request, p crmcontracts.GetJobHealthHistoryParams) {
@@ -30,14 +30,13 @@ func (h jobHealthHandlers) GetJobHealthHistory(w http.ResponseWriter, r *http.Re
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), jobHealthReadTimeout)
 	defer cancel()
-	ws, ok := principal.WorkspaceID(ctx)
 	actor, bound := principal.Actor(ctx)
-	if !ok || !bound {
+	if !bound {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
 		return
 	}
 	now := utcNow()
-	cursor := jobHistoryCursor{Workspace: ws.String(), Reader: actor.ID, Days: 7, Cutoff: now}
+	cursor := jobHistoryCursor{Reader: actor.ID, Days: 7, Cutoff: now}
 	if p.Kind != nil {
 		cursor.Kind = *p.Kind
 	}
@@ -60,7 +59,7 @@ func (h jobHealthHandlers) GetJobHealthHistory(w http.ResponseWriter, r *http.Re
 		cursor = previous
 	}
 	from := cursor.Cutoff.AddDate(0, 0, -cursor.Days)
-	result, err := jobs.WorkspaceHistory(ctx, h.pool, jobs.HistoryFilter{Workspace: cursor.Workspace, Dispatchers: dispatcherKinds(), Kind: cursor.Kind, State: cursor.State, From: from, Cutoff: cursor.Cutoff, BeforeID: cursor.Before})
+	result, err := jobs.ReadHistory(ctx, h.pool, jobs.HistoryFilter{Dispatchers: dispatcherKinds(), Kind: cursor.Kind, State: cursor.State, From: from, Cutoff: cursor.Cutoff, BeforeID: cursor.Before})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -110,6 +109,6 @@ func decodeJobHistoryCursor(encoded string, current jobHistoryCursor, now time.T
 }
 
 func (cursor jobHistoryCursor) sameFilters(other jobHistoryCursor) bool {
-	return cursor.Workspace == other.Workspace && cursor.Reader == other.Reader &&
+	return cursor.Reader == other.Reader &&
 		cursor.Kind == other.Kind && cursor.State == other.State && cursor.Days == other.Days
 }

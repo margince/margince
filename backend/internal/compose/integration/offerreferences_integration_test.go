@@ -246,7 +246,7 @@ func requireStillADraftWithNoSnapshot(t *testing.T, e *Env, offer ids.OfferID) {
 	t.Helper()
 	var status, frozen string
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT status, coalesce(buyer_snapshot::text, '') FROM offer WHERE id = $1`,
 			offer.UUID).Scan(&status, &frozen)
@@ -302,7 +302,7 @@ func TestTheSendFreezesTheRealBuyerWhateverTheResponseWithholds(t *testing.T) {
 
 	var frozen string
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT coalesce(buyer_snapshot::text, '') FROM offer WHERE id = $1`,
 			offer.UUID).Scan(&frozen)
@@ -357,7 +357,7 @@ func TestTheRenderEndpointAnswers403ForABuyerTheSeatCannotOpen(t *testing.T) {
 	}
 	var ref string
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT coalesce(pdf_asset_ref, '') FROM offer WHERE id = $1`, offer.UUID).Scan(&ref)
 	}); err != nil || ref != "" {
 		t.Errorf("the refused render stored a rendering: ref=%q err=%v", ref, err)

@@ -131,7 +131,7 @@ func seedHumanFieldHistoryRow(t *testing.T, app *apptest.AppEnv, e *Env, entityI
 	}
 	beforeJSON, afterJSON := auditImageJSON(t, before), auditImageJSON(t, after)
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, action,
 			                        entity_type, entity_id, before, after, occurred_at)
@@ -159,7 +159,7 @@ func seedAgentFieldHistoryRow(t *testing.T, e *Env, entityType string, entityID,
 	}
 	rowID := ids.NewV7()
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, passport_id, action,
 			                        entity_type, entity_id, before, after, evidence, occurred_at)

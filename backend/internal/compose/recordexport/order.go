@@ -24,7 +24,9 @@ const exportPageSize = 200
 // narrowed to the matched ids. The sort vocabulary and tie-break are then the
 // screen's, not a second copy. A spec the list refuses leaves the matched order.
 func Ordered(ctx context.Context, db *database.DB, object, sort string, matched []ids.UUID) ([]ids.UUID, error) {
-	if sort == "" || len(matched) == 0 {
+	// The projects list takes no narrowing to a set of ids, so a sorted project
+	// export keeps the matched order.
+	if sort == "" || len(matched) == 0 || object == objectProject {
 		return matched, nil
 	}
 	only := func(idColumn string, arg func(any) int) (string, error) {

@@ -21,6 +21,7 @@ package storekit
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"sort"
@@ -311,6 +312,16 @@ func CustomFilterClauses(active []fieldcatalog.Column, filters map[string]string
 		if err := checkListFilterValue(c, value); err != nil {
 			return nil, err
 		}
+		if c.Type == fieldcatalog.TypeMultiselect {
+			var selected []string
+			if err := json.Unmarshal([]byte(value), &selected); err != nil {
+				return nil, fmt.Errorf("decode checked multiselect filter: %w", err)
+			}
+			column := quoteColumnIdentifier(c.Name)
+			bind := arg(selected)
+			clauses = append(clauses, SQLf("(%s @> $%d::text[] AND %s <@ $%d::text[])", column, bind, column, bind))
+			continue
+		}
 		clauses = append(clauses, SQLf("%s = $%d%s", quoteColumnIdentifier(c.Name), arg(value), listBindCast(c.Type)))
 	}
 	return clauses, nil
@@ -336,6 +347,9 @@ func checkListFilterValue(c fieldcatalog.Column, value string) error {
 // text and picklist accept any string.
 func parsesAsKind(kind, value string) bool {
 	switch kind {
+	case fieldcatalog.TypeMultiselect:
+		var selected []string
+		return strings.HasPrefix(strings.TrimSpace(value), "[") && json.Unmarshal([]byte(value), &selected) == nil && len(selected) > 0
 	case fieldcatalog.TypeNumber:
 		_, err := strconv.ParseFloat(value, 64)
 		return err == nil

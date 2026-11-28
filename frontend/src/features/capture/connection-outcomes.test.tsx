@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import {
@@ -95,7 +96,9 @@ it("keeps the waiting row on screen when its read fails, with a retry", async ()
   const retry = await screen.findByRole("button", {
     name: "Retry Waiting on a decision",
   });
-  expect(screen.getByText("Could not load")).toBeVisible();
+  expect(
+    screen.getByText(englishCopy["connectionOutcomes.unread"]),
+  ).toBeVisible();
 
   failing = false;
   await user.click(retry);
@@ -144,7 +147,7 @@ it("returns focus to the card when the drawer's list empties before it closes", 
 
   await waitFor(() =>
     expect(document.activeElement).toBe(
-      screen.getByText("What your connections found"),
+      screen.getByText(englishCopy["connectionOutcomes.title"]),
     ),
   );
 });
@@ -175,7 +178,7 @@ it("returns focus to the card while the drawer's list is still re-reading", asyn
 
   await waitFor(() =>
     expect(document.activeElement).toBe(
-      screen.getByText("What your connections found"),
+      screen.getByText(englishCopy["connectionOutcomes.title"]),
     ),
   );
 });
@@ -191,7 +194,7 @@ it("opens the held-mail controls from health and clears only the review paramete
   renderCard();
   expect(
     await screen.findByRole("dialog", {
-      name: "Mail not shared with the team",
+      name: englishCopy["heldThreads.title"],
     }),
   ).toBeVisible();
   await user.keyboard("{Escape}");

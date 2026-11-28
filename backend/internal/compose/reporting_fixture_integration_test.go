@@ -402,7 +402,7 @@ func TestANameOnlyCSVContactLandsWithAChannelWarning(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := importAdmin(e)
 	runs := migration.NewRunStore(e.DB())
-	run, err := runs.Create(ctx, migration.CreateRunInput{Connector: "csv", SourceRef: "channels.csv", Source: "csv:channels"})
+	run, err := runs.Create(ctx, migration.CreateRunInput{Connector: "csv", SourceRef: "channels.csv"})
 	if err != nil {
 		t.Fatal(err)
 	}

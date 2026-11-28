@@ -60,6 +60,8 @@ type Core interface {
 	CustomFields() CustomFieldRepo
 	// Notices returns the door for telling a member about a record; see notices.go.
 	Notices() NoticeRepo
+	// Members returns the roster door; it needs CapabilityMembers in Extension.Needs.
+	Members() MemberRepo
 	// LinkSuggestions returns the door for proposing where a message belongs; see linksuggestion.go.
 	LinkSuggestions() LinkSuggestionRepo
 }

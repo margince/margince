@@ -7,24 +7,39 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/messaging"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // Handlers is the /channel-links transport. A role that composes no store
 // leaves it zero, and every operation answers 503.
 type Handlers struct {
-	store *Store
-	filer MessageFiler
+	preview DeliveryPreviewer
+	store   *Store
+	filer   MessageFiler
 	// manifestBase reads public_base_url when the manifest is asked for, so
 	// the option that sets it may run after this one.
 	manifestBase func() string
 	// publisher reads the asking member's address, the manifest's publisher.
 	publisher func(ctx context.Context) (string, error)
+}
+
+// DeliveryPreviewer shares the outbound preview engine with the HTTP surface.
+type DeliveryPreviewer interface {
+	PreviewDelivery(context.Context, string, ids.UUID) (crmcontracts.ChannelDeliveryPreview, error)
+}
+
+// WithDeliveryPreviewer shares delivery preparation with the HTTP preview surface.
+func (h Handlers) WithDeliveryPreviewer(preview DeliveryPreviewer) Handlers {
+	h.preview = preview
+	return h
 }
 
 // MessageFiler files a chosen channel message as a summary note. compose
@@ -65,15 +80,28 @@ func (h Handlers) GetChannelLink(w http.ResponseWriter, r *http.Request, kind cr
 		writeErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireState(state))
+	out := wireState(state)
+	if out.Link != nil && h.store.historyProfiles != nil {
+		profile, err := h.store.historyProfiles(r.Context(), string(out.Link.Provider))
+		if err != nil {
+			writeErr(w, r, err)
+			return
+		}
+		out.Link.HistoryProfile = WireHistoryProfile(profile)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // ListLinkableChannels lists the channels the record can be linked to.
-func (h Handlers) ListLinkableChannels(w http.ResponseWriter, r *http.Request, kind crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+func (h Handlers) ListLinkableChannels(w http.ResponseWriter, r *http.Request, kind crmcontracts.ChannelLinkRecordType, id crmcontracts.Id, params crmcontracts.ListLinkableChannelsParams) {
 	if !h.composed(w, r) {
 		return
 	}
-	channels, err := h.store.LinkableChannels(r.Context(), string(kind), ids.UUID(id))
+	provider := ProviderDispact
+	if params.Provider != nil {
+		provider = string(*params.Provider)
+	}
+	channels, err := h.store.LinkableProviderChannels(r.Context(), string(kind), ids.UUID(id), provider)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -95,6 +123,12 @@ func (h Handlers) LinkChannel(w http.ResponseWriter, r *http.Request, kind crmco
 		return
 	}
 	link := LinkRequest{Mode: string(req.Mode), SummarizeHistory: req.SummarizeHistory}
+	if req.Provider != nil {
+		link.Provider = string(*req.Provider)
+	}
+	if req.RootId != nil {
+		link.RootID = *req.RootId
+	}
 	if req.Channel != nil {
 		link.Channel = *req.Channel
 	}
@@ -118,7 +152,11 @@ func (h Handlers) SetChannelVerbosity(w http.ResponseWriter, r *http.Request, ki
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	state, err := h.store.SetVerbosity(r.Context(), string(kind), ids.UUID(id), string(req.Verbosity))
+	if err := httperr.RequireAnyField(r); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	state, err := h.store.SetSyncOptions(r.Context(), string(kind), ids.UUID(id), SyncOptions{ExpectedLink: (*ids.UUID)(req.ExpectedLinkId), ExpectedVersion: req.ExpectedVersion, Verbosity: (*string)(req.Verbosity), Read: req.SaveChannelUpdates, Post: req.SendCrmUpdates, MessageDetail: (*string)(req.MessageDetail)})
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -152,8 +190,14 @@ func (h Handlers) composed(w http.ResponseWriter, r *http.Request) bool {
 
 func wireState(s State) crmcontracts.ChannelLinkState {
 	out := crmcontracts.ChannelLinkState{State: crmcontracts.ChannelLinkStateState(s.State)}
+	if ended := s.LastSync; ended != nil {
+		out.LastSync = &crmcontracts.ChannelEndedSync{Provider: crmcontracts.MessengerProvider(ended.Provider), EndedAt: ended.Ended, ReadThrough: ended.ReadThrough, LastPostedAt: ended.LastPosted, RetainedMessages: ended.RetainedMessages, ConfirmedRedactions: ended.ConfirmedRedactions, UnverifiedWithdrawals: ended.UnverifiedWithdrawals, UnconfirmedDeliveries: ended.UnconfirmedDeliveries}
+	}
+	if s.Health != nil {
+		out.Sync = &crmcontracts.ChannelSyncHealth{NotificationsDelayed: &s.Health.NotificationsDelayed, CoverageAt: s.Health.Coverage, LastError: (*crmcontracts.ChannelSyncHealthLastError)(s.Health.Error), PendingConversations: s.Health.PendingRoots, FailedConversations: s.Health.FailedRoots, PendingCrmUpdates: s.Health.PendingUpdates, UnconfirmedDeliveries: s.Health.Unconfirmed, DeliveryError: (*crmcontracts.ChannelSyncHealthDeliveryError)(s.Health.DeliveryError)}
+	}
 	if s.Link != nil {
-		link := wireLink(*s.Link, s.Address)
+		link := wireLink(*s.Link, s.Address, s.Workspace)
 		out.Link = &link
 	}
 	if s.Invites != nil {
@@ -164,18 +208,30 @@ func wireState(s State) crmcontracts.ChannelLinkState {
 	return out
 }
 
-func wireLink(l Link, address string) crmcontracts.ChannelLink {
+func wireLink(l Link, address, workspace string) crmcontracts.ChannelLink {
+	detail := crmcontracts.ChannelMessageDetail(l.MessageDetail)
+	sourceURL := ProviderChannelURL(l.Provider, workspace, address, l.ChannelSlug)
+	if l.Provider == ProviderDispact && !l.NativeIdentity {
+		sourceURL = ChannelURL(address, l.ChannelSlug)
+	}
 	return crmcontracts.ChannelLink{
-		Id:          openapi_types.UUID(l.ID),
-		Provider:    crmcontracts.ChannelLinkProvider(l.Provider),
-		ChannelSlug: l.ChannelSlug,
-		ChannelName: l.ChannelName,
-		ChannelUrl:  ChannelURL(address, l.ChannelSlug),
-		Verbosity:   crmcontracts.ChannelVerbosity(l.Verbosity),
-		Status:      crmcontracts.ChannelLinkStatus(l.Status),
-		DealId:      (*openapi_types.UUID)(l.DealID),
-		ProjectId:   (*openapi_types.UUID)(l.ProjectID),
-		CreatedAt:   l.CreatedAt,
+		NativeIdentity:     new(l.NativeIdentity),
+		OverviewCardPaused: &l.CardPaused,
+		Id:                 openapi_types.UUID(l.ID),
+		Provider:           crmcontracts.MessengerProvider(l.Provider),
+		ChannelSlug:        l.ChannelSlug,
+		ChannelName:        l.ChannelName,
+		ChannelUrl:         sourceURL,
+		RootId:             optionalRoot(l.RootID),
+		CanSendCrmUpdates:  new(l.PostSupported),
+		Verbosity:          crmcontracts.ChannelVerbosity(l.Verbosity),
+		MessageDetail:      &detail,
+		Status:             crmcontracts.ChannelLinkStatus(l.Status),
+		CompanyId:          (*openapi_types.UUID)(l.CompanyID),
+		SaveChannelUpdates: new(!l.ReadDisabled), SendCrmUpdates: new(!l.PostDisabled),
+		DealId:    (*openapi_types.UUID)(l.DealID),
+		ProjectId: (*openapi_types.UUID)(l.ProjectID),
+		CreatedAt: l.CreatedAt,
 	}
 }
 
@@ -191,6 +247,10 @@ var refusals = []struct {
 	code   string
 	detail string
 }{
+	{ErrChannelIdentityNeedsReview, http.StatusConflict, "channel_identity_needs_review", "Choose the channel again to confirm its current identity before syncing."},
+	{ErrMessengerDeliveryNeedsReview, http.StatusConflict, "messenger_delivery_needs_review", "An earlier delivery in this conversation is still unresolved. Refresh Messenger, check the conversation, and explicitly review the earlier attempt before sending again."},
+	{ErrMembersConsentRequired, http.StatusConflict, "channel_members_consent_required", "Reconnect the shared Dispact app and approve channel:members:read before enabling automatic CRM posts. Incoming channel recaps can continue."},
+	{ErrAudienceNeedsReview, http.StatusConflict, "channel_audience_needs_review", "Automatic sharing is paused because the complete channel audience could not be cleared for this record. Review the members and their record access, then review channel delivery again."},
 	{ErrBotNotConnected, http.StatusConflict, "channel_bot_not_connected", "No bot connected. Connect one in Settings."},
 	{ErrChannelNotFound, http.StatusNotFound, "channel_not_found", "Channel not found. Check the link."},
 	{ErrChannelNameRefused, http.StatusUnprocessableEntity, "channel_name_refused", "The chat refused this channel name. Rename the record, or link an existing channel."},
@@ -204,9 +264,21 @@ var refusals = []struct {
 	{ErrNoSummaryModel, http.StatusConflict, httperr.CodeAINotConfigured, "Summarising chat talk needs an AI model. An administrator can bind one under Settings → AI."},
 	{ErrSummaryFailed, http.StatusBadGateway, "channel_summary_failed", "The summary could not be written. Nothing was filed. Try again."},
 	{ErrChatUnreachable, http.StatusBadGateway, "channel_provider_unreachable", "The chat could not be reached. Nothing was changed. Try again."},
+	{messaging.ErrUnauthorized, http.StatusConflict, "messenger_consent_required", "Reconnect your messaging account to continue."},
+	{messaging.ErrUnsupported, http.StatusServiceUnavailable, "messenger_unavailable", "This messaging operation is unavailable. Check the provider connection and supported capabilities."},
+	{messaging.ErrUnavailable, http.StatusBadGateway, "messenger_conversation_unavailable", "This conversation is unavailable. Check access in your messaging app and refresh."},
+	{messaging.ErrInvalid, http.StatusConflict, "messenger_review_required", "Review the destination, audience and message before sending."},
+	{messaging.ErrDeliveryUnknown, http.StatusConflict, "messenger_delivery_unknown", "Check the conversation before sending again. Delivery could not be confirmed."},
 }
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
+	if limited, ok := errors.AsType[*connector.RateLimitedError](err); ok {
+		seconds := max(1, int(limited.RetryAfter.Seconds()))
+		w.Header().Set("Retry-After", strconv.Itoa(seconds))
+		httperr.Write(w, r, &httperr.DetailedError{Status: http.StatusTooManyRequests, Code: "messenger_rate_limited", Detail: "The provider asked us to wait. Your draft is preserved."})
+		return
+	}
+
 	for _, refusal := range refusals {
 		if errors.Is(err, refusal.err) {
 			httperr.Write(w, r, &httperr.DetailedError{Status: refusal.status, Code: refusal.code, Detail: refusal.detail})
@@ -214,4 +286,11 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		}
 	}
 	httperr.Write(w, r, err)
+}
+
+func optionalRoot(root string) *string {
+	if root == "" {
+		return nil
+	}
+	return &root
 }

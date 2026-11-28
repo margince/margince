@@ -28,7 +28,7 @@ func TestDeletingAMeetingDoesNotReopenUnrelatedSignatures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(h.e.Admin(), h.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(h.e.Admin(), h.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `DELETE FROM activity WHERE id=@id`, pgx.NamedArgs{"id": ids.UUID(meeting.Id)})
 		return err
 	}); err != nil {

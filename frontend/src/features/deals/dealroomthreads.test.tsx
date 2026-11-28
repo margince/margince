@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ProblemError } from "../../lib/problem";
 import {
   type BoardDocument,
@@ -234,9 +235,7 @@ describe("a refused reply", () => {
     await user.click(screen.getByRole("button", { name: /^Reply$/ }));
 
     await waitFor(() =>
-      expect(
-        screen.getByText("The request failed. No cause reported."),
-      ).toBeTruthy(),
+      expect(screen.getByText(englishCopy["common.errorNoCause"])).toBeTruthy(),
     );
     expect(screen.queryByText(/Failed to fetch/)).toBeNull();
   });
@@ -254,11 +253,11 @@ describe("a refused new thread", () => {
     draw({ open });
 
     await user.click(
-      screen.getByRole("button", { name: "Ask about this document" }),
+      screen.getByRole("button", { name: englishCopy["threads.askAbout"] }),
     );
     // Scoped to THIS composer: the room-wide one below carries the same verb,
     // and a bare getByRole would be ambiguous rather than wrong.
-    const field = screen.getByLabelText("Ask about this document");
+    const field = screen.getByLabelText(englishCopy["threads.askAbout"]);
     await user.type(field, "Is clause 7 negotiable?");
     const composer = field.closest(".thread-composer");
     if (composer === null) {
@@ -288,7 +287,7 @@ describe("a board nobody may write to", () => {
     draw({ refusal: REFUSAL });
 
     const ask = screen.getByRole("button", {
-      name: "Ask about this document",
+      name: englishCopy["threads.askAbout"],
     });
     // Refused, not absent: the affordance is on the page and cannot be used.
     expect(ask).toBeDisabled();
@@ -343,12 +342,12 @@ describe("a board nobody may write to", () => {
     );
     // Both cards carry a refused control...
     expect(
-      screen.getAllByRole("button", { name: "Ask about this document" }),
+      screen.getAllByRole("button", { name: englishCopy["threads.askAbout"] }),
     ).toHaveLength(2);
     // ...and every one of them points at the SAME single sentence.
     expect(screen.getAllByText(REFUSAL)).toHaveLength(1);
     const ids = screen
-      .getAllByRole("button", { name: "Ask about this document" })
+      .getAllByRole("button", { name: englishCopy["threads.askAbout"] })
       .map((b) => b.getAttribute("aria-describedby"));
     expect(new Set(ids).size).toBe(1);
   });
@@ -360,7 +359,7 @@ describe("a board nobody may write to", () => {
     // once a refusal exists.
     draw({});
     expect(
-      screen.queryByRole("button", { name: "Ask about this document" }),
+      screen.queryByRole("button", { name: englishCopy["threads.askAbout"] }),
     ).toBeNull();
     expect(screen.queryByRole("button", { name: "New thread" })).toBeNull();
   });
@@ -392,7 +391,7 @@ describe("the deck layout", () => {
 
     expect(screen.getByText("About Rahmenvertrag")).toBeInTheDocument();
     expect(
-      screen.getByText("About a document no longer in the room"),
+      screen.getByText(englishCopy["threads.aboutRemoved"]),
     ).toBeInTheDocument();
     expect(screen.getAllByText(/^About /)).toHaveLength(2);
   });
@@ -438,7 +437,7 @@ describe("a conversation the buyer can no longer see", () => {
       thread({ id: "th-kept", visible_to_buyer: true }),
     ]);
     expect(
-      screen.getAllByText("The buyer can no longer see this conversation"),
+      screen.getAllByText(englishCopy["threads.hiddenFromBuyer"]),
     ).toHaveLength(1);
   });
 });

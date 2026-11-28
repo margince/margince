@@ -6,7 +6,13 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
-import { type Locale, LocaleProvider, translate } from "../../i18n";
+import {
+  type Locale,
+  LocaleProvider,
+  translate,
+  translatePlural,
+} from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { approvalHref, LinkedApprovalDrawer } from "./approvaldrawer";
 
 // The drawer a notice or a receipt line opens: the decision the address names.
@@ -105,7 +111,12 @@ describe("a link to one decision", () => {
 const commitmentLabels: ReadonlyArray<{ locale: Locale; label: string }> = [
   { locale: "en", label: "Create task" },
   { locale: "de", label: "Aufgabe erstellen" },
-  { locale: "vi", label: "Tạo 1 công việc" },
+  {
+    locale: "vi",
+    label: translatePlural("vi", "approval.commitment.createTask", 1, {
+      count: "1",
+    }),
+  },
 ];
 it.each(commitmentLabels)(
   "names the commitment effect in $locale",
@@ -143,7 +154,7 @@ it("asks before Escape throws away text typed in the editor", async () => {
 
   await user.keyboard("{Escape}");
 
-  expect(await screen.findByText("Discard unsaved changes?")).toBeVisible();
+  expect(await screen.findByText(englishCopy["unsaved.title"])).toBeVisible();
 });
 
 it("closes on Escape without asking when nothing was typed", async () => {
@@ -155,5 +166,5 @@ it("closes on Escape without asking when nothing was typed", async () => {
 
   await user.keyboard("{Escape}");
 
-  expect(screen.queryByText("Discard unsaved changes?")).toBeNull();
+  expect(screen.queryByText(englishCopy["unsaved.title"])).toBeNull();
 });

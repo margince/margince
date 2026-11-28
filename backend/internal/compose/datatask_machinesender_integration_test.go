@@ -41,7 +41,7 @@ func senderMessage(key, from, to, cc string, at time.Time) []byte {
 func activityBySubject(t *testing.T, e *integration.Env, subject string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE subject = $1`, subject).Scan(&id)
 	}); err != nil {
 		t.Fatalf("reading %q: %v", subject, err)
@@ -81,7 +81,7 @@ func newSenderTaskFixture(t *testing.T) senderTaskFixture {
 func (f senderTaskFixture) stamped(t *testing.T, activity ids.UUID) bool {
 	t.Helper()
 	var stamped bool
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT sender_is_machine FROM activity WHERE id = $1`, activity).Scan(&stamped)
 	}); err != nil {
 		t.Fatal(err)
@@ -91,7 +91,7 @@ func (f senderTaskFixture) stamped(t *testing.T, activity ids.UUID) bool {
 
 func (f senderTaskFixture) rebuildEdges(t *testing.T) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		if _, err := f.e.Contacts.PromoteContactCohortTx(f.e.Admin(), tx, ids.ContactID{UUID: f.contact}); err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func (f senderTaskFixture) rebuildEdges(t *testing.T) {
 func (f senderTaskFixture) edgeCount(t *testing.T) int {
 	t.Helper()
 	var count int
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT coalesce(max(count_90d), 0) FROM graph_interaction_edge
 			 WHERE user_id = $1 AND contact_id = $2`, f.seat, f.contact).Scan(&count)
 	}); err != nil {
@@ -132,7 +132,7 @@ func TestTheSenderTaskMarksOnlyASendingSystemsMailAndReplaysSafely(t *testing.T)
 	}
 
 	step := machineSenderDataTask().Steps[0]
-	if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		if err == nil && out.Changed != 0 {
 			t.Errorf("a second run changed %d row(s)", out.Changed)
@@ -148,7 +148,7 @@ func TestTheSenderTaskRollsBackWithItsBatch(t *testing.T) {
 	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")
 	step := machineSenderDataTask().Steps[0]
 	rollback := errors.New("roll back after the write")
-	err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		if err != nil {
 			return err

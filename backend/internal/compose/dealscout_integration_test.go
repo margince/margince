@@ -58,7 +58,7 @@ func (e *scoutEnv) pass(t *testing.T) DealScoutPass {
 	t.Helper()
 	ctx := e.system()
 	var pass DealScoutPass
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		pass, err = RunDealScout(ctx, tx, e.now)
 		return err
@@ -144,7 +144,7 @@ func (e *scoutEnv) signal(t *testing.T, kind string, company, cited ids.UUID, at
 		buyer, role = &buyers[0], "buyer"
 	}
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:signal-scan")
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind: kind, CompanyID: company, Summary: kind + " on the account", Severity: "info",
 			Fingerprint: kind + ":" + cited.String(),
@@ -420,7 +420,7 @@ func TestEvidenceFromAWithheldConversationIsIgnored(t *testing.T) {
 	if err != nil {
 		t.Fatalf("logging the held mail: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return capture.NewThreadVerdictStore(InstallationDB(e.Pool)).DecideAsOwner(e.Admin(), tx, "held-thread", false)
 	}); err != nil {
 		t.Fatalf("holding the thread: %v", err)

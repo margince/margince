@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -62,7 +63,7 @@ export const NameTaken: Story = {
       "Churn Risk",
     );
     await userEvent.click(page.getByRole("button", { name: "Add" }));
-    const taken = await page.findByText("A tag with this name already exists.");
+    const taken = await page.findByText(englishCopy["tags.nameTaken"]);
     await waitFor(() => expect(taken).toBeVisible());
   },
 };

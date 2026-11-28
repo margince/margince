@@ -37,7 +37,6 @@ const objected = (extra: Partial<RefusedRecipient> = {}): RefusedRecipient => ({
 const reviewOf = (refusals: RefusedRecipient[]): CommunicationReview => ({
   id: "r-1",
   state: "needs_repair",
-  kind: "single",
   reason_code: refusals[0]?.reason_code ?? "",
   refusals,
   warning: { version: "override-v2", text: "The send check still blocks it." },

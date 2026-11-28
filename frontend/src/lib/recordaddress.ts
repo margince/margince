@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { bookingSlugFromPath, isShareableBookingSlug } from "./bookingaddress";
+import { EXTENSION_SCREEN } from "./extensionscreen";
 import { opensElsewhere } from "./linkclick";
 
 const IDENTIFIER =
@@ -15,13 +16,17 @@ const RECORD_PATH = new RegExp(
 
 /**
  * Whether a pathname is one this module publishes or restores: a record, a
- * booking page or the consent screen.
+ * booking page, the consent screen or the embed path.
  *
  * Exported so the served-path check reads this notion rather than keeping a
  * second copy. Two copies disagree the first time one gains an address.
  */
 export function namesAnAppAddress(pathname: string): boolean {
-  return isMirroredPath(pathname) || pathname === CONSENT_PATH;
+  return (
+    isMirroredPath(pathname) ||
+    pathname === CONSENT_PATH ||
+    pathname === EMBED_PATH
+  );
 }
 
 export function appHref(href: string): string;
@@ -116,12 +121,28 @@ export function isConsentAddress(pathname: string, hash: string): boolean {
   return pathname === CONSENT_PATH && CONSENT_ROUTE.test(hash);
 }
 
+/**
+ * The path nginx serves to the frames an operator allows, such as a browser
+ * extension's panel. Only a unit's screen is shown there.
+ */
+export const EMBED_PATH = "/embed/";
+const EMBED_ROUTE = new RegExp(`^#/${EXTENSION_SCREEN}/[^/?]+(?:[/?]|$)`);
+
+/** True when the app is a unit's screen inside an allowed frame. */
+export function isEmbedAddress(pathname: string, hash: string): boolean {
+  return pathname === EMBED_PATH && EMBED_ROUTE.test(hash);
+}
+
 // Keep the hash router while making the record identity visible to preview fetchers.
 export function publishRecordAddress(): void {
   const { pathname, search, hash } = globalThis.location;
-  // Any other screen here would leave a window handle open to whoever opened it.
-  // So it reloads at the root, under the app's own policy.
-  if (pathname === CONSENT_PATH && !CONSENT_ROUTE.test(hash)) {
+  // Any other screen here would leave a window handle open to whoever opened it,
+  // or put a core screen in a frame. So it reloads at the root, under the app's
+  // own policy.
+  if (
+    (pathname === CONSENT_PATH && !CONSENT_ROUTE.test(hash)) ||
+    (pathname === EMBED_PATH && !EMBED_ROUTE.test(hash))
+  ) {
     globalThis.location.replace(`/${search}${hash}`);
     return;
   }

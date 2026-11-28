@@ -88,7 +88,7 @@ func (r takeoverReading) reading(sentence string, seat *ids.UUID) Commitment {
 func (r takeoverReading) dispatchOnce(t *testing.T, c Commitment) CommitmentOutcome {
 	t.Helper()
 	var outcome CommitmentOutcome
-	if err := database.WithWorkspaceTx(r.ctx, r.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(r.ctx, r.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		outcome, _, err = r.dispatch.DispatchTx(r.ctx, tx, c, ids.NewV7())
 		return err

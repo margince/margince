@@ -53,6 +53,7 @@ import (
 // whichever their first consent happened to reach.
 type AppProvider string
 
+// Application providers remain separate from the connectors that use their credentials.
 const (
 	// AppProviderGoogle is the Google Cloud OAuth client behind Gmail and
 	// Google Calendar.
@@ -60,14 +61,15 @@ const (
 	// AppProviderMicrosoft is the Entra app registration behind Outlook mail
 	// and Outlook calendar.
 	AppProviderMicrosoft AppProvider = "microsoft"
+	AppProviderSlack     AppProvider = "slack"
 )
 
-// GoogleAppKey and MicrosoftAppKey are the settings keys each app is stored
-// under. Named constants because settings.LockForWrite takes the key as a
-// string, and a locked key that is not the written key serializes nothing.
+// GoogleAppKey, MicrosoftAppKey and SlackAppKey identify stored application credentials.
+// Reads and writes use the same key to share their lock.
 const (
 	GoogleAppKey    = "capture.google_app"
 	MicrosoftAppKey = "capture.microsoft_app"
+	SlackAppKey     = "capture.slack_app"
 )
 
 // ConnectorApp is one installation's OAuth app for one provider, as stored.
@@ -77,6 +79,8 @@ const (
 // cannot be presented. Storing them together means a reader cannot see a
 // half-configured app that no code path would accept.
 type ConnectorApp struct {
+	SigningSecretSet bool   `json:"signing_secret_set,omitempty"`
+	SigningSecret    string `json:"-"`
 	// ClientID is the vendor's public identifier for the app.
 	ClientID string `json:"client_id,omitempty"`
 	// ClientSecretRef addresses the sealed secret in the key vault. AS STORED
@@ -193,6 +197,7 @@ func (k appKind) writeTx(ctx context.Context, s *settings.Store, tx pgx.Tx, next
 }
 
 var (
+	slackVendor  = appVendor{name: "Slack", console: "the Slack app configuration", validateClientID: appVendor.validateOpaqueClientID}
 	googleVendor = appVendor{
 		name:             "Google",
 		console:          "the Google Cloud console",
@@ -227,6 +232,7 @@ var (
 // the alternative is a capability handle in the one place an installation hands
 // out wholesale.
 var (
+	SlackAppSetting  = settings.Define[ConnectorApp](SlackAppKey, captureSettingsObject, "update", ConnectorApp{}, slackVendor.validate).AsInstallationIdentity().AsSecretReference()
 	GoogleAppSetting = settings.Define[ConnectorApp](
 		GoogleAppKey, captureSettingsObject, "update", ConnectorApp{},
 		googleVendor.validate,
@@ -303,6 +309,7 @@ func (v appVendor) validateOpaqueClientID(clientID string) error {
 // appKinds is the provider table. Declared after the entries it points at, and
 // read through appKindFor so an unknown provider is refused in one place.
 var appKinds = map[AppProvider]appKind{
+	AppProviderSlack:     {appVendor: slackVendor, entry: SlackAppSetting},
 	AppProviderGoogle:    {appVendor: googleVendor, entry: GoogleAppSetting},
 	AppProviderMicrosoft: {appVendor: microsoftVendor, entry: MicrosoftAppSetting},
 }

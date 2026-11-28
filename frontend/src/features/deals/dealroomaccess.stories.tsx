@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -258,7 +259,9 @@ export const ChangingPermissions: Story = {
       }),
     );
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change permissions" }),
+      await screen.findByRole("button", {
+        name: englishCopy["access.changeCapability"],
+      }),
     );
     await screen.findByRole("dialog");
   },
@@ -305,8 +308,8 @@ export const ClipboardRefusedOnTheIssuedLink: Story = {
       await userEvent.click(
         await dialog.findByRole("button", { name: "Copy link" }),
       );
-      await dialog.findByText("Clipboard access denied");
-      await dialog.findByText("Select the link and copy it manually.");
+      await dialog.findByText(englishCopy["clipboard.copyFailedTitle"]);
+      await dialog.findByText(englishCopy["access.issued.copyFailed"]);
     } finally {
       clipboard.restore();
     }

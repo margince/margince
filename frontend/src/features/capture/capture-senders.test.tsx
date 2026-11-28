@@ -90,7 +90,7 @@ async function openList(
   const dialog = await screen.findByRole("dialog", { name: list });
   if (list === "Sender decisions")
     await user.click(
-      within(dialog).getByRole("button", { name: "Browse recent senders" }),
+      within(dialog).getByRole("button", { name: en["senders.browse"] }),
     );
   return within(dialog);
 }
@@ -185,7 +185,9 @@ it("draws no waiting row when nothing waits, and offers no empty list", async ()
       client.getQueryState(["capture-contacts-awaiting-decision"])?.status,
     ).toBe("success"),
   );
-  expect(screen.queryByText("Waiting on a decision")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(en["senders.waiting.title"]),
+  ).not.toBeInTheDocument();
 });
 
 // The classifier's vocabulary moves on its own. A kind this build has no word

@@ -160,7 +160,7 @@ func (f *fixture) quietDeal(today time.Time) ids.DealID {
 
 func (f *fixture) inTx(fn func(ctx context.Context, tx pgx.Tx) error) {
 	f.t.Helper()
-	if err := database.WithWorkspaceTx(f.reader, f.env.Pool, func(tx pgx.Tx) error { return fn(f.reader, tx) }); err != nil {
+	if err := database.WithTx(f.reader, f.env.Pool, func(tx pgx.Tx) error { return fn(f.reader, tx) }); err != nil {
 		f.t.Fatal(err)
 	}
 }
@@ -415,7 +415,7 @@ func (f *fixture) freezeQuarter(within, takenAt time.Time, readings forecasting.
 func (f *fixture) accuracy(at time.Time) (forecasting.Accuracy, error) {
 	f.t.Helper()
 	var out forecasting.Accuracy
-	err := database.WithWorkspaceTx(f.reader, f.env.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(f.reader, f.env.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = compose.WinChanceEngine().Accuracy(f.reader, tx, at)
 		return err

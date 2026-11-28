@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
@@ -103,7 +104,7 @@ it("adds a follow-up from an unfiled source through the existing task form", asy
     />,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Add a follow-up task" }),
+    await screen.findByRole("button", { name: englishCopy["log.addFollowUp"] }),
   );
   fireEvent.change(screen.getByRole("textbox", { name: "Subject" }), {
     target: { value: "Send scope" },

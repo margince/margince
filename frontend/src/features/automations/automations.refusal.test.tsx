@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AutomationsAdmin } from "./automations";
 
@@ -201,7 +202,7 @@ describe("a rule's name", () => {
     if (typed) await user.type(nameField(dialog), typed);
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
-    const error = within(dialog).getByText("Give the automation a name.");
+    const error = within(dialog).getByText(englishCopy["auto.nameRequired"]);
     expect(nameField(dialog).getAttribute("aria-describedby")).toContain(
       error.id,
     );

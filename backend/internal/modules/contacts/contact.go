@@ -66,6 +66,7 @@ type CreateContactInput struct {
 	// gap visible instead of leaving the question unasked.
 	Acquisition Acquisition
 	FullName    string
+	Salutation  *crmcontracts.Salutation
 	// Source names retain the complete imported identity rather than a typed label.
 	sourceNames bool
 	// CreatedFromActivityID is the record this create was read out of.
@@ -162,6 +163,12 @@ func (s *Store) readyContactCreate(ctx context.Context, in *CreateContactInput) 
 			return "", err
 		}
 	}
+	if err := refuseLongerList(contactEmailsField, "addresses", maxContactEmails, len(in.Emails), 0); err != nil {
+		return "", err
+	}
+	if err := refuseLongerList(contactPhonesField, "numbers", maxContactPhones, len(in.Phones), 0); err != nil {
+		return "", err
+	}
 	if err := parseContactContacts(in.Emails, in.Phones); err != nil {
 		return "", err
 	}
@@ -209,6 +216,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		// unjudged sender, and an advisor's record among them.
 		Visibility:   TypedCreateVisibility,
 		FullName:     in.FullName,
+		Salutation:   in.Salutation,
 		FirstName:    in.FirstName,
 		LastName:     in.LastName,
 		Title:        in.Title,
@@ -231,7 +239,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		return crmcontracts.Contact{}, err
 	}
 
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "contact", id.UUID, nil, map[string]any{"full_name": in.FullName}, in.auditEvidence)
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "contact", id.UUID, nil, contactCreateImage(in), in.auditEvidence)
 	if err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("audit contact create: %w", err)
 	}

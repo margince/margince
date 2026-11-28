@@ -41,7 +41,7 @@ func TestABootSetLegalReviewIsNotSeeded(t *testing.T) {
 	e := integration.Setup(t)
 	bindForTest(t, "MARGINCE_DEALS_LEGAL_REVIEW_ENABLED=true")
 	off := false
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return seedLegalReview(e.Admin(), tx, deployconfig.Seeds{LegalReview: &off})
 	}); err != nil {
 		t.Fatalf("seeding legal review off under a boot value: %v", err)

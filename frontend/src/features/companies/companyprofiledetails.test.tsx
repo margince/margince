@@ -97,7 +97,9 @@ describe("CompanyProfileDetails", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Change LinkedIn URL" }),
     );
-    const input = screen.getByRole("textbox", { name: "LinkedIn URL" });
+    const input = screen.getByRole("textbox", {
+      name: en["create.linkedinUrl"],
+    });
     await userEvent.clear(input);
     await userEvent.type(
       input,

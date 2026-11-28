@@ -15,6 +15,7 @@ import { type ReactNode, useState } from "react";
 import { createPortal } from "react-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import {
   openView,
   openViewStep,
@@ -114,7 +115,9 @@ describe("the View panel from the keyboard", () => {
     await user.tab();
     expect(order).toEqual(["Filters, None", "Sort, Default order"]);
     expect(document.activeElement).toBe(
-      within(panel).getByRole("button", { name: "Show archived" }),
+      within(panel).getByRole("button", {
+        name: englishCopy["list.showArchived"],
+      }),
     );
   });
 
@@ -127,7 +130,9 @@ describe("the View panel from the keyboard", () => {
       </>,
     );
     const panel = await openView(user);
-    within(panel).getByRole("button", { name: "Show archived" }).focus();
+    within(panel)
+      .getByRole("button", { name: englishCopy["list.showArchived"] })
+      .focus();
 
     await user.tab();
 

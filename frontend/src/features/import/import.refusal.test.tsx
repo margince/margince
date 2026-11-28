@@ -127,7 +127,7 @@ describe("a refused file says what is wrong in the reader's words", () => {
 
   it("says a file that could not be read at all, with no line", () => {
     refused({ field: "file", code: "unreadable" });
-    expect(body()).toBe("The file could not be read. Upload it again.");
+    expect(body()).toBe(en["import.refusal.unreadable"]);
   });
 
   it("names a column the header gives twice", () => {
@@ -204,8 +204,8 @@ describe("a refused file says what is wrong in the reader's words", () => {
         "“deals.csv” is not in the ZIP.",
       ],
       [
-        { reason: "type_not_importable", object: "project" },
-        "“project” is not a record type an import takes.",
+        { reason: "type_not_importable", object: "invoice" },
+        "“invoice” is not a record type an import takes.",
       ],
       [
         { reason: "spreadsheet" },
@@ -249,9 +249,7 @@ describe("a refused file says what is wrong in the reader's words", () => {
 
   it("lists every type an import takes", () => {
     refused({ field: "object", code: "unsupported" });
-    expect(body()).toBe(
-      "An import takes companies, contacts, leads, deals or activities. Choose the type the file holds.",
-    );
+    expect(body()).toBe(en["import.refusal.unsupported"]);
   });
 
   it("names two columns mapped to one field by the field's label", () => {
@@ -345,7 +343,7 @@ describe("a refused file says what is wrong in the reader's words", () => {
   });
 
   it("keeps the server's sentence for a code this build does not know", () => {
-    refused({ field: "file", code: "from_a_newer_server" });
+    refused({ field: "file", code: "from_a_newer_server" }); // problem-code:unknown-field exercises an unfamiliar server refusal
     expect(body()).toBe(SERVER_SENTENCE);
   });
 });

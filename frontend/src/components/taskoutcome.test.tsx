@@ -6,6 +6,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { en as englishCopy } from "../i18n/en";
 import {
   type Captured,
   createdActivity,
@@ -53,7 +54,7 @@ describe("the outcome of a task filed on no record", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Log without a record" }),
+      screen.getByRole("button", { name: englishCopy["tasks.log.noRecord"] }),
     );
     await user.type(await screen.findByLabelText("Subject *"), "Renewed");
     await user.click(screen.getByRole("button", { name: "Log" }));
@@ -80,7 +81,7 @@ describe("the outcome of a task filed on no record", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Log without a record" }),
+      screen.getByRole("button", { name: englishCopy["tasks.log.noRecord"] }),
     );
     await user.type(await screen.findByLabelText("Subject *"), "Renewed");
     await user.click(screen.getByRole("button", { name: "Log" }));
@@ -110,7 +111,7 @@ describe("the outcome of a task filed on no record", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Log without a record" }),
+      screen.getByRole("button", { name: englishCopy["tasks.log.noRecord"] }),
     );
     await user.type(await screen.findByLabelText("Subject *"), "Renewed");
     await user.click(screen.getByRole("button", { name: "Log" }));
@@ -152,7 +153,7 @@ describe("the outcome of a task filed on no record", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Log without a record" }),
+      screen.getByRole("button", { name: englishCopy["tasks.log.noRecord"] }),
     );
     const subject = await screen.findByLabelText("Subject *");
     await user.type(subject, "Renewed");

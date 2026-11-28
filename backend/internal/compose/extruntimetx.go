@@ -84,11 +84,10 @@ func (r *callRuntime) endIngest() {
 // Tx opens ONE transaction on the workspace the invocation belongs to, and
 // hands the callback the published seam over it.
 //
-// It goes through database.WithWorkspaceTx rather than a second mechanism this
-// surface invents, so the tier and the core open a transaction the same way and
-// there is one place to audit either. The workspace comes from scoped — the
-// INVOCATION's tenant, not whatever tenant the handler's own ctx happens to
-// carry.
+// It goes through database.WithTx rather than a second mechanism this surface
+// invents, so the tier and the core open a transaction the same way. The
+// workspace comes from scoped: the invocation's tenant, not whatever tenant the
+// handler's own ctx carries.
 //
 // Nothing in this database keys on a tenant: an installation holds one
 // workspace (ADR-0061), no table carries workspace_id and no policy reads one.
@@ -121,7 +120,7 @@ func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx ex
 		defer cancel()
 		err = errors.Join(err, audit.flush(flushCtx, r.deps.pool))
 	}()
-	return database.WithWorkspaceTx(ctx, r.deps.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, r.deps.pool, func(tx pgx.Tx) error {
 		// Re-checked inside: opening a transaction is a round trip, and a
 		// Runtime released during it must not reach the callback with a live
 		// handle. Refusing here rolls the (empty) transaction back.
@@ -132,7 +131,7 @@ func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx ex
 			return fn(ctx, extensionTx{
 				sql: sql,
 				core: extensionCore{
-					tx: tx, unattended: r.unattended, notifies: r.deliversNotices, deps: r.deps, authority: r.scoped, unit: r.unit, audit: audit,
+					tx: tx, unattended: r.unattended, actsAsSeat: r.actsAsSeat, notifies: r.deliversNotices, deps: r.deps, authority: r.scoped, unit: r.unit, audit: audit,
 				},
 				ledger: extensionLedger{tx: tx, namespace: namespace, authority: r.scoped},
 			})

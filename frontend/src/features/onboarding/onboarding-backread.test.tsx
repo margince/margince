@@ -115,10 +115,10 @@ describe("the scope preview", () => {
       },
     });
     render({ state: "none" });
-    await screen.findByRole("combobox", { name: "How far back" });
+    await screen.findByRole("combobox", { name: en["backfill.windowLabel"] });
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "How far back" }),
+      screen.getByRole("combobox", { name: en["backfill.windowLabel"] }),
       "10 years",
     );
     await screen.findByText(/Emails since/);
@@ -148,7 +148,7 @@ describe("the scope preview", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "How far back" }),
+      screen.getByRole("combobox", { name: en["backfill.windowLabel"] }),
       "1 year",
     );
     await waitFor(() =>
@@ -181,7 +181,7 @@ describe("the scope preview", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "How far back" }),
+      screen.getByRole("combobox", { name: en["backfill.windowLabel"] }),
       "1 year",
     );
 
@@ -191,9 +191,7 @@ describe("the scope preview", () => {
     expect(
       screen.queryByText(/messages in this period\./),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByText("Counting messages in this period…"),
-    ).toBeInTheDocument();
+    expect(screen.getByText(en["ob.backread.estimating"])).toBeInTheDocument();
 
     deferred.resolve?.(previewOf({ estimated_messages: 900 }));
     expect(
@@ -221,12 +219,12 @@ describe("the scope preview", () => {
     render({ state: "none" });
 
     expect(
-      await screen.findByText("Counting messages in this period…"),
+      await screen.findByText(en["ob.backread.estimating"]),
     ).toBeInTheDocument();
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "How far back" }),
+      screen.getByRole("combobox", { name: en["backfill.windowLabel"] }),
       "3 months",
     );
     const start = screen.getByRole("button", START);
@@ -243,7 +241,7 @@ describe("the scope preview", () => {
     render({ state: "none" });
 
     expect(
-      await screen.findByText("Estimated from the mailbox, not counted."),
+      await screen.findByText(en["ob.backread.estimateHeuristic"]),
     ).toBeInTheDocument();
   });
 
@@ -284,9 +282,12 @@ describe("the scope preview", () => {
     const starts: unknown[] = [];
     installFetchStub({
       [PREVIEW_ROUTE]: () =>
-        jsonResponse(
-          { code: "internal", detail: "The mailbox went quiet." },
-          502,
+        Response.json(
+          { code: "provider_unreachable", detail: "The mailbox went quiet." },
+          {
+            status: 502,
+            headers: { "Content-Type": "application/problem+json" },
+          },
         ),
       [START_ROUTE]: (body) => {
         starts.push(body);
@@ -344,14 +345,14 @@ describe("starting the read", () => {
     await screen.findByText("About 1,234 messages in this period.");
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "How far back" }),
+      screen.getByRole("combobox", { name: en["backfill.windowLabel"] }),
       "3 months",
     );
     await user.click(screen.getByRole("button", START));
 
     await waitFor(() => expect(starts).toEqual([{ window: "3m" }]));
     expect(
-      await screen.findByRole("heading", { name: "Importing mailbox history" }),
+      await screen.findByRole("heading", { name: en["ob.backread.running"] }),
     ).toBeInTheDocument();
   });
 
@@ -371,10 +372,11 @@ describe("starting the read", () => {
     render({ state: "cancelled", window: "12m", counts: { captured: 4 } });
 
     await user.click(
-      await screen.findByRole("button", { name: "Start a new import" }),
+      await screen.findByRole("button", { name: en["backfill.restart"] }),
     );
     expect(
-      screen.getByRole("combobox", { name: "How far back" }).textContent,
+      screen.getByRole("combobox", { name: en["backfill.windowLabel"] })
+        .textContent,
     ).toContain("1 year");
 
     await screen.findByText("About 90 messages in this period.");
@@ -400,11 +402,11 @@ describe("starting the read", () => {
       await screen.findByText(/The mailbox history import did not start/),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "Importing mailbox history" }),
+      screen.queryByRole("heading", { name: en["ob.backread.running"] }),
     ).not.toBeInTheDocument();
     // Still the setup view: the window pick is where the user was left.
     expect(
-      screen.getByRole("combobox", { name: "How far back" }),
+      screen.getByRole("combobox", { name: en["backfill.windowLabel"] }),
     ).toHaveTextContent("6 months");
   });
 
@@ -425,7 +427,7 @@ describe("starting the read", () => {
     });
 
     expect(
-      await screen.findByRole("heading", { name: "Importing mailbox history" }),
+      await screen.findByRole("heading", { name: en["ob.backread.running"] }),
     ).toBeInTheDocument();
     expect(starts).toEqual([]);
     expect(screen.queryByRole("button", START)).not.toBeInTheDocument();
@@ -469,11 +471,17 @@ describe("the tallies", () => {
       counts: { messages_scanned: 10, captured: 4 },
     });
 
-    expect(await screen.findByText("messages read")).toBeInTheDocument();
+    expect(
+      await screen.findByText(en["ob.backread.tallyMessages"]),
+    ).toBeInTheDocument();
     expect(screen.getByText("kept")).toBeInTheDocument();
     expect(screen.queryByText("ignored")).not.toBeInTheDocument();
-    expect(screen.queryByText("contacts found")).not.toBeInTheDocument();
-    expect(screen.queryByText("companies found")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(en["ob.backread.tallyContacts"]),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(en["ob.backread.tallyCompanies"]),
+    ).not.toBeInTheDocument();
     // The absent counts are absent, not zero.
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
@@ -491,7 +499,7 @@ describe("the tallies", () => {
       },
     });
 
-    await screen.findByRole("heading", { name: "Import results" });
+    await screen.findByRole("heading", { name: en["ob.backread.doneHeading"] });
     expect(screen.queryByText(/deal/i)).not.toBeInTheDocument();
   });
 });
@@ -552,7 +560,7 @@ describe("outcomes", () => {
     render({ state: "cancelled", counts: { messages_scanned: 40 } });
 
     expect(
-      await screen.findByText("Import stopped. Nothing was written."),
+      await screen.findByText(en["ob.backread.cancelled"]),
     ).toBeInTheDocument();
   });
 
@@ -584,12 +592,10 @@ describe("outcomes", () => {
     });
 
     expect(
-      await screen.findByText(
-        "Import stopped. Records already captured stay and wait for review in the Worklist.",
-      ),
+      await screen.findByText(en["ob.backread.cancelledPartial"]),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("Import stopped. Nothing was written."),
+      screen.queryByText(en["ob.backread.cancelled"]),
     ).not.toBeInTheDocument();
   });
 
@@ -663,7 +669,9 @@ describe("leaving", () => {
 
     await screen.findByText("About 1,234 messages in this period.");
     await user.click(
-      screen.getByRole("button", { name: "Continue without importing" }),
+      screen.getByRole("button", {
+        name: en["ob.conv.connect.continueNoImport"],
+      }),
     );
 
     expect(onDone).toHaveBeenCalledTimes(1);

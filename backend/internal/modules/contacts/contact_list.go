@@ -29,10 +29,12 @@ const contactNameColumn = "full_name"
 
 // ListContactsInput carries the contact list's contract parameters.
 type ListContactsInput struct {
-	Cursor  *string
-	Limit   *int
-	Query   *string
-	OwnerID *ids.UserID
+	Salutation *string
+	Cursor     *string
+	Offset     *int
+	Limit      *int
+	Query      *string
+	OwnerID    *ids.UserID
 	// OwnerTeamID narrows to a team's rows; Unassigned to the unowned queue.
 	// Both narrow the caller's row scope and never widen it — see
 	// storekit.OwnershipClause, which also refuses two of them at once.
@@ -171,7 +173,6 @@ func contactCommonFilters(in ListContactsInput) listFilters {
 		OwnerTeamID:     in.OwnerTeamID,
 		Unassigned:      in.Unassigned,
 		Query:           in.Query,
-		Cursor:          in.Cursor,
 		CustomFilters:   in.CustomFilters,
 		nameColumn:      contactNameColumn,
 		identifier:      storekit.ContactEmails,
@@ -184,12 +185,13 @@ func contactCommonFilters(in ListContactsInput) listFilters {
 func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmcontracts.Contact, storekit.Page, error) {
 	shared := contactCommonFilters(in)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Contact]{
-		entity:    contactEntity,
-		firstPage: in.Cursor == nil || *in.Cursor == "",
-		columns:   contactColumns,
-		fields:    contactListFields,
-		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-			where, err := shared.clauses(ctx, active, sorted, arg)
+		entity:  contactEntity,
+		cursor:  in.Cursor,
+		offset:  in.Offset,
+		columns: contactColumns,
+		fields:  contactListFields,
+		filters: func(ctx context.Context, active []fieldcatalog.Column, arg func(any) int) ([]string, error) {
+			where, err := shared.clauses(active, arg)
 			if err != nil {
 				return nil, err
 			}
@@ -199,6 +201,9 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 			}
 			if shared != "" {
 				where = append(where, shared)
+			}
+			if clause := salutationListClause(contactEntity, in.Salutation, arg); clause != "" {
+				where = append(where, clause)
 			}
 			if clause := relationshipMarkClause(in, arg); clause != "" {
 				where = append(where, clause)

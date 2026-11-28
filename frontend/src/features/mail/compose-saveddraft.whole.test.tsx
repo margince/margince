@@ -8,6 +8,7 @@ import {
 } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { UTC_ZONE } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import { installComposeClock, pressSend } from "./compose.testkit";
 import {
   calls,
@@ -48,13 +49,16 @@ describe("a saved draft put back whole", () => {
   it("brings back its files, its reason for contact and its send time", async () => {
     const sent = stubRoutes({ "GET /mail-drafts": () => jsonResponse(WHOLE) });
     render(composer(vi.fn()));
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
 
     expect(screen.getByText("seat-pricing.pdf")).toBeTruthy();
     expect(
-      screen.getByRole("combobox", { name: "Reason for contact" }).textContent,
-    ).toContain("They asked for it");
-    expect(screen.getByRole("button", { name: "Schedule send" })).toBeTruthy();
+      screen.getByRole("combobox", { name: englishCopy["compose.why"] })
+        .textContent,
+    ).toContain(englishCopy["compose.why.asked"]);
+    expect(
+      screen.getByRole("button", { name: englishCopy["compose.schedule"] }),
+    ).toBeTruthy();
     expect(screen.getByText(/^Sends /)).toBeTruthy();
     // What came back is what the draft holds, so nothing is written again.
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
@@ -85,7 +89,7 @@ describe("a saved draft put back whole", () => {
     render(composer(vi.fn()));
 
     expect(
-      await screen.findByText("Agent draft restored. Read it before sending."),
+      await screen.findByText(englishCopy["compose.savedDraftByAgent"]),
     ).toBeTruthy();
     expect(screen.getByText("1 file could not be restored.")).toBeTruthy();
     expect(screen.getByText("seat-pricing.pdf")).toBeTruthy();
@@ -157,7 +161,7 @@ describe("a composer opened with a caller's own words", () => {
     );
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Reason for contact" }),
+      screen.getByRole("combobox", { name: englishCopy["compose.why"] }),
       "They asked for it",
     );
 

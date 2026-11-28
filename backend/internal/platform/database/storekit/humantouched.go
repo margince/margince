@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -52,4 +53,43 @@ func MachineCreatedUntouched(ctx context.Context, tx pgx.Tx, entityType string, 
 	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log made WHERE made.entity_type=@kind AND made.entity_id=@id AND made.action='create' AND made.actor_type IN ('system','agent') AND made.passport_id IS NULL)
  AND NOT EXISTS (SELECT 1 FROM audit_log worked WHERE worked.entity_type=@kind AND worked.entity_id=@id AND `+AuditForAUser("worked")+`)`, pgx.NamedArgs{"kind": entityType, "id": id}).Scan(&pristine)
 	return pristine, err
+}
+
+// HumanTouchedError refuses an archive whose caller asked for it only while the
+// record was untouched since an import landed it. It is a conflict, so an undo
+// keeps the record and says why instead of stopping.
+type HumanTouchedError struct {
+	EntityType string
+	EntityID   ids.UUID
+}
+
+func (e *HumanTouchedError) Error() string {
+	return fmt.Sprintf("a colleague has changed this %s since it was imported, so it was left alone", e.EntityType)
+}
+
+// Is makes the refusal a conflict for errors.Is.
+func (e *HumanTouchedError) Is(target error) bool { return target == apperrors.ErrConflict }
+
+// ArchiveGuard is a precondition on an archive: the record must not have been
+// worked on by a colleague since the import landed it.
+type ArchiveGuard struct{ since time.Time }
+
+// NotTouchedByHumanSince guards an archive against a record a user or their agent
+// has acted on after `at`.
+func NotTouchedByHumanSince(at time.Time) ArchiveGuard { return ArchiveGuard{since: at} }
+
+// RefuseIfHumanActedSince asks each guard inside the caller's transaction, after
+// the row's write check took the lock. A colleague's write then lands wholly
+// before the question or wholly after the commit.
+func RefuseIfHumanActedSince(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, guards ...ArchiveGuard) error {
+	for _, guard := range guards {
+		touched, err := HumanActedSince(ctx, tx, entityType, id, guard.since)
+		if err != nil {
+			return err
+		}
+		if touched {
+			return &HumanTouchedError{EntityType: entityType, EntityID: id}
+		}
+	}
+	return nil
 }

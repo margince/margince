@@ -6,6 +6,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { useToast } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { steppedClock } from "../../testing/steppedclock";
@@ -70,14 +71,20 @@ it.each([true, false])(
       }),
     );
     render(<Row />);
-    await screen.findByText("Your HTML signature");
-    await user.click(screen.getByRole("button", { name: "Edit signature" }));
+    await screen.findByText(englishCopy["settings.signatureOwnHtml"]);
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["settings.signatureEdit"],
+      }),
+    );
     const dialog = await screen.findByRole("dialog");
     const box = within(dialog).getByRole<HTMLTextAreaElement>("textbox", {
-      name: "HTML signature",
+      name: englishCopy["settings.signatureHtmlLabel"],
     });
     expect(box.value).toBe(raw);
-    const frame = await within(dialog).findByTitle("Signature preview");
+    const frame = await within(dialog).findByTitle(
+      englishCopy["settings.signaturePreview"],
+    );
     expect(frame.getAttribute("srcdoc")).toContain("<b>Server sanitized</b>");
     expect(frame.getAttribute("srcdoc")).not.toContain("onclick");
     expect(frame.getAttribute("srcdoc")).not.toContain("<script>");
@@ -135,10 +142,14 @@ it("keeps the current edit open while its save is pending", async () => {
     }),
   );
   render(<Row />);
-  await screen.findByText("Your HTML signature");
-  await user.click(screen.getByRole("button", { name: "Edit signature" }));
+  await screen.findByText(englishCopy["settings.signatureOwnHtml"]);
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["settings.signatureEdit"] }),
+  );
   const dialog = await screen.findByRole("dialog");
-  const box = within(dialog).getByRole("textbox", { name: "HTML signature" });
+  const box = within(dialog).getByRole("textbox", {
+    name: englishCopy["settings.signatureHtmlLabel"],
+  });
   await user.type(box, " Updated");
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(writing).toBe(true));
@@ -147,8 +158,9 @@ it("keeps the current edit open while its save is pending", async () => {
       .disabled,
   ).toBe(true);
   expect(
-    screen.getByRole<HTMLButtonElement>("button", { name: "Edit signature" })
-      .disabled,
+    screen.getByRole<HTMLButtonElement>("button", {
+      name: englishCopy["settings.signatureEdit"],
+    }).disabled,
   ).toBe(true);
   await user.keyboard("{Escape}");
   expect(screen.getByRole("dialog")).toBe(dialog);
@@ -182,7 +194,9 @@ it("keeps Save disabled when changing format would submit the same empty HTML", 
   );
   render(<Row />);
   await screen.findByText("Saved plain");
-  await user.click(screen.getByRole("button", { name: "Edit signature" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["settings.signatureEdit"] }),
+  );
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "HTML" }));
   expect(
@@ -242,14 +256,18 @@ it("takes the Gmail signature into the draft and saves it only on Save", async (
   );
   render(<Row />);
   await user.click(
-    await screen.findByRole("button", { name: "Edit signature" }),
+    await screen.findByRole("button", {
+      name: englishCopy["settings.signatureEdit"],
+    }),
   );
   const dialog = await screen.findByRole("dialog");
   await user.click(
-    within(dialog).getByRole("button", { name: "Use my Gmail signature" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["settings.signatureUseGmail"],
+    }),
   );
   const box = await within(dialog).findByRole<HTMLTextAreaElement>("textbox", {
-    name: "HTML signature",
+    name: englishCopy["settings.signatureHtmlLabel"],
   });
   expect(box.value).toBe("<div><b>Rep</b><br>Demo GmbH</div>");
   expect(within(dialog).getByText(/rep@demo\.test/)).toBeTruthy();
@@ -273,15 +291,21 @@ it("says to reconnect when the grant cannot read Gmail's settings", async () => 
   gmailBackend({ state: "needs_reconnect" }, writes);
   render(<Row />);
   await user.click(
-    await screen.findByRole("button", { name: "Edit signature" }),
+    await screen.findByRole("button", {
+      name: englishCopy["settings.signatureEdit"],
+    }),
   );
   const dialog = await screen.findByRole("dialog");
   await user.click(
-    within(dialog).getByRole("button", { name: "Use my Gmail signature" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["settings.signatureUseGmail"],
+    }),
   );
   expect(await within(dialog).findByText(/Press Reconnect/)).toBeTruthy();
   expect(
-    within(dialog).queryByRole("textbox", { name: "HTML signature" }),
+    within(dialog).queryByRole("textbox", {
+      name: englishCopy["settings.signatureHtmlLabel"],
+    }),
   ).toBeNull();
   expect(writes).toEqual([]);
 });

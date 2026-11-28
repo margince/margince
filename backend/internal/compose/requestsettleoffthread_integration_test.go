@@ -63,7 +63,7 @@ func (o *owedEnv) offered(t *testing.T, request ids.UUID) (activities.RepliedReq
 func (o *owedEnv) evidence(t *testing.T, candidate activities.RepliedRequest) []threadMessage {
 	t.Helper()
 	var messages []threadMessage
-	if err := database.WithWorkspaceTx(o.judge(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.judge(), o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		messages, err = settleEvidence(o.judge(), tx, candidate, time.Now())
 		return err
@@ -263,7 +263,7 @@ func TestADayTieReplyFiledFirstReachesTheModel(t *testing.T) {
 	if o.threadKey(t, reply) != o.threadKey(t, request) {
 		t.Fatal("capture left the reply off the request's thread; the fixture proves nothing")
 	}
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity
 			SET occurred_at = $3, occurred_precision = CASE WHEN id = $1 THEN 'day' ELSE occurred_precision END
 			WHERE id IN ($1, $2)`, request, reply, occurredday.Anchor(o.now.Add(-72*time.Hour)))
@@ -389,7 +389,7 @@ func TestSettlementReadsTheFilesOnTheActualAnswer(t *testing.T) {
 	actor := o.e.As(o.owner, []ids.UUID{o.e.Team1}, integration.AdminPerms)
 	store := comms.NewStore(o.e.DB(), func() time.Time { return o.now }, o.e.Activities)
 	var delivery ids.UUID
-	if err := database.WithWorkspaceTx(actor, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(actor, o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		delivery, err = store.StageTx(actor, tx, comms.StageInput{ActivityID: ids.From[ids.ActivityKind](reply), Provider: "gmail", MessageID: ids.NewV7().String() + "@ws.example", Recipients: []string{"pat@customer.example"}, Attachments: []comms.OutboundFile{{AttachmentID: ids.UUID(file.Id), Filename: "report.txt"}}})
 		return err

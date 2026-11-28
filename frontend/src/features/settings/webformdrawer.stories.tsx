@@ -22,7 +22,7 @@ const meta: Meta<typeof WebFormDrawer> = {
 export default meta;
 type Story = StoryObj<typeof WebFormDrawer>;
 
-function setup(linked: boolean) {
+function setup(linked: boolean, notifyOwner = false) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(INQUIRY_GRANTS),
@@ -34,6 +34,7 @@ function setup(linked: boolean) {
         <WebFormDrawer
           form={{
             ...INQUIRY_FORM,
+            notify_owner: notifyOwner,
             handling_automation_id: linked
               ? INQUIRY_FORM.handling_automation_id
               : null,
@@ -45,4 +46,5 @@ function setup(linked: boolean) {
   };
 }
 export const LegacyOwner: Story = { render: setup(false) };
+export const OwnerNotified: Story = { render: setup(false, true) };
 export const LinkedInquiryPolicy: Story = { render: setup(true) };

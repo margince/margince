@@ -91,6 +91,42 @@ func TestEveryImageShapeTheTreeUsesIsFollowed(t *testing.T) {
 			func caller() { w(map[string]any{"from_caller": 1}) }`,
 			want: "from_caller",
 		},
+
+		{
+			name: "a tagged record struct",
+			body: "type snapshot struct { CustomerID string `json:\"customer_id\"`; Hidden string `json:\"-\"` }; func w(){ _=k.AuditEvent(ctx,tx,\"update\",\"contact\",1,snapshot{}) }",
+			want: "customer_id",
+		},
+		{
+			name: "a method's returned map",
+			body: `type builder struct{};func(builder) image()map[string]any{return map[string]any{"from_method":1}};func w(){b:=builder{};_=k.AuditEvent(ctx,tx,"update","contact",1,b.image())}`,
+			want: "from_method",
+		},
+		{
+			name: "a map filled after allocation",
+			body: `func w(){after:=map[string]any{};after["later_key"]=1;_=k.AuditEvent(ctx,tx,"update","contact",1,after)}`,
+			want: "later_key",
+		},
+		{
+			name: "a returned local across two builders",
+			body: `func image()map[string]any{out:=map[string]any{"returned_local":1};return out};func outer()map[string]any{return image()};func w(){_=k.AuditEvent(ctx,tx,"update","contact",1,outer())}`,
+			want: "returned_local",
+		},
+		{
+			name: "a map in a tuple return",
+			body: `func image()(map[string]any,error){return map[string]any{"tuple_key":1},nil};func w(){after,_:=image();_=k.AuditEvent(ctx,tx,"update","contact",1,after)}`,
+			want: "tuple_key",
+		},
+		{
+			name: "a local closure's returned image",
+			body: `func w(){change:=func(on bool)map[string]any{return map[string]any{"closure_key":on}};_=k.AuditEvent(ctx,tx,"update","contact",1,change(true))}`,
+			want: "closure_key",
+		},
+		{
+			name: "a map reassigned through a helper",
+			body: `func narrow(in map[string]any)map[string]any{return in};func w(){after:=map[string]any{"previous_assignment":1};after=narrow(after);_=k.AuditEvent(ctx,tx,"update","contact",1,after)}`,
+			want: "previous_assignment",
+		},
 		{
 			name: "a small builder's return",
 			body: `func w() { _ = k.AuditEvent(ctx, tx, "update", "contact", 1, image()) }

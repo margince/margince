@@ -14,6 +14,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   day,
   echoView,
@@ -145,7 +146,9 @@ describe("a bounced message can be sent again", () => {
 
     await user.click(await screen.findByRole("button", { name: "Send again" }));
     await user.type(
-      await screen.findByRole("textbox", { name: "Corrected address" }),
+      await screen.findByRole("textbox", {
+        name: englishCopy["worklist.verb.sendAgainAddress"],
+      }),
       "new@buyer.test",
     );
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -177,14 +180,18 @@ describe("a bounced message can be sent again", () => {
 
     await user.click(await screen.findByRole("button", { name: "Send again" }));
     await user.type(
-      await screen.findByRole("textbox", { name: "Corrected address" }),
+      await screen.findByRole("textbox", {
+        name: englishCopy["worklist.verb.sendAgainAddress"],
+      }),
       "new@buyer.test",
     );
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByText(/has not agreed to receive/)).toBeTruthy();
     expect(
-      screen.getByRole("textbox", { name: "Corrected address" }),
+      screen.getByRole("textbox", {
+        name: englishCopy["worklist.verb.sendAgainAddress"],
+      }),
     ).toBeTruthy();
   });
 

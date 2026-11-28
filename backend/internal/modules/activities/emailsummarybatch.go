@@ -165,3 +165,42 @@ func readAdmittedByID(
 	}
 	return admitted, nil
 }
+
+// RowEmailSummary also serves composed contact views, which assemble activity
+// rows outside this scanner. Withheld rows retain their access status.
+func RowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
+	if a.Kind != crmcontracts.ActivityKindEmail {
+		return nil
+	}
+	withheld := a.ContentState != nil && *a.ContentState == crmcontracts.ActivityContentStateWithheld
+	summary := crmcontracts.EmailSummary{
+		ActivityId:        a.Id,
+		OccurredAt:        a.OccurredAt,
+		OccurredPrecision: a.OccurredPrecision,
+		DisplayStatus:     crmcontracts.EmailAccessStatusWithheld,
+		Move:              crmcontracts.EmailSummaryMoveNone,
+	}
+	if a.Version != nil {
+		summary.Version = *a.Version
+	}
+	if a.Direction != nil {
+		d := crmcontracts.EmailSummaryDirection(*a.Direction)
+		summary.Direction = &d
+	}
+	if withheld {
+		return &summary
+	}
+	// This projection cannot prove record-wide visibility without a transaction.
+	// WithEmailRowFacts may widen the label for a whole page.
+	summary.DisplayStatus = crmcontracts.EmailAccessStatusTeam
+	if a.Audience != nil {
+		summary.DisplayStatus = narrowStatusForAudience(*a.Audience)
+	}
+	summary.Subject = a.Subject
+	if a.Body != nil {
+		if preview := EmailSummaryText(*a.Body, deref(a.Subject)); preview != "" {
+			summary.Preview = &preview
+		}
+	}
+	return &summary
+}

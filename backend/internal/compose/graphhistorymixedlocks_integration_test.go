@@ -75,7 +75,7 @@ func TestAMixedGraphBatchLocksItsHistoricalTargetsBeforeItsFirstFold(t *testing.
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
 	}
-	err = database.WithWorkspaceTx(ctx, b.env.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, b.env.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `SELECT contact_id FROM graph_interaction_edge WHERE contact_id=@contact FOR UPDATE NOWAIT`, pgx.NamedArgs{"contact": contactsIDs[1]})
 		return err
 	})
@@ -93,7 +93,7 @@ func TestAMixedGraphBatchLocksItsHistoricalTargetsBeforeItsFirstFold(t *testing.
 	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { _, err := search.DrainPendingGraphTx(system, tx, 100); return err }); err != nil {
+	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { _, err := search.DrainPendingGraphTx(system, tx, 100); return err }); err != nil {
 		t.Fatal(err)
 	}
 	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE count_total=2`); got != 2 {

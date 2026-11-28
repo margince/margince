@@ -122,7 +122,7 @@ func TestTheForecastReadsTheSharedExpression(t *testing.T) {
 	// The same deal through the SQL expression the morning brief and the report
 	// engine share, read directly so a change to either spelling shows up here.
 	var fromExpr int64
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT `+
 			deals.BaseValueSQL("$1", "'EUR'", "d")+
 			` FROM deal d WHERE d.currency = 'VND'`,
@@ -175,7 +175,7 @@ func TestClosingADealFreezesTheScaledAmount(t *testing.T) {
 	}
 
 	var frozen *int64
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin,
 			`SELECT amount_minor_base FROM deal WHERE id = $1`, deal).Scan(&frozen)
 	}); err != nil {
@@ -196,7 +196,7 @@ func TestClosingADealFreezesTheScaledAmount(t *testing.T) {
 	if _, err := e.Deals.AdvanceDeal(admin, deal, deals.AdvanceDealInput{ToStageID: open}); err != nil {
 		t.Fatalf("reopening the deal: %v", err)
 	}
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin,
 			`SELECT amount_minor_base FROM deal WHERE id = $1`, deal).Scan(&frozen)
 	}); err != nil {

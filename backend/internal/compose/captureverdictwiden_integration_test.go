@@ -176,7 +176,7 @@ func TestAHeldThreadsUnstampedMessagesAreNotPublishedByASenderVerdict(t *testing
 // thread, leaving the message's own import row unstamped.
 func holdThreadFor(t *testing.T, e *integration.Env, activityID, seat ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		// The seeded mail carries no thread of its own, so the conversation this
 		// verdict is about has to be named first.
 		if _, err := tx.Exec(context.Background(),
@@ -352,7 +352,7 @@ func queueImport(batch *pgx.Batch, activityID, seat ids.UUID, posture string, ve
 // have left it: settled on the ledger, with no release behind it.
 func settleDisposition(t *testing.T, e *integration.Env, id ids.UUID, status, kind string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET status = $2, kind = $3, resolved_at = now()
@@ -366,7 +366,7 @@ func settleDisposition(t *testing.T, e *integration.Env, id ids.UUID, status, ki
 
 func audienceAndReason(t *testing.T, e *integration.Env, activityID ids.UUID) (audience, reason string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT audience, coalesce(audience_reason, '') FROM activity WHERE id = $1`,
 			activityID).Scan(&audience, &reason)
@@ -380,7 +380,7 @@ func audienceAndReason(t *testing.T, e *integration.Env, activityID ids.UUID) (a
 func importPosture(t *testing.T, e *integration.Env, activityID ids.UUID) string {
 	t.Helper()
 	var posture string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT posture_at_import FROM capture_import WHERE activity_id = $1`,
 			activityID).Scan(&posture)

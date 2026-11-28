@@ -688,6 +688,31 @@ Give **every** language the installation ships (`en`, `de`, `vi`),
 or the generator refuses. A reader of the missing one would get an empty screen. Keys outside your space are
 refused too: your own copy never writes over core text. To change core wording, use an override, below. The steps alone are in [override-core-wording-from-an-extension.md](override-core-wording-from-an-extension.md).
 
+### Show the screen on another origin's page
+
+A browser extension's panel can embed your screen in an `<iframe>`. Point it at `/embed/#/ext/<name>`. On
+that path the web app draws your screen and nothing around it: no menu, no command palette and no
+onboarding. Any other address on `/embed/` reloads at `/`, so an `<iframe>` can never show a core screen.
+A reader with no session sees a card that opens Margince in a new tab. A provider sign-in does not run
+inside an `<iframe>`, so they sign in there and come back.
+
+The web image refuses to be embedded until the operator allows an origin. Its nginx reads every
+`/etc/nginx/margince/*.conf` in the `/embed/` location. One line allows one origin:
+
+```nginx
+set $embed_ancestors "chrome-extension://<extension id>";
+```
+
+In the release's Compose files, mount a folder at `/etc/nginx/margince` in the `web` service. The value
+goes into that page's `frame-ancestors`. List several origins with spaces between them. Every other page
+keeps `frame-ancestors 'none'` and `X-Frame-Options: DENY`.
+
+The session cookie is `SameSite=Strict`, so a browser sends it to the `<iframe>` only when it counts the
+page as same-site. Chrome does that for an extension page with host permission for the Margince origin.
+A plain web page on another site gets the sign-in card each time. The `<iframe>` and its host send each
+other messages with `postMessage`. Accept a message only when `event.source` is `window.parent`, and
+answer to `location.ancestorOrigins[0]`.
+
 ## Override core wording
 
 An installation can change the text of the screens without forking core, for example "Deal" becomes "Opportunity". Put one flat
@@ -1349,8 +1374,11 @@ func withdrawFiling(ctx context.Context, rt extension.Runtime, d extension.Deliv
 subscription gets its own consumer group (`cg:ext-<unit>-<subscription>`), started in the worker role. What to
 plan for:
 
-- **A delivery has no one behind it.** The caller is the zero `Caller`, so `tx.Core()` refuses. Your own
-  tables stay open to writes, audits and events.
+- **A delivery runs as the unit's service member.** Say the unit has a live
+  [service member](declare-a-service-member.md) that holds one of its secrets. Then `rt.Caller()` names it.
+  `tx.Core()` is checked against its grants and row scope, so a record it cannot read is `ErrNotFound`. With
+  none, the caller is the zero `Caller` and `tx.Core()` refuses, and your own tables stay open either way. See
+  [React to a new company](land-companies-and-deals-from-an-extension.md#react-to-a-new-company).
 - **The bus may deliver an event twice.** The core drops the second delivery when it can see it (the same event to
   the same subscription). But that is a cache, and it cannot cover a crash between your work and the `ack`.
   Make the handler safe to run twice, keyed on `EventID`.

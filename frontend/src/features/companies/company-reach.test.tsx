@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { CompanyReachCard } from "./company-reach";
@@ -77,8 +78,13 @@ it("names each colleague, where their connections work and their count, in the o
         ),
     ),
   ).toEqual([
-    ["Dana Okonjo", "IT · 2, Finance · 2", "3", "Ask for an introduction"],
-    ["Minh Tran", "", "1", "Ask for an introduction"],
+    [
+      "Dana Okonjo",
+      "IT · 2, Finance · 2",
+      "3",
+      englishCopy["companyReach.ask"],
+    ],
+    ["Minh Tran", "", "1", englishCopy["companyReach.ask"]],
   ]);
 });
 
@@ -199,7 +205,7 @@ it("asks a colleague for an introduction at the account in the function the read
   await user.click(within(dialog).getByRole("combobox"));
   await user.click(await screen.findByRole("option", { name: "IT · 2" }));
   await user.click(
-    within(dialog).getByRole("button", { name: "Draft message" }),
+    within(dialog).getByRole("button", { name: englishCopy["co.intro.write"] }),
   );
 
   expect(

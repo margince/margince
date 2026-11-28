@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { CoverageBand } from "./summary";
 
 type Coverage = components["schemas"]["CompanyCoverage"];
@@ -132,7 +133,9 @@ test("says nobody has answered rather than naming a fallback", async () => {
     />,
   );
 
-  expect(await screen.findByText("Contacted · no replies")).not.toBeNull();
+  expect(
+    await screen.findByText(englishCopy["co.contacts.band.noWayInWhy"]),
+  ).not.toBeNull();
 });
 
 // A bare "6" says nothing about an account until the reader knows whether it
@@ -185,7 +188,7 @@ test("the band reads the roster size, who answers, the open role and the way in"
   const band = await screen.findByTestId("coverage-band");
   expect(band.childElementCount).toBe(4);
   expect(band.closest("section")?.getAttribute("aria-label")).toBe(
-    "Coverage at this company",
+    englishCopy["co.contacts.band.label"],
   );
 });
 
@@ -217,7 +220,9 @@ test("names the missing critical role", async () => {
   expect(screen.getByTestId("gap-champion")).not.toBeNull();
   // Each column is headed like any other label and counts the contacts in it.
   expect(screen.getByText("Champion")).not.toBeNull();
-  expect(screen.getByText("Economic buyer")).not.toBeNull();
+  expect(
+    screen.getByText(englishCopy["co.roleLabel.economic_buyer"]),
+  ).not.toBeNull();
   expect(screen.getByText("1 contact")).not.toBeNull();
   expect(screen.queryByText(/^\d+ deals?$/)).toBeNull();
 });
@@ -236,7 +241,9 @@ test("tells an unreadable committee apart from an empty one", async () => {
   );
 
   expect(await screen.findByText("Restricted")).not.toBeNull();
-  expect(await screen.findByText("Deals not visible")).not.toBeNull();
+  expect(
+    await screen.findByText(englishCopy["co.contacts.band.committeeUnreadWhy"]),
+  ).not.toBeNull();
   expect(screen.queryByText(/No champion/)).toBeNull();
 });
 
@@ -310,7 +317,9 @@ test("tells no-open-deal apart from withheld", async () => {
     />,
   );
 
-  expect(await screen.findByText("No open deal")).not.toBeNull();
+  expect(
+    await screen.findByText(englishCopy["co.contacts.band.noOpenDeal"]),
+  ).not.toBeNull();
   expect(screen.queryByText("Restricted")).toBeNull();
 });
 
@@ -327,7 +336,9 @@ test("does not claim a complete committee when seats are hidden", async () => {
     />,
   );
 
-  expect(await screen.findByText("Partly hidden")).not.toBeNull();
+  expect(
+    await screen.findByText(englishCopy["co.contacts.band.committeePartial"]),
+  ).not.toBeNull();
   expect(screen.queryByText("Complete")).toBeNull();
 });
 
@@ -409,7 +420,7 @@ test("says the reading failed rather than vanishing", async () => {
 
   expect(await screen.findByText("Unavailable")).not.toBeNull();
   expect(
-    await screen.findByText("Load failed · list unaffected"),
+    await screen.findByText(englishCopy["co.contacts.band.unavailableWhy"]),
   ).not.toBeNull();
 });
 
@@ -499,7 +510,9 @@ test("marks a seat the product read, and only that one", async () => {
   );
 
   await screen.findByText("Dietmar Rietsch");
-  const marks = screen.getAllByText("Read from their messages");
+  const marks = screen.getAllByText(
+    englishCopy["co.contacts.board.readFromMessages"],
+  );
   expect(marks).toHaveLength(1);
   // The mark sits on the seat that was read, not the one that was typed.
   expect(marks[0]?.closest("[data-suggested='true']")).not.toBeNull();

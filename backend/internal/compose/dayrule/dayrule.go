@@ -115,7 +115,7 @@ func zoneIn(ctx context.Context, pool *pgxpool.Pool, surface occurredday.Surface
 		return zone, nil
 	}
 	var loc *time.Location
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		loc, err = Zone(ctx, tx, surface, ActingUser(ctx))
 		return err
@@ -136,7 +136,7 @@ func ActingUser(ctx context.Context) ids.UUID {
 // reads ungated: which day it is does not need the settings grant.
 func InstallationZone(ctx context.Context, pool *pgxpool.Pool) (*time.Location, error) {
 	var name string
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		name, err = identity.TimezoneAppliedTx(ctx, tx)
 		return err

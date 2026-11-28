@@ -42,8 +42,53 @@ const check = (found: readonly string[], name: string) =>
   found.filter((line) => line.startsWith(`${name}: `));
 
 describe("the vi copy checks, over planted catalogs", () => {
+  it("distinguishes archive from retention and storage", () => {
+    const english = {
+      archive: "Archive activity",
+      archived: "This record is archived",
+      retention: "Retention",
+      storage: "File storage",
+      mixed: "Archived records under a legal hold keep their retention period",
+    };
+    expect(
+      findings(
+        {
+          archive: "Chuyển hoạt động vào kho lưu trữ",
+          archived: "Hồ sơ trong kho lưu trữ",
+          retention: "Lưu trữ",
+          storage: "Lưu trữ tệp",
+          mixed:
+            "Mục trong kho lưu trữ giữ thời hạn lưu trữ và lưu trữ pháp lý",
+        },
+        english,
+      ),
+    ).toEqual([]);
+    expect(
+      check(
+        findings(
+          { archive: "Lưu trữ hoạt động", archived: "Hồ sơ đã lưu trữ" },
+          english,
+        ),
+        "uses kho lưu trữ for archive and reserves lưu trữ for retention",
+      ),
+    ).toHaveLength(2);
+  });
+
   it("pass clean copy", () => {
     expect(findings({ "a.b": "Lưu thay đổi" })).toEqual([]);
+  });
+
+  it("passes a range of figures joined by a hyphen", () => {
+    expect(findings({ "a.b": "{first}-{last} trong {count}" })).toEqual([]);
+  });
+
+  it("refuses a range whose hyphen is spaced", () => {
+    expect(
+      check(
+        findings({ "a.b": "{first} - {last} trong {count}" }),
+        "uses no en dash, em dash, double hyphen or spaced hyphen",
+      ),
+    ).toHaveLength(1);
   });
 
   it.each([
@@ -67,6 +112,11 @@ describe("the vi copy checks, over planted catalogs", () => {
     ["says thất bại only in a sentence, never in a short value", "Thất bại"],
   ])("refuses copy that breaks %s", (name, value) => {
     expect(check(findings({ "a.b": value }), name)).toHaveLength(1);
+  });
+
+  it("keeps Thất bại as a lost deal's outcome", () => {
+    expect(findings({ "deals.statusLost": "Thất bại" })).toEqual([]);
+    expect(findings({ "a.b": "{lost} thất bại" })).toEqual([]);
   });
 
   it("keeps the ordinary compound of a retired word", () => {

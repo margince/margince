@@ -43,7 +43,7 @@ func seedDealActions(t *testing.T, e *Env, owner ids.UUID, n int, action, before
 	t.Helper()
 	pipeline, stage := ids.NewV7(), ids.NewV7()
 	deals := make([]ids.UUID, n)
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `INSERT INTO pipeline (id, name, is_default, position)
 			VALUES ($1, 'Opened line fixture', false, 92)`, pipeline); err != nil {

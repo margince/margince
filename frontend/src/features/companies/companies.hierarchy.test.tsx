@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { emptyRollup, jsonResponse } from "../../testing/company.fixtures";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { HierarchyRollupPanel } from "./companies.hierarchy";
@@ -76,8 +77,10 @@ describe("HierarchyRollupPanel periods", () => {
     renderWithQueryClient(<HierarchyRollupPanel companyId="o-1" />);
 
     await waitFor(() => expect(screen.getByText("€1,200")).toBeTruthy());
-    expect(screen.getByText("Won this quarter")).toBeTruthy();
-    expect(screen.getByText("Weighted deal value today")).toBeTruthy();
+    expect(screen.getByText(englishCopy["rollup.closedWon"])).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["rollup.weightedPipeline"]),
+    ).toBeTruthy();
     expect(
       screen.getByText(
         "Won deals count in Q2 2026 by the day they were won. The weighted deal value is the open deals today.",
@@ -93,7 +96,9 @@ describe("HierarchyRollupPanel periods", () => {
     await waitFor(() => expect(screen.getByText("€1,200")).toBeTruthy());
 
     await user.click(
-      screen.getByRole("combobox", { name: "Period for won deals" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["rollup.period.label"],
+      }),
     );
     await user.click(screen.getByRole("option", { name: "Year" }));
 
@@ -109,7 +114,7 @@ describe("HierarchyRollupPanel periods", () => {
     renderWithQueryClient(<HierarchyRollupPanel companyId="o-1" />);
     await waitFor(() => expect(screen.getByText("€1,200")).toBeTruthy());
     const forward = screen.getByRole("button", {
-      name: "The next period has not begun",
+      name: englishCopy["rollup.period.nextNotBegun"],
     });
     expect((forward as HTMLButtonElement).disabled).toBe(true);
 
@@ -179,7 +184,9 @@ describe("HierarchyRollupPanel while a new grain loads", () => {
     await waitFor(() => expect(screen.getByText("€1,200")).toBeTruthy());
 
     await user.click(
-      screen.getByRole("combobox", { name: "Period for won deals" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["rollup.period.label"],
+      }),
     );
     await user.click(screen.getByRole("option", { name: "Year" }));
     const back = screen.getByRole("button", { name: "Show Q1 2026" });

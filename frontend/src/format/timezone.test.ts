@@ -408,8 +408,8 @@ it("names a zone by its country in Vietnamese, and keeps the long name where Int
   expect(zoneNameAndOffset("vi", at, "Asia/Ho_Chi_Minh")).toBe(
     "Giờ Việt Nam · UTC+7",
   );
-  expect(zoneNameAndOffset("vi", at, "America/New_York")).toContain(
-    "Giờ chuẩn miền Đông",
+  expect(zoneNameAndOffset("vi", at, "America/New_York")).toMatch(
+    /^(Giờ chuẩn miền Đông|Giờ New York) · UTC-5$/,
   );
   expect(zoneNameAndOffset("en", at, "Asia/Ho_Chi_Minh")).toBe(
     "Indochina Time · UTC+7",

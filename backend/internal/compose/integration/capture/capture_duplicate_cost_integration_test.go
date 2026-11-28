@@ -80,7 +80,7 @@ func TestASecondMailboxDeliveringKnownMailStoresNoContentAndStaysWithinItsBudget
 func tableCounts(t *testing.T, e *integration.SearchEnv, tables []string) map[string]int {
 	t.Helper()
 	counts := make(map[string]int, len(tables))
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, table := range tables {
 			var n int
 			if err := tx.QueryRow(context.Background(), `SELECT count(*) FROM `+pgx.Identifier{table}.Sanitize()).Scan(&n); err != nil {

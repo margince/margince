@@ -87,7 +87,7 @@ describe("the conversational voice act", () => {
 
     await userEvent.click(screen.getByRole("radio", { name: /Speaker 1/ }));
     await userEvent.click(
-      screen.getByRole("button", { name: "Use this speaker" }),
+      screen.getByRole("button", { name: en["ob.conv.voice.speakerContinue"] }),
     );
 
     await waitFor(() => {
@@ -119,7 +119,9 @@ describe("the conversational voice act", () => {
         name: /“call\.vtt” has several speakers/,
       }),
     ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Skip this file" }));
+    await user.click(
+      screen.getByRole("button", { name: en["ob.conv.voice.speakerSkip"] }),
+    );
 
     expect(
       await screen.findByRole("button", { name: en["ob.conv.voice.browse"] }),
@@ -605,7 +607,7 @@ describe("the conversational voice act", () => {
     );
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe("The request failed. No cause reported.");
+    expect(alert.textContent).toBe(en["common.errorNoCause"]);
   });
 
   it("keeps late events from a superseded build inert after the retry", () => {
@@ -783,7 +785,9 @@ describe("the voice act's surface/rail split", () => {
       await screen.findByRole("button", { name: /Build my voice profile/ }),
     );
 
-    expect(await screen.findByText("Sentence length")).toBeTruthy();
+    expect(
+      await screen.findByText(en["ob.conv.voice.dimSentenceName"]),
+    ).toBeTruthy();
     expect(screen.getByText("Measured: 1")).toBeTruthy();
     expect(screen.getByText("9.5 words per sentence on average.")).toBeTruthy();
     // A readout, not a control: nothing here is focusable or draggable.

@@ -306,7 +306,7 @@ func TestThePrivateHandoverRefusesAReceiverWhoCannotOwn(t *testing.T) {
 	deactivate(t, e, e.Rep1)
 	deactivate(t, e, e.Rep3)
 
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := contacts.HandOverOwnerPrivateTx(e.Admin(), tx,
 			ids.From[ids.UserKind](e.Rep1), ids.From[ids.UserKind](e.Rep3))
 		return err

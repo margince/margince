@@ -21,6 +21,9 @@ import (
 // move. A project both deals share is then not mistaken for one that already
 // has a channel.
 func MoveDealRefsTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]recordmerge.Moved, error) {
+	if err := moveMessengerRefsTx(ctx, tx, RecordDeal, from, to); err != nil {
+		return nil, err
+	}
 	movedIDs, err := recordmerge.MovedIDs(ctx, tx,
 		`UPDATE chat_link SET deal_id = $2,
 		        project_id = CASE WHEN archived_at IS NULL THEN NULL ELSE project_id END
@@ -55,3 +58,37 @@ const (
 	chatLinkDealColumn    = "deal_id"
 	chatLinkProjectColumn = "project_id"
 )
+
+func moveMessengerRefsTx(ctx context.Context, tx pgx.Tx, kind string, from, to ids.UUID) error {
+	args := pgx.StrictNamedArgs{kindKey: kind, "from": from, "target": to}
+	rows, err := tx.Query(ctx, `DELETE FROM chat_member_room source WHERE record_type=@kind AND record_id=@from
+ AND EXISTS (SELECT 1 FROM chat_member_room target WHERE target.record_type=@kind AND target.record_id=@target
+ AND target.grant_id=source.grant_id AND target.grant_version=source.grant_version AND target.roster_hash=source.roster_hash) RETURNING id`, args)
+	if err != nil {
+		return err
+	}
+	retired, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return err
+	}
+	if err := storekit.AuditEach(ctx, tx, "delete", "chat_member_room", retired, map[string]any{recordIDKey: from}, nil); err != nil {
+		return err
+	}
+	for _, statement := range []struct{ table, sql string }{
+		{"chat_member_room", `UPDATE chat_member_room SET record_id=@target WHERE record_type=@kind AND record_id=@from RETURNING id`},
+		{"chat_send_attempt", `UPDATE chat_send_attempt SET record_id=@target WHERE record_type=@kind AND record_id=@from RETURNING id`},
+	} {
+		rows, err := tx.Query(ctx, statement.sql, args)
+		if err != nil {
+			return err
+		}
+		moved, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		if err != nil {
+			return err
+		}
+		if err := storekit.AuditEach(ctx, tx, "update", statement.table, moved, map[string]any{"record_id": from}, map[string]any{"record_id": to}); err != nil {
+			return err
+		}
+	}
+	return nil
+}

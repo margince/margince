@@ -4,26 +4,27 @@
 package dispact
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 )
 
 var (
 	// ErrTokenRejected means the chat refused the bot token, so the admin must
 	// replace it.
-	ErrTokenRejected = errors.New("dispact: the bot token was rejected")
+	ErrTokenRejected = chatwire.ErrTokenRejected
 	// ErrNotMember means the bot may not act in this channel.
-	ErrNotMember = errors.New("dispact: the bot is not a member of the channel")
+	ErrNotMember = chatwire.ErrNotMember
 	// ErrChannelGone means the channel or message no longer exists.
-	ErrChannelGone = errors.New("dispact: the channel is gone")
+	ErrChannelGone = chatwire.ErrChannelGone
 	// ErrUnreachable means the chat could not be reached or answered with a fault.
-	ErrUnreachable = errors.New("dispact: the chat could not be reached")
+	ErrUnreachable = chatwire.ErrUnreachable
 	// ErrRequestRejected means the chat refused the request as malformed, or as
 	// one it will not do.
-	ErrRequestRejected = errors.New("dispact: the chat refused the request")
+	ErrRequestRejected = chatwire.ErrRequestRejected
 	// ErrNameRefused means the chat will not make a channel by this name: it is
 	// taken, or breaks the chat's naming rules.
-	ErrNameRefused = errors.New("dispact: the chat refused the channel name")
+	ErrNameRefused = chatwire.ErrNameRefused
 )
 
 // StatusError keeps the HTTP status of a refusal next to its typed meaning.

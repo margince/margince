@@ -33,6 +33,8 @@ const composeRootDir = "internal/compose"
 //
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
+// Recovery fixtures use the private tool registry. Owner notices bind the
+// private intake and mail-worker wiring; their tests need those same bindings.
 const (
 	// Raised by 1 for the history-narrowing fleet worker, which binds each
 	// workspace through this package's unexported job helpers. Raised by 1 for
@@ -44,7 +46,10 @@ const (
 	// Raised by 1 for reportexactrange.go, which withholds a report number past the
 	// exact range at every scan that puts report numbers on the wire.
 	// Raised by 1 for the seat-bound deal reads a unit asks as its own user.
-	composeRootProductionFiles = 1392
+	// Raised by the files develop's import, analytics and release fixes added,
+	// met with main's in the back-sync.
+	// Provider callbacks bind private Server state; shared engines live in subpackages.
+	composeRootProductionFiles = 1_402
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -71,7 +76,7 @@ const (
 	// brief fixture.
 	// Raised by 1 test file for the re-ingest vector reuse cases, which drive the
 	// unexported knowledge ingest worker.
-	composeRootTestFiles = 1937
+	composeRootTestFiles = 1_941
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -169,9 +174,10 @@ const (
 	// the How it stands job and its page case, and the task explanation's
 	// certification case and its test. The job needs the unexported job
 	// context; the cases drive the contact page.
+	// Raised by develop's import, analytics and release fixes met with main's.
 	// Raised by 1 production line for the notices handlers' mail delivery, set on
 	// the unexported server options.
-	composeRootProductionLines = 232_390
+	composeRootProductionLines = 233_827
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
@@ -189,7 +195,11 @@ const (
 	// the unexported knowledge ingest worker and its embedder fixture.
 	// Raised by 3 test lines for the generated Prefer parameter the unwired
 	// transcript read now takes.
-	composeRootTestLines = 364_314
+	// Raised by 1 test line for the second staged approval in the site-read
+	// finish case, which checks a repeated id keeps its first place.
+	// Raised by 21 test lines for the case that reads a timeline entry's request
+	// state into the deal status input, which is unexported.
+	composeRootTestLines = 364_269
 )
 
 // A read under these floors stopped early or read the wrong place, and would

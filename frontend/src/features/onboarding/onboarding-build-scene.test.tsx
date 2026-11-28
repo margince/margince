@@ -5,6 +5,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { type ReactNode, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { BuildScene } from "./onboarding-build-scene";
 
 // The scene is a deliberate pause, which makes two things safety-critical: it
@@ -84,7 +85,7 @@ describe("BuildScene", () => {
     const onDone = vi.fn();
     withLocale(<BuildScene onDone={onDone} durationMs={1200} />);
     const scene = screen.getByRole("status", {
-      name: "Assembling company profile…",
+      name: englishCopy["ob.enter.assembling"],
     });
 
     expect(scene).not.toHaveClass("is-leaving");
@@ -165,10 +166,12 @@ describe("BuildScene", () => {
 
     // A blocking scene that says nothing to a screen reader is a dead end.
     const scene = screen.getByRole("status", {
-      name: "Assembling company profile…",
+      name: englishCopy["ob.enter.assembling"],
     });
     expect(scene).toBeInTheDocument();
-    expect(screen.getByText("Assembling company profile…")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["ob.enter.assembling"]),
+    ).toBeInTheDocument();
 
     // The word is readable through the real wordmark's accessible name...
     expect(screen.getByRole("img", { name: "Margince" })).toBeInTheDocument();

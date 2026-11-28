@@ -64,7 +64,7 @@ func edgeIsLive(t *testing.T, e *integration.Env, edge ids.UUID) bool {
 	t.Helper()
 	admin := e.Admin()
 	var live bool
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin,
 			`SELECT archived_at IS NULL FROM relationship WHERE id = $1`, edge).Scan(&live)
 	}); err != nil {
@@ -193,7 +193,7 @@ func titleOf(t *testing.T, e *integration.Env, contact ids.UUID) string {
 	t.Helper()
 	admin := e.Admin()
 	var title *string
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin, `SELECT title FROM contact WHERE id = $1`, contact).Scan(&title)
 	}); err != nil {
 		t.Fatalf("read contact %s's title: %v", contact, err)

@@ -13,6 +13,7 @@ import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import {
   bookingConnection,
   bookingHours,
@@ -136,19 +137,21 @@ afterEach(() => {
 it("uses the only connected calendar, saves it with the calendars that block time, then takes bookings", async () => {
   const user = userEvent.setup();
   const server = mount();
-  const accept = await screen.findByRole("switch", { name: "Accept bookings" });
+  const accept = await screen.findByRole("switch", {
+    name: englishCopy["scheduling.acceptBookings"],
+  });
   expect(accept).toHaveProperty("disabled", true);
   expect(
-    screen.getByText(
-      "Available once a calendar for bookings is saved under Calendar.",
-    ),
+    screen.getByText(englishCopy["scheduling.acceptNeedsChoice"]),
   ).toBeTruthy();
   const save = await enabledSave();
-  expect(screen.queryByRole("combobox", { name: "Calendar provider" })).toBe(
-    null,
-  );
+  expect(
+    screen.queryByRole("combobox", {
+      name: englishCopy["scheduling.provider"],
+    }),
+  ).toBe(null);
   await user.click(
-    screen.getByRole("combobox", { name: "Also count as busy" }),
+    screen.getByRole("combobox", { name: englishCopy["scheduling.blocking"] }),
   );
   expect(screen.queryByRole("option", { name: "Work calendar" })).toBeNull();
   await user.click(screen.getByRole("option", { name: "Personal calendar" }));
@@ -198,13 +201,25 @@ it("offers a provider choice only when both calendars are connected", async () =
     },
   );
   await user.click(
-    await screen.findByRole("combobox", { name: "Calendar provider" }),
+    await screen.findByRole("combobox", {
+      name: englishCopy["scheduling.provider"],
+    }),
   );
-  expect(screen.getByRole("option", { name: "Google Calendar" })).toBeTruthy();
-  expect(screen.getByRole("option", { name: "Outlook Calendar" })).toBeTruthy();
+  expect(
+    screen.getByRole("option", { name: englishCopy["connectors.provGcal"] }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("option", {
+      name: englishCopy["connectors.provGraphCal"],
+    }),
+  ).toBeTruthy();
   expect(screen.queryByRole("option", { name: "Gmail" })).toBeNull();
   expect(saveBar()).toBeNull();
-  await user.click(screen.getByRole("option", { name: "Outlook Calendar" }));
+  await user.click(
+    screen.getByRole("option", {
+      name: englishCopy["connectors.provGraphCal"],
+    }),
+  );
   await enabledSave();
 });
 
@@ -238,9 +253,11 @@ it("does not offer a disconnected provider or keep its old calendar ids", async 
     calendar_id: "work",
     blocking_calendars: [],
   });
-  expect(screen.queryByRole("combobox", { name: "Calendar provider" })).toBe(
-    null,
-  );
+  expect(
+    screen.queryByRole("combobox", {
+      name: englishCopy["scheduling.provider"],
+    }),
+  ).toBe(null);
 });
 
 it("states a read-only calendar's saved choices and reconnects it back to Meetings", async () => {
@@ -265,12 +282,15 @@ it("states a read-only calendar's saved choices and reconnects it back to Meetin
     },
   );
   expect(
-    (await screen.findAllByText("Needs attention")).length,
+    (await screen.findAllByText(englishCopy["connectors.health.attention"]))
+      .length,
   ).toBeGreaterThan(0);
   expect(screen.getByText(/connected for reading events/)).toBeTruthy();
   expect(screen.getAllByText(/Kept as saved/)).toHaveLength(2);
   expect(
-    screen.queryByRole("combobox", { name: "Add booked meetings to" }),
+    screen.queryByRole("combobox", {
+      name: englishCopy["scheduling.eventCalendar"],
+    }),
   ).toBe(null);
   expect(
     screen.getByText(/Available once your calendar is reconnected/),
@@ -330,17 +350,23 @@ it("says bookings are live with nothing landing in an expired calendar, and paus
     },
   );
   expect(
-    await screen.findByText("Guests can book, but no invitations go out"),
+    await screen.findByText(englishCopy["scheduling.liveNoInvitesTitle"]),
   ).toBeTruthy();
   expect(
     screen.getByText(/Your Google Calendar connection has expired/),
   ).toBeTruthy();
   expect(screen.getByText(/The connection has expired/)).toBeTruthy();
-  expect(screen.getAllByText("Needs attention").length).toBeGreaterThan(0);
+  expect(
+    screen.getAllByText(englishCopy["connectors.health.attention"]).length,
+  ).toBeGreaterThan(0);
   // The link says what its guests see: the page is paused.
-  const links = screen.getByRole("region", { name: "Booking links" });
+  const links = screen.getByRole("region", {
+    name: englishCopy["scheduling.linksTitle"],
+  });
   expect(within(links).getAllByText("Paused").length).toBeGreaterThan(0);
-  await user.click(screen.getByRole("button", { name: "Pause bookings" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["scheduling.pause"] }),
+  );
   await waitFor(() => expect(server.profileWrites).toHaveLength(1));
   expect(server.profileWrites[0]).toMatchObject({ enabled: false });
 });
@@ -515,7 +541,7 @@ it("keeps an off-preset value as its own choice and leaves it alone on other sav
     "availability",
   );
   const notice = await screen.findByRole("combobox", {
-    name: "Minimum notice",
+    name: englishCopy["scheduling.noticeRow"],
   });
   expect(notice.textContent).toContain("50 minutes");
   await pick(user, "How far ahead", "60 days");
@@ -583,12 +609,14 @@ it("orders the cards and copies and previews the booking link from its row", asy
   );
   expect(order).toEqual([...order].sort((a, b) => a - b));
   expect(order).not.toContain(-1);
-  expect(headings).not.toContain("Connect a calendar to take bookings");
+  expect(headings).not.toContain(englishCopy["scheduling.setup.title"]);
   expect(screen.getAllByText("Google Meet").length).toBeGreaterThan(0);
   await user.click(screen.getByRole("button", { name: "Copy link" }));
   expect(copy.written).toEqual([bookingProfile.public_url]);
   await user.click(screen.getByRole("button", { name: /^More actions for / }));
-  await user.click(screen.getByRole("button", { name: "Preview public page" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["scheduling.preview"] }),
+  );
   expect(window.location.hash).toBe("#/book/preview");
 });
 
@@ -609,7 +637,8 @@ it("names Microsoft Teams as an Outlook calendar's video app", async () => {
     },
   );
   expect(
-    (await screen.findAllByText("Microsoft Teams")).length,
+    (await screen.findAllByText(englishCopy["webhooks.body.preset.teams"]))
+      .length,
   ).toBeGreaterThan(0);
   expect(screen.queryByText("Google Meet")).toBeNull();
 });
@@ -617,9 +646,13 @@ it("names Microsoft Teams as an Outlook calendar's video app", async () => {
 it("creates the booking link when none exists yet", async () => {
   const user = userEvent.setup();
   const server = mount({ slug: undefined, public_url: undefined });
-  expect(await screen.findByText("No booking link yet.")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["scheduling.noLinkYet"]),
+  ).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Create booking link" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["scheduling.createLink"] }),
+  );
   await waitFor(() => expect(server.profileWrites).toHaveLength(1));
   expect(server.profileWrites[0]).toMatchObject({ enabled: false });
 });
@@ -631,7 +664,7 @@ it("says a created link has no public address yet rather than offering a copy", 
     "disabled",
     true,
   );
-  expect(screen.queryByText("No booking link yet.")).toBeNull();
+  expect(screen.queryByText(englishCopy["scheduling.noLinkYet"])).toBeNull();
 });
 
 it("leads with connecting a calendar when none is connected, and connects back to Meetings", async () => {
@@ -652,18 +685,24 @@ it("leads with connecting a calendar when none is connected, and connects back t
     },
   );
   const lead = await screen.findByRole("heading", {
-    name: "Connect a calendar to take bookings",
+    name: englishCopy["scheduling.setup.title"],
   });
   expect(screen.getAllByRole("heading")[0]).toBe(lead);
   expect(screen.queryByRole("heading", { name: "Calendar" })).toBeNull();
-  expect(await screen.findByText("Your hours are saved.")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["scheduling.setup.step2Done"]),
+  ).toBeTruthy();
   expect(screen.getByText(/Your link already exists/)).toBeTruthy();
   expect(
     screen.getByText(/Available once a calendar is connected/),
   ).toBeTruthy();
   const assign = vi.fn();
   vi.stubGlobal("location", locationDouble({ assign }));
-  await user.click(screen.getByRole("button", { name: "Connect calendar" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["connectors.connectCalendar"],
+    }),
+  );
   await waitFor(() =>
     expect(assign).toHaveBeenCalledWith("https://accounts.google/x"),
   );
@@ -675,7 +714,9 @@ it("leads with connecting a calendar when none is connected, and connects back t
 it("reads the company and the host's name from where they are kept", async () => {
   const user = userEvent.setup();
   const server = mount({ logo_url: "" }, {}, "guests");
-  expect(await screen.findByText("Company name and logo")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["scheduling.companyRow"]),
+  ).toBeTruthy();
   expect(
     screen.getByText(
       "Gradion has no logo yet, so guests see the name only. An admin assigns the company you work for.",
@@ -695,9 +736,7 @@ it("reads the company and the host's name from where they are kept", async () =>
 it("says the booking page has no company to show rather than leaving it blank", async () => {
   mount({ company_name: "", logo_url: "" }, {}, "guests");
   expect(
-    await screen.findByText(
-      "Not set in the company profile yet, so guests see your name only.",
-    ),
+    await screen.findByText(englishCopy["scheduling.companyNoName"]),
   ).toBeTruthy();
   expect(screen.queryByText(/has no logo yet/)).toBeNull();
 });
@@ -729,7 +768,7 @@ it("turns the reminder email on only with a mailbox to send it from", async () =
     "guests",
   );
   const reminder = await screen.findByRole("switch", {
-    name: "Reminder email",
+    name: englishCopy["scheduling.reminderRow"],
   });
   await waitFor(() => expect(reminder).toHaveProperty("disabled", false));
   expect(screen.getByText(/sent from ada@example.test/)).toBeTruthy();
@@ -752,16 +791,14 @@ it("gives a member without the booking grant their hours alone", async () => {
     "availability",
   );
   expect(
-    await screen.findByText(
-      "Booking meetings needs permission from an administrator.",
-    ),
+    await screen.findByText(englishCopy["scheduling.bookNeedsGrant"]),
   ).toBeTruthy();
   expect(
     await screen.findByRole("checkbox", { name: "Saturday" }),
   ).toBeTruthy();
-  expect(screen.getByText("When people can book")).toBeTruthy();
-  expect(screen.queryByText("Booking rules")).toBeNull();
-  expect(screen.queryByText("Booking links")).toBeNull();
+  expect(screen.getByText(englishCopy["scheduling.whenTitle"])).toBeTruthy();
+  expect(screen.queryByText(englishCopy["scheduling.bookingRules"])).toBeNull();
+  expect(screen.queryByText(englishCopy["scheduling.linksTitle"])).toBeNull();
   expect(profileReads).toBe(0);
 });
 
@@ -780,7 +817,7 @@ async function editLengths(user: User, value: string, input = "keyboard") {
   await user.click(actions[0]);
   await user.click(screen.getByRole("button", { name: "Edit link" }));
   const offered = await screen.findByRole<HTMLInputElement>("textbox", {
-    name: "Additional meeting lengths",
+    name: englishCopy["scheduling.offeredLengths"],
   });
   if (input === "keyboard") {
     await user.clear(offered);
@@ -791,7 +828,9 @@ async function editLengths(user: User, value: string, input = "keyboard") {
   await user.click(screen.getByRole("button", { name: "Save link" }));
   await waitFor(() =>
     expect(
-      screen.queryByRole("textbox", { name: "Additional meeting lengths" }),
+      screen.queryByRole("textbox", {
+        name: englishCopy["scheduling.offeredLengths"],
+      }),
     ).toBeNull(),
   );
 }
@@ -843,14 +882,16 @@ it("refuses a repeated extra length with a message that names the repeat", async
   );
   await user.click(screen.getByRole("button", { name: "Edit link" }));
   const offered = await screen.findByRole("textbox", {
-    name: "Additional meeting lengths",
+    name: englishCopy["scheduling.offeredLengths"],
   });
   await user.clear(offered);
   await user.type(offered, "45, 45, 60");
   await user.click(screen.getByRole("button", { name: "Save link" }));
-  expect(await screen.findByText("Name each length once.")).toBeTruthy();
   expect(
-    screen.queryByText("Enter a length from 15 to 480 minutes."),
+    await screen.findByText(englishCopy["scheduling.lengthRepeated"]),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText(englishCopy["scheduling.lengthInvalid"]),
   ).toBeNull();
   expect(server.profileWrites).toHaveLength(0);
 });

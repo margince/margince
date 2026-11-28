@@ -115,7 +115,7 @@ func (f *relationshipFixture) read(t *testing.T) relationshipReading {
 	t.Helper()
 	var got relationshipReading
 	ctx := f.e.Admin()
-	err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		// The contact.created handler's repair names the contact on the mail
 		// capture filed by address, as a live install does after capture.
 		if _, err := f.e.Contacts.PromoteContactCohortTx(ctx, tx, ids.ContactID{UUID: f.contact}); err != nil {
@@ -235,7 +235,7 @@ func TestACopiedContactHasNotWrittenTheThread(t *testing.T) {
 func workspaceValue[T any](t *testing.T, e *integration.Env, query string, args ...any) T {
 	t.Helper()
 	var got T
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&got)
 	}); err != nil {
 		t.Fatal(err)

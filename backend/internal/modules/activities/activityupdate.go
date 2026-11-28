@@ -19,6 +19,7 @@ import (
 
 // UpdateActivityInput is a sparse activity edit. A nil field stays as stored.
 type UpdateActivityInput struct {
+	sourceAuthority    SourceAuthority
 	FollowUpTask       *crmcontracts.ActivityFollowUpTask
 	DueIntent          *crmcontracts.IntentTime
 	RemindIntent       *crmcontracts.IntentTime
@@ -81,6 +82,7 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 	if err := refuseMarkByMachine(ctx, in.AIAssisted != nil && *in.AIAssisted); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	in.sourceAuthority = s.sourceAuthority
 	at := s.now()
 	in.recordedAt, in.recordZone = &at, s.recordZone
 	var out crmcontracts.Activity

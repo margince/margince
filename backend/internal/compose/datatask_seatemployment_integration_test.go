@@ -86,7 +86,7 @@ func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndRepl
 	task := seatEmploymentDataTask()
 	step := task.Steps[0]
 	rollback := errors.New("roll the batch back")
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()}); err != nil {
 			return err
 		}
@@ -135,7 +135,7 @@ func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndRepl
 	in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
 	for {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = step.Batch(ctx, tx, in)
 			return err
@@ -163,7 +163,7 @@ func replayChangesNothing(ctx context.Context, t *testing.T, e *integration.Env,
 	in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
 	for {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = step.Batch(ctx, tx, in)
 			return err

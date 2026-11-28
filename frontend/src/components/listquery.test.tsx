@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
+import { en as englishCopy } from "../i18n/en";
 import {
   emptyPage,
   ListTableHarness,
@@ -322,7 +323,15 @@ describe("listFetchLimit — one read carries the page shown and the next", () =
   });
 
   it("reads the page shown and the one Next opens, at every offered size", () => {
-    expect(LIST_PAGE_SIZES.map(listFetchLimit)).toEqual([50, 100, 200]);
+    expect(LIST_PAGE_SIZES.map((size) => listFetchLimit(size))).toEqual([
+      50, 100, 200,
+    ]);
+  });
+
+  it("walks past the offset cap in the widest reads the server takes", () => {
+    expect(
+      LIST_PAGE_SIZES.map((size) => listFetchLimit(size, { pastCap: true })),
+    ).toEqual([200, 200, 200]);
   });
 });
 
@@ -341,7 +350,7 @@ describe("useListQuery — the page size is part of the server query", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Rows per page" }),
+      screen.getByRole("combobox", { name: englishCopy["table.rowsPerPage"] }),
       "50 per page",
     );
 

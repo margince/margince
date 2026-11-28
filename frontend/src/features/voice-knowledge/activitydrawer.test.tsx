@@ -3,6 +3,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { browserZone } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import {
   installFetchStub,
@@ -40,7 +41,7 @@ it.each([403, 404])(
       />,
     );
     expect(
-      await screen.findByText("Activity content is withheld"),
+      await screen.findByText(englishCopy["activity.detail.withheldReason"]),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
   },
@@ -139,7 +140,9 @@ it("lists the activity's files and offers an upload while it is live", async () 
     name: /price-list-2026\.pdf/,
   });
   expect(link.getAttribute("href")).toBe("/v1/attachments/att-price");
-  expect(screen.getByRole("button", { name: "Add document" })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: englishCopy["docs.add.action"] }),
+  ).toBeTruthy();
 });
 it("reads out the value of a field the workspace added to activities", async () => {
   installFetchStub({
@@ -310,7 +313,7 @@ it("shows a website form's fields under their labels instead of the note's text"
   expect(term("Message")).toBe("Please call me");
   expect(term("Email")).toBe("ada@visitor.example");
   expect(term("budget")).toBe("10k");
-  expect(term("Campaign source")).toBe("newsletter");
+  expect(term(englishCopy["activity.webForm.utmSource"])).toBe("newsletter");
   expect(term("ref")).toBe("partner");
   expect(term("Consent")).toContain("Not agreed");
   expect(term("Consent")).toContain("You may contact me.");
@@ -349,6 +352,8 @@ it.each([
   );
   expect(await screen.findByText(sentence)).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Connect meeting notes" }),
+    screen.getByRole("button", {
+      name: englishCopy["connectors.notes.connect"],
+    }),
   ).toBeTruthy();
 });

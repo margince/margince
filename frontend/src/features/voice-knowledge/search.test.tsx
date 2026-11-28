@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { SearchScreen } from "./search";
 
@@ -311,7 +312,7 @@ describe("SearchScreen", () => {
     // The tier covers every connector source, so the badge names none of
     // them: a hit carries no provider field, and a vendor name here would be
     // stamped on rows mirrored from a different system.
-    expect(screen.getByText("From a connected system")).toBeTruthy();
+    expect(screen.getByText(englishCopy["search.tier.mirrored"])).toBeTruthy();
     expect(screen.queryByText(/HubSpot/)).toBeNull();
     // authoritative's badge never renders alongside a mirrored hit.
     expect(screen.queryByText("verified")).toBeNull();
@@ -546,7 +547,7 @@ describe("SearchScreen", () => {
       const { container } = render(<SearchScreen q="brandt" />);
       await waitFor(() => expect(screen.getByText("Brandt GmbH")).toBeTruthy());
       expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(0);
-      expect(screen.queryByText("Open partner record")).toBeNull();
+      expect(screen.queryByText(englishCopy["search.partner.open"])).toBeNull();
     },
   );
 
@@ -573,7 +574,7 @@ describe("SearchScreen", () => {
     const { container } = render(<SearchScreen q="dana" />);
     await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
     expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(0);
-    expect(screen.queryByText("Open partner record")).toBeNull();
+    expect(screen.queryByText(englishCopy["search.partner.open"])).toBeNull();
   });
 });
 
@@ -803,7 +804,9 @@ describe("SearchScreen — grouped by what each hit is", () => {
     render(<SearchScreen q="rennsteig" />);
 
     expect(
-      await screen.findByRole("heading", { name: "Emails and activities" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["search.filter.activity"],
+      }),
     ).toBeTruthy();
     const offers = screen.getAllByRole("button", { name: /^Show all/ });
     expect(offers.map((button) => button.getAttribute("aria-label"))).toEqual([
@@ -825,7 +828,9 @@ describe("SearchScreen — grouped by what each hit is", () => {
     );
     render(<SearchScreen q="acme" />);
     expect(
-      screen.getByRole("button", { name: "Emails and activities" }),
+      screen.getByRole("button", {
+        name: englishCopy["search.filter.activity"],
+      }),
     ).toBeTruthy();
   });
 });

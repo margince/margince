@@ -158,7 +158,7 @@ func TestQualificationAndTextRepairsRollBackTheirWritesAndRejectInvalidCursors(t
 			if n := l.e.WsCount(t, `SELECT count(*) FROM event_outbox`); n != events {
 				t.Fatal("activity event escaped rollback")
 			}
-			if err := database.WithWorkspaceTx(ctx, l.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, l.e.Pool, func(tx pgx.Tx) error {
 				_, err := original(ctx, tx, datatask.BatchIn{Limit: 1, Cursor: []byte(`"invalid"`)})
 				return err
 			}); err == nil {
@@ -176,7 +176,7 @@ func TestLegacyQualificationTextDistinguishesAnUnnamedLeadFromAName(t *testing.T
 			writer := newLeadWorkTasks(l.e.DB(), slog.Default())
 			named := name == "named"
 			input := contacts.CreateLeadInput{Source: "manual", LinkedInURL: new("https://www.linkedin.com/in/unnamed-lead")}
-			expected := "Xem xét điều kiện của Một khách hàng tiềm năng"
+			expected := "Xem xét điều kiện của Một lead"
 			if named {
 				input.LinkedInURL = nil
 				input.FullName = new("A lead")

@@ -26,7 +26,7 @@ func TestCapturedRequestUsesTheParsedEnvelopeNotHeadersInsideTheBody(t *testing.
 	e := integration.Setup(t)
 	// Connection configuration is the external boundary; messages and tasks
 	// below land through the production mapper, sink and worker.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `INSERT INTO capture_connection (user_id, provider, mail_posture, account_label) VALUES ($1, 'gmail', 'shared', (SELECT email FROM app_user WHERE id=$1)), ($2, 'imap', 'shared', (SELECT email FROM app_user WHERE id=$2))`, e.Rep1, e.Rep2)
 		return err
 	}); err != nil {

@@ -144,7 +144,7 @@ func TestOneSenderIsOneRowAcrossLedgerRows(t *testing.T) {
 	e := integration.Setup(t)
 	const sender = "wieder@kunde.example"
 	closed := seedPendingDisposition(t, e, sender, "kunde.example", seedCapturedMail(t, e, sender, "Alt"))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET status = 'rejected', resolved_at = now(), created_at = now() - interval '2 days'

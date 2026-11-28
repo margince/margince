@@ -31,7 +31,7 @@ func TestSystemHealthReadCosts(t *testing.T) {
 			integration.ApplyRiverSchema(t)
 			system := principal.SystemActing(e.Admin(), "system:health_benchmark")
 			var email string
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(t.Context(), `SELECT email FROM app_user WHERE id=$1`, e.Rep1).Scan(&email)
 			}); err != nil {
 				t.Fatal(err)
@@ -43,7 +43,7 @@ func TestSystemHealthReadCosts(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 				for range count {
 					if err := inserter.EnqueueTx(system, tx, CaptureClassifyArgs{}, &river.InsertOpts{ScheduledAt: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}); err != nil {
 						return err

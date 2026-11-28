@@ -204,7 +204,7 @@ func reminderTaskCount(t *testing.T, e *Env, dealID ids.UUID) int {
 func runCountForHandler(t *testing.T, e *Env, handler string) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM workflow_run WHERE handler = $1`, handler).Scan(&n)
 	}); err != nil {

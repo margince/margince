@@ -35,7 +35,6 @@ type PromiseToTake struct {
 	SourceLabel *string
 	DueAt       *time.Time
 	Current     bool
-	NeedsReview bool
 	Kind        string
 	Status      string
 	Task        *ids.UUID
@@ -102,14 +101,14 @@ func (s *Store) readPromiseState(ctx context.Context, tx pgx.Tx, p *PromiseToTak
 		return err
 	}
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
- SELECT c.kind, c.status, c.needs_review, (%s), c.body, a.subject, c.due_at,
+ SELECT c.kind, c.status, (%s), c.body, a.subject, c.due_at,
         c.task_activity_id, c.taken_by_user_id, taker.display_name, c.taken_at
    FROM conversation_claim c
    JOIN activity a ON a.id = c.source_activity_id
    LEFT JOIN app_user taker ON taker.id = c.taken_by_user_id
   WHERE c.id = $%d AND c.archived_at IS NULL AND a.archived_at IS NULL AND %s
     FOR UPDATE OF c`, current, claimPos, content), args...).Scan(
-		&p.Kind, &p.Status, &p.NeedsReview, &p.Current, &p.Body, &p.SourceLabel, &p.DueAt,
+		&p.Kind, &p.Status, &p.Current, &p.Body, &p.SourceLabel, &p.DueAt,
 		&p.Task, &p.TakenBy, &p.TakerName, &p.TakenAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperrors.ErrNotFound

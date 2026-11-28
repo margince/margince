@@ -54,7 +54,7 @@ func twoCompanies(t *testing.T) companyEnv {
 	exec(t, e, `INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by) VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'human:x')`, c.branch)
 	exec(t, e, `INSERT INTO legal_entity_member (user_id, legal_entity_id, assigned_by) VALUES ($1, $2, 'human:x')`, e.Rep3, c.branch)
 	exec(t, e, `UPDATE capture_connection SET legal_entity_id = NULL WHERE user_id = $1`, e.Rep1)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return consent.SeedDefaultPurposesTx(e.Admin(), tx)
 	}); err != nil {
 		t.Fatalf("seeding the purpose catalog: %v", err)
@@ -124,7 +124,7 @@ func scopeOlderImports(t *testing.T, e *integration.SearchEnv) int {
 	t.Helper()
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	var scoped []ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		scoped, err = capture.ScopeImportsTx(ctx, tx, ids.Nil, 100)
 		return err

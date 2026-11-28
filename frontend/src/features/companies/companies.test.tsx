@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { listFetchLimit } from "../../components/listquery";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import {
   company,
   emptyPage,
@@ -311,9 +312,9 @@ describe("CompaniesScreen — default columns", () => {
       "Select every row on this pageCompany",
       "Open deals",
       "Lifecycle",
-      "Relationship type",
+      englishCopy["company.relationshipTypes"],
       "Owner",
-      "Last activity",
+      englishCopy["standing.exchange.last.other"],
       "Created",
     ]);
     const step = within(await openViewStep(user, "Columns"));
@@ -427,7 +428,7 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Rows per page" }),
+      screen.getByRole("combobox", { name: englishCopy["table.rowsPerPage"] }),
       "50 per page",
     );
 
@@ -469,7 +470,7 @@ describe("CompaniesScreen — rich create (P-15)", () => {
     );
     await pickOption(
       user,
-      screen.getByLabelText("Company size"),
+      screen.getByLabelText(englishCopy["co.aside.size"]),
       "11–50 employees",
     );
     await user.click(screen.getByText("Add domain"));
@@ -528,9 +529,9 @@ describe("CompaniesScreen — dedupe view-existing link (P-16)", () => {
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() =>
-      expect(screen.getByText("View existing record")).toBeTruthy(),
+      expect(screen.getByText(englishCopy["dedupe.viewExisting"])).toBeTruthy(),
     );
-    await user.click(screen.getByText("View existing record"));
+    await user.click(screen.getByText(englishCopy["dedupe.viewExisting"]));
     expect(window.location.hash).toBe("#/companies/01X");
   });
 });

@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -45,7 +46,7 @@ const (
 	// importBlobKind namespaces uploaded sources inside the workspace's blob
 	// prefix, beside attachments and logos.
 	importBlobKind = "import"
-	// importSourceProvenance is the `source` every run row carries: this
+	// importSourceProvenance is the `source` every served run names: this
 	// surface, not the connector, which lives in its own column.
 	importSourceProvenance = "import_api"
 	// importPredictPage bounds one prediction read; the same page size the
@@ -428,9 +429,9 @@ var errNoObjectStore = fmt.Errorf("this role stores no objects, so it cannot run
 // reference obtained anywhere could be dry-run and approved here, importing
 // somebody else's estate into this one.
 func (h importHandlers) ownsSource(ctx context.Context, sourceRef string) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return fmt.Errorf("no workspace is bound to this request: %w", apperrors.ErrPermissionDenied)
+	ws, err := storekit.StoredKeyWorkspaceOn(ctx, h.db)
+	if err != nil {
+		return err
 	}
 	if sourceRef != blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), importBlobKind, path.Base(sourceRef)) {
 		// Not-found, not forbidden: a caller may not learn whether a reference

@@ -72,7 +72,7 @@ func (v *sentMailVoice) press(t *testing.T, profileID ids.UUID) ai.SentMailLearn
 func stored(t *testing.T, o *owedEnv, profileID ids.UUID) map[string]string {
 	t.Helper()
 	out := map[string]string{}
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `SELECT source_ref, coalesce(content, '') FROM voice_corpus_source
 			WHERE voice_profile_id = $1 AND archived_at IS NULL AND origin = 'capture' AND kind = 'email'`, profileID)
 		if err != nil {

@@ -95,13 +95,13 @@ describe("a lead's company facts", () => {
     const group = await screen.findByRole("region", {
       name: "From Nordwind Holding SE",
     });
-    expect(within(group).getByText("Logistics and Transport")).toBeTruthy();
+    expect(
+      within(group).getByText(en["industry.logisticsTransport"]),
+    ).toBeTruthy();
     expect(within(group).getByText("Germany")).toBeTruthy();
     expect(within(group).getByText("51–200 employees")).toBeTruthy();
     expect(
-      within(group).getByText(
-        "These come from the company record. Change them on the company.",
-      ),
+      within(group).getByText(en["lead.details.companyDecides"]),
     ).toBeTruthy();
     const about = await editSection(userEvent.setup(), "About");
     expect(
@@ -403,6 +403,7 @@ describe("the details' Edit", () => {
         en["lead.product"],
       ],
       [en["record.reach.label"]]: [
+        en["create.salutation"],
         en["create.email"],
         en["create.phone"],
         en["create.linkedinUrl"],

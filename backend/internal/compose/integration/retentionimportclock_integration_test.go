@@ -45,7 +45,7 @@ func TestAnImportedRecordIsNotSweptOnArrival(t *testing.T) {
 	SeedRetentionPolicies(t, e)
 	lead, contact, activity := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	ctx := context.Background()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO lead (id, full_name, email, status, source, captured_by)
 			VALUES ($1, 'Imported Lead', 'imported@old.example', 'new', 'import', 'human:x')`, lead); err != nil {
@@ -79,7 +79,7 @@ func TestAnImportedRecordIsNotSweptOnArrival(t *testing.T) {
 
 	var leadName, contactName string
 	var leadArchived, activityArchived bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `SELECT full_name, archived_at IS NOT NULL FROM lead WHERE id = $1`,
 			lead).Scan(&leadName, &leadArchived); err != nil {
 			return err
@@ -108,7 +108,7 @@ func TestTheDefaultPolicyArchivesAnUnconvertedLeadAndKeepsIt(t *testing.T) {
 	e := Setup(t)
 	lead := ids.NewV7()
 	ctx := context.Background()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `DELETE FROM retention_policy`); err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func TestTheDefaultPolicyArchivesAnUnconvertedLeadAndKeepsIt(t *testing.T) {
 	var name string
 	var email *string
 	var archived bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT full_name, email, archived_at IS NOT NULL FROM lead WHERE id = $1`,
 			lead).Scan(&name, &email, &archived)
 	}); err != nil {
@@ -151,7 +151,7 @@ func TestAnAnonymizePolicyReachesALeadTheArchiveAlreadyTook(t *testing.T) {
 	e := Setup(t)
 	lead := ids.NewV7()
 	ctx := context.Background()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `DELETE FROM retention_policy`); err != nil {
 			return err
 		}
@@ -172,7 +172,7 @@ func TestAnAnonymizePolicyReachesALeadTheArchiveAlreadyTook(t *testing.T) {
 	runRetentionPass(t, e)
 
 	var name string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT full_name FROM lead WHERE id = $1`, lead).Scan(&name)
 	}); err != nil {
 		t.Fatal(err)

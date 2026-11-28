@@ -127,7 +127,7 @@ func TestAForgedSenderCannotReachTheWorkspacesOwnCorrespondence(t *testing.T) {
 func seedOutboundMail(t *testing.T, e *integration.Env, to, subject string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id, source, captured_by, counterparty_email, counterparty_outbound_attested)
 			VALUES ($1, 'email', $2, 'our own words', 'outbound',
@@ -220,7 +220,7 @@ func TestANoiseVerdictWithoutBulkCorroborationHidesButNeverDestroys(t *testing.T
 // original — the state a non-atomic redaction would commit.
 func stripActivityContent(t *testing.T, e *integration.Env, id ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET subject = NULL, body = NULL, raw = NULL WHERE id = $1`, id)
 		return err
@@ -286,7 +286,7 @@ func TestANoiseVerdictCannotReachMailSentLongAfterIt(t *testing.T) {
 // instead of sleeping out a seven-day wait.
 func backdateResolution(t *testing.T, e *integration.Env, id ids.UUID, by time.Duration) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET resolved_at = now() - $2::interval WHERE id = $1`, id, by.String())
@@ -301,7 +301,7 @@ func backdateResolution(t *testing.T, e *integration.Env, id ids.UUID, by time.D
 // a sender chooses, as opposed to when capture actually saw it.
 func stampOccurredAt(t *testing.T, e *integration.Env, id ids.UUID, ahead time.Duration) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET occurred_at = now() + $2::interval WHERE id = $1`, id, ahead.String())
 		return err
@@ -315,7 +315,7 @@ func stampOccurredAt(t *testing.T, e *integration.Env, id ids.UUID, ahead time.D
 // where the verdict itself is not what is under test.
 func resolveAsNoise(t *testing.T, e *integration.Env, id ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET status = 'noise', resolved_at = now(), next_attempt_at = NULL,
@@ -390,7 +390,7 @@ func TestTheSendersOwnRecordStillCallsTheSweepOff(t *testing.T) {
 func seedContact(t *testing.T, e *integration.Env, email string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, full_name, source, captured_by)
 			VALUES ($1, 'Someone', 'manual', 'human:x')`, id); err != nil {
@@ -411,7 +411,7 @@ func seedContact(t *testing.T, e *integration.Env, email string) ids.UUID {
 // on the message in. Both, because it is the PAIR the sweep now reads.
 func fileUnderAs(t *testing.T, e *integration.Env, activity, contact ids.UUID, role string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_link (activity_id, entity_type, contact_id)
 			VALUES ($1, 'contact', $2)`, activity, contact); err != nil {
@@ -527,7 +527,7 @@ func TestASenderDecisionAndItsReaderSerializeOnOneKey(t *testing.T) {
 
 	// One transaction takes the decision's lock and holds it open.
 	go func() {
-		done <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		done <- database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			if _, err := capture.OverrideForTx(ctx, tx, e.Rep1, "dana.olsen@partner.example"); err != nil {
 				return err
 			}
@@ -542,7 +542,7 @@ func TestASenderDecisionAndItsReaderSerializeOnOneKey(t *testing.T) {
 	// blocking lock does without waiting for the answer, so the assertion is
 	// "the key is held", not "this call was slow".
 	var free bool
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))`,
 			"capture_sender_override_write", e.Rep1.String()+":dana.olsen@partner.example").Scan(&free)
 	}); err != nil {
@@ -561,7 +561,7 @@ func TestASenderDecisionAndItsReaderSerializeOnOneKey(t *testing.T) {
 
 	// And it is released on commit, so this serializes writers rather than
 	// wedging them.
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))`,
 			"capture_sender_override_write", e.Rep1.String()+":dana.olsen@partner.example").Scan(&free)
 	}); err != nil {

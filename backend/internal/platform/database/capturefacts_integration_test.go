@@ -23,7 +23,7 @@ func TestAFactWriterWaitsForTheCaptureThatCheckedTheVersion(t *testing.T) {
 	run := storekit.WithCaptureFactsRun(ctx)
 	domain := "barrier-" + ids.NewV7().String() + ".example"
 	t.Cleanup(func() {
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, `DELETE FROM capture_freemail_domain WHERE domain = $1`, domain)
 			return err
 		}); err != nil {
@@ -39,7 +39,7 @@ func TestAFactWriterWaitsForTheCaptureThatCheckedTheVersion(t *testing.T) {
 	}
 	capture := func(during func(tx pgx.Tx)) int {
 		var seen int
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			if err := storekit.HoldCaptureFactsTx(run, tx); err != nil {
 				return err
 			}
@@ -62,7 +62,7 @@ func TestAFactWriterWaitsForTheCaptureThatCheckedTheVersion(t *testing.T) {
 	waiting := capture(func(reader pgx.Tx) {
 		writer := make(chan uint32, 1)
 		go func() {
-			written <- database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			written <- database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 				var pid uint32
 				if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
 					return err
@@ -95,5 +95,54 @@ func TestAFactWriterWaitsForTheCaptureThatCheckedTheVersion(t *testing.T) {
 	}
 	if seen := capture(nil); seen != 1 {
 		t.Fatalf("the next capture saw %d rows after the writer committed, want 1: it used the old copy", seen)
+	}
+}
+
+func TestASavepointReusesLockedCaptureFactsAndForgetsItsOwnWrites(t *testing.T) {
+	ctx, pool := laneEnv(t)
+	run := storekit.WithCaptureFactsRun(ctx)
+	domain := "savepoint-" + ids.NewV7().String() + ".example"
+	reads := 0
+	read := func(tx pgx.Tx) (int, error) {
+		return storekit.RememberCaptureFact(run, tx, storekit.CaptureFactsMemo+"savepoint", func() (int, error) {
+			reads++
+			var count int
+			err := tx.QueryRow(ctx, `SELECT count(*) FROM capture_freemail_domain WHERE domain=$1`, domain).Scan(&count)
+			return count, err
+		})
+	}
+	err := database.WithTx(ctx, pool, func(root pgx.Tx) error {
+		if err := storekit.HoldCaptureFactsTx(run, root); err != nil {
+			return err
+		}
+		if count, err := read(root); err != nil || count != 0 {
+			t.Fatalf("initial fact = %d, %v", count, err)
+		}
+		child, err := root.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		if count, err := read(child); err != nil || count != 0 || reads != 1 {
+			t.Fatalf("locked fact in savepoint = %d, %v, reads=%d; want the root's one read", count, err, reads)
+		}
+		if _, err := child.Exec(ctx, `INSERT INTO capture_freemail_domain(domain,kind) VALUES($1,'extra')`, domain); err != nil {
+			return err
+		}
+		if err := storekit.CaptureFactsChanged(ctx, child); err != nil {
+			return err
+		}
+		if count, err := read(child); err != nil || count != 1 {
+			t.Fatalf("written fact in savepoint = %d, %v; want 1", count, err)
+		}
+		if err := child.Rollback(ctx); err != nil {
+			return err
+		}
+		if count, err := read(root); err != nil || count != 0 || reads != 3 {
+			t.Fatalf("fact after rollback = %d, %v, reads=%d; want a fresh zero", count, err, reads)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }

@@ -79,7 +79,7 @@ func touchMomentsThrough[K interface {
 		wanted = append(wanted, ids.From[K](id))
 	}
 	out := make(map[ids.UUID]attention.TouchMoments, len(recordIDs))
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		touched, err := read(ctx, tx, wanted)
 		if err != nil {
 			return err

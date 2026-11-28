@@ -155,7 +155,7 @@ func Preview(floor Floor, members Members) assurance.PreviewFloor {
 func ReadRun(ctx context.Context, pool *pgxpool.Pool, store *assurance.Store, floor Floor) (assurance.Run, []assurance.SourceCoverage, error) {
 	var run assurance.Run
 	var coverage []assurance.SourceCoverage
-	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+	err := database.WithSnapshot(ctx, pool, func(ctx context.Context) error {
 		var err error
 		if run, err = store.LatestRun(ctx); err != nil {
 			return err
@@ -163,7 +163,7 @@ func ReadRun(ctx context.Context, pool *pgxpool.Pool, store *assurance.Store, fl
 		if coverage, err = store.CoverageFor(ctx, run.ID); err != nil {
 			return err
 		}
-		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			return requireRunFloor(ctx, tx, floor, run)
 		})
 	})

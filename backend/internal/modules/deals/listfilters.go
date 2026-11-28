@@ -111,7 +111,7 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	switch t {
 	case datasource.EntityDeal:
-		return dealListFilters.Names()
+		return append(dealListFilters.Names(), datasource.CustomFieldPrefix)
 	case datasource.EntityProduct:
 		return productListFilters.Names()
 	case datasource.EntityOfferTemplate:

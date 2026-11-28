@@ -21,7 +21,7 @@ import (
 func reminderCreate(system string) crmcontracts.CreateActivityRequest {
 	return crmcontracts.CreateActivityRequest{
 		Source: "manual",
-		Kind:   "task", Subject: new("Check in — no activity since 2026-09-05"),
+		Kind:   "task", Subject: new("Check in: no activity since 2026-09-05"),
 		SourceSystem: &system, SourceId: new("no_activity_reminder:company:c-1:anchor:2026-09-05T00:00:00Z"),
 	}
 }
@@ -126,7 +126,7 @@ func TestTheProviderSeamDoesNotOpenTheImporterNamespace(t *testing.T) {
 	importer := principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:admin",
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
-			"import_run": {Create: true},
+			"import_run": {Create: true, Read: true, Update: true, Delete: true},
 		}},
 	}
 	ctx := principal.WithActor(context.Background(), importer)

@@ -20,9 +20,13 @@ func (w *csvWriters) reviewLinks(ctx context.Context, row migration.Row) ([]migr
 		} else if key := strings.TrimSpace(fields[csvEmployerName]); key != "" && w.companyNameColumn != "" {
 			links = append(links, migration.ReviewLink{Object: migration.ObjectCompany, Key: key, ByName: true})
 		}
-	case migration.ObjectDeal:
-		for _, edge := range []struct{ field, object string }{{csvTargetCompanyRef, migration.ObjectCompany}, {dealTargetContactRef, migration.ObjectContact}} {
-			if key := strings.TrimSpace(fields[edge.field]); key != "" && columnFor(w.columns, edge.field) != "" {
+	case migration.ObjectDeal, migration.ObjectProject:
+		edges := w.dealEdges()
+		if w.object == migration.ObjectProject {
+			edges = w.projectEdges()
+		}
+		for _, edge := range edges {
+			if key := strings.TrimSpace(fields[edge.target]); key != "" && columnFor(w.columns, edge.target) != "" {
 				links = append(links, migration.ReviewLink{Object: edge.object, Key: key})
 			}
 		}

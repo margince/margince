@@ -619,7 +619,7 @@ func TestKeepingTheCreditOfAMeetingBornHeldAddsItsGuestList(t *testing.T) {
 		VALUES ($1, $2, 'attendee', 'born@snapshot.test')`, id.UUID, e.other); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(meetingCtx(e), e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(meetingCtx(e), e.pool, func(tx pgx.Tx) error {
 		kept, err := storekit.KeepMeetingCreditTx(meetingCtx(e), tx, id.UUID)
 		if err == nil && !kept {
 			t.Error("no held transition took the guest list")

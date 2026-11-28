@@ -39,7 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// errTestRollback forces WithWorkspaceTx to roll back after a successful
+// errTestRollback forces WithTx to roll back after a successful
 // StageTx, so the rollback test can assert the row never committed.
 var errTestRollback = errors.New("comms test: forced rollback")
 
@@ -149,7 +149,7 @@ func actorCtx(ws ids.UUID, user ids.UserID) context.Context {
 func (e *storeEnv) stage(t *testing.T, in StageInput) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	err := database.WithWorkspaceTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
 		var err error
 		id, err = e.store.StageTx(e.ctx, tx, in)
 		return err
@@ -234,7 +234,7 @@ func TestStagingADeliveryWithNoAddresseeIsRefused(t *testing.T) {
 	in := e.baseInput(e.activity, "msg-noaddressee@example.com")
 	in.Recipients, in.Cc = nil, nil
 
-	err := database.WithWorkspaceTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
 		_, err := e.store.StageTx(e.ctx, tx, in)
 		return err
 	})
@@ -415,14 +415,14 @@ func TestRecordFailureLeavesTheDeliveryPendingForRetry(t *testing.T) {
 func TestStageTxRollsBackWithItsCallerTransaction(t *testing.T) {
 	e := setupStore(t)
 	in := e.baseInput(e.activity, "msg-rollback@example.com")
-	err := database.WithWorkspaceTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
 		if _, err := e.store.StageTx(e.ctx, tx, in); err != nil {
 			return err
 		}
 		return errTestRollback
 	})
 	if err != errTestRollback {
-		t.Fatalf("WithWorkspaceTx: got %v, want the forced rollback error", err)
+		t.Fatalf("WithTx: got %v, want the forced rollback error", err)
 	}
 
 	var count int
@@ -448,7 +448,7 @@ func TestStagingTheSameMessageIDTwiceConflicts(t *testing.T) {
 	in := e.baseInput(e.activity, "msg-dupe@example.com")
 	e.stage(t, in)
 
-	err := database.WithWorkspaceTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
 		_, err := e.store.StageTx(e.ctx, tx, e.baseInput(e.activity2, in.MessageID))
 		return err
 	})
@@ -465,7 +465,7 @@ func TestStagingTheSameMessageIDTwiceConflicts(t *testing.T) {
 // A recorded decision cannot authorize a delivery that was never staged.
 func TestADirectedDecisionNeedsAStagedDelivery(t *testing.T) {
 	e := setupStore(t)
-	err := database.WithWorkspaceTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
 		return e.store.RecordDirectedExecutionTx(e.ctx, tx, ids.NewV7(), ids.NewV7())
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {

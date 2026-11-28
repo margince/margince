@@ -31,7 +31,9 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -476,5 +478,65 @@ func TestTheLastRungOfAnUntakenMailRecordsWhyAndCountsAsDead(t *testing.T) {
 	stamp, cause := e.emailState(t, notice)
 	if stamp == nil || cause == nil || !strings.Contains(*cause, "unreachable") {
 		t.Fatalf("the last rung left claim %v and cause %v, want both", stamp, cause)
+	}
+}
+
+func TestAWebsiteNoticeMailsItsCurrentOwnerOnceAndSkipsChangedAccess(t *testing.T) {
+	for _, change := range []string{"none", "owner", "note access", "preference", "inactive"} {
+		t.Run(change, func(t *testing.T) {
+			e := setupNoticeMail(t)
+			key := "website-notice-reader"
+			e.e.WsExec(t, `INSERT INTO role(key,name,permissions) VALUES($1,'Website reader','{"objects":{"lead":{"read":true},"activity":{"read":true}},"row_scope":"all"}')`, key)
+			e.e.WsExec(t, `INSERT INTO role_assignment(role_id,user_id) SELECT id,$1 FROM role WHERE key=$2`, e.e.AdminUser, key)
+			if _, err := notices.NewStore(e.db).SaveNotificationPreference(e.e.Admin(), notices.ClassWebsiteLead, notices.DeliveryEmail); err != nil {
+				t.Fatal(err)
+			}
+			ctx := e.proposerCtx(ids.Nil)
+			form, _, err := webforms.NewStore(e.db, slog.Default()).CreateForm(ctx, webforms.CreateInput{Name: "New request", Sender: webforms.SenderBrowser, AllowedOrigins: []string{"https://visitor.example"}, OwnerID: &e.e.AdminUser, NotifyOwner: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			landing := webforms.Landing{FormID: form.ID, FormName: form.Name, OwnerID: &e.e.AdminUser, SourceKey: "notice-mail-post", Enquiry: webforms.Enquiry{Email: "visitor@notice.example", FullName: "Mail Visitor", Company: "Visitor Company"}}
+			if err := newWebFormLander(e.db, e.e.Pool, slog.Default()).Land(ctx, landing); err != nil {
+				t.Fatal(err)
+			}
+			var notice, lead ids.UUID
+			if err := integration.OwnerConn(t).QueryRow(t.Context(), `SELECT id,target_id FROM notice WHERE kind='website_lead'`).Scan(&notice, &lead); err != nil {
+				t.Fatal(err)
+			}
+			switch change {
+			case "owner":
+				owner := ids.From[ids.UserKind](e.e.Rep1)
+				if _, err := e.e.Contacts.UpdateLead(e.e.Admin(), ids.From[ids.LeadKind](lead), contacts.UpdateLeadInput{OwnerID: &owner}); err != nil {
+					t.Fatal(err)
+				}
+			case "note access":
+				e.e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,activity,read}','false') WHERE key=$1`, key)
+			case "preference":
+				if _, err := notices.NewStore(e.db).SaveNotificationPreference(e.e.Admin(), notices.ClassWebsiteLead, notices.DeliveryInApp); err != nil {
+					t.Fatal(err)
+				}
+			case "inactive":
+				e.e.WsExec(t, `UPDATE app_user SET status='deactivated' WHERE id=$1`, e.e.AdminUser)
+			}
+			e.work(t, notice)
+			e.work(t, notice)
+			want := 0
+			if change == "none" {
+				want = 1
+			}
+			if got := e.relay.count(); got != want {
+				t.Fatalf("%s mailed %d times, want %d", change, got, want)
+			}
+			if want == 1 {
+				body := e.relay.bodies[0]
+				if !strings.Contains(body, "visitor@notice.example") || !strings.Contains(body, noticeMailOrigin+"/#/leads/"+lead.String()) {
+					t.Fatalf("missing visitor or lead link: %s", body)
+				}
+				if strings.Contains(body, "Please review this request") {
+					t.Fatal("website notice used approval copy")
+				}
+			}
+		})
 	}
 }

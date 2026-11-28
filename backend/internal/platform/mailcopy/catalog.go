@@ -84,15 +84,15 @@ func resetLines(line writeLine) {
 		"Neues Passwort festlegen",
 		"Đặt mật khẩu mới")
 	line(func(c *Copy) *string { return &c.ResetIgnore },
-		"If this wasn't you, ignore this email — your password is unchanged.",
+		"If this was not you, ignore this email. Your password is unchanged.",
 		"Warst du das nicht, ignoriere diese E-Mail. Dein Passwort bleibt unverändert.",
-		"Nếu không phải bạn, hãy bỏ qua email này — mật khẩu của bạn không thay đổi.")
+		"Nếu không phải bạn, hãy bỏ qua email này. Mật khẩu không thay đổi.")
 }
 
 // inviteLines is the invitation an administrator sent on somebody's behalf.
 func inviteLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.InviteSubject },
-		"You're invited to Margince",
+		"You are invited to Margince",
 		"Du bist zu Margince eingeladen",
 		"Bạn được mời vào Margince")
 	line(func(c *Copy) *string { return &c.InviteIntro },
@@ -162,11 +162,11 @@ func morningLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.MorningChanges },
 		"Margince changed %d of your deals last night",
 		"Margince hat letzte Nacht %d deiner Deals geändert",
-		"Margince đã thay đổi %d giao dịch của bạn đêm qua")
+		"Margince đã thay đổi %d deal của bạn đêm qua")
 	line(func(c *Copy) *string { return &c.MorningChangeClosed },
 		"closed as lost",
 		"als verloren geschlossen",
-		"đóng là thất bại")
+		"đã đóng, thua")
 	line(func(c *Copy) *string { return &c.MorningChangeMoved },
 		"moved forward",
 		"in eine spätere Phase verschoben",
@@ -194,7 +194,7 @@ func morningLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.MorningChangeMore },
 		"and %d more deals",
 		"und %d weitere Deals",
-		"và %d giao dịch khác")
+		"và %d deal khác")
 	line(func(c *Copy) *string { return &c.MorningChangesUndo },
 		"Undo or view all",
 		"Rückgängig machen oder alle ansehen",
@@ -215,12 +215,13 @@ func morningLines(line writeLine) {
 // here, and a product that says "du" every morning and "Sie" when a decision is
 // waiting is two voices in one mailbox.
 func notificationLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.WebsiteLeadOpen }, "Open in Margince", "In Margince öffnen", "Mở trong Margince")
 	line(func(c *Copy) *string { return &c.NotificationSubject },
 		"Your decision is needed: ",
 		"Deine Entscheidung ist gefragt: ",
 		"Cần quyết định của bạn: ")
 	line(func(c *Copy) *string { return &c.NotificationIntro },
-		"Please review this request. You can approve or decline it in Margince.",
+		"Review this request. You can approve or decline it in Margince.",
 		"Prüfe diese Anfrage. In Margince kannst du sie freigeben oder ablehnen.",
 		"Xem yêu cầu này. Có thể duyệt hoặc từ chối trong Margince.")
 	line(func(c *Copy) *string { return &c.NotificationOpen },
@@ -245,7 +246,7 @@ func digestLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.DigestSubject },
 		"What is waiting on your worklist",
 		"Das wartet in deiner Worklist",
-		"Những việc đang chờ trong danh sách công việc của bạn")
+		"Việc đang chờ trong Danh sách công việc của bạn")
 	line(func(c *Copy) *string { return &c.DigestIntro },
 		"These updates need your attention. Open an item to see its current status.",
 		"Diese Neuigkeiten solltest du dir ansehen. Öffne einen Eintrag, um den aktuellen Stand zu prüfen.",

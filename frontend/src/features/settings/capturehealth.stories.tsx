@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -98,7 +99,7 @@ export const KeepingUp: Story = {
   render: story(KEEPING_UP),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText("Mailboxes with something waiting");
+    await canvas.findByText(englishCopy["captureHealth.fact.mailboxes"]);
     await expect(
       canvas.queryByRole("heading", { name: "Mailboxes" }),
     ).toBeNull();

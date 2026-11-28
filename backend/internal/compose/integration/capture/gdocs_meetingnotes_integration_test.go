@@ -182,7 +182,7 @@ func TestMeetingNotesLandOnceAsATranscriptAndQueueAReading(t *testing.T) {
 		from       string
 		capturedBy string
 	)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT id, body, kind, raw -> 'google_doc' ->> 'meeting_id', captured_by FROM activity
 			 WHERE source_system = 'transcript' AND source_id = $1`, notesURL(notesFileID)).
@@ -280,7 +280,7 @@ func TestARefusedNotesGrantAsksTheOwnerToReconnect(t *testing.T) {
 
 	var scopes []string
 	var status string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT provider_scopes, status FROM capture_connection WHERE id = $1`, connID).Scan(&scopes, &status)
 	}); err != nil {
@@ -338,7 +338,7 @@ func TestNotesLandOnlyOnEvidenceStillTrueAtTheWrite(t *testing.T) {
 func landAs(t *testing.T, e *integration.SearchEnv, store *activities.Store, user ids.UUID, meeting ids.UUID, domain string) (bool, error) {
 	var landed bool
 	ctx := notesWriter(t, e, user)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		landed, err = store.LandMeetingNotesTx(ctx, tx, landing(user, meeting, domain))
 		return err
@@ -455,7 +455,7 @@ func seatOf(t *testing.T, e *integration.SearchEnv, address string) ids.UUID {
 func transcriptID(t *testing.T, e *integration.SearchEnv, fileID string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE source_system = 'transcript' AND source_id = $1`, notesURL(fileID)).Scan(&id)
 	}); err != nil {
@@ -500,7 +500,7 @@ func TestTwoSyncsLandingOneDocAtOnceLandItOnce(t *testing.T) {
 	ctx := notesWriter(t, e, e.Rep1)
 	firstLanded, release, firstDone := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 	go func() {
-		firstDone <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		firstDone <- database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			landed, err := store.LandMeetingNotesTx(ctx, tx, landing(e.Rep1, meeting, "myco.example"))
 			if err != nil || !landed {
 				return errors.Join(err, errors.New("the first sync did not land the notes"))
@@ -563,7 +563,7 @@ func TestNotesKeepAnExistingMeetingOutcome(t *testing.T) {
 			e := env.e
 			meeting, _, _ := meetingWithNotes(t, env)
 			var before int64
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(), `UPDATE activity SET meeting_status = $1 WHERE id = $2 RETURNING version`, status, meeting).Scan(&before)
 			}); err != nil {
 				t.Fatal(err)
@@ -600,7 +600,7 @@ func TestNotesCanLandWithoutAuthorityToChangeTheMeeting(t *testing.T) {
 	meeting, _, _ := meetingWithNotes(t, env)
 	store := activities.NewStore(e.DB())
 	ctx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		landed, err := store.LandMeetingNotesTx(ctx, tx, landing(e.Rep1, meeting, "myco.example"))
 		if err == nil && !landed {
 			t.Error("readable notes did not land")

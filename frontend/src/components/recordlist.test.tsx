@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { ABSENT } from "../format/absent";
 import { type Translator, translate, useT } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { emptyPage, type Row, render } from "../testing/listquery.testkit";
 import {
   type ListQuery,
@@ -187,7 +188,9 @@ describe("an empty list narrowed by its view alone", () => {
       await screen.findByText("No contacts shared with you."),
     ).toBeVisible();
     expect(screen.queryByText(/match these filters/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["table.clearFilters"] }),
+    ).toBeNull();
     expect(screen.getAllByRole("button", { name: "Show all" })).toHaveLength(1);
   });
 
@@ -196,14 +199,18 @@ describe("an empty list narrowed by its view alone", () => {
     render(<ContactsList />);
     expect(await screen.findByText("No contacts owned by you.")).toBeVisible();
     expect(screen.queryByText(/match these filters/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["table.clearFilters"] }),
+    ).toBeNull();
   });
 
   it("gives a search typed over the view the filters sentence and Clear filters", async () => {
     window.location.hash = "#/contacts?shared_with_me=true&q=zzz";
     render(<ContactsList />);
     expect(
-      await screen.findByRole("button", { name: "Clear filters" }),
+      await screen.findByRole("button", {
+        name: englishCopy["table.clearFilters"],
+      }),
     ).toBeVisible();
     expect(screen.getByText("No contacts match these filters.")).toBeVisible();
     expect(screen.queryByText("No contacts shared with you.")).toBeNull();

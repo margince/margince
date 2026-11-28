@@ -117,7 +117,7 @@ func (s *Store) moveTeamToLinkTx(ctx context.Context, tx pgx.Tx, page ids.UUID, 
 	if err != nil {
 		return false, err
 	}
-	link := storedSchedulingProfile{Title: stored.Title, Enabled: stored.Enabled, TeamMembers: stored.TeamMembers}
+	link := storedSchedulingProfile{Title: stored.shownTitle(), Enabled: stored.Enabled, TeamMembers: stored.TeamMembers}
 	var linkID ids.UUID
 	args = schedulingArgs{}
 	if err := tx.QueryRow(ctx, `INSERT INTO booking_page (host_user_id, slug, team_link, scheduling_policy, first_used_at) VALUES (`+

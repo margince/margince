@@ -221,6 +221,8 @@ const IMPORT_OBJECTS = new Set([
   "lead",
   "deal",
   "activity",
+  "project",
+  "product",
 ]);
 
 /**

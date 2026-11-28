@@ -94,16 +94,15 @@ func NewExtractionAccept(pool *pgxpool.Pool) *ExtractionAccept {
 	}
 }
 
-// Accept runs the full gate stack, then the write phase: the deal update
-// and every per-field audit note commit inside ONE transaction
-// (database.WithWorkspaceTx, driven here via deals.Store.UpdateDealTx and
-// activities.Store.LogActivityTx — the C5 shared-tx shape
-// SeedWorkspaceDefaultsTx pioneered for the identity/deals workspace-seed
-// path). A note failure therefore rolls the deal update back too: there is
-// no window where the deal carries an accepted value with no matching
-// timeline evidence, or vice versa. Every failure before this point (the
-// gate stack, the extractor call, patch validation) is side-effect free,
-// so the whole flow is either fully applied or leaves nothing behind.
+// Accept runs the full gate stack, then the write phase. The deal update and
+// every per-field audit note commit inside one transaction (database.WithTx),
+// driven through deals.Store.UpdateDealTx and activities.Store.LogActivityTx,
+// the shared-tx shape SeedWorkspaceDefaultsTx pioneered. A note failure
+// therefore rolls the deal update back too. No window exists where the deal
+// carries an accepted value with no matching timeline evidence, or the reverse.
+// Every failure before this point (the gate stack, the extractor call, patch
+// validation) is side-effect free. So the whole flow is either fully applied or
+// leaves nothing behind.
 func (a *ExtractionAccept) Accept(ctx context.Context, attachmentID ids.UUID, req crmcontracts.AcceptExtractionRequest) (crmcontracts.AttachmentExtractionAcceptResponse, error) {
 	var zero crmcontracts.AttachmentExtractionAcceptResponse
 
@@ -179,7 +178,7 @@ func (a *ExtractionAccept) Accept(ctx context.Context, attachmentID ids.UUID, re
 	if err != nil {
 		return zero, err
 	}
-	err = database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, a.pool, func(tx pgx.Tx) error {
 		if err := a.deals.ApplyDealUpdateTx(ctx, tx, dealID, patch, active); err != nil {
 			return err
 		}

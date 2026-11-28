@@ -128,7 +128,7 @@ func TestTheSwitchOffWaitsForAnApplyAlreadyInFlight(t *testing.T) {
 		}
 		return n > 0
 	}
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		mode, err := approvals.AutoApplyModeTx(ctx, tx, e.Rep1, deals.CloseDateCorrectionKind)
 		if err != nil || mode != approvals.ModeAuto {
 			t.Fatalf("in-flight read = %q, %v; want auto", mode, err)
@@ -156,7 +156,7 @@ func TestTheSwitchOffWaitsForAnApplyAlreadyInFlight(t *testing.T) {
 		t.Fatalf("in-flight transaction: %v", err)
 	}
 	<-done
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		mode, err := approvals.AutoApplyModeTx(ctx, tx, e.Rep1, deals.CloseDateCorrectionKind)
 		if mode != approvals.ModeManual {
 			t.Errorf("after the switch-off returned, mode = %q, want manual", mode)

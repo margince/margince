@@ -47,10 +47,7 @@ func (p *avatarPictures) FillFromPictureURL(ctx context.Context, user ids.UserID
 	if err := googlePictureURL(pictureURL); err != nil {
 		return err
 	}
-	ctx, ws, err := p.fillContext(ctx)
-	if err != nil {
-		return err
-	}
+	ctx = principal.SystemActing(ctx, "system:provider-picture")
 	fillable, current, err := p.users.ProviderMayFill(ctx, user)
 	if err != nil || !fillable {
 		return err
@@ -69,7 +66,10 @@ func (p *avatarPictures) FillFromPictureURL(ctx context.Context, user ids.UserID
 		return nil
 	}
 	// Unique per attempt: a key a later fill reused could be the one a release just deleted.
-	key := avatarKey(ws, user, revision+ids.NewV7().String())
+	key, err := p.avatarKey(ctx, user, revision+ids.NewV7().String())
+	if err != nil {
+		return err
+	}
 	if err := p.putPicture(ctx, key, png); err != nil {
 		return err
 	}
@@ -82,17 +82,6 @@ func (p *avatarPictures) FillFromPictureURL(ctx context.Context, user ids.UserID
 	}
 	p.release(ctx, user, superseded)
 	return nil
-}
-
-// fillContext binds what a write needs and a sign-in callback lacks. That is the workspace,
-// and the system principal the fill is admitted as.
-func (p *avatarPictures) fillContext(ctx context.Context) (context.Context, ids.WorkspaceID, error) {
-	ws, err := p.db.Workspace(ctx)
-	if err != nil {
-		return ctx, ids.WorkspaceID{}, err
-	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-	return principal.SystemActing(ctx, "system:provider-picture"), ws, nil
 }
 
 // The picture URL is personal data, and webread's errors carry it, so none of them is wrapped.

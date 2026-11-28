@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
   installFetchStub,
@@ -54,7 +55,6 @@ const DEAL_NOT_REQUESTED = {
     review: {
       id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
       state: "needs_context",
-      kind: "single",
       reason_code: "deal_not_requested",
       refusals: [
         {
@@ -102,7 +102,7 @@ function savedDraftStory(routes: RouteMap) {
 // The composer is a portalled Modal, so every query reaches the document.
 async function restoredOnScreen() {
   const dialog = within(await screen.findByRole("dialog"));
-  await dialog.findByText("Saved draft restored");
+  await dialog.findByText(englishCopy["compose.savedDraftRestored"]);
   await expect(
     dialog.getByDisplayValue("Pricing for 40 seats"),
   ).toBeInTheDocument();
@@ -157,7 +157,7 @@ export const ChangedElsewhere: Story = {
       " Pricing attached.",
     );
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
-    await screen.findByText("Draft changed in another window");
+    await screen.findByText(englishCopy["compose.savedDraftChangedTitle"]);
   },
 };
 
@@ -183,7 +183,9 @@ export const AIDraftRestored: Story = {
   }),
   play: async () => {
     await restoredOnScreen();
-    await screen.findByRole("heading", { name: "AI-assisted draft" });
+    await screen.findByRole("heading", {
+      name: englishCopy["compose.aiDisclosureTitle"],
+    });
   },
 };
 
@@ -226,7 +228,7 @@ export const RestoredDealContext: Story = {
   play: async () => {
     await restoredOnScreen();
     const deal = await screen.findByRole("combobox", {
-      name: "Deal this follow-up is about",
+      name: englishCopy["compose.aboutDeal"],
     });
     await expect(deal).toHaveTextContent("Seat expansion");
     // The composer asks the engine when Send is pressed, not before.

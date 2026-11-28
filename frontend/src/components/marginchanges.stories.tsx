@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import type { MarginceChangeBundle } from "../lib/marginchanges";
 import {
   jsonResponse,
@@ -118,7 +119,7 @@ export const UnfinishedDeals: Story = {
       await canvas.findByRole("button", { name: "Undo changes on 4 deals" }),
     );
     const list = await canvas.findByRole("list", {
-      name: "Deals not fully undone",
+      name: englishCopy["changes.bulk.unfinished"],
     });
     const rows = within(list).getAllByRole("listitem");
     await expect(rows).toHaveLength(3);
@@ -174,7 +175,7 @@ export const Remembered: Story = {
       await canvas.findByRole("button", { name: "Undo changes on 4 deals" }),
     );
     const clear = await canvas.findByRole("button", {
-      name: "Clear this result",
+      name: englishCopy["changes.bulk.clear"],
     });
     await userEvent.click(clear);
     await expect(

@@ -6,6 +6,7 @@ import { type ReactNode, useState } from "react";
 import { expect, screen, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import { en as englishCopy } from "../i18n/en";
 import { latestInboundKey } from "../lib/latestinbound.queries";
 import { OpenSourceProvider } from "../lib/opensource";
 import {
@@ -276,9 +277,13 @@ export const LastExchange: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("Introductory lunch")).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "View meeting" }),
+      canvas.getByRole("button", {
+        name: englishCopy["standing.exchange.view.meeting"],
+      }),
     ).toBeVisible();
-    await expect(canvas.getByText("Nothing is due next.")).toBeVisible();
+    await expect(
+      canvas.getByText(englishCopy["standing.next.none"]),
+    ).toBeVisible();
   },
 };
 

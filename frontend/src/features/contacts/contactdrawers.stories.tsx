@@ -5,6 +5,7 @@ import { Heading } from "../../design-system/heading";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { ContactResearchDrawer } from "./contactdrawers";
 import "./contact360.css";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -108,7 +109,7 @@ export const MappingAClaim: Story = {
     const dialog = await screen.findByRole("dialog");
     const user = userEvent.setup();
     const [picker] = await within(dialog).findAllByRole("combobox", {
-      name: "Profile field",
+      name: englishCopy["contact.research.mapField"],
     });
     if (!picker) throw new Error("the drawer shows no Profile field picker");
     await user.click(picker);

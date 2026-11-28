@@ -21,8 +21,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 const system = `You read captured business correspondence (mail, meeting notes and call notes) and say which of the
@@ -96,11 +98,30 @@ func ItemRefs(items []Item) *promptref.Refs {
 	return refs
 }
 
+// BodyReadLimit bounds database and certification inputs before mail parsing.
+const BodyReadLimit = 64000
+
+const bodyPromptLimit = 1500
+
 func newText(item Item) string {
 	if item.Kind != string(crmcontracts.ActivityKindEmail) {
-		return item.Body
+		return boundText(item.Body, bodyPromptLimit)
 	}
-	return activities.SplitEmailBody(item.Body, item.Subject).Main
+	main := activities.SplitEmailBody(item.Body, item.Subject).Main
+	lines := strings.Split(main, "\n")
+	blocks := mailquote.ForwardedBlocks(lines, item.Subject)
+	if len(blocks) == 0 {
+		return boundText(main, bodyPromptLimit)
+	}
+	// Give the original message room even when the forwarding note has a long footer.
+	header := blocks[len(blocks)-1].Header
+	note := boundText(strings.Join(lines[:header], "\n"), 400)
+	prefix := "Forwarding note (excerpt):\n" + note + "\nForwarded message:\n"
+	return prefix + boundText(strings.Join(lines[header:], "\n"), bodyPromptLimit-len([]rune(prefix)))
+}
+
+func boundText(text string, limit int) string {
+	return textcut.Runes(text, limit)
 }
 
 // Fixed in every field so the digest is a property of the code, never of a
@@ -127,7 +148,7 @@ var Ruleset = ai.PromptDigest(rulesetPrompt)
 
 // rulesetPrompt renders the fixed sample as the model reads it.
 func rulesetPrompt(fence promptfence.Fence) string {
-	return SystemFor(fence) + "\n" + Prompt(fence, []collections.SuggestibleTag{rulesetTag}, []Item{rulesetItem, rulesetForward})
+	return SystemFor(fence) + "\n" + Prompt(fence, []collections.SuggestibleTag{rulesetTag}, []Item{rulesetItem, rulesetForward, rulesetNestedForward()})
 }
 
 // VocabularyDigest names the suggestible tags an item is read against and the
@@ -152,4 +173,11 @@ func VocabularyDigest(tags []collections.SuggestibleTag) string {
 func appendField(framed []byte, field string) []byte {
 	framed = binary.AppendUvarint(framed, uint64(len(field)))
 	return append(framed, field...)
+}
+
+func rulesetNestedForward() Item {
+	item := rulesetForward
+	item.ID = ids.UUID{15: 2}
+	item.Body = "Please review.\n" + strings.Repeat("Forwarding footer. ", 100) + "\n\n---------- Forwarded message ---------\nFrom: Colleague <colleague@example.test>\nDate: Tuesday\nSubject: Fwd: Customer request\n\nFor the sales team.\n\n" + rulesetForward.Body
+	return item
 }

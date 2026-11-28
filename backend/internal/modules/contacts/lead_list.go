@@ -150,13 +150,14 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	// page and once for the total, and they must judge the same leads overdue.
 	ctx = pinSLANow(ctx)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
-		entity:    leadEntity,
-		firstPage: in.Cursor == nil || *in.Cursor == "",
-		prepare:   withLeadTaskIdentities,
-		columns:   leadColumns,
-		fields:    leadListFields,
-		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-			return leadListWhere(ctx, in, active, sorted, policy, arg)
+		entity:  leadEntity,
+		cursor:  in.Cursor,
+		offset:  in.Offset,
+		prepare: withLeadTaskIdentities,
+		columns: leadColumns,
+		fields:  leadListFields,
+		filters: func(ctx context.Context, active []fieldcatalog.Column, arg func(any) int) ([]string, error) {
+			return leadListWhere(ctx, in, active, policy, arg)
 		},
 		scan: func(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort) ([]crmcontracts.Lead, []*string, error) {
 			return scanLeadPage(rows, active, sorted, policy, slaNow(ctx), systemtext.Locale(ctx))
@@ -170,9 +171,12 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 
 // ListLeadsInput is one read of the lead list: its page, its sort and what it narrows by.
 type ListLeadsInput struct {
-	Cursor *string
-	Limit  *int
-	Status *string
+	CustomFilters map[string]string
+	Salutation    *string
+	Cursor        *string
+	Offset        *int
+	Limit         *int
+	Status        *string
 	// OwnerID, OwnerTeamID and Unassigned are the owner dials every
 	// owner-scoped list carries (DM-VOCAB-OWN-1), bound through
 	// storekit.OwnershipClause as contact and company bind them.
@@ -201,6 +205,7 @@ type ListLeadsInput struct {
 	TagMode storekit.TagMode
 	// FromContactID narrows to the leads worked from one contact.
 	FromContactID *ids.ContactID
+	CompanyID     *ids.CompanyID
 	// SLAState narrows to leads in one first-response state; breached is the
 	// overdue queue.
 	SLAState *crmcontracts.ListLeadsParamsSlaState
@@ -220,7 +225,7 @@ type ListLeadsInput struct {
 
 // leadListWhere builds a lead list read's `WHERE`: the shared chain, then the lead's own
 // filters. The sorted page, the work queue and the filter-reach probe all call it.
-func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog.Column, sorted *storekit.ListSort,
+func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog.Column,
 	policy leadSLAPolicy, arg func(any) int,
 ) ([]string, error) {
 	where, err := listFilters{
@@ -228,12 +233,12 @@ func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog
 		CapturedByKind:  in.CapturedByKind,
 		AiWritten:       in.AiWritten,
 		entity:          leadEntity,
+		CustomFilters:   in.CustomFilters,
 		OwnerID:         in.OwnerID,
 		OwnerTeamID:     in.OwnerTeamID,
 		Unassigned:      in.Unassigned,
 		Query:           nil,
-		Cursor:          in.Cursor,
-	}.clauses(ctx, active, sorted, arg)
+	}.clauses(active, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -276,6 +281,9 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	if in.Source != nil {
 		where = append(where, storekit.SQLf(leadSourceColumn+" = $%d", arg(*in.Source)))
 	}
+	if clause := salutationListClause(leadEntity, in.Salutation, arg); clause != "" {
+		where = append(where, clause)
+	}
 	if in.Origin != nil {
 		where = append(where, leadOriginClause(*in.Origin, arg))
 	}
@@ -287,6 +295,14 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	}
 	if in.FromContactID != nil {
 		where = append(where, storekit.SQLf("lead.from_contact_id = $%d", arg(*in.FromContactID)))
+	}
+	if in.CompanyID != nil {
+		where = append(where, storekit.SQLf("lead.company_id = $%d", arg(*in.CompanyID)))
+		readable, err := storekit.LinkedCompanyColumn(ctx, "lead.company_id", "id", arg)
+		if err != nil {
+			return nil, err
+		}
+		where = append(where, readable+" IS NOT NULL")
 	}
 	return where, nil
 }

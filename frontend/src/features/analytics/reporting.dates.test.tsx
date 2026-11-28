@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -121,7 +122,9 @@ it("labels an empty sales period without calling unknown values zero", () => {
     </StoryProviders>,
   );
   expect(screen.queryByText(/^No sales won/)).not.toBeInTheDocument();
-  expect(screen.getByText("Partial coverage")).toBeVisible();
+  expect(
+    screen.getByText(englishCopy["reporting.status.partial"]),
+  ).toBeVisible();
 });
 
 it("preserves the server explanation for a broken installation calendar", async () => {

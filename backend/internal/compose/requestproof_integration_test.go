@@ -126,7 +126,7 @@ func (e proofEnv) erasureTrail(t *testing.T, contact, request ids.UUID) (tombsto
 func (e proofEnv) installationZone(t *testing.T) *time.Location {
 	t.Helper()
 	var zone *time.Location
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		zone, err = identity.ZoneAppliedTx(e.Admin(), tx)
 		return err

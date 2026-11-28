@@ -294,8 +294,8 @@ func TestCurrentNativePromiseLeavesWorkWhenItsMeaningIsCompleted(t *testing.T) {
 
 func legacyImportContext(t *testing.T, e *integration.Env) context.Context {
 	t.Helper()
-	actor := e.As(e.AdminUser, nil, principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"import_run": {Create: true}}})
-	run, err := migration.NewRunStore(e.DB()).Create(actor, migration.CreateRunInput{Connector: "csv", SourceRef: "history.csv", Source: "manual"})
+	actor := e.As(e.AdminUser, nil, principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"import_run": {Create: true, Read: true, Update: true, Delete: true}}})
+	run, err := migration.NewRunStore(e.DB()).Create(actor, migration.CreateRunInput{Connector: "csv", SourceRef: "history.csv"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -62,7 +62,7 @@ func (s *Service) DismissSuggestion(
 	now := s.now().UTC()
 	var done doneAsk
 	var isDone bool
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// Anything that names a record is gated: dismissing advice about an
 		// account the caller cannot read would confirm it exists.
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
@@ -134,7 +134,7 @@ func (s *Service) RestoreSuggestion(ctx context.Context, companyID ids.CompanyID
 	}
 	var done doneAsk
 	var isDone bool
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}

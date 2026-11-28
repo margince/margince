@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { forgetSeat } from "../../lib/storage";
 import { reportingFixtureFrames } from "../../testing/reporting.fixtures";
 import { jsonResponse } from "../../testing/story-utils";
@@ -48,7 +49,11 @@ function weekAnd(
 }
 
 async function results() {
-  return within(await screen.findByRole("region", { name: "Your results" }));
+  return within(
+    await screen.findByRole("region", {
+      name: englishCopy["analytics.prospect.results"],
+    }),
+  );
 }
 
 describe("My prospecting's results", () => {
@@ -56,7 +61,9 @@ describe("My prospecting's results", () => {
     open(ADDRESS, weekAnd(prospectingEvaluation()), { seat: "sdr" });
     const lead = await results();
     expect(lead.getByText("Accepted handoffs")).toBeVisible();
-    expect(lead.queryByText("Leads qualified")).toBeNull();
+    expect(
+      lead.queryByText(englishCopy["analytics.sdrReading.leads_promoted"]),
+    ).toBeNull();
     expect(
       lead.getByText("2", { selector: ".analytics-hero-value" }),
     ).toBeVisible();
@@ -72,10 +79,14 @@ describe("My prospecting's results", () => {
       { seat: "sdr", template: "sales" },
     );
     const lead = await results();
-    expect(lead.getByText("Leads qualified")).toBeVisible();
+    expect(
+      lead.getByText(englishCopy["analytics.sdrReading.leads_promoted"]),
+    ).toBeVisible();
     expect(lead.queryByText("Accepted handoffs")).toBeNull();
     expect(lead.queryByText(/^Of 11 leads that arrived /)).toBeNull();
-    expect(lead.getByText("Leads qualified")).toBeVisible();
+    expect(
+      lead.getByText(englishCopy["analytics.sdrReading.leads_promoted"]),
+    ).toBeVisible();
   });
 
   it("shows a measured zero without requiring arrivals in the same week", async () => {
@@ -191,7 +202,7 @@ describe("My prospecting's results", () => {
       open(ADDRESS, weekAnd(prospectingEvaluation(), weeks), { seat: "sdr" });
       const history = within(
         await screen.findByRole("region", {
-          name: "How your outcomes developed",
+          name: englishCopy["analytics.prospect.historyTitle"],
         }),
       );
       const text = (await history.findByText(/^Week by week since /))
@@ -220,9 +231,7 @@ describe("My prospecting's results", () => {
     });
     const lead = await results();
     expect(
-      await lead.findByText(
-        "Could not read whether this company uses SDR handoffs.",
-      ),
+      await lead.findByText(englishCopy["analytics.overview.workflowFailed"]),
     ).toBeVisible();
     expect(lead.getByRole("button", { name: "Retry" })).toBeVisible();
     expect(screen.queryByText("Accepted handoffs")).toBeNull();
@@ -256,9 +265,9 @@ describe("My prospecting's readings", () => {
         coverage: { status: "failed", withheld: false },
       }),
     );
-    expect(zero).toContain("No meetings recorded as held this week");
-    expect(hidden).toContain("Hidden from you");
-    expect(broken).toContain("Could not be read");
+    expect(zero).toContain(englishCopy["analytics.prospect.noMeetingsWeek"]);
+    expect(hidden).toContain(englishCopy["analytics.prospect.withheld"]);
+    expect(broken).toContain(englishCopy["analytics.prospect.failed"]);
     expect(new Set([zero, hidden, broken]).size).toBe(3);
   });
 
@@ -278,7 +287,7 @@ describe("My prospecting's readings", () => {
     const strip = await readings();
     expect(strip.getByText("1 hr 42 mins")).toBeVisible();
     expect(
-      strip.getByText("Unanswered leads could not be counted"),
+      strip.getByText(englishCopy["analytics.prospect.unansweredFailed"]),
     ).toBeVisible();
   });
 
@@ -298,7 +307,7 @@ describe("My prospecting's readings", () => {
     const strip = await readings();
     expect(strip.getByText("—")).toBeVisible();
     expect(
-      strip.getByText("Too few answered leads to give a typical time."),
+      strip.getByText(englishCopy["analytics.prospect.tooFewResponses"]),
     ).toBeVisible();
     expect(strip.getByText("3 leads still waiting for a reply")).toBeVisible();
   });
@@ -339,10 +348,14 @@ describe("My prospecting's readings", () => {
         template: "sales",
       });
       const strip = await readings();
-      expect(strip.getByText("Booked meetings")).toBeVisible();
+      expect(
+        strip.getByText(englishCopy["analytics.prospect.upcoming"]),
+      ).toBeVisible();
       expect(strip.getByText("Next 14 days, through 8 Oct 2026")).toBeVisible();
       const list = within(
-        await screen.findByRole("region", { name: "Meetings to prepare" }),
+        await screen.findByRole("region", {
+          name: englishCopy["analytics.prospect.prepTitle"],
+        }),
       );
       expect(
         await list.findByText("Discovery call with Orchard Freight"),
@@ -422,8 +435,10 @@ describe("My prospecting's next moves", () => {
     const moves = within(
       await screen.findByRole("region", { name: "Do next" }),
     );
-    expect(await moves.findByText("This section did not load.")).toBeVisible();
-    expect(moves.queryByText("Nothing needs you right now")).toBeNull();
+    expect(await moves.findByText(englishCopy["state.failed"])).toBeVisible();
+    expect(
+      moves.queryByText(englishCopy["analytics.sdrNothingNeedsYou"]),
+    ).toBeNull();
     expect(moves.queryByRole("link", { name: /^Open / })).toBeNull();
   });
 });
@@ -475,12 +490,16 @@ describe("My prospecting's handoffs", () => {
         }),
     });
     const waiting = within(
-      await screen.findByRole("region", { name: "Handoffs waiting on others" }),
+      await screen.findByRole("region", {
+        name: englishCopy["analytics.sdrWaiting"],
+      }),
     );
     expect(
       await waiting.findByText(/Casey Closer can no longer act/),
     ).toBeVisible();
-    expect(waiting.getByText("Recipient cannot act")).toBeVisible();
+    expect(
+      waiting.getByText(englishCopy["analytics.prospect.blocked"]),
+    ).toBeVisible();
     expect(
       waiting.getByText(/^Waiting .*Casey Closer can no longer act$/),
     ).toBeVisible();
@@ -493,12 +512,14 @@ describe("My prospecting's handoffs", () => {
     open(ADDRESS, weekAnd(prospectingEvaluation()), { seat: "sdr" });
     const cohort = within(
       await screen.findByRole("region", {
-        name: "What happened to your handoffs",
+        name: englishCopy["analytics.prospect.cohortTitle"],
       }),
     );
     expect(
       await cohort.findByText(/handoffs you submitted .*, as they stand now/),
     ).toBeVisible();
-    expect(cohort.getByText("Not decided yet")).toBeVisible();
+    expect(
+      cohort.getByText(englishCopy["analytics.prospect.cohort.waiting"]),
+    ).toBeVisible();
   });
 });

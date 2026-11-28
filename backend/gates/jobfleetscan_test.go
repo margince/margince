@@ -80,45 +80,13 @@ type ratifiedFleetScan struct {
 // worker, and a waiver granted on that basis would already have waved it
 // through.
 var ratifiedFleetScans = map[string]ratifiedFleetScan{
-	"internal/compose/installtrial/installtrial.go": {
-		1,
-		"reads the earliest workspace creation time once, as the start of the installation's trial; it does no tenant work and enqueues nothing",
-	},
-	"internal/compose/dispatch.go": {
+	"internal/platform/database/workspaces.go": {
 		2,
-		"the dispatch enumerations: the live fleet every pass on behalf of an active tenant fans out over, and the archived-inclusive one BOTH retention passes need — GDPR retention and idempotency claim retention — because archiving a workspace does not un-store the data inside it. Both read the fleet only to enqueue one workspace-scoped job per tenant, and do no tenant work themselves",
+		"the one fleet scan: LiveWorkspaces is what every dispatcher, per-workspace pass, due-scan and tenant resolution starts from, and EveryWorkspace is the archived-inclusive spelling BOTH retention passes need, because archiving a workspace does not un-store the data inside it. Both read the fleet and do no tenant work themselves",
 	},
 	"internal/modules/identity/installation.go": {
 		1,
 		"boot path: resolves the singleton company and refuses to serve when a second exists (ADR-0061 §3) — it IS the workspace authority, not a consumer of it",
-	},
-	"internal/compose/archivedpredecessor.go": {
-		1,
-		"boot path, and it counts ARCHIVED workspaces rather than enumerating live ones: an archived company's rows merged into this installation when ADR-0091 §8 phase D took the tenant column, and that row is the only surviving evidence a merge happened. It reads the count to say so once and does no tenant work at all",
-	},
-	"internal/modules/capture/registry_connections.go": {
-		1,
-		"collectDue, the due-scan BOTH capture dispatchers drive (gmail_sync via DueConnections, gmail_watch_renew via DueWatches): it enumerates to find due connections it then enqueues one job each for, which is the target shape, not the anti-pattern",
-	},
-	"internal/modules/capture/channelpoll.go": {
-		1,
-		"the telegram_poll_sweep DISPATCHER's due-scan — same shape as registry_connections above",
-	},
-	"internal/modules/capture/push.go": {
-		1,
-		"tenant resolution: a Pub/Sub push notification names a mailbox and no tenant, so BumpDueByMailbox probes every workspace under its own GUC to find which one holds that mailbox — and bumps only the connections it found there",
-	},
-	"internal/modules/capture/credentialbackfill.go": {
-		1,
-		"boot path: one-shot credential migration at startup, before any job runs",
-	},
-	"internal/modules/ai/voice_build_complete.go": {
-		1,
-		"the voice_build_retry DISPATCHER's due-scan: enqueues one voice_build per due build, a finer fan-out than per-workspace",
-	},
-	"internal/modules/search/binding.go": {
-		1,
-		"a read: fleetWorkspaceIDs drives pendingStats, the embed-backlog rollup, which visits every live tenant under that tenant's own GUC to count the entities carrying no embedding at the current identity and writes nothing",
 	},
 }
 
@@ -217,6 +185,35 @@ func TestFleetEnumerationOnlyAtRatifiedSites(t *testing.T) {
 		}
 		if found[path] == 0 {
 			t.Errorf("%s: stale waiver — the site no longer enumerates the fleet; delete it", path)
+		}
+	}
+}
+
+// TestModulesReadTheWorkspaceCollectionOnlyInIdentity has no waiver list.
+// A module other than identity, which owns the workspace table, takes the fleet
+// from database.LiveWorkspaces or database.EveryWorkspace and never spells the
+// scan itself. The census check fails when few module files were read, so a
+// moved directory cannot turn this into a pass over nothing.
+func TestModulesReadTheWorkspaceCollectionOnlyInIdentity(t *testing.T) {
+	t.Parallel()
+	paths, err := goFilesUnder("internal/modules")
+	if err != nil {
+		t.Fatalf("walking internal/modules: %v", err)
+	}
+	if len(paths) < 100 {
+		t.Fatalf("read %d module files, want at least 100: the walk lost the module tree", len(paths))
+	}
+	for _, path := range paths {
+		slashed := filepath.ToSlash(path)
+		if strings.HasPrefix(slashed, "internal/modules/identity/") || isIntegrationTagged(path) {
+			continue
+		}
+		src, err := gatekit.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading %s: %v", path, err)
+		}
+		if n := countFleetScans(string(src)); n > 0 {
+			t.Errorf("%s reads the workspace collection %d time(s); call database.LiveWorkspaces or database.EveryWorkspace instead", slashed, n)
 		}
 	}
 }

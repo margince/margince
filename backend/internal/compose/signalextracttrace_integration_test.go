@@ -74,7 +74,7 @@ func offeredKeys(t *testing.T, e *integration.Env) map[string]bool {
 	t.Helper()
 	out := map[string]bool{}
 	as := e.Admin()
-	if err := database.WithWorkspaceTx(as, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(as, e.Pool, func(tx pgx.Tx) error {
 		due, err := dueThreads(as, tx, traceReadClock, 100)
 		if err != nil {
 			return err
@@ -217,7 +217,7 @@ func TestAPromiseInRoutinePrivateMailIsNeverFiled(t *testing.T) {
 	for key, source := range cited {
 		thread := settledThread{Key: key, Messages: []threadMessage{{ID: source, Body: "Happy to continue."}}}
 		event := extractedEvent{Kind: extractKindCommitment, MessageID: source.String(), Quote: "Happy to continue."}
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			legacy, err := legacyThread(ctx, tx, legacyCommitment{cited: source})
 			if err != nil {
 				return err

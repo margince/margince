@@ -63,7 +63,7 @@ func seedForecastFXDeal(
 func forecastDeals(t *testing.T, e *Env, at time.Time) []forecasting.Deal {
 	t.Helper()
 	var out []forecasting.Deal
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		period, base, err := compose.ForecastPeriodAt(
 			e.Admin(), tx, forecasting.PeriodQuarter, at)
 		if err != nil {

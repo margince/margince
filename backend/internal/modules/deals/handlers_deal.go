@@ -43,6 +43,7 @@ func dayArg(day *openapi_types.Date) *time.Time {
 func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmcontracts.ListDealsParams) {
 	in := ListDealsInput{
 		Cursor:          params.Cursor,
+		Offset:          params.Offset,
 		Limit:           params.Limit,
 		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
 		Sort:            params.Sort,
@@ -117,8 +118,8 @@ func (h Handlers) CreateDeal(w http.ResponseWriter, r *http.Request, _ crmcontra
 	if !httperr.DecodeJudged(w, r, &req, amountIsJudged) {
 		return
 	}
-	// A declared importer (a HUMAN holding import_run:create) may stamp the
-	// reserved mirror: namespace; everyone else, an agent carrying that human's
+	// A declared importer (auth.DeclaredImporter) may stamp the reserved
+	// mirror: namespace; everyone else, an agent carrying that human's
 	// grants included, gets the closed door.
 	mapInput := DealCreationInput
 	if auth.DeclaredImporter(r.Context()) {

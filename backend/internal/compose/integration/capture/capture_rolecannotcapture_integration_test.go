@@ -31,7 +31,7 @@ import (
 // seedShippedRoles writes the roles a new installation starts with.
 func seedShippedRoles(t *testing.T, e *integration.SearchEnv) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := identity.SeedSystemRoles(context.Background(), tx)
 		return err
 	}); err != nil {
@@ -42,7 +42,7 @@ func seedShippedRoles(t *testing.T, e *integration.SearchEnv) {
 // holdOnlyRole makes the shipped role key the member's one role.
 func holdOnlyRole(t *testing.T, e *integration.SearchEnv, user ids.UUID, key string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `DELETE FROM role_assignment WHERE user_id = $1`, user); err != nil {
 			return err
 		}
@@ -64,7 +64,7 @@ func TestTheShippedRolesThatCannotCaptureAreReadOnlyAlone(t *testing.T) {
 	seedShippedRoles(t, e)
 	authority := identity.NewService(e.Pool)
 	var keys []string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `SELECT key FROM role WHERE is_system ORDER BY key`)
 		if err != nil {
 			return err
@@ -127,7 +127,7 @@ func TestConnectRefusesAMemberWhoseRoleCannotCapture(t *testing.T) {
 func lastSuccessAt(t *testing.T, e *integration.SearchEnv, connID ids.UUID) *time.Time {
 	t.Helper()
 	var at *time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT last_success_at FROM capture_sync_state WHERE connection_id = $1`, connID).Scan(&at)
 	}); err != nil {

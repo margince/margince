@@ -12,7 +12,7 @@ import {
   isEntityKind,
   isExtensionEntityKind,
 } from "./entity";
-import { EXTENSION_SCREEN } from "./extensions";
+import { EXTENSION_SCREEN } from "./extensionscreen";
 import { type Route, routeHash, useRoute } from "./router";
 import {
   hashWithParams,

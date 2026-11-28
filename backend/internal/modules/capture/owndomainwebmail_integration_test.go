@@ -32,7 +32,7 @@ func trustedDomainsOf(t *testing.T, claims ...string) capture.InternalDomains {
 	t.Helper()
 	ctx, db := bootstrapInternalMailWorkspace(t, claims...)
 	var trusted capture.InternalDomains
-	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		var err error
 		trusted, err = capture.TrustedOwnDomainsTx(ctx, tx)
 		return err
@@ -47,7 +47,7 @@ func trustedDomainsOf(t *testing.T, claims ...string) capture.InternalDomains {
 func settingsAdmin(ctx context.Context, t *testing.T, db *database.DB) context.Context {
 	t.Helper()
 	seat := ids.NewV7()
-	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO app_user (id, email, display_name, status)
 			VALUES ($1, $2, 'Settings Admin', 'active')`,
@@ -94,7 +94,7 @@ func TestAnAdministratorsNeverEntryKeepsTheDomainOurs(t *testing.T) {
 	}
 
 	var trusted capture.InternalDomains
-	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		var err error
 		trusted, err = capture.TrustedOwnDomainsTx(ctx, tx)
 		return err

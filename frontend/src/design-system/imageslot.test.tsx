@@ -7,6 +7,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { Avatar } from "./atoms";
 import { ImageSlot } from "./imageslot";
 
@@ -45,15 +46,17 @@ it.each([
     const onRemove = vi.fn();
     const { rerender } = render(<ImageSlot {...props({ onRemove })} />);
     await user.click(
-      screen.getByRole("button", { name: "Edit profile picture" }),
+      screen.getByRole("button", { name: englishCopy["account.pictureEdit"] }),
     );
 
     rerender(<ImageSlot {...props({ onRemove, ...over })} />);
 
     expect(
-      screen.getByRole("button", { name: "Upload picture" }),
+      screen.getByRole("button", { name: englishCopy["account.pictureAdd"] }),
     ).toBeDisabled();
-    const remove = screen.getByRole("button", { name: "Remove picture" });
+    const remove = screen.getByRole("button", {
+      name: englishCopy["account.pictureRemove"],
+    });
     expect(remove).toBeDisabled();
     await user.click(remove);
     expect(onRemove).not.toHaveBeenCalled();

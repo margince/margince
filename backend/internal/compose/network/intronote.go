@@ -170,7 +170,7 @@ func (h Reads) noteFactsFor(
 	ctx context.Context, contactID ids.ContactID, body crmcontracts.DraftIntroNoteJSONRequestBody,
 ) (noteFacts, error) {
 	var facts noteFacts
-	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		graph := crmcontracts.ContactGraph{
 			ContactId:     openapi_types.UUID(contactID.UUID),
 			Nodes:         []crmcontracts.ContactGraphNode{},

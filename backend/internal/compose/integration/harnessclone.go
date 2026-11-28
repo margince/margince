@@ -32,7 +32,7 @@ func (e *Env) CloneActivity(t *testing.T, template ids.ActivityID, count int, va
 		copies[i] = ids.NewV7()
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := cloneRows(ctx, tx, "activity", "id", template.UUID, copies, vary); err != nil {
 			return err
 		}

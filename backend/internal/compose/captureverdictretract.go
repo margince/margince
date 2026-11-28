@@ -108,7 +108,7 @@ func (w *linkReconcileWorker) retractNoiseJudgedContacts(ctx context.Context) (i
 	for _, c := range judged {
 		// Per contact, each on its own transaction, like every drain in this
 		// job: one contact's failure costs that contact, not the sweep.
-		if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 			// The scan committed before this transaction opened, so both the
 			// answer that selected the contact and the correspondence bound
 			// are re-read here, where the archive can still be called off.
@@ -177,7 +177,7 @@ func (w *linkReconcileWorker) retractPrivateThreadContacts(ctx context.Context) 
 	for _, thread := range threads {
 		// Per thread, each on its own transaction, like every drain in this
 		// job: one thread's failure costs that thread, not the sweep.
-		if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 			orphaned, err := capture.ContactsOrphanedByPrivacyTx(ctx, tx, thread.ThreadKey, thread.UserID)
 			if err != nil {
 				return err

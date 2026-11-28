@@ -3,13 +3,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { AppLink } from "../design-system/applink";
+import { Badge } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { recordEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
 import { ENTITY, type EntityKind } from "../lib/entity";
 import { useMemberName } from "../lib/membernames";
 import { routeHash } from "../lib/router";
 import {
-  entityNameObserverQuery,
+  entityReferenceObserverQuery,
   type NameReading,
   readingOf,
   usableName,
@@ -143,6 +144,7 @@ export function EntityRef({
   kind,
   id,
   name,
+  archived,
   asText = false,
   newTab = false,
 }: Readonly<{
@@ -165,12 +167,10 @@ export function EntityRef({
    * A `user`/`team` reference ignores it, having no page to open at all.
    */
   newTab?: boolean;
-  // The display name, when the CALLER already has it. A composite read that
-  // returns its own labels — the company view's connection graph — would
-  // otherwise pay one record fetch per reference and show the raw id until each
-  // one lands. Passing it skips the lookup entirely; the link and the id
-  // fallback are unchanged.
+  // Supply both facts when the caller already has them. A name alone keeps
+  // its spelling while the shared batched read resolves the archive state.
   name?: string | null;
+  archived?: boolean;
 }>) {
   if (!id) {
     return <span>—</span>;
@@ -188,6 +188,7 @@ export function EntityRef({
       kind={kind}
       id={id}
       name={name}
+      archived={archived}
       asText={asText}
       newTab={newTab}
     />
@@ -249,47 +250,55 @@ function RecordRef({
   kind,
   id,
   name,
+  archived,
   asText,
   newTab,
 }: Readonly<{
   kind: EntityKind;
   id: string;
   name?: string | null;
+  archived?: boolean;
   asText: boolean;
   newTab: boolean;
 }>) {
-  // A caller-supplied name skips the lookup; a blank one does not, because a
-  // blank is the caller saying it has nothing rather than saying the record is
-  // nameless. `usableName` is what decides that, once, so the value that
-  // switches the read off is the same value that gets rendered.
+  const t = useT();
   const available = recordEnabled(kind, useHiddenCoreFeatures());
   const supplied = usableName(name);
   const query = useQuery({
-    ...entityNameObserverQuery(kind, id),
-    enabled: available && supplied == null,
+    ...entityReferenceObserverQuery(kind, id),
+    enabled: available && (supplied == null || archived === undefined),
   });
   // Only a resolved name is a safe link target; a reference with no name —
   // still loading, refused, or a record that carries none — never becomes one.
-  const resolved = supplied ?? usableName(query.data);
+  const resolved = supplied ?? usableName(query.data?.name);
   if (!available) {
     return supplied ? <span>{supplied}</span> : null;
   }
-  if (resolved == null) {
-    return <UnnamedRef id={id} reading={readingOf(query)} />;
-  }
-  if (asText) {
-    return <span>{resolved}</span>;
-  }
-  // Native destinations support copying and new tabs; ordinary clicks use the router.
+  const label =
+    resolved == null ? (
+      <UnnamedRef id={id} reading={readingOf(query)} />
+    ) : asText ? (
+      <span>{resolved}</span>
+    ) : (
+      <AppLink
+        className="entity-link"
+        href={routeHash(ENTITY[kind].route(id))}
+        onClick={(event) => event.stopPropagation()}
+        {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      >
+        {resolved}
+      </AppLink>
+    );
   return (
-    <AppLink
-      className="entity-link"
-      href={routeHash(ENTITY[kind].route(id))}
-      onClick={(event) => event.stopPropagation()}
-      {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-    >
-      {resolved}
-    </AppLink>
+    <>
+      {label}
+      {(archived ?? query.data?.archived) && (
+        <>
+          {" "}
+          <Badge tone="warning">{t("record.archived")}</Badge>
+        </>
+      )}
+    </>
   );
 }
 

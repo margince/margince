@@ -140,7 +140,7 @@ func captureSiteLead(
 	// A collision with another source's lead returns that lead, and stages a
 	// merge for a human instead of writing this one.
 	var ours bool
-	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT EXISTS (SELECT 1 FROM lead WHERE id = $1 AND source_system = $2 AND source_id = $3)`,
 			leadID, siteLeadSourceSystem, proposal.NaturalKey).Scan(&ours)

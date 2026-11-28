@@ -95,7 +95,7 @@ func seedDealInState(t *testing.T, e *Env, name, status string, closes time.Time
 	t.Helper()
 	pipeline, stage, deal := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	probability := map[string]int{"open": 20, "won": 100, "lost": 0}[status]
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `INSERT INTO pipeline (id, name, is_default, position)
 			VALUES ($1, $2, false, 91)`, pipeline, name+" pipeline"); err != nil {

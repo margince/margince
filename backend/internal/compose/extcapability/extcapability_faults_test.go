@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -83,8 +84,10 @@ func TestAnObjectCallReportsEachWayTheStoreOrTheNameCanFail(t *testing.T) {
 	if err := objectsFor("u", nil).Put(ctx, "report", []byte("x")); !errors.Is(err, extcapability.ErrObjectsUnwired) {
 		t.Errorf("Put with no store bound: err = %v, want ErrObjectsUnwired", err)
 	}
-	if err := healthy.Put(context.Background(), "report", []byte("x")); !errors.Is(err, extcapability.ErrObjectsFailed) {
-		t.Errorf("Put with no workspace on the context: err = %v, want ErrObjectsFailed", err)
+	unbootstrapped := objectsFor("u", memory)
+	unbootstrapped.Workspace = func(context.Context) (ids.WorkspaceID, error) { return ids.WorkspaceID{}, errBoundary }
+	if err := unbootstrapped.Put(ctx, "report", []byte("x")); !errors.Is(err, extcapability.ErrObjectsFailed) {
+		t.Errorf("Put with no stored-key id for the installation: err = %v, want ErrObjectsFailed", err)
 	}
 }
 

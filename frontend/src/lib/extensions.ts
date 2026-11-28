@@ -46,31 +46,6 @@ export type ExtensionScreenRegistry = Readonly<
   Record<string, ComponentType | undefined>
 >;
 
-/**
- * The route segment every unit surface lives under: `#/ext/<name>`.
- *
- * Spelled once and exported, because App.tsx's switch and any caller building
- * a link have to agree — a registry keyed under a screen name the router never
- * dispatches on resolves nothing, however correct its lookup is. `ext_` is the
- * namespace token everywhere else in the tier (tables, roles, job kinds,
- * `/v1/ext/<name>` routes); this is its hash-route spelling.
- *
- * This is the unit's SUB-SETTING, not its drawer entry. `nav.ts` keeps
- * `NAV_GROUPS` as the canonical list whose order `rail.test.tsx` pins, and a
- * unit adds no row to it. A unit is OFFERED in Settings, on the page that
- * already holds the kind of credential it is configured with. See
- * `unitsForSecretScope` below and `features/automations/extension-units.tsx`.
- * A unit that declares an App is also listed in the drawer, at
- * `#/app/<unit>` (lib/extensionapps.ts).
- *
- * `RAIL_LESS_SCREENS` was reviewed with it and is unchanged: a unit's screen
- * wants the rail like any other destination, and `nav.ts` marks Settings
- * current while it is open. What it does NOT get is a badge or a phone-bar
- * slot — both are the product's judgement about what deserves a contact's
- * attention, and it cannot make one for a surface it did not write.
- */
-export const EXTENSION_SCREEN = "ext";
-
 /** The composed registry itself, for a caller that needs the whole set. */
 export const composedExtensions: readonly ExtensionDescriptor[] = extensions;
 

@@ -56,7 +56,7 @@ const ledgerEntity = "ext_alpha_thing"
 func auditedRow(t *testing.T, e *extRuntimeEnv, entityID ids.UUID) (auditID ids.UUID, action, actorID string, evidence []byte) {
 	t.Helper()
 	ctx := e.callCtx(e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT id, action, actor_id, evidence FROM audit_log WHERE entity_type = $1 AND entity_id = $2`,
 			ledgerEntity, entityID).Scan(&auditID, &action, &actorID, &evidence)
@@ -159,7 +159,7 @@ func publishedEnvelope(t *testing.T, e *extRuntimeEnv, eventType string) events.
 	// event_outbox is one of the infra tables outside RLS (0014), so this read
 	// needs no binding of its own — it runs on the same pool as everything
 	// else here for consistency, not for visibility.
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT stream, envelope FROM event_outbox WHERE envelope->>'type' = $1`, eventType).Scan(&stream, &raw)
 	}); err != nil {
@@ -221,7 +221,7 @@ func TestAFailedUnitWriteTakesItsLedgerRowAndItsEventWithIt(t *testing.T) {
 
 	var audits, staged int
 	countCtx := e.callCtx(e.WS)
-	if err := database.WithWorkspaceTx(countCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(countCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(countCtx,
 			`SELECT (SELECT count(*) FROM audit_log WHERE entity_id = $1),
 			        (SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id' = $1::text)`,

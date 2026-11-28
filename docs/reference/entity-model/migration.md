@@ -60,6 +60,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | `job_attempt` | `integer`, default `0` | yes |  |
 | `job_status` | `text` |  |  |
 | `mapping` | `jsonb`, default `'{}'::jsonb` | yes |  |
+| `own_seat` | `uuid` |  |  |
 | `phase` | `text` |  | One of `reading`, `checking`, `creating_tags`, `importing`, `linking`, `undoing` and 1 more. |
 | `phase_object` | `text` |  | The object the run is working on in `phase`, when it is working on one. |
 | `profile` | `jsonb` |  | What the upload read of the file. |
@@ -76,7 +77,6 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | `undo_report` | `jsonb` |  |  |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `integer`, default `1` | yes | Bumped by every saved change of a choice. |
 
@@ -90,12 +90,12 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `idx_import_run_status`: `btree (status)`
-- `import_run_one_active_per_source_name`: `unique, btree (source_name) WHERE ((connector = 'csv') AND (source_name <> '') AND (status = ANY (ARRAY['validating', 'awaiting_approval', 'running', 'undoing'])))`
+- `import_run_one_active_per_source_name`: `unique, btree (source_name, own_seat) NULLS NOT DISTINCT WHERE ((connector = 'csv') AND (source_name <> '') AND (status = ANY (ARRAY['validating', 'awaiting_approval', 'running', 'undoing'])))`
 - `import_run_one_live_per_source_ref`: `unique, btree (source_ref) WHERE ((connector = 'csv') AND (source_released_at IS NULL))`
 - `import_run_one_test_per_agent`: `unique, btree (((actor ->> 'id'))) WHERE ((status = 'validating') AND ((actor ->> 'type') = 'agent'))`
 - `import_run_pkey`: `unique, btree (id)`
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"error": 20000, "phase": 20000, "source": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"error": 20000, "phase": 20000, "source": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"error": 20000, "phase": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source_ref":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"error": 20000, "phase": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source_ref":20000,"status":20000}')`

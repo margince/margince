@@ -375,6 +375,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `capture_freemail_domain_domain_check`: `CHECK (((domain = lower(domain)) AND (domain <> '')))`
+- `capture_freemail_domain_domain_one_spelling`: `CHECK (is_identifier_text(domain))`
 - `capture_freemail_domain_kind_check`: `CHECK ((kind = ANY (ARRAY['extra', 'never'])))`
 
 **Indexes**
@@ -628,6 +629,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_pending_counterparty_confidence_range`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))`
 - `capture_pending_counterparty_email_is_canonical`: `CHECK ((email = lower(btrim(email))))`
+- `capture_pending_counterparty_email_one_spelling`: `CHECK (is_identifier_text(email))`
 - `capture_pending_counterparty_kind_check`: `CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact', 'role_mailbox', 'company_sender', 'newsletter', 'transactional', 'spam', 'personal', 'advisor', 'vendor_pitch']))))`
 - `capture_pending_counterparty_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'unsure', 'real', 'noise', 'suppressed', 'rejected'])))`
 
@@ -670,6 +672,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `capture_sender_override_address_is_canonical`: `CHECK ((address = lower(btrim(address))))`
+- `capture_sender_override_address_one_spelling`: `CHECK (is_identifier_text(address))`
 - `capture_sender_override_decision_check`: `CHECK ((decision = ANY (ARRAY['business', 'keep_out', 'personal'])))`
 - `capture_sender_override_user_address_key`: `UNIQUE (user_id, address)`
 
@@ -877,7 +880,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## channel_connection
 
-20 columns · primary key `(id)` · referenced by 2 foreign keys
+20 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -894,7 +897,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `ownership` | `text`, default `'workspace'::text` | yes | One of `workspace`, `member`. |
 | `parent_connection_id` | `uuid` |  | Points at `channel_connection.id`. |
 | `poll_offset` | `bigint`, default `0` | yes |  |
-| `provider` | `text` | yes | One of `telegram`, `telegram_business`, `dispact`, `whatsapp`, `zalo_oa`. |
+| `provider` | `text` | yes | One of `telegram`, `telegram_business`, `dispact`, `whatsapp`, `zalo_oa`, `slack` and 1 more. |
 | `seat_id` | `uuid` |  | Points at `capture_connection.id`. |
 | `status` | `text` | yes | Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -917,7 +920,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `channel_connection_child_names_account`: `CHECK (((parent_connection_id IS NULL) OR (account_id IS NOT NULL)))`
 - `channel_connection_owner_shape`: `CHECK (((ownership = 'member') = (owner_user_id IS NOT NULL)))`
 - `channel_connection_ownership_check`: `CHECK ((ownership = ANY (ARRAY['workspace', 'member'])))`
-- `channel_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['telegram', 'telegram_business', 'dispact', 'whatsapp', 'zalo_oa'])))`
+- `channel_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['telegram', 'telegram_business', 'dispact', 'whatsapp', 'zalo_oa', 'slack', 'teams'])))`
 - `channel_connection_status_check`: `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required', 'pending_approval'])))`
 - `channel_connection_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
@@ -1001,6 +1004,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `workspace_email_domain_domain_check`: `CHECK (((domain = lower(domain)) AND (domain <> '')))`
+- `workspace_email_domain_domain_one_spelling`: `CHECK (is_identifier_text(domain))`
 - `workspace_email_domain_source_check`: `CHECK ((source = ANY (ARRAY['admin', 'mailbox'])))`
 
 **Indexes**

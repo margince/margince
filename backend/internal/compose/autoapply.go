@@ -188,7 +188,7 @@ func (a autoApplier) proposalToApply(ctx context.Context, approvalID ids.Approva
 	var out proposalTarget
 	var entityType *string
 	var entityID *ids.UUID
-	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, a.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT kind, target_entity_type, target_entity_id
 			  FROM approval
@@ -216,7 +216,7 @@ func (a autoApplier) proposalToApply(ctx context.Context, approvalID ids.Approva
 // authority nobody currently holds.
 func (a autoApplier) ownerOf(ctx context.Context, entityType string, entityID ids.UUID) (ids.UUID, error) {
 	var owner ids.UUID
-	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, a.pool, func(tx pgx.Tx) error {
 		var err error
 		owner, err = ownerOfTx(ctx, tx, entityType, entityID, false)
 		return err
@@ -291,7 +291,7 @@ func (a autoApplier) asOwnersAgent(ctx context.Context, owner ids.UUID) (context
 // decision whose work nobody performs.
 func (a autoApplier) duePending(ctx context.Context, limit int) ([]ids.ApprovalID, error) {
 	var due []ids.ApprovalID
-	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, a.pool, func(tx pgx.Tx) error {
 		// The kinds come from the module that owns them, so the scan looks for
 		// the set the applier accepts. A stable order sends the same set twice.
 		rows, err := tx.Query(ctx, `

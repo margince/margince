@@ -7,6 +7,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Modal } from "../design-system/atoms";
 import { DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
+import { en as englishCopy } from "../i18n/en";
 import {
   ANA,
   contactCase,
@@ -188,11 +189,11 @@ export const Stale: Story = {
     const body = within(document.body);
     await tickBen(body);
     await userEvent.click(
-      await body.findByRole("button", { name: "Preview merge" }),
+      await body.findByRole("button", {
+        name: englishCopy["contactCase.previewVerb"],
+      }),
     );
-    const notice = await body.findByText(
-      "The duplicates changed while you reviewed them. Check the selection again.",
-    );
+    const notice = await body.findByText(englishCopy["contactCase.stale"]);
     await waitFor(() => expect(notice).toBeVisible());
   },
 };
@@ -208,7 +209,9 @@ export const Preview: Story = {
     await tickBen(body);
     await userEvent.click(body.getByRole("checkbox", { name: /M\. Kovac/ }));
     await userEvent.click(
-      await body.findByRole("button", { name: "Preview merge" }),
+      await body.findByRole("button", {
+        name: englishCopy["contactCase.previewVerb"],
+      }),
     );
     const reader = await body.findByText("Cleo Reader, can view");
     await waitFor(() => expect(reader).toBeVisible());

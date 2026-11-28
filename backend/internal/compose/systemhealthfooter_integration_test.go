@@ -35,7 +35,7 @@ func TestADroppedBackgroundSendCountsInTheFooterWarning(t *testing.T) {
 		set: commsauthz.DecisionSet{Decisions: []commsauthz.Decision{held}}, cause: apperrors.ErrConsentNotGranted,
 	})
 	for _, err := range []error{refusal, errors.New("a provider fault, not a refusal")} {
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return commsStager{}.RecordUnheldRefusalTx(ctx, tx, err)
 		}); err != nil {
 			t.Fatalf("recording the dropped send: %v", err)

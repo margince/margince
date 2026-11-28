@@ -23,7 +23,7 @@ func markOf(t *testing.T, e *integration.Env, email string) (mark, setBy string,
 	t.Helper()
 	var m, by *string
 	var rows int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(context.Background(), `
 			SELECT p.relationship_mark, p.relationship_mark_set_by
 			  FROM contact p JOIN contact_email pe ON pe.contact_id = p.id

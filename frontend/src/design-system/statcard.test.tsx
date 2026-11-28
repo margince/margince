@@ -59,7 +59,7 @@ describe("a reading that names what it counts", () => {
 
     await user.tab();
     expect(
-      screen.getByRole("region", { name: "Open deals on this company" }),
+      screen.getByRole("region", { name: en["co.standing.peek.openDeals"] }),
     ).toBeTruthy();
     await user.keyboard("{Enter}");
 
@@ -77,7 +77,7 @@ describe("a reading that names what it counts", () => {
     await user.click(screen.getByText("2 emails"));
 
     expect(
-      screen.getByRole("region", { name: "Open deals on this company" }),
+      screen.getByRole("region", { name: en["co.standing.peek.openDeals"] }),
     ).toBeTruthy();
   });
 

@@ -18,11 +18,17 @@ package contacts
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The ordinary correction: someone's work address changed and the file says so.
@@ -484,5 +490,65 @@ func TestAnAbsentAddressSetLeavesThemAlone(t *testing.T) {
 	if rows := liveEmailRows(updated); len(rows) != 1 {
 		t.Fatalf("a patch that said nothing about addresses left %d of them: %+v",
 			len(rows), rows)
+	}
+}
+
+func TestAReplacementKeepsHeldLegacyEmailsAndBoundsNewAddresses(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	contact, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Legacy address", Source: "test",
+		Emails: []ContactEmailInput{{Email: "stored@legacy.test", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+	legacy := strings.Repeat("a", values.MaxEmailLength) + "@legacy.test"
+	// Restoring a legacy spelling needs SQL because the current writer refuses it.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE contact_email SET email = @email WHERE contact_id = @contact`,
+			pgx.StrictNamedArgs{"email": legacy, "contact": id})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	emails := make([]ContactEmailInput, maxContactEmails)
+	emails[0] = ContactEmailInput{Email: legacy, EmailType: "work", IsPrimary: true}
+	for i := 1; i < len(emails); i++ {
+		emails[i] = ContactEmailInput{Email: fmt.Sprintf("new-%d@example.test", i), EmailType: "work", Position: i}
+	}
+	updated, err := e.store.UpdateContact(ctx, id, UpdateContactInput{Emails: emails, Source: "test"})
+	if err != nil {
+		t.Fatalf("adding addresses beside a held legacy address: %v", err)
+	}
+	keptLegacy := false
+	for _, row := range liveEmailRows(updated) {
+		keptLegacy = keptLegacy || string(row.Email) == legacy
+	}
+	if len(liveEmailRows(updated)) != maxContactEmails || !keptLegacy {
+		t.Fatal("replacement lost the legacy address or did not reach the list cap")
+	}
+	before := writeShapeRows(ctx, t, e)
+	_, err = e.store.UpdateContact(ctx, id, UpdateContactInput{
+		Emails: append(emails, ContactEmailInput{Email: "overflow@example.test", EmailType: "work"}), Source: "test",
+	})
+	fault, ok := errors.AsType[*httperr.DetailedError](err)
+	if !ok || len(fault.Fields) != 1 || fault.Fields[0].Field != "emails" || fault.Fields[0].Code != "too_many" {
+		t.Fatalf("growing the list past its cap = %v, want emails/too_many", err)
+	}
+	_, err = e.store.UpdateContact(ctx, id, UpdateContactInput{
+		Emails: []ContactEmailInput{emails[0], {Email: "fresh@intranet", EmailType: "work"}}, Source: "test",
+	})
+	invalid, ok := errors.AsType[*values.ParseError](err)
+	if !ok || invalid.Field != "email" || invalid.Code != "email_malformed" {
+		t.Fatalf("adding an undotted address = %v, want email/email_malformed", err)
+	}
+	stored, err := e.store.GetContact(ctx, id, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(liveEmailRows(stored)) != maxContactEmails || writeShapeRows(ctx, t, e) != before {
+		t.Fatal("refused replacements changed the contact or its audit and event rows")
 	}
 }

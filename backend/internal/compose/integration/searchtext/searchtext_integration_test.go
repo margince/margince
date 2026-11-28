@@ -165,7 +165,7 @@ func TestAWriteThatLeavesTheTextAloneLeavesTheSearchValueAlone(t *testing.T) {
 
 	storedAgain := func(write string) int {
 		var before, after int
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			const counted = `SELECT pg_stat_get_xact_tuples_inserted(reltoastrelid) FROM pg_class WHERE oid = 'activity'::regclass`
 			if err := tx.QueryRow(e.Admin(), counted).Scan(&before); err != nil {
 				return err

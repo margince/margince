@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { OfferTemplatesAdmin } from "./offertemplates";
 
@@ -86,13 +87,15 @@ function templatesStub({
 }
 
 function newButton() {
-  return screen.queryByRole("button", { name: "New template" });
+  return screen.queryByRole("button", { name: englishCopy["template.new"] });
 }
 function editButton() {
-  return screen.queryByRole("button", { name: "Edit template" });
+  return screen.queryByRole("button", { name: englishCopy["template.edit"] });
 }
 function archiveButton() {
-  return screen.queryByRole("button", { name: "Archive template" });
+  return screen.queryByRole("button", {
+    name: englishCopy["template.archive"],
+  });
 }
 function rowMenu() {
   return screen.queryByRole("button", { name: "Actions for Standard DE" });
@@ -103,9 +106,7 @@ async function openRowMenu() {
   );
 }
 function postureLine() {
-  return screen.queryByText(
-    "Read-only. Your role cannot change offer templates.",
-  );
+  return screen.queryByText(englishCopy["template.readOnly"]);
 }
 
 describe("OfferTemplatesAdmin", () => {
@@ -133,7 +134,7 @@ describe("OfferTemplatesAdmin", () => {
     expect(standard.getByText("German (DE)")).toBeTruthy();
     expect(standard.getByText("Default")).toBeTruthy();
     const plain = within(screen.getByRole("row", { name: /Plain EN/ }));
-    expect(plain.getByText("English (US)")).toBeTruthy();
+    expect(plain.getByText(englishCopy["template.localeEN"])).toBeTruthy();
     expect(plain.queryByText("Default")).toBeNull();
     expect(screen.queryByText("de-DE")).toBeNull();
   });
@@ -151,7 +152,10 @@ describe("OfferTemplatesAdmin", () => {
       await userEvent.keyboard("{Escape}");
       return labels;
     };
-    expect(await offered(/^Language/)).toEqual(["German (DE)", "English (US)"]);
+    expect(await offered(/^Language/)).toEqual([
+      "German (DE)",
+      englishCopy["template.localeEN"],
+    ]);
     expect(await offered(/^Default for this language/)).toEqual(["No", "Yes"]);
   });
 
@@ -216,7 +220,7 @@ describe("OfferTemplatesAdmin", () => {
     );
     render(<OfferTemplatesAdmin />);
     expect(
-      await screen.findByRole("button", { name: "New template" }),
+      await screen.findByRole("button", { name: englishCopy["template.new"] }),
     ).toBeTruthy();
     expect(await screen.findByText("Standard DE")).toBeTruthy();
     expect(rowMenu()).toBeNull();
@@ -231,7 +235,7 @@ describe("OfferTemplatesAdmin", () => {
     render(<OfferTemplatesAdmin />);
     await openRowMenu();
     expect(
-      await screen.findByRole("button", { name: "Edit template" }),
+      await screen.findByRole("button", { name: englishCopy["template.edit"] }),
     ).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Actions" })).toBeTruthy();
     expect(newButton()?.hasAttribute("disabled")).toBe(true);
@@ -247,7 +251,9 @@ describe("OfferTemplatesAdmin", () => {
     render(<OfferTemplatesAdmin />);
     await openRowMenu();
     expect(
-      await screen.findByRole("button", { name: "Archive template" }),
+      await screen.findByRole("button", {
+        name: englishCopy["template.archive"],
+      }),
     ).toBeTruthy();
     expect(newButton()?.hasAttribute("disabled")).toBe(true);
     expect(editButton()).toBeNull();

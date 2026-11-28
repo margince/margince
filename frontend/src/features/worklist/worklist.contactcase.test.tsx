@@ -7,6 +7,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { ANA, BEN, contactCase } from "../../testing/contactcase.fixtures";
 import {
   jsonResponse,
@@ -73,7 +74,9 @@ describe("a contact case on the Worklist", () => {
     ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Review" }));
     expect(
-      await screen.findByRole("button", { name: "Preview merge" }),
+      await screen.findByRole("button", {
+        name: englishCopy["contactCase.previewVerb"],
+      }),
     ).toBeVisible();
   });
 

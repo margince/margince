@@ -405,7 +405,7 @@ func readInstallationZone(ctx context.Context, pool *pgxpool.Pool) (*time.Locati
 	}
 	readCtx := bootCtx(ctx, ws, scheduleReadActor)
 	var zone *time.Location
-	err = database.WithWorkspaceTx(readCtx, pool, func(tx pgx.Tx) (err error) {
+	err = database.WithTx(readCtx, pool, func(tx pgx.Tx) (err error) {
 		zone, err = identity.ZoneAppliedTx(readCtx, tx)
 		return err
 	})

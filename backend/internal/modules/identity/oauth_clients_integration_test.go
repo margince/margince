@@ -28,7 +28,7 @@ func (e *cimdEnv) actorWith(t *testing.T, grant principal.ObjectGrant) Identity 
 		userID ids.UserID
 		wsID   ids.WorkspaceID
 	)
-	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		if err := tx.QueryRow(e.ctx, `SELECT id FROM workspace LIMIT 1`).Scan(&wsID); err != nil {
 			return err
 		}
@@ -102,7 +102,7 @@ func TestAnAdminRegisteredClientAlwaysGetsASecretStoredAsItsDigest(t *testing.T)
 		t.Fatalf("secret %q, confidential %v: want a secret on every admin-registered client", secret, client.Confidential)
 	}
 	var stored *string
-	err = database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err = database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx, `SELECT client_secret_hash FROM oauth_client WHERE id = $1`, client.ID).Scan(&stored)
 	})
 	if err != nil {
@@ -172,7 +172,7 @@ func (e *cimdEnv) agentClientRow(t *testing.T, actor Identity, clientID string) 
 func TestTheClientListPagesWithAdminClientsFirst(t *testing.T) {
 	e := setupCIMD(t, "agent-client-page")
 	admin := e.actorWith(t, fullAgentClientGrant)
-	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		for i := range 3 {
 			if _, err := tx.Exec(e.ctx, `INSERT INTO oauth_client (client_id, client_name, redirect_uris, created_at)
 				VALUES ($1, 'self', ARRAY['https://x.example/cb'], now() - make_interval(mins => $2))`,

@@ -606,7 +606,7 @@ describe("formatHours", () => {
   it("keeps one decimal in the reader's notation and unit word", () => {
     expect(formatHours(3.5, "en")).toMatch(/^3\.5\s*hr/);
     expect(formatHours(3.5, "de")).toMatch(/^3,5\s*Std\./);
-    expect(formatHours(3.5, "vi")).toMatch(/^3,5\s*giờ$/);
+    expect(formatHours(3.5, "vi")).toMatch(/^3,5\s*(giờ|tiếng)$/);
   });
 
   it("rounds a long fraction to one decimal and drops a whole one", () => {

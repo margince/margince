@@ -50,9 +50,9 @@ func TestRefusedLeadFiltersNamesTheDialsASeatCannotRead(t *testing.T) {
 		}), []string{filterPartnerAccepted, leadPartnerField}},
 		{"a seat reading leads and partners", leadTeamReader(map[string]principal.ObjectGrant{
 			leadEntity: {Read: true}, partnerMaskObject: {Read: true},
-		}), []string{filterCountry, filterIndustry, filterPartnerAccepted, leadPartnerField, filterSizeBand}},
+		}), []string{filterCompanyID, filterCountry, filterIndustry, filterPartnerAccepted, leadPartnerField, filterSizeBand}},
 		{"a seat reading leads alone", leadTeamReader(leadReadOnly), []string{
-			filterCountry, filterIndustry, filterPartnerAccepted, leadPartnerField, filterSizeBand,
+			filterCompanyID, filterCountry, filterIndustry, filterPartnerAccepted, leadPartnerField, filterSizeBand,
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestTheReachProbeWalksEveryLeadListFilter(t *testing.T) {
 		if err := leadListFilters.Apply(&in, map[string]string{probe.Parameter: probe.Operand}); err != nil {
 			t.Fatalf("the probe's %s operand does not bind: %v", probe.Parameter, err)
 		}
-		if _, err := leadListWhere(everyRow, in, nil, nil, leadSLAPolicy{}, func(any) int { return 1 }); err != nil {
+		if _, err := leadListWhere(everyRow, in, nil, leadSLAPolicy{}, func(any) int { return 1 }); err != nil {
 			t.Errorf("the probe's %s operand faults for a reader of every row: %v", probe.Parameter, err)
 		}
 	}

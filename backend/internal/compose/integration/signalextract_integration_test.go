@@ -192,7 +192,7 @@ func TestAThreadThatEndsAContractRaisesASignalCitingIt(t *testing.T) {
 
 	var cited ids.UUID
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT (evidence->0->>'source_id')::uuid FROM signal
 			 WHERE resolved_company_id = $1 AND kind = 'contract_ended'`, company).Scan(&cited)

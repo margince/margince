@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import {
   expectFoldedRowsUnderSummary,
   installFetchStub,
@@ -84,7 +85,7 @@ const openSendGroup = async ({
   canvasElement,
 }: Readonly<{ canvasElement: HTMLElement }>) => {
   await userEvent.click(
-    await within(canvasElement).findByText("Send messages"),
+    await within(canvasElement).findByText(englishCopy["passport.scope.send"]),
   );
 };
 
@@ -110,7 +111,9 @@ export const SearchByKey: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
-      await canvas.findByRole("searchbox", { name: "Search tools" }),
+      await canvas.findByRole("searchbox", {
+        name: englishCopy["tools.search"],
+      }),
       "search_rec",
     );
     await canvas.findByText("search_records");
@@ -136,7 +139,9 @@ export const SearchNarrows: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
-      await canvas.findByRole("searchbox", { name: "Search tools" }),
+      await canvas.findByRole("searchbox", {
+        name: englishCopy["tools.search"],
+      }),
       "mail",
     );
   },
@@ -147,7 +152,9 @@ export const SearchFindsNothing: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
-      await canvas.findByRole("searchbox", { name: "Search tools" }),
+      await canvas.findByRole("searchbox", {
+        name: englishCopy["tools.search"],
+      }),
       "invoice",
     );
   },
@@ -160,7 +167,9 @@ export const ScopedToPassport: Story = {
     const canvas = within(context.canvasElement);
     await pickOption(
       userEvent.setup(),
-      await canvas.findByRole("combobox", { name: "All passports" }),
+      await canvas.findByRole("combobox", {
+        name: englishCopy["tools.scopeAll"],
+      }),
       "Reachable by Scout",
     );
     await openSendGroup(context);

@@ -164,6 +164,9 @@ func (c inputChanges) empty() bool {
 func inputChangesOf(envs []events.Envelope) (inputChanges, error) {
 	var out inputChanges
 	for _, env := range envs {
+		if env.Type == "offer.updated" && crmcontracts.OfferSourceOnly(env.Payload) {
+			continue
+		}
 		change, ok := assurance.InputChangeOf(env.Type)
 		if !ok {
 			continue

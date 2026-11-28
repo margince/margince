@@ -4,15 +4,20 @@
 // Which rendered page of a list table is on screen, and how many rows a page
 // holds. A new narrowing sends the reader back to page one.
 
-import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type RefObject,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { stable } from "../format/collate";
 
 /**
  * Page sizes the footer offers, as rendered pages. The caller fetches a whole
- * number of them per read (`listFetchLimit`), and the table slices what it holds.
- *
- * The fetch is always a whole multiple of this, so the two stay in step. A
- * buffer sized on its own once made a list say "1-25 of 50 loaded so far".
+ * number of them per read (`listFetchLimit`), by cursor or at a row offset.
+ * The table slices what it holds on page boundaries.
  */
 export const PAGE_SIZES = [25, 50, 100] as const;
 
@@ -65,38 +70,44 @@ export function narrowingSignature(
 }
 
 /**
- * Sends the reader back to page one when the narrowing changes. Page 2 of a
- * new filter, sort or scope holds rows they never asked for.
- *
- * Not when `keepsPage` says so: a link that changes the narrowing names its page.
- *
- * Not on arrival: a page read from the address must survive the first render.
- * So the reset compares the signature with the one seeded during the first
- * render. Counting effect runs fails, because StrictMode and late deps run
- * the effect on arrival more than once.
+ * Sends the reader back to page one when the dials change, unless `keepsPage`
+ * says a link named both. A scope that settles before the first rows land, as
+ * the deals pipeline does, is arrival and keeps the page. Compared by value:
+ * StrictMode and late deps run the effect on arrival more than once.
  */
 function useResetOnNarrowing(
-  narrowing: string,
+  narrowing: Readonly<{ dials: string; scope: string }>,
   toFirstPage: () => void,
   keepsPage: (() => boolean) | undefined,
+  pending: boolean,
 ) {
-  const narrowedBy = useRef(narrowing);
-  // `toFirstPage` is re-made every render and must not re-run the effect;
-  // what it does depends only on the signature.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: setPage is stable in effect
+  const { dials, scope } = narrowing;
+  const seen = useRef({ dials, scope });
+  const arrived = useRef(!pending);
+  const reset = useEffectEvent(() => {
+    if (!keepsPage?.()) {
+      toFirstPage();
+    }
+  });
   useEffect(() => {
-    if (narrowedBy.current === narrowing) {
+    const before = seen.current;
+    if (before.dials === dials && before.scope === scope) {
       return;
     }
-    narrowedBy.current = narrowing;
-    if (keepsPage?.()) {
+    seen.current = { dials, scope };
+    if (before.dials === dials && !arrived.current) {
       return;
     }
-    toFirstPage();
+    reset();
     // The page and nothing else. This also fires on the way out, against an
     // address that is no longer the list's, and a scroll offset written then
     // would be lost. The pager scrolls to the top for its own moves instead.
-  }, [narrowing]);
+  }, [dials, scope]);
+  useEffect(() => {
+    if (!pending) {
+      arrived.current = true;
+    }
+  }, [pending]);
 }
 
 type Reach = Readonly<{
@@ -112,9 +123,9 @@ type Reach = Readonly<{
   setPage: (to: number) => void;
 }>;
 
-// The only loader for a page past the rows in hand, named by an address or
-// stepped onto with Next. A cursor read cannot jump, so it walks on until the
-// page is loaded. When the rows run out the address returns to the last page.
+// Walks the cursor to a page past the rows in hand, for a list that cannot
+// read a page at an offset. When the rows run out the address returns to the
+// last page.
 function useReachAskedPage(reach: Reach) {
   const past = reach.enabled && reach.page > reach.lastPage;
   // Re-armed by each arriving read or press; the callbacks are re-made every render.
@@ -131,6 +142,18 @@ function useReachAskedPage(reach: Reach) {
   }, [past, reach.loaded, reach.hasMore, reach.asks]);
 }
 
+/**
+ * Rows the caller read at a row offset for a page past the rows in hand. It
+ * is there while the page is past them, so the cursor does not walk.
+ */
+export type JumpedRows<Row> = Readonly<{
+  /** The offset of the first row. */
+  from: number;
+  rows: readonly Row[];
+  /** False while the read, or the walk on from it, is under way. */
+  settled: boolean;
+}>;
+
 /** What the caller passes to own the page or the page size. */
 export type PagingControl<Row> = Readonly<{
   rows: readonly Row[];
@@ -142,10 +165,13 @@ export type PagingControl<Row> = Readonly<{
   onLoadMore?: () => void;
   /** How many rows match on the server, when it counts them. */
   total?: number;
+  jumped?: JumpedRows<Row>;
   /** False where a body outside the table owns the paging; default true. */
   reachAsked?: boolean;
   /** True when the page in hand was named with the narrowing, so no reset. */
   keepsPage?: () => boolean;
+  /** The list's rows have not arrived yet. */
+  pending?: boolean;
 }>;
 
 /** The rows the table slices out, and the pager's state. */
@@ -155,8 +181,10 @@ export type Paging<Row> = Readonly<{
   lastPage: number;
   /** `lastPage` is the list's real end: counted, or every row is in hand. */
   endKnown: boolean;
-  /** The page a press or an address named, while the cursor walks to it. */
+  /** The page a press or an address named, while its rows are read. */
   asked?: number;
+  /** The rows have not arrived, or the page on screen is a jump still being read. */
+  pending: boolean;
   from: number;
   pageRows: readonly Row[];
   perPage: number;
@@ -191,6 +219,56 @@ function usePageState<Row>(control: PagingControl<Row>) {
   };
 }
 
+/** The pages the list holds, and the one on screen within them. */
+function pageBounds<Row>(
+  control: PagingControl<Row>,
+  page: number,
+  perPage: number,
+) {
+  const { jumped } = control;
+  const inHand = Math.max(
+    control.rows.length,
+    jumped?.rows.length ? jumped.from + jumped.rows.length : 0,
+  );
+  const loadedPages = Math.max(1, Math.ceil(inHand / perPage));
+  // A count is read once, so rows added since can outrun it; the rows in hand win.
+  const counted =
+    control.hasMore && control.total !== undefined
+      ? Math.max(loadedPages, Math.ceil(control.total / perPage))
+      : undefined;
+  // A jumped read is under way before the count arrives, so the page waits for it.
+  const reachable = jumped ? (counted ?? page) : loadedPages;
+  return { loadedPages, counted, current: Math.min(page, reachable) };
+}
+
+/** The rows of the page starting at `from`, from whichever read holds them. */
+function sliceOf<Row>(
+  rows: readonly Row[],
+  jumped: JumpedRows<Row> | undefined,
+  from: number,
+  perPage: number,
+): readonly Row[] {
+  if (jumped && from >= jumped.from) {
+    return jumped.rows.slice(from - jumped.from, from - jumped.from + perPage);
+  }
+  return rows.slice(from, from + perPage);
+}
+
+// A jumped page past the count goes to the last counted page.
+function useClampJumpedPage(
+  jumped: boolean,
+  page: number,
+  counted: number | undefined,
+  setPage: (to: number) => void,
+) {
+  const toLast = useEffectEvent((last: number) => setPage(last));
+  useEffect(() => {
+    if (jumped && counted !== undefined && page > counted) {
+      toLast(counted);
+    }
+  }, [jumped, page, counted]);
+}
+
 /**
  * Slices the rows the caller holds into rendered pages. One read carries a
  * whole multiple of `perPage`, so the slices land on page boundaries.
@@ -201,38 +279,37 @@ export function usePaging<Row>(
   scrollerRef: RefObject<HTMLDivElement | null>,
 ): Paging<Row> {
   const { page, setPage, perPage, setPerPage } = usePageState(control);
-  const lastPage = Math.max(1, Math.ceil(control.rows.length / perPage));
-  // A count is read once, so rows added since can outrun it; the rows in hand win.
-  const counted =
-    control.hasMore && control.total !== undefined
-      ? Math.max(lastPage, Math.ceil(control.total / perPage))
-      : undefined;
-  const current = Math.min(page, lastPage);
+  const { loadedPages, counted, current } = pageBounds(control, page, perPage);
   const from = (current - 1) * perPage;
-  const { rows } = control;
+  const { rows, jumped } = control;
   const pageRows = useMemo(
-    () => rows.slice(from, from + perPage),
-    [rows, from, perPage],
+    () => sliceOf(rows, jumped, from, perPage),
+    [rows, jumped, from, perPage],
   );
   const [asks, setAsks] = useState(0);
   useReachAskedPage({
-    enabled: control.reachAsked !== false,
+    enabled: control.reachAsked !== false && jumped === undefined,
     page,
-    lastPage,
+    lastPage: loadedPages,
     loaded: control.rows.length,
     hasMore: control.hasMore,
     asks,
     loadMore: () => control.onLoadMore?.(),
     setPage,
   });
+  useClampJumpedPage(jumped !== undefined, page, counted, setPage);
   useResetOnNarrowing(
-    narrowingSignature({ ...narrowing, perPage }),
+    {
+      dials: narrowingSignature({ ...narrowing, scopeKey: "", perPage }),
+      scope: narrowing.scopeKey,
+    },
     () => setPage(1),
     control.keepsPage,
+    control.pending ?? false,
   );
   const goto = (to: number) => {
     // Stepping past what is loaded is answered by `useReachAskedPage`.
-    if (to > lastPage) {
+    if (to > loadedPages) {
       setAsks((presses) => presses + 1);
     }
     setPage(Math.max(1, to));
@@ -242,11 +319,15 @@ export function usePaging<Row>(
       scrollerRef.current.scrollTop = 0;
     }
   };
+  const reading = jumped
+    ? !jumped.settled
+    : control.hasMore && page > loadedPages;
   return {
     current,
-    lastPage: counted ?? lastPage,
+    lastPage: counted ?? loadedPages,
     endKnown: counted !== undefined || !control.hasMore,
-    asked: control.hasMore && page > lastPage ? page : undefined,
+    asked: reading ? page : undefined,
+    pending: (control.pending ?? false) || (jumped !== undefined && reading),
     from,
     pageRows,
     perPage,
@@ -255,32 +336,49 @@ export function usePaging<Row>(
   };
 }
 
-/** Page numbers around the current one, which sits in the middle of them. */
-const PAGE_WINDOW = 3;
+/**
+ * The slots of a strip longer than it: page one, a gap, the pages around the
+ * current one, a gap, the last. A desktop has room for seven, a narrower screen five.
+ */
+export const PAGER_SLOTS = { wide: 7, short: 5 } as const;
+
+/** A slot in the pager: a page to jump to, or a gap where pages were skipped. */
+export type PagerSlot = number | "gap";
+
+const pages = (first: number, last: number): PagerSlot[] =>
+  Array.from({ length: last - first + 1 }, (_, index) => first + index);
 
 /**
- * A slot in the pager: a page to jump to, a gap where pages were skipped, or
- * the room a gap would take.
+ * Page one stays reachable because a lost reader goes back there. The last
+ * page is numbered so the strip says how long the list is. A longer list
+ * fills the same `slots` at every page, so Next never slides out between
+ * clicks. An `open` list has pages past `lastPage`, so a gap follows them.
  */
-export type PagerSlot = number | "gap" | "room";
-
-/** Page one stays reachable because a lost reader goes back there, and the
- *  last page is numbered so the strip says how long the list is. Seven slots
- *  at every position, so Next never slides out between clicks. */
-export function pagerSlots(current: number, lastPage: number): PagerSlot[] {
-  const first = Math.min(
-    Math.max(1, current - Math.floor(PAGE_WINDOW / 2)),
-    Math.max(1, lastPage - PAGE_WINDOW + 1),
-  );
-  const span = Math.min(PAGE_WINDOW, lastPage - first + 1);
-  const window = Array.from({ length: span }, (_, index) => first + index);
-  const last = first + span - 1;
+export function pagerSlots(
+  current: number,
+  lastPage: number,
+  open = false,
+  slots: number = PAGER_SLOTS.wide,
+): PagerSlot[] {
+  const tail: PagerSlot[] = open ? ["gap"] : [];
+  if (lastPage <= slots) {
+    return [...pages(1, lastPage), ...tail];
+  }
+  // At either end the window widens to the gap, so the strip keeps its count.
+  const end = slots - 2;
+  const reach = Math.floor((slots - 4) / 2);
+  if (current + reach <= end) {
+    return [...pages(1, end), "gap", lastPage, ...tail];
+  }
+  if (current - reach > lastPage - end) {
+    return [1, "gap", ...pages(lastPage - end + 1, lastPage), ...tail];
+  }
   return [
-    first > 1 ? 1 : "room",
-    first > 2 ? "gap" : "room",
-    ...window,
-    ...Array.from({ length: PAGE_WINDOW - span }, () => "room" as const),
-    last < lastPage - 1 ? "gap" : "room",
-    last < lastPage ? lastPage : "room",
+    1,
+    "gap",
+    ...pages(current - reach, current + reach),
+    "gap",
+    lastPage,
+    ...tail,
   ];
 }

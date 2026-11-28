@@ -66,7 +66,7 @@ func TestTheAnswerTaskFillsAnswersFromTheStoredEvent(t *testing.T) {
 	// A second pass over the same originals finds nothing left to fill.
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	var again datatask.BatchOut
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		again, err = fillGuestAnswersBatch(ctx, tx, identity.NewService(e.Pool), datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		return err

@@ -43,7 +43,7 @@ func contactTouches(
 func changesOf(ctx context.Context, t *testing.T, e *Env, contact ids.ContactID, now time.Time) []relstrength.Change {
 	t.Helper()
 	var out []relstrength.Change
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		touches, zone, err := contactTouches(ctx, tx, contact)
 		if err != nil {
 			return err
@@ -80,7 +80,7 @@ func TestQuietCountStartsFromTheOwnersLastTouchAndIgnoresAColleaguesMessage(t *t
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
 	contact := ids.From[ids.ContactKind](mine)
 	var touch contact360.LastTouch
-	if err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		touched, err := contact360.LastTouchFor(rep, tx, []ids.ContactID{contact}, contact360.AssembleOptions{})
 		touch = touched[contact]
 		return err

@@ -137,9 +137,6 @@ func TestASiteReadOverManyRecordsIsOneLineWithoutOneSite(t *testing.T) {
 	var entries []entry
 	for i, site := range []string{"https://a.example/about", "https://b.example/about", "https://c.example/logo.png"} {
 		after := `{"industry": "Software"}`
-		if i == 2 {
-			after = `{"industry": "Software", "logo": "` + site + `"}`
-		}
 		entries = append(entries, companyRow(`{"industry": null}`, after,
 			`{"source": "site_read", "source_url": "`+site+`"}`, now.Add(-time.Duration(i)*time.Second)))
 	}

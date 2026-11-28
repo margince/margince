@@ -1,7 +1,9 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ListTable } from "./listtable";
 
 afterEach(cleanup);
@@ -56,7 +58,9 @@ describe("ListTable alternate body paging ownership", () => {
       </LocaleProvider>,
     );
 
-    expect(screen.getByText("1 to 1 of 1 rows loaded")).toBeTruthy();
+    expect(document.querySelector(".lt-count")).toHaveTextContent(
+      /^1-1 of 1 loaded$/,
+    );
     expect(screen.getByRole("navigation", { name: "Pages" })).toBeTruthy();
   });
 
@@ -83,7 +87,9 @@ describe("ListTable alternate body paging ownership", () => {
 
     expect(screen.getByText("Empty board")).toBeTruthy();
     expect(screen.getByText(/No rows match these filters\./)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: englishCopy["table.clearFilters"] }),
+    );
     expect(cleared).toEqual([""]);
   });
 });

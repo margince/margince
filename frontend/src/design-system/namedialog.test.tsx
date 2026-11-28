@@ -13,6 +13,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import { NameDialog, nameRefusal } from "./namedialog";
 
@@ -114,7 +115,7 @@ it("asks before Escape drops a changed name", async () => {
   await user.type(screen.getByRole("textbox", { name: "Name" }), " Mitte");
   await user.keyboard("{Escape}");
   expect(
-    screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
+    screen.getByRole("dialog", { name: englishCopy["unsaved.title"] }),
   ).toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled();
 });

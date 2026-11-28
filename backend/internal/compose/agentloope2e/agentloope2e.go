@@ -40,8 +40,9 @@ const (
 // which it must never touch. Subjects are logical names from the seed, never
 // record ids, because the real writers mint their own.
 type Scenario struct {
-	Name  string `yaml:"name"`
-	Agent Agent  `yaml:"agent"`
+	Recovery string `yaml:"recovery"`
+	Name     string `yaml:"name"`
+	Agent    Agent  `yaml:"agent"`
 	// Worklist is the subjects the agent must write on once each.
 	Worklist []string `yaml:"worklist"`
 	// Forbidden is the subjects it must not write on: another member's deal,
@@ -116,6 +117,8 @@ var safeName = regexp.MustCompile(`^[a-z0-9][a-z0-9_.-]*$`)
 
 func (s Scenario) validate() error {
 	switch {
+	case s.Recovery != "" && s.Recovery != "bad_arguments" && s.Recovery != "unknown_field" && s.Recovery != "field_shape" && s.Recovery != "unsupported":
+		return fmt.Errorf("unknown recovery class %q", s.Recovery)
 	case !safeName.MatchString(s.Name):
 		return fmt.Errorf("the scenario name %q is not a plain file name, which a verdict is filed under", s.Name)
 	case slices.Contains(s.Worklist, "") || slices.Contains(s.Forbidden, ""):

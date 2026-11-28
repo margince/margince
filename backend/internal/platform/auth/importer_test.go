@@ -23,7 +23,15 @@ import (
 // takes, and the only grant this door reads.
 func importerGrant() principal.Permissions {
 	return principal.Permissions{Objects: map[string]principal.ObjectGrant{
-		"import_run": {Create: true},
+		"import_run": {Create: true, Read: true, Update: true, Delete: true},
+	}}
+}
+
+// ownImportGrant is a rep's: they import their own records and may not
+// discard anybody's run.
+func ownImportGrant() principal.Permissions {
+	return principal.Permissions{Objects: map[string]principal.ObjectGrant{
+		"import_run": {Create: true, Read: true, Update: true},
 	}}
 }
 
@@ -39,6 +47,12 @@ func TestDeclaredImporterAdmitsOnlyAHumanHoldingTheGrant(t *testing.T) {
 			p:    principal.Principal{Type: principal.PrincipalHuman, ID: "human:admin", Permissions: importerGrant()},
 			want: true,
 			why:  "this is the importer; refusing it refuses every import",
+		},
+		{
+			name: "a rep who imports only their own records",
+			p:    principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep", Permissions: ownImportGrant()},
+			want: false,
+			why:  "a rep's own import never writes the importer's namespace",
 		},
 		{
 			name: "a human without the grant",

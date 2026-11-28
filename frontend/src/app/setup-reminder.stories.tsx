@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { parseHash } from "../lib/router";
 import {
   gmail,
@@ -54,7 +55,7 @@ export const Open: Story = {
       await screen.findByRole("button", { name: /Finish setup/ }),
     );
     const panel = await screen.findByRole("heading", {
-      name: "Finish setting up",
+      name: englishCopy["setup.reminder.title"],
     });
     const pop = panel.closest(".popover-panel");
     if (!pop) {

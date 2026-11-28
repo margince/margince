@@ -97,7 +97,7 @@ func (h installationSettingsHandlers) readJurisdiction(ctx context.Context, fn f
 	if err := auth.Require(ctx, "installation_settings", principal.ActionRead); err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		code, err := gatedCountry(ctx, tx)
 		if err != nil {
 			return err

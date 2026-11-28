@@ -4,6 +4,7 @@ import { focusManager } from "@tanstack/react-query";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import type { StageColumnRead } from "./dealboard.queries";
 import { DealsScreen } from "./deals";
 import { StageColumnFoot } from "./deals.board";
@@ -96,9 +97,7 @@ describe("the deals board's counts", () => {
     );
     render(<DealsScreen />);
 
-    expect(
-      await screen.findByText("Could not load this view. Reload the page."),
-    ).toBeTruthy();
+    expect(await screen.findByText(englishCopy["common.error"])).toBeTruthy();
     expect(screen.queryByText(/^\d+ deals?\b/)).toBeNull();
   });
 
@@ -139,7 +138,7 @@ describe("the deals board's counts", () => {
     render(<DealsScreen />);
 
     expect(
-      await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
+      await screen.findByText("1-2 of 2 loaded in Sales"),
     ).toBeInTheDocument();
   });
 
@@ -216,7 +215,7 @@ describe("the deals board's counts", () => {
     render(<DealsScreen />);
 
     expect(
-      await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
+      await screen.findByText("1-2 of 2 loaded in Sales"),
     ).toBeInTheDocument();
   });
 
@@ -245,7 +244,7 @@ describe("the deals board's counts", () => {
     expect(await within(column("s1")).findByRole("alert")).toBeTruthy();
     expect(within(column("s1")).getByText("Fleet one")).toBeTruthy();
     expect(
-      await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
+      await screen.findByText("1-2 of 2 loaded in Sales"),
     ).toBeInTheDocument();
   });
 });

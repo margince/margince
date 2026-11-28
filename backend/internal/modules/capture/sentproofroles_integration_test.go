@@ -30,7 +30,7 @@ func recipientWasWrittenTo(t *testing.T, role string) {
 	t.Helper()
 	ctx, pool := meetingTenureEnv(t)
 	copied := role + "@buyer.example"
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, mail := ids.NewV7(), ids.NewV7()
 		if _, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Sender')`,
 			seat, "sender-"+seat.String()+"@seller.example"); err != nil {
@@ -84,7 +84,7 @@ func TestOneSendSeenFromTwoMailboxesIsOneSend(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctx, pool := meetingTenureEnv(t)
 			copied := "copied-" + ids.NewV7().String() + "@buyer.example"
-			err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 				first, second := ids.NewV7(), ids.NewV7()
 				for _, seat := range []ids.UUID{first, second} {
 					if _, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Sender')`,
@@ -146,7 +146,7 @@ func captureSentMail(ctx context.Context, tx pgx.Tx, copied, body string, mailbo
 func TestADecliningSendReachedTwoWaysIsOneSend(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
 	buyer := "buyer-" + ids.NewV7().String() + "@buyer.example"
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, mail := ids.NewV7(), ids.NewV7()
 		if _, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Sender')`,
 			seat, "sender-"+seat.String()+"@seller.example"); err != nil {
@@ -185,7 +185,7 @@ func TestADecliningSendReachedTwoWaysIsOneSend(t *testing.T) {
 func TestAnUnfoldedCounterpartyStillProvesASend(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
 	local := "buyer-" + ids.NewV7().String()
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, mail := ids.NewV7(), ids.NewV7()
 		if _, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Sender')`,
 			seat, "sender-"+seat.String()+"@seller.example"); err != nil {

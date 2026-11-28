@@ -28,6 +28,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -55,7 +56,9 @@ var ErrRejected = errors.New("oidc: token rejected")
 
 // Verifier checks an RS256 ID token against one issuer's published keys.
 type Verifier struct {
-	jwksURL string
+	requiredEndorsement  string
+	allowMissingIssuedAt bool
+	jwksURL              string
 	// checkIssuer settles WHOSE token this is, and is separate from
 	// matchIdentity because the two answer different questions and only one of
 	// them may ever be omitted. Every constructor supplies an issuer check as a
@@ -177,43 +180,6 @@ type oidcHeader struct {
 	Kid string `json:"kid"`
 }
 
-// Claims are the ID token fields a sign-in or push check reads.
-type Claims struct {
-	Iss           string   `json:"iss"`
-	Aud           Audience `json:"aud"`
-	Sub           string   `json:"sub"`
-	Email         string   `json:"email"`
-	EmailVerified bool     `json:"email_verified"`
-	Exp           int64    `json:"exp"`
-	Iat           int64    `json:"iat"`
-	// Tid is the Microsoft directory the account belongs to. Google issues no
-	// such claim; for Microsoft it is what says WHICH tenant vouched for the
-	// email, and the issuer is derived from it, so the two are read together.
-	Tid string `json:"tid"`
-	// PreferredUsername is Microsoft's sign-in name for the account. Read only
-	// as a fallback where a work/school account carries no `email` claim, and
-	// only under a tenant this installation trusts.
-	PreferredUsername string `json:"preferred_username"`
-	// Groups is the token's standard `groups` claim, feeding identity's
-	// additive group→role grants. Absent decodes as nil — the empty list the
-	// sign-in adapters hand on, never an error, because most Google tokens
-	// carry no such claim and a token naming no groups simply grants nothing.
-	Groups []string `json:"groups"`
-	// Hd is Google's hosted-domain claim: the Workspace domain that vouches for
-	// the account, absent for a personal account.
-	Hd string `json:"hd"`
-	// GivenName is the standard `given_name` claim; absent decodes as "".
-	GivenName string `json:"given_name"`
-	// Picture is the standard `picture` claim. Only the Google adapter hands it
-	// on: Microsoft sends no picture URL, and a URL from anywhere else is not fetched.
-	Picture string `json:"picture"`
-	// Jti, WorkspaceID and DisplayName are what a Dispact call token adds: the
-	// token's one-use id, the Dispact team, and the caller's name there.
-	Jti         string `json:"jti"`
-	WorkspaceID string `json:"workspace_id"`
-	DisplayName string `json:"display_name"`
-}
-
 // Verify returns the decoded claims only for a well-formed, correctly-signed
 // token whose issuer and identity both pass the injected checks.
 func (v *Verifier) Verify(ctx context.Context, bearer string) (Claims, error) {
@@ -278,10 +244,13 @@ func (v *Verifier) checkClaims(c Claims, matchIdentity func(Claims) error) error
 		return err
 	}
 	now := v.now()
+	if c.Nbf != 0 && now.Add(v.skew).Before(time.Unix(c.Nbf, 0)) {
+		return fmt.Errorf("%w: not valid yet", ErrRejected)
+	}
 	if c.Exp == 0 || now.After(time.Unix(c.Exp, 0).Add(v.skew)) {
 		return fmt.Errorf("%w: expired", ErrRejected)
 	}
-	if c.Iat == 0 {
+	if c.Iat == 0 && !v.allowMissingIssuedAt {
 		return fmt.Errorf("%w: missing iat", ErrRejected)
 	}
 	if now.Add(v.skew).Before(time.Unix(c.Iat, 0)) {
@@ -322,10 +291,11 @@ func (v *Verifier) lookupKey(kid string) (*rsa.PublicKey, bool) {
 }
 
 type jwk struct {
-	Kid string `json:"kid"`
-	Kty string `json:"kty"`
-	N   string `json:"n"`
-	E   string `json:"e"`
+	Endorsements []string `json:"endorsements"`
+	Kid          string   `json:"kid"`
+	Kty          string   `json:"kty"`
+	N            string   `json:"n"`
+	E            string   `json:"e"`
 }
 
 // refresh bounds JWKS fetches: concurrent callers coalesce onto one in-flight
@@ -403,7 +373,7 @@ func (v *Verifier) fetchJWKS(ctx context.Context) (map[string]*rsa.PublicKey, ti
 	}
 	keys := make(map[string]*rsa.PublicKey, len(set.Keys))
 	for _, k := range set.Keys {
-		if k.Kty != "RSA" || k.Kid == "" {
+		if k.Kty != "RSA" || k.Kid == "" || v.requiredEndorsement != "" && !slices.Contains(k.Endorsements, v.requiredEndorsement) {
 			continue
 		}
 		pub, err := rsaPublicKey(k.N, k.E)

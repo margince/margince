@@ -106,7 +106,7 @@ func ReportableColumnsIn(ctx context.Context, tx pgx.Tx, object string) ([]field
 // on this shared plumbing.
 func (s *Service) queryColumns(ctx context.Context, whereTail string, args ...any) ([]fieldcatalog.Column, error) {
 	var cols []fieldcatalog.Column
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		cols, err = queryColumnsIn(ctx, tx, whereTail, args...)
 		return err

@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { en as englishCopy } from "../../i18n/en";
 import type { FilterVocabulary } from "../../lib/filterdata";
 import { newGroup, newLeaf } from "../../lib/segmentpredicate";
 import { listsMe } from "../../testing/lists.fixtures";
@@ -113,7 +114,9 @@ function routes(
 
 /** One condition on City, written the way a reader writes it. */
 async function addCity(user: User, canvas: Canvas, value: string) {
-  const [add] = await canvas.findAllByRole("button", { name: "Add condition" });
+  const [add] = await canvas.findAllByRole("button", {
+    name: englishCopy["filters.addClause"],
+  });
   if (!add) throw new Error("the filter offers no Add condition");
   await user.click(add);
   const field = canvas.getAllByRole("combobox", { name: "Field" }).at(-1);
@@ -166,7 +169,7 @@ export const CompleteWithFooter: Story = {
     const user = userEvent.setup();
     const canvas = within(canvasElement);
     await addCity(user, canvas, "Berlin");
-    await canvas.findByText("Unsaved filter");
+    await canvas.findByText(englishCopy["filters.unsavedFilter"]);
   },
 };
 
@@ -287,14 +290,16 @@ export const ProposalBarWithFooterCount: Story = {
     const canvas = within(canvasElement);
     await addCity(user, canvas, "Berlin");
     await user.click(
-      await canvas.findByText("Describe changes in plain words"),
+      await canvas.findByText(englishCopy["filters.describeChanges"]),
     );
     await user.type(
       canvas.getByLabelText("Describe the contacts you want"),
       "in Hamburg, quiet for 45 days",
     );
     await user.click(
-      canvas.getByRole("button", { name: "Propose conditions" }),
+      canvas.getByRole("button", {
+        name: englishCopy["filters.propose.submit"],
+      }),
     );
     await canvas.findByText(
       "2 proposed conditions in this filter. Saving keeps them.",

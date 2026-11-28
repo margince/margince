@@ -13,6 +13,7 @@ import {
   useToast,
 } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ChatIdentityRows } from "./chatidentities";
 
 type Sent = { method: string; path: string };
@@ -79,7 +80,11 @@ it("asks for a code for the network and shows it with the instruction", async ()
   const user = userEvent.setup();
   show();
   await user.click(
-    (await screen.findAllByRole("button", { name: "Confirm with a code" }))[0],
+    (
+      await screen.findAllByRole("button", {
+        name: englishCopy["account.chatConfirm"],
+      })
+    )[0],
   );
   expect(await screen.findByText(/K7M2QX9A/)).toBeInTheDocument();
   expect(screen.getByText(/within 10 minutes/)).toBeInTheDocument();
@@ -107,5 +112,7 @@ it("shows a confirmed account with its hidden number and removes it", async () =
       path: "/v1/me/chat-identities/telegram",
     }),
   );
-  expect(await screen.findByText("Account removed")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["account.chatRemoved"]),
+  ).toBeInTheDocument();
 });

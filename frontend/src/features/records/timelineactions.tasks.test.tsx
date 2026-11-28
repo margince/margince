@@ -19,6 +19,7 @@ import { useRecordTimeline } from "../../design-system/recordtimeline";
 import { TimelineList } from "../../design-system/timeline";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { useCompanyZone } from "../../lib/companyzone";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
@@ -138,7 +139,9 @@ describe("tasks in record history", () => {
     expect(await screen.findByText("Open")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Open task" }));
     await user.click(await screen.findByRole("button", { name: "Done" }));
-    expect(await screen.findByText("Task completed")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["worklist.verb.completed"]),
+    ).toBeTruthy();
     await waitFor(() => expect(screen.queryByText("Open")).toBeNull());
     expect(writes[0]?.headers.get("If-Match")).toContain("3");
     expect(

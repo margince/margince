@@ -30,7 +30,7 @@ func NewAgentAllowanceSource(pool *pgxpool.Pool) AgentAllowanceSource {
 // Policy reads the allowances through identity's one machinery reader.
 func (s AgentAllowanceSource) Policy(ctx context.Context) (agentvolume.Policy, error) {
 	var policy agentvolume.Policy
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		policy, err = identity.AgentPolicyTx(ctx, tx, loadedConfig())
 		return err
@@ -53,7 +53,7 @@ func (r connectionReleaser) Release(
 	ctx context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64, length time.Duration,
 ) (bool, error) {
 	var connection ids.UUID
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		var err error
 		connection, err = identity.PassportConnectionTx(ctx, tx, passport)
 		return err

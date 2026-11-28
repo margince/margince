@@ -13,6 +13,7 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/activities": {
 		{Name: "call_outcome", Values: []string{"reached", "not_reached", "voicemail", "call_back_later", "put_through"}, Array: false, Explode: true},
+		{Name: "chat_provider", Values: []string{"dispact", "slack", "teams"}, Array: false, Explode: true},
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 		{Name: "kind", Values: []string{"email", "call", "meeting", "note", "task", "message"}, Array: true, Explode: true},
 	},
@@ -122,6 +123,9 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/catch-up": {
 		{Name: "record_type", Values: []string{"contact", "company", "deal", "lead", "project", "activity"}, Array: false, Explode: true},
 	},
+	"GET /v1/channel-links/{record_type}/{id}/channels": {
+		{Name: "provider", Values: []string{"dispact", "slack", "teams"}, Array: false, Explode: true},
+	},
 	"GET /v1/commissions": {
 		{Name: "status", Values: []string{"accrued", "approved", "paid", "void"}, Array: false, Explode: true},
 	},
@@ -153,6 +157,7 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/contacts": {
 		{Name: "captured_by_kind", Values: []string{"human", "agent", "connector", "system"}, Array: false, Explode: true},
 		{Name: "relationship_mark", Values: []string{"vendor_marketing", "any"}, Array: false, Explode: true},
+		{Name: "salutation", Values: []string{"mr", "ms", "none", "unset"}, Array: false, Explode: true},
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
 	},
 	"GET /v1/contacts/{id}/consent/mail-preview": {
@@ -228,6 +233,7 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/leads": {
 		{Name: "captured_by_kind", Values: []string{"human", "agent", "connector", "system"}, Array: false, Explode: true},
 		{Name: "industry", Values: []string{"agriculture", "automotive", "aerospace_defense", "chemicals_materials", "construction", "consumer_goods_retail", "education", "energy_utilities", "entertainment_media", "financial_services", "food_beverage", "government_public_sector", "healthcare", "hospitality_tourism", "insurance", "it_services", "software", "legal_professional_services", "logistics_transport", "manufacturing", "marketing_advertising", "mining_metals", "nonprofit", "pharma_biotech", "real_estate", "telecommunications"}, Array: false, Explode: true},
+		{Name: "salutation", Values: []string{"mr", "ms", "none", "unset"}, Array: false, Explode: true},
 		{Name: "size_band", Values: []string{"1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"}, Array: false, Explode: true},
 		{Name: "sla_state", Values: []string{"within_target", "at_risk", "breached"}, Array: false, Explode: true},
 		{Name: "source", Values: []string{"api", "automation", "capture", "import", "manual", "webform"}, Array: false, Explode: true},
@@ -424,6 +430,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/companies": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/companies/{id}/access": {
 		{Name: "limit", Minimum: 1},
@@ -445,6 +452,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/contacts": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/contacts/{id}/access": {
 		{Name: "limit", Minimum: 1},
@@ -469,6 +477,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/deals": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 		{Name: "value_max", Minimum: 0},
 		{Name: "value_min", Minimum: 0},
 		{Name: "win_probability_max", Minimum: 0},
@@ -507,6 +516,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/leads": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/leads/{id}/score": {
 		{Name: "limit", Minimum: 1},
@@ -555,6 +565,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/projects": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/projects/{id}/health-assessments": {
 		{Name: "limit", Minimum: 1},

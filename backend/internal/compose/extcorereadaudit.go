@@ -52,7 +52,7 @@ func (a *readAudit) flush(ctx context.Context, pool *pgxpool.Pool) error {
 	if len(a.pending) == 0 {
 		return nil
 	}
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		for _, detail := range a.pending {
 			if _, err := storekit.LogSystem(ctx, tx, "export", detail); err != nil {
 				return err

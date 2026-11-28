@@ -108,7 +108,7 @@ func TestACSVImportSkipsAnErasedAddressAndLandsTheRest(t *testing.T) {
 			e := erasedSubject(t)
 			ctx := importingAdmin(e)
 			run, err := migration.NewRunStore(e.DB()).CreateDraftRun(ctx, migration.CreateDraftRunInput{
-				SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api", FileName: object + ".csv",
+				SourceRef: "ws/import/" + ids.NewV7().String(), FileName: object + ".csv",
 				Profile: json.RawMessage(`{"files":[{"name":"` + object + `.csv","row_count":2}]}`),
 				Mapping: migration.RunMapping{Object: object, Fields: map[string]string{"Email": "email"}, SourceKey: "Email"},
 			})
@@ -143,7 +143,7 @@ func TestACSVImportSkipsAnErasedAddressAndLandsTheRest(t *testing.T) {
 func importingAdmin(e *integration.Env) context.Context {
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
-	perms.Objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	perms.Objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	return e.As(e.AdminUser, nil, perms)
 }
 

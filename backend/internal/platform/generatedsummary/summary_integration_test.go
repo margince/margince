@@ -79,7 +79,7 @@ func TestEachKindReadsBackFromItsOwnRecord(t *testing.T) {
 		t.Errorf("the contact brief read as (%q, %t, %v)", got.Fingerprint, found, err)
 	}
 	var cards map[ids.UUID]generatedsummary.Entry
-	if err := database.WithWorkspaceTx(e.ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		cards, err = generatedsummary.ReadEachTx(e.ctx, tx, reader, generatedsummary.KindDealStatusCard,
 			[]ids.UUID{deal.UUID, quiet.UUID, contact.UUID})
@@ -177,7 +177,7 @@ func setup(t *testing.T) env {
 
 func (e env) inTx(t *testing.T, fn func(pgx.Tx) error) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.ctx, e.pool, fn); err != nil {
+	if err := database.WithTx(e.ctx, e.pool, fn); err != nil {
 		t.Fatal(err)
 	}
 }

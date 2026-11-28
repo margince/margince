@@ -38,6 +38,7 @@ const customers = [
 
 const ADMIN: GrantSpec = {
   integrations: ["read", "create", "update", "delete"],
+  installation_settings: ["read", "update"],
   company: ["read", "update"],
 };
 
@@ -46,6 +47,8 @@ function cardStory(source: unknown, directory: unknown[] = customers) {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow: ADMIN })),
       "GET /finance/source": () => jsonResponse(source),
+      "GET /installation/settings": () =>
+        jsonResponse({ payment_long_overdue_days: 365, locks: [] }),
       "GET /finance/source/customers": () =>
         jsonResponse({ data: directory, page }),
     });

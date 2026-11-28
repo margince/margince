@@ -215,7 +215,7 @@ func TestTheOwnersDomainDropsAMeetingOnlyWhereTheWorkspaceCallsItInternal(t *tes
 				t.Fatalf("SyncOnce: %v", err)
 			}
 			var audience string
-			err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+			err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(),
 					`SELECT audience FROM activity WHERE kind = 'meeting' AND source_id = 'meeting'`).Scan(&audience)
 			})

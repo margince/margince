@@ -33,7 +33,7 @@ import (
 // seedRate loads a published rate the freeze can find.
 func seedRate(t *testing.T, e *Env, from, to string, rate string, on time.Time) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
 			 VALUES ($1, $2, $3::numeric, $4)

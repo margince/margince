@@ -51,7 +51,7 @@ func orphanedObjectOfKind(
 	if err := blob.Put(ctx, key, strings.NewReader("bytes nobody claimed"), 20, "application/octet-stream"); err != nil {
 		t.Fatalf("storing the orphan's bytes: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO stored_object_intent (storage_key, kind, recorded_at)
 			VALUES ($1, $2, now() - $3::interval)`,
@@ -66,7 +66,7 @@ func orphanedObjectOfKind(
 func provisionalKeys(t *testing.T, e *integration.Env) []string {
 	t.Helper()
 	var keys []string
-	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `SELECT storage_key FROM stored_object_intent WHERE reaped_at IS NULL ORDER BY storage_key`)
 		if err != nil {
 			return err
@@ -322,8 +322,8 @@ func referenceKeyFromItsOwner(t *testing.T, e *integration.Env, kind storedobjec
 			ids.NewV7(), e.SeedWonDealLinkedTo(t), key)
 	case storedobjects.KindImport:
 		e.WsExec(t, `
-			INSERT INTO import_run (connector, status, mapping, source_ref, source, captured_by)
-			VALUES ('csv', 'validating', '{}'::jsonb, $1, 'upload', 'human:test')`, key)
+			INSERT INTO import_run (connector, status, mapping, source_ref, captured_by)
+			VALUES ('csv', 'validating', '{}'::jsonb, $1, 'human:test')`, key)
 	case storedobjects.KindRawOriginal:
 		e.WsExec(t, `INSERT INTO raw_capture (source_system, source_id, payload, payload_object)
 			VALUES ('telegram', 'referenced-original', '{}'::jsonb,
@@ -413,7 +413,7 @@ func TestEachWriterDeclaresItsOwnKind(t *testing.T) {
 			// what the key ends in is that module's business, and the kind beside it
 			// is what the sweep reads.
 			var kind string
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(), `
 					SELECT kind FROM stored_object_intent WHERE storage_key LIKE $1 || '%'`,
 					base).Scan(&kind)

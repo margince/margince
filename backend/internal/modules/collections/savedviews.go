@@ -5,6 +5,7 @@ package collections
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -23,17 +24,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
-// A saved view is per-user view state (B-E15.12, runtime-config-surface.md
-// §3): it is owned by exactly one human and read back only by that owner.
-// V1 is private — shared/team views are a fast-follow — so the store
-// stamps and enforces owner_id = the caller and writes shared_scope
-// 'private', never widening visibility from the request body. The
-// visibility gate here is ownership + tenant RLS, not the shared-record
-// row-scope clause, because a view is a personal preference and not a
-// workspace record governed by the RBAC object matrix's own/team/all
-// scope.
+// Saved views belong to one user. Reads enforce ownership and workspace RLS.
 
-const savedViewColumns = `id, owner_id, shared_scope, resource, name, query, version, created_at, updated_at, archived_at`
+const savedViewColumns = `id, owner_id, resource, name, query, version, created_at, updated_at, archived_at`
 
 // The one key inside a saved view's `query` that carries a filter tree, and the
 // wire field a refusal of it names. Spelled once so the create/update gate and
@@ -43,42 +36,55 @@ const (
 	viewQueryField = "query"
 )
 
+// maxViewQueryBytes bounds a saved view's query as JSON. Every list of the
+// owner's views carries each query whole.
+const maxViewQueryBytes = 64 << 10
+
+func checkViewQuerySize(query map[string]any) error {
+	encoded, err := json.Marshal(query)
+	if err != nil {
+		return fmt.Errorf("encode saved view query: %w", err)
+	}
+	if len(encoded) > maxViewQueryBytes {
+		return &BadInputError{Field: viewQueryField, Code: "too_large", Reason: fmt.Sprintf(
+			"a saved view's query holds at most %d bytes as JSON; this one has %d", maxViewQueryBytes, len(encoded))}
+	}
+	return nil
+}
+
 // selectSavedView is the shared projection prefix for every saved_view read —
 // one spelling so the columns can't drift between the list, get, and delete paths.
 const selectSavedView = "SELECT " + savedViewColumns + " FROM saved_view WHERE "
 
 type savedViewRow struct {
-	ID          ids.SavedViewID
-	OwnerID     ids.UserID
-	SharedScope string
-	Resource    string
-	Name        string
-	Query       map[string]any
-	Version     int64
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	ArchivedAt  *time.Time
+	ID         ids.SavedViewID
+	OwnerID    ids.UserID
+	Resource   string
+	Name       string
+	Query      map[string]any
+	Version    int64
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	ArchivedAt *time.Time
 }
 
 func wireSavedView(v savedViewRow) crmcontracts.SavedView {
-	scope := crmcontracts.SavedViewSharedScope(v.SharedScope)
 	return crmcontracts.SavedView{
-		Id:          openapi_types.UUID(v.ID.UUID),
-		OwnerId:     openapi_types.UUID(v.OwnerID.UUID),
-		SharedScope: &scope,
-		Resource:    v.Resource,
-		Name:        v.Name,
-		Query:       v.Query,
-		Version:     v.Version,
-		CreatedAt:   &v.CreatedAt,
-		UpdatedAt:   &v.UpdatedAt,
-		ArchivedAt:  v.ArchivedAt,
+		Id:         openapi_types.UUID(v.ID.UUID),
+		OwnerId:    openapi_types.UUID(v.OwnerID.UUID),
+		Resource:   v.Resource,
+		Name:       v.Name,
+		Query:      v.Query,
+		Version:    v.Version,
+		CreatedAt:  &v.CreatedAt,
+		UpdatedAt:  &v.UpdatedAt,
+		ArchivedAt: v.ArchivedAt,
 	}
 }
 
 func scanSavedView(r pgx.Row) (savedViewRow, error) {
 	var v savedViewRow
-	err := r.Scan(&v.ID, &v.OwnerID, &v.SharedScope, &v.Resource,
+	err := r.Scan(&v.ID, &v.OwnerID, &v.Resource,
 		&v.Name, &v.Query, &v.Version, &v.CreatedAt, &v.UpdatedAt, &v.ArchivedAt)
 	return v, err
 }
@@ -169,6 +175,9 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 		return savedViewRow{}, err
 	}
 	in.Name = name
+	if _, err := httperr.RequireNonBlank("resource", in.Resource); err != nil {
+		return savedViewRow{}, err
+	}
 	if kindUnavailable(ctx, in.Resource) {
 		return savedViewRow{}, &BadInputError{Field: "resource", Reason: fmt.Sprintf(
 			"%q is not a record kind you can read; read GET /v1/record-kinds for the kinds there are", in.Resource)}
@@ -179,14 +188,17 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 	if in.Query == nil {
 		return savedViewRow{}, &BadInputError{Field: viewQueryField, Code: codeRequired, Reason: "a view needs a query"}
 	}
+	if err := checkViewQuerySize(in.Query); err != nil {
+		return savedViewRow{}, err
+	}
 	if err := s.validateViewFilter(ctx, in.Resource, in.Query); err != nil {
 		return savedViewRow{}, err
 	}
 	var out savedViewRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
-			INSERT INTO saved_view (owner_id, shared_scope, resource, name, query)
-			VALUES ($1, 'private', $2, $3, $4)
+			INSERT INTO saved_view (owner_id, resource, name, query)
+			VALUES ($1, $2, $3, $4)
 			RETURNING `+savedViewColumns,
 			owner, in.Resource, in.Name, in.Query)
 		var err error
@@ -300,6 +312,9 @@ func (s *Store) UpdateSavedView(ctx context.Context, id ids.SavedViewID, in Upda
 	// returning a record without the gate every other read carries, which is a
 	// worse thing to own than a grant combination no seeded role has.
 	if in.Query != nil {
+		if err := checkViewQuerySize(*in.Query); err != nil {
+			return savedViewRow{}, err
+		}
 		current, err := s.GetSavedView(ctx, id)
 		if err != nil {
 			return savedViewRow{}, err

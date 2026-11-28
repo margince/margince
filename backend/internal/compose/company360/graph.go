@@ -119,7 +119,7 @@ func (s *Service) Graph(ctx context.Context, companyID ids.CompanyID) (crmcontra
 	if err != nil {
 		return crmcontracts.CompanyGraph{}, err
 	}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
 		if err != nil {
 			return err

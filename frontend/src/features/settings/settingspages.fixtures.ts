@@ -30,6 +30,7 @@ export const EVERY_GRANT: GrantSpec = Object.fromEntries(
 const NOTIFICATION_PREFERENCES: Schemas["NotificationPreferenceList"] = {
   items: [
     { class: "approval_pending", delivery: "email", chosen: false },
+    { class: "website_lead", delivery: "in_app", chosen: false },
     { class: "automation", delivery: "in_app", chosen: false },
     { class: "lead_sla", delivery: "in_app", chosen: false },
     { class: "project_health", delivery: "in_app", chosen: false },
@@ -178,11 +179,56 @@ const NO_OAUTH_APP = (provider: string) => ({
 
 export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
   ...NOTIFICATION_ROUTES,
+  "GET /channel-providers/slack/setup": () =>
+    jsonResponse({
+      configured: false,
+      callback_url: "",
+      events_url: "",
+      scopes: [],
+    }),
+  "GET /channel-providers/teams/setup": () =>
+    jsonResponse({
+      configured: false,
+      app_id: "",
+      tenant_id: "",
+      events_url: "",
+      scopes: [],
+      installations: [],
+    }),
   ...UNUSED_AI,
   ...ROLE_DIRECTORY,
   "GET /capture/activity": () => jsonResponse(QUIET_CAPTURE),
   "GET /capture/activity/workspace": () => jsonResponse(QUIET_CAPTURE),
   "GET /capture/settings": () => jsonResponse(CAPTURE_SETTINGS),
+  "GET /installation/oauth-apps/slack": () =>
+    jsonResponse(NO_OAUTH_APP("slack")),
+  "GET /messenger/dispact/identity": () =>
+    jsonResponse({ provider: "dispact", state: "needs_consent" }),
+  "GET /messenger/dispact/setup": () =>
+    jsonResponse({
+      provider: "dispact",
+      configured: false,
+      callback_url: "",
+      participant_scopes: [],
+    }),
+  "GET /messenger/slack/identity": () =>
+    jsonResponse({ provider: "slack", state: "needs_consent" }),
+  "GET /messenger/slack/setup": () =>
+    jsonResponse({
+      provider: "slack",
+      configured: false,
+      callback_url: "",
+      participant_scopes: [],
+    }),
+  "GET /messenger/teams/identity": () =>
+    jsonResponse({ provider: "teams", state: "needs_consent" }),
+  "GET /messenger/teams/setup": () =>
+    jsonResponse({
+      provider: "teams",
+      configured: false,
+      callback_url: "",
+      participant_scopes: [],
+    }),
   "GET /installation/oauth-apps/google": () =>
     jsonResponse(NO_OAUTH_APP("google")),
   "GET /installation/oauth-apps/microsoft": () =>

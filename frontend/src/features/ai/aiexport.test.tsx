@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import type { AiCallDetail } from "./aiexport";
 import { ExportScenarioDialog, scenarioYaml } from "./aiexport";
 
@@ -56,7 +57,9 @@ it("requires PII acknowledgment before copying or downloading", async () => {
     </LocaleProvider>,
   );
   const copy = screen.getByRole("button", { name: "Copy YAML" });
-  const download = screen.getByRole("button", { name: "Download .yaml" });
+  const download = screen.getByRole("button", {
+    name: englishCopy["aiexport.download"],
+  });
   expect((copy as HTMLButtonElement).disabled).toBe(true);
   expect((download as HTMLButtonElement).disabled).toBe(true);
 
@@ -78,8 +81,8 @@ it("surfaces clipboard rejection", async () => {
   );
   await userEvent.click(screen.getByRole("checkbox"));
   await userEvent.click(screen.getByRole("button", { name: "Copy YAML" }));
-  expect(await screen.findByText("Clipboard access denied")).toBeTruthy();
   expect(
-    screen.getByText("Copy failed. Use the preview or download instead."),
+    await screen.findByText(englishCopy["clipboard.copyFailedTitle"]),
   ).toBeTruthy();
+  expect(screen.getByText(englishCopy["aiexport.copyFailed"])).toBeTruthy();
 });

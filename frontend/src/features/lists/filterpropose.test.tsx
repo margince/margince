@@ -111,7 +111,9 @@ async function ask(user: User, text = ASKED) {
   const box = await screen.findByLabelText("Describe the contacts you want");
   await user.clear(box);
   await user.type(box, text);
-  await user.click(screen.getByRole("button", { name: "Propose conditions" }));
+  await user.click(
+    screen.getByRole("button", { name: en["filters.propose.submit"] }),
+  );
 }
 
 /** One condition of the reader's own, written by hand. */
@@ -151,7 +153,7 @@ it("lands a proposal on the calm start as marked rows the reader can keep", asyn
   expect(screen.getByRole("button", { name: en["common.undo"] })).toBeTruthy();
   // Nothing of the reader's own to replace.
   expect(
-    screen.queryByRole("button", { name: "Replace my conditions" }),
+    screen.queryByRole("button", { name: en["filters.proposal.replaceMine"] }),
   ).toBeNull();
   // The box the reader asked from is gone; they are in the first new row.
   expect(document.activeElement).toBe(firstField());
@@ -189,9 +191,9 @@ it("undoes a proposal back to the calm start, and sends a description on Enter",
 
   expect(values()).toEqual([]);
   expect(
-    screen.getByRole("heading", { name: "Build it condition by condition" }),
+    screen.getByRole("heading", { name: en["filters.start.buildTitle"] }),
   ).toBeTruthy();
-  expect(screen.queryByText("Matching records")).toBeNull();
+  expect(screen.queryByText(en["filters.resultsTitle"])).toBeNull();
   // The Undo that was pressed is gone with the bar; the calm start takes focus.
   expect(document.activeElement).toBe(
     screen.getByRole("button", { name: en["filters.addClause"] }),
@@ -228,11 +230,11 @@ it("appends a proposal to the reader's own condition and replaces it only when a
   ).toBe(false);
 
   await user.click(
-    screen.getByRole("button", { name: "Replace my conditions" }),
+    screen.getByRole("button", { name: en["filters.proposal.replaceMine"] }),
   );
   expect(values()).toEqual(["Lee", "Berlin"]);
   expect(
-    screen.queryByRole("button", { name: "Replace my conditions" }),
+    screen.queryByRole("button", { name: en["filters.proposal.replaceMine"] }),
   ).toBeNull();
   // The button pressed is gone; the question still open about the rows is not.
   expect(document.activeElement).toBe(
@@ -260,7 +262,7 @@ it("lands as one group on a root that matches any, and a group joined the other 
   await ask(user);
 
   expect(await screen.findByText(barTitle(2))).toBeTruthy();
-  const group = screen.getByRole("group", { name: "All of these" });
+  const group = screen.getByRole("group", { name: en["lists.why.all"] });
   expect(
     within(group)
       .getAllByLabelText<HTMLInputElement>("Value")
@@ -290,7 +292,7 @@ it("lands against the filter as it stands when the answer arrives", async () => 
   // the box folds above their row, still open on the wait.
   await ask(user);
   expect(
-    screen.getByRole("button", { name: "Propose conditions" }),
+    screen.getByRole("button", { name: en["filters.propose.submit"] }),
   ).toHaveAttribute("aria-busy", "true");
   await addOwn(user, "Ann");
   expect(

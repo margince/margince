@@ -119,7 +119,7 @@ func SeedScoutedNamed(t *testing.T, e *AppEnv, companyName, contactName string) 
 
 	ws := InstallationWorkspaceUUID(context.Background(), t, e.Pool)
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), ws), "system:deal-scout")
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		for _, kind := range []string{"new_opportunity", "commitment_made"} {
 			if _, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 				Kind: kind, CompanyID: company.ID, Summary: "Platform migration requested.", Severity: "info",
@@ -198,7 +198,7 @@ func SeedRoute(t *testing.T, e *AppEnv, seat, contact ids.UUID) {
 	}
 	ws := InstallationWorkspaceUUID(ctx, t, e.Pool)
 	wsCtx := principal.WithWorkspaceID(ctx, ws)
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{id})
 	}); err != nil {
 		t.Fatalf("folding the edge: %v", err)

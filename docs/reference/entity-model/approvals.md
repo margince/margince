@@ -6,7 +6,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## approval
 
-38 columns · primary key `(id)` · referenced by 4 foreign keys
+38 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -84,6 +84,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `approval_requested_decider_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.requested_decider_id IS NOT NULL) AND (new.status = 'pending'))) EXECUTE FUNCTION refuse_retired_member_work('requested_decider_id')`
+- `consent_purpose_keys`: `BEFORE INSERT OR UPDATE OF proposed_change FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('json', 'live', 'proposed_change')`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "status": 20000, "summary": 500, "diff_hash": 20000, "proposed_by": 20000, "target_label": 120, "context_digest": 20000, "effect_failure": 20000, "decision_reason": 2000, "target_entity_type": 20000, "co_target_entity_type": 20000, "requested_decider_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"co_target_entity_type":20000,"context_digest":20000,"decision_reason":2000,"diff_hash":20000,"effect_failure":20000,"kind":20000,"proposed_by":20000,"requested_decider_source":20000,"status":20000,"summary":500,"target_entity_type":20000,"target_label":120}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "status": 20000, "summary": 500, "diff_hash": 20000, "proposed_by": 20000, "target_label": 120, "context_digest": 20000, "effect_failure": 20000, "decision_reason": 2000, "target_entity_type": 20000, "co_target_entity_type": 20000, "requested_decider_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"co_target_entity_type":20000,"context_digest":20000,"decision_reason":2000,"diff_hash":20000,"effect_failure":20000,"kind":20000,"proposed_by":20000,"requested_decider_source":20000,"status":20000,"summary":500,"target_entity_type":20000,"target_label":120}')`
 - `trg_approval_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`

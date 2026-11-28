@@ -74,8 +74,8 @@ func seedLegacyRun(t *testing.T, conn *pgx.Conn, run legacyRun) string {
 	}
 	var id string
 	if err := conn.QueryRow(context.Background(), `
-		INSERT INTO import_run (connector, status, source_ref, source, captured_by, mapping, error, created_at, updated_at)
-		VALUES ($1, $2, $3, 'import_api', 'human:fixture',
+		INSERT INTO import_run (connector, status, source_ref, captured_by, mapping, error, created_at, updated_at)
+		VALUES ($1, $2, $3, 'human:fixture',
 		        CASE WHEN $4 = '' THEN '{}'::jsonb ELSE jsonb_build_object('source_name', $4::text) END,
 		        $5, now() - $6::interval, now() - $6::interval + interval '1 minute')
 		RETURNING id::text`,
@@ -265,8 +265,8 @@ func TestTwoActiveRunsOfOneNameAreRefused(t *testing.T) {
 	headSchema(t, conn)
 	seedLegacyRun(t, conn, legacyRun{status: "running", sourceRef: "ws/import/a", sourceName: "Fair 2026"})
 	_, err := conn.Exec(context.Background(), `
-		INSERT INTO import_run (connector, status, source_ref, source, captured_by, mapping)
-		VALUES ('csv', 'awaiting_approval', 'ws/import/b', 'import_api', 'human:fixture', '{"source_name": "Fair 2026"}')`)
+		INSERT INTO import_run (connector, status, source_ref, captured_by, mapping)
+		VALUES ('csv', 'awaiting_approval', 'ws/import/b', 'human:fixture', '{"source_name": "Fair 2026"}')`)
 	if err == nil || !strings.Contains(err.Error(), "import_run_one_active_per_source_name") {
 		t.Fatalf("a second active run of one name = %v, want the one-active-per-name index to refuse it", err)
 	}
@@ -297,8 +297,8 @@ func TestOneUnreleasedRunPerSource(t *testing.T) {
 
 	ctx := context.Background()
 	_, err := conn.Exec(ctx, `
-		INSERT INTO import_run (connector, status, source_ref, source, captured_by)
-		VALUES ('csv', 'pending', 'ws/import/same', 'import_api', 'human:fixture')`)
+		INSERT INTO import_run (connector, status, source_ref, captured_by)
+		VALUES ('csv', 'pending', 'ws/import/same', 'human:fixture')`)
 	if err == nil || !strings.Contains(err.Error(), "import_run_one_live_per_source_ref") {
 		t.Fatalf("a second unreleased run of one upload = %v, want the one-live-per-source index to refuse it", err)
 	}
