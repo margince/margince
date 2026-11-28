@@ -836,6 +836,25 @@ func TestTheBreadcrumbKeepsNoPartOfTheRefusedRecord(t *testing.T) {
 // land under a deposit that is already being removed.
 func TestARecordWaitsForAWithdrawalInFlightAndIsThenRefused(t *testing.T) {
 	e := setupIngress(t)
+	err := ingestDuringWithdrawal(t, e, func() error {
+		_, err := e.ingestingRuntime().Ingest(context.Background(), extension.UserID(e.member.String()),
+			aProviderRecord("ws-7:9001", "outside@example.test"))
+		return err
+	})
+	if !errors.Is(err, extension.ErrForbidden) {
+		t.Fatalf("err = %v, want ErrForbidden once the withdrawal committed", err)
+	}
+	if got := e.countAsWorkspace(t,
+		`SELECT count(*) FROM activity WHERE source_system = $1`, ingressProbeSource); got != 0 {
+		t.Errorf("activity rows = %d, want none after the withdrawal", got)
+	}
+}
+
+// ingestDuringWithdrawal opens the member's withdrawal, runs ingest while it is
+// open, and commits it only once ingest waits on it. A finished ingest before
+// that fails the test: it means the write did not wait for the withdrawal.
+func ingestDuringWithdrawal(t *testing.T, e *ingressEnv, ingest func() error) error {
+	t.Helper()
 	ctx := context.Background()
 	withdrawal, err := e.Pool.Begin(ctx)
 	if err != nil {
@@ -852,13 +871,8 @@ func TestARecordWaitsForAWithdrawalInFlightAndIsThenRefused(t *testing.T) {
 		ingressUnit, e.member).Scan(&withdrawer); err != nil {
 		t.Fatalf("starting the withdrawal: %v", err)
 	}
-
 	landed := make(chan error, 1)
-	go func() {
-		_, err := e.ingestingRuntime().Ingest(ctx, extension.UserID(e.member.String()),
-			aProviderRecord("ws-7:9001", "outside@example.test"))
-		landed <- err
-	}()
+	go func() { landed <- ingest() }()
 	for waiting := false; !waiting; {
 		select {
 		case err := <-landed:
@@ -873,11 +887,5 @@ func TestARecordWaitsForAWithdrawalInFlightAndIsThenRefused(t *testing.T) {
 	if err := withdrawal.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if err := <-landed; !errors.Is(err, extension.ErrForbidden) {
-		t.Fatalf("err = %v, want ErrForbidden once the withdrawal committed", err)
-	}
-	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM activity WHERE source_system = $1`, ingressProbeSource); got != 0 {
-		t.Errorf("activity rows = %d, want none after the withdrawal", got)
-	}
+	return <-landed
 }

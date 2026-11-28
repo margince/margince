@@ -372,3 +372,19 @@ func TestAStageMoveALandedRecordMakesIsSynced(t *testing.T) {
 		t.Fatalf("stage history provenance = %v, want %v", got, want)
 	}
 }
+
+// A company landed on a member's authority waits for their withdrawal in flight
+// and is then refused, like a captured activity.
+func TestACompanyWaitsForAWithdrawalInFlightAndIsThenRefused(t *testing.T) {
+	e := setupCRMIngress(t)
+	err := ingestDuringWithdrawal(t, e.ingressEnv, func() error {
+		_, err := e.ingest(t, e.member, companyRecord("co-withdrawn", extension.CompanyFields{DisplayName: "Withdrawn Co"}))
+		return err
+	})
+	if !errors.Is(err, extension.ErrForbidden) {
+		t.Fatalf("err = %v, want ErrForbidden once the withdrawal committed", err)
+	}
+	if got := e.countAsWorkspace(t, `SELECT count(*) FROM company WHERE source_id = $1`, "co-withdrawn"); got != 0 {
+		t.Errorf("company rows = %d, want none after the withdrawal", got)
+	}
+}
