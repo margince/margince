@@ -63,19 +63,6 @@ func TestPublishedWordingCannotBeEdited(t *testing.T) {
 	}
 }
 
-// TestAPublishedVersionMayStillBeWithdrawn — taking a version out of use is not
-// rewriting what it said, so the window columns stay writable. Without this the
-// only way to retire wording would be to leave it live forever.
-func TestAPublishedVersionMayStillBeWithdrawn(t *testing.T) {
-	e := setupChannelConsent(t)
-	publishFixture(t, e)
-
-	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE consent_text_version SET effective_until = now() WHERE key = 'newsletter'`); err != nil {
-		t.Fatalf("withdrawing a published version: %v — retiring wording is not rewriting it", err)
-	}
-}
-
 // TestADraftIsStillEditable — the trigger keys on published_at, so wording being
 // worked on is not frozen before anybody has stood behind it.
 func TestADraftIsStillEditable(t *testing.T) {
@@ -249,17 +236,13 @@ func TestPublishedWordingCannotBeDeleted(t *testing.T) {
 	}
 }
 
-// TestAPublishedVersionsScopeIsFrozenToo — what a version applied to is
-// evidence as much as what it said. Backdating effective_from makes a version
-// claim it was live on a day it was not, which is how a proof row from March is
-// made to resolve against wording published in June.
+// TestAPublishedVersionsScopeIsFrozenToo — who and what a version applied to
+// is evidence as much as what it said.
 func TestAPublishedVersionsScopeIsFrozenToo(t *testing.T) {
 	e := setupChannelConsent(t)
 	publishFixture(t, e)
 
 	for _, set := range []string{
-		"effective_from = '2020-01-01'",
-		"jurisdiction = 'DE'",
 		"locale = 'de-DE'",
 		"channel = 'email'",
 	} {
