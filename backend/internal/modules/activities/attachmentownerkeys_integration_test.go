@@ -19,18 +19,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+func (e *sendEnv) execAttachment(t *testing.T, sql string, args ...any) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), sql, args...); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func seedOwnerAttachment(t *testing.T, e *sendEnv, kind string, owner ids.UUID, key string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	e.exec(t, `INSERT INTO attachment(id,entity_type,entity_id,filename,storage_key,source,captured_by,owner_unkeyed) VALUES($1,$2,$3,'review.txt',$4,'manual','human:test',true)`, id, kind, owner, key)
+	e.execAttachment(t, `INSERT INTO attachment(id,entity_type,entity_id,filename,storage_key,source,captured_by,owner_unkeyed) VALUES($1,$2,$3,'review.txt',$4,'manual','human:test',true)`, id, kind, owner, key)
 	return id
 }
 
 func TestEveryAttachmentOwnerKeyRefusesMissingParentsAndCascades(t *testing.T) {
 	e := setupSend(t)
 	lead, activity := ids.NewV7(), ids.NewV7()
-	e.exec(t, `INSERT INTO lead(id,full_name,source,captured_by) VALUES($1,'Buyer','manual','human:test')`, lead)
-	e.exec(t, `INSERT INTO activity(id,kind,occurred_at,source,captured_by) VALUES($1,'note',now(),'manual','human:test')`, activity)
+	e.execAttachment(t, `INSERT INTO lead(id,full_name,source,captured_by) VALUES($1,'Buyer','manual','human:test')`, lead)
+	e.execAttachment(t, `INSERT INTO activity(id,kind,occurred_at,source,captured_by) VALUES($1,'note',now(),'manual','human:test')`, activity)
 	owners := []struct {
 		kind string
 		id   ids.UUID
@@ -52,7 +59,7 @@ func TestEveryAttachmentOwnerKeyRefusesMissingParentsAndCascades(t *testing.T) {
 			if err := e.owner.QueryRow(ctx, fmt.Sprintf(`SELECT NOT owner_unkeyed AND owner_%s_id=$1 FROM attachment WHERE id=$2`, owner.kind), owner.id, id).Scan(&keyed); err != nil || !keyed {
 				t.Fatalf("owner not keyed: %v", err)
 			}
-			e.exec(t, `DELETE FROM `+owner.kind+` WHERE id=$1`, owner.id)
+			e.execAttachment(t, `DELETE FROM `+owner.kind+` WHERE id=$1`, owner.id)
 			var rows, intents int
 			if err := e.owner.QueryRow(ctx, `SELECT (SELECT count(*) FROM attachment WHERE id=$1),(SELECT count(*) FROM stored_object_intent WHERE storage_key=$2 AND kind='attachment')`, id, key).Scan(&rows, &intents); err != nil {
 				t.Fatal(err)
@@ -85,7 +92,7 @@ func TestAttachmentDeletionRollsBackItsFileIntentAndKeepsSharedFiles(t *testing.
 	if err := e.owner.QueryRow(ctx, `SELECT count(*) FROM stored_object_intent WHERE storage_key=$1`, key).Scan(&intents); err != nil || intents != 0 {
 		t.Fatalf("rolled-back intent=%d, %v", intents, err)
 	}
-	e.exec(t, `DELETE FROM attachment WHERE id=$1`, first)
+	e.execAttachment(t, `DELETE FROM attachment WHERE id=$1`, first)
 	store, system := systemStore(e)
 	unreferenced, err := store.UnreferencedAttachmentKeys(system, []string{key})
 	if err != nil || len(unreferenced) != 0 {
@@ -98,8 +105,8 @@ func TestDeletingAnAttachmentKeepsAnExistingReaperClaim(t *testing.T) {
 	owner := seedCustomer(t, e)
 	key := "test/attachment/claimed"
 	id := seedOwnerAttachment(t, e, "contact", owner, key)
-	e.exec(t, `INSERT INTO stored_object_intent(storage_key,kind,recorded_at,reaping_since) VALUES($1,'attachment',now()-interval '2 days',now()-interval '1 hour')`, key)
-	e.exec(t, `DELETE FROM attachment WHERE id=$1`, id)
+	e.execAttachment(t, `INSERT INTO stored_object_intent(storage_key,kind,recorded_at,reaping_since) VALUES($1,'attachment',now()-interval '2 days',now()-interval '1 hour')`, key)
+	e.execAttachment(t, `DELETE FROM attachment WHERE id=$1`, id)
 	var kept bool
 	if err := e.owner.QueryRow(context.Background(), `SELECT reaping_since IS NOT NULL AND recorded_at>now()-interval '1 minute' FROM stored_object_intent WHERE storage_key=$1`, key).Scan(&kept); err != nil || !kept {
 		t.Fatalf("reaper claim changed: %v", err)
@@ -112,8 +119,8 @@ func TestDeletingTheLastSharedFileReferenceDefeatsAStaleRetire(t *testing.T) {
 	key := "test/attachment/retire-race"
 	first := seedOwnerAttachment(t, e, "contact", owner, key)
 	last := seedOwnerAttachment(t, e, "contact", owner, key)
-	e.exec(t, `DELETE FROM attachment WHERE id=$1`, first)
-	e.exec(t, `UPDATE stored_object_intent SET recorded_at=now()-interval '2 days' WHERE storage_key=$1`, key)
+	e.execAttachment(t, `DELETE FROM attachment WHERE id=$1`, first)
+	e.execAttachment(t, `UPDATE stored_object_intent SET recorded_at=now()-interval '2 days' WHERE storage_key=$1`, key)
 	_, ctx := systemStore(e)
 	ledger := storedobjects.NewLedger(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	pending, err := ledger.ListProvisional(ctx, time.Now(), 10)
@@ -121,7 +128,7 @@ func TestDeletingTheLastSharedFileReferenceDefeatsAStaleRetire(t *testing.T) {
 		t.Fatalf("pending=%v, %v", pending, err)
 	}
 	// The reaper saw the last row, then that row was deleted before Retire.
-	e.exec(t, `DELETE FROM attachment WHERE id=$1`, last)
+	e.execAttachment(t, `DELETE FROM attachment WHERE id=$1`, last)
 	if err := ledger.Retire(ctx, pending[0]); err != nil {
 		t.Fatal(err)
 	}

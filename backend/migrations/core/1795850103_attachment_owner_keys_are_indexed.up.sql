@@ -14,3 +14,6 @@ DROP INDEX CONCURRENTLY IF EXISTS idx_attachment_owner_project;
 CREATE INDEX CONCURRENTLY idx_attachment_owner_project ON attachment (owner_project_id) WHERE owner_project_id IS NOT NULL;
 DROP INDEX CONCURRENTLY IF EXISTS idx_attachment_owner_activity;
 CREATE INDEX CONCURRENTLY idx_attachment_owner_activity ON attachment (owner_activity_id) WHERE owner_activity_id IS NOT NULL;
+
+DROP INDEX CONCURRENTLY IF EXISTS idx_attachment_unkeyed_owner;
+CREATE INDEX CONCURRENTLY idx_attachment_unkeyed_owner ON attachment (id) WHERE owner_unkeyed;

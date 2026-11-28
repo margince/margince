@@ -8,3 +8,4 @@ DROP INDEX CONCURRENTLY IF EXISTS idx_attachment_owner_deal;
 DROP INDEX CONCURRENTLY IF EXISTS idx_attachment_owner_lead;
 DROP INDEX CONCURRENTLY IF EXISTS idx_attachment_owner_project;
 DROP INDEX CONCURRENTLY IF EXISTS idx_attachment_owner_activity;
+DROP INDEX CONCURRENTLY IF EXISTS idx_attachment_unkeyed_owner;
