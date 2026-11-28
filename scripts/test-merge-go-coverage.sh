@@ -52,7 +52,7 @@ expect_fail() {
 # 1. Every producer sent its pods: one profile, holding the program's block.
 artifacts "$work/whole" 2 unit solo
 "$MERGE" "$work/whole" "$work/whole.out" > "$work/whole.log" || fail "a complete set did not merge: $(cat "$work/whole.log")"
-head -1 "$work/whole.out" | grep -qx 'mode: atomic' || fail "the profile does not start with its mode line"
+[[ "$(head -1 "$work/whole.out")" == 'mode: atomic' ]] || fail "the profile does not start with its mode line"
 grep -q 'example.test/covered/main.go' "$work/whole.out" || fail "the profile holds no block of the covered program"
 grep -q '4 pod dirs (2 from 2 shards' "$work/whole.log" || fail "the merge did not count every pod: $(cat "$work/whole.log")"
 grep -qE '^coverage: [0-9]+ of [0-9]+ statements covered' "$work/whole.log" || fail "the merge printed no covered share: $(cat "$work/whole.log")"
