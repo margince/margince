@@ -46,6 +46,11 @@ func TestTheMailCopiesTaskKeepsFilesLinksReadStateAndHoldsOnce(t *testing.T) {
 	}
 	file := ids.NewV7()
 	e.WsExec(t, `INSERT INTO attachment(id,entity_type,entity_id,activity_id,filename,content_type,byte_size,storage_key,source,captured_by) VALUES($1,'activity',$2,$2,'proposal.pdf','application/pdf',12,'test/proposal.pdf','manual',$3)`, file, imported, "human:"+e.Rep1.String())
+	manual, filed := ids.NewV7(), ids.NewV7()
+	e.WsExec(t, `INSERT INTO attachment(id,entity_type,entity_id,filename,content_type,byte_size,storage_key,source,captured_by)
+ VALUES($1,'activity',$2,'manual.txt','text/plain',12,'test/manual.txt','manual',$3)`, manual, imported, "human:"+e.Rep1.String())
+	e.WsExec(t, `INSERT INTO attachment(id,entity_type,entity_id,activity_id,filename,content_type,byte_size,storage_key,source,captured_by)
+ VALUES($1,'contact',$2,$3,'filed.pdf','application/pdf',12,'test/filed.pdf','manual',$4)`, filed, contact.Id, imported, "human:"+e.Rep1.String())
 	for range 2 {
 		runCalendarDescriptionTask(ctx, t, e, mailCopiesDataTask(e.Pool))
 	}
@@ -55,8 +60,17 @@ func TestTheMailCopiesTaskKeepsFilesLinksReadStateAndHoldsOnce(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND contact_id=$2`, kept, contact.Id); got != 1 {
 		t.Fatal("the imported record link was lost")
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM attachment WHERE id=$1 AND activity_id=$2 AND archived_at IS NULL`, file, kept); got != 1 {
+	if got := e.WsCount(t, `SELECT count(*) FROM attachment WHERE id=$1 AND activity_id=$2 AND entity_type='activity' AND entity_id=$2 AND owner_activity_id=$2 AND archived_at IS NULL`, file, kept); got != 1 {
 		t.Fatal("the file did not follow the surviving message")
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM attachment WHERE id=$1 AND entity_type='activity' AND entity_id=$2 AND owner_activity_id=$2 AND activity_id IS NULL AND archived_at IS NULL`, manual, kept); got != 1 {
+		t.Fatal("the manual file did not keep its empty provenance while following the survivor")
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM attachment WHERE id=$1 AND entity_type='contact' AND entity_id=$2 AND owner_contact_id=$2 AND activity_id=$3 AND archived_at IS NULL`, filed, contact.Id, kept); got != 1 {
+		t.Fatal("the filed file lost its contact owner or its surviving source mail")
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id'=$1 AND envelope->>'type'='attachment.updated' AND envelope->'payload'->>'parent_type'='contact' AND envelope->'payload'->>'parent_id'=$2`, filed.String(), contact.Id.String()); got != 1 {
+		t.Fatal("the filed file announced a change on the wrong record")
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM activity_reader_state WHERE activity_id=$1 AND reader_id=$2 AND state='handled'`, kept, e.Rep1); got != 1 {
 		t.Fatal("the reader's handled state was lost")

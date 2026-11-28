@@ -34,7 +34,7 @@ func (SlackBotCheck) ValidateToken(token string) error {
 	if json.Unmarshal([]byte(token), &credential) != nil || credential.Workspace == "" || credential.Member == "" || credential.Credential.AccessToken == "" || credential.Credential.AppID == "" {
 		return capture.ErrChannelTokenRejected
 	}
-	for _, scope := range slack.BotScopes {
+	for _, scope := range slack.RequiredBotScopes() {
 		if !slices.Contains(credential.Credential.Scopes, scope) {
 			return capture.ErrChannelTokenRejected
 		}

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks/messaging"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -129,6 +130,7 @@ func (c *Participant) Conversation(ctx context.Context, slug string) (messaging.
 	if !messaging.HasActiveMember(out.Members, c.user) {
 		return messaging.Conversation{}, messaging.ErrUnauthorized
 	}
+	out.SourceURL = strings.TrimSuffix(c.http.Base, "/api") + "/channels/id:" + url.PathEscape(room.ID)
 	return out, nil
 }
 

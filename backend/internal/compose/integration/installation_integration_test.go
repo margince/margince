@@ -272,8 +272,8 @@ func TestSecondActiveWorkspaceTurnsTheSurfaceUnavailable(t *testing.T) {
 		ids.NewV7()); err != nil {
 		t.Fatal(err)
 	}
-	// The row went in behind the pool's back, so the proof of the one company
-	// it held a moment ago no longer describes the database.
+	// The row went in behind the pool's back, and a fresh process has no proof
+	// cached on the fixture's shared pool.
 	database.ForgetInstallationProofs()
 	fresh := httptest.NewServer(compose.New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(fresh.Close)

@@ -44,7 +44,7 @@ func (e *Eraser) eraseActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUI
 }
 
 func clearActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	_, err := tx.Exec(ctx, `UPDATE activity SET body = NULL, body_own_end = NULL, owed_ask = NULL, system_text = @system_text, raw = NULL, agenda_fingerprint = NULL, calendar_event = NULL, subject = @subject,
+	_, err := tx.Exec(ctx, `UPDATE activity SET body = NULL, meeting_notes = NULL, body_own_end = NULL, owed_ask = NULL, system_text = @system_text, raw = NULL, agenda_fingerprint = NULL, calendar_event = NULL, subject = @subject,
  internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
  language = NULL, source_author_name = NULL, reply_verdict = NULL, reply_verdict_at = NULL,
  reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = @id`, pgx.StrictNamedArgs{"subject": erasedActivitySubject, "id": id, "system_text": erasedActivityText()})

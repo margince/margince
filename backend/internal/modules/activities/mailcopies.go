@@ -190,31 +190,50 @@ func carryMailCopyTx(ctx context.Context, tx pgx.Tx, duplicate, kept ids.Activit
 }
 
 func carryMailAttachmentsTx(ctx context.Context, tx pgx.Tx, duplicate, kept ids.ActivityID) error {
+	type carriedFile struct {
+		id         ids.UUID
+		entityType string
+		entityID   ids.UUID
+		activityID *ids.UUID
+	}
 	args := schedulingArgs{}
-	rows, err := tx.Query(ctx, `SELECT id FROM attachment WHERE activity_id=`+args.add(duplicate)+` AND archived_at IS NULL ORDER BY id FOR UPDATE`, args...)
+	copyArg := args.add(duplicate)
+	rows, err := tx.Query(ctx, `SELECT id,entity_type,entity_id,activity_id FROM attachment
+ WHERE (activity_id=`+copyArg+` OR (entity_type='activity' AND entity_id=`+copyArg+`))
+ AND archived_at IS NULL ORDER BY id FOR UPDATE`, args...)
 	if err != nil {
 		return err
 	}
-	files, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	files, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (carriedFile, error) {
+		var file carriedFile
+		err := row.Scan(&file.id, &file.entityType, &file.entityID, &file.activityID)
+		return file, err
+	})
 	if err != nil {
 		return err
 	}
-	for _, id := range files {
+	for _, file := range files {
 		patch := storekit.NewPatch()
-		patch.Set("activity_id", duplicate.UUID, kept.UUID)
-		patch.Set("entity_id", duplicate.UUID, kept.UUID)
-		lock, err := storekit.LockRow(ctx, tx, "attachment", id, storekit.LiveOnly)
+		parent := file.entityID
+		if file.activityID != nil && *file.activityID == duplicate.UUID {
+			patch.Set("activity_id", *file.activityID, kept.UUID)
+		}
+		if file.entityType == linkEntityActivity && file.entityID == duplicate.UUID {
+			patch.Set("entity_id", file.entityID, kept.UUID)
+			parent = kept.UUID
+		}
+		lock, err := storekit.LockRow(ctx, tx, "attachment", file.id, storekit.LiveOnly)
 		if err != nil {
 			return err
 		}
 		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
-		audit, err := storekit.Audit(ctx, tx, "update", "attachment", id, patch.Before(), patch.After())
+		audit, err := storekit.Audit(ctx, tx, "update", "attachment", file.id, patch.Before(), patch.After())
 		if err != nil {
 			return err
 		}
-		if err := storekit.EmitEvent(ctx, tx, audit, id, crmcontracts.PublicEventAttachmentUpdated{ParentType: linkEntityActivity, ParentId: openapi_types.UUID(kept.UUID)}); err != nil {
+		if err := storekit.EmitEvent(ctx, tx, audit, file.id, crmcontracts.PublicEventAttachmentUpdated{ParentType: file.entityType, ParentId: openapi_types.UUID(parent)}); err != nil {
 			return fmt.Errorf("activities: announcing carried file: %w", err)
 		}
 	}

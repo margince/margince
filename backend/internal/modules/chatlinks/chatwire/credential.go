@@ -8,13 +8,12 @@ import "github.com/margince/margince/backend/internal/modules/chatlinks/messagin
 
 // BotCredential binds sealed installation credentials to their native identity.
 type BotCredential struct {
-	SlackReader       *messaging.Credential `json:"slack_reader,omitempty"`
-	SlackReaderMember string                `json:"slack_reader_member,omitempty"`
-	SlackHistory      *HistoryProfile       `json:"slack_history,omitempty"`
-	ServiceURL        string                `json:"service_url,omitempty"`
-	NativeTeam        string                `json:"native_team,omitempty"`
-	BotMember         string                `json:"bot_member,omitempty"`
-	Workspace         string                `json:"workspace"`
-	Member            string                `json:"member"`
-	Credential        messaging.Credential  `json:"credential"`
+	AllowedTeams []string             `json:"allowed_teams,omitempty"`
+	SlackHistory *HistoryProfile      `json:"slack_history,omitempty"`
+	ServiceURL   string               `json:"service_url,omitempty"`
+	NativeTeam   string               `json:"native_team,omitempty"`
+	BotMember    string               `json:"bot_member,omitempty"`
+	Workspace    string               `json:"workspace"`
+	Member       string               `json:"member"`
+	Credential   messaging.Credential `json:"credential"`
 }

@@ -18,7 +18,7 @@ import (
 )
 
 // Clients binds personal clients to the installation that issued their grants.
-func Clients(private bool, installation func(context.Context, string) (capture.LiveBot, error)) chatlinks.MemberClient {
+func Clients(private bool, installation func(context.Context, string) (capture.LiveBot, error), profiles ...chatlinks.HistoryProfileReader) chatlinks.MemberClient {
 	httpClient := chatsync.HTTPClient(private)
 	return func(ctx context.Context, grant chatlinks.MemberGrant, raw []byte) (messaging.Client, error) {
 		var credential messaging.Credential
@@ -36,6 +36,15 @@ func Clients(private bool, installation func(context.Context, string) (capture.L
 			client, err := slackClient(ctx, httpClient, installation, grant, credential)
 			if err != nil {
 				return nil, err
+			}
+			if len(profiles) > 0 && profiles[0] != nil {
+				profile, err := profiles[0](ctx, grant.Provider)
+				if err != nil {
+					return nil, err
+				}
+				client.WithParticipantHistory(profile, credential.AppID)
+			} else {
+				client.WithParticipantHistory(nil, credential.AppID)
 			}
 			return client, nil
 		case chatlinks.ProviderTeams:

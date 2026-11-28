@@ -54,8 +54,14 @@ func (s Server) GetSlackChannelSetup(w http.ResponseWriter, r *http.Request) {
 	_, _, err := s.slackChannelApp(r.Context())
 	out := crmcontracts.ChannelProviderSetup{
 		Configured: err == nil, CallbackUrl: s.slackChannelCallbackURL(),
-		EventsUrl: strings.TrimSuffix(s.slackChannelCallbackURL(), "/channel-providers/slack/callback") + "/channel-events/slack", Scopes: append(append([]string{}, slack.BotScopes...), slack.ChannelReaderScopes...),
+		EventsUrl: strings.TrimSuffix(s.slackChannelCallbackURL(), "/channel-providers/slack/callback") + "/channel-events/slack", Scopes: slack.BotScopes,
 	}
+	manifest, manifestErr := slack.AppManifest(s.messengerOAuthHandlers.callbackURL("slack"), out.CallbackUrl, out.EventsUrl)
+	if manifestErr != nil {
+		httperr.Write(w, r, manifestErr)
+		return
+	}
+	out.AppManifest = &manifest
 	if s.historyProfile != nil {
 		profile, err := s.historyProfile(r.Context(), "slack")
 		if err != nil {
@@ -67,7 +73,7 @@ func (s Server) GetSlackChannelSetup(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// ConnectSlackChannels requests shared bot and read-only channel-reader consent.
+// ConnectSlackChannels requests the shared bot installation permissions.
 func (s Server) ConnectSlackChannels(w http.ResponseWriter, r *http.Request) {
 	actor, ok := signedInHuman(w, r)
 	if !ok {
@@ -95,11 +101,22 @@ func (s Server) ConnectSlackChannels(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, apperrors.ErrInvalidArgument)
 		return
 	}
+	selection, err := s.links.MessengerSelection(r.Context())
+	if err != nil {
+		chatlinks.WriteMessengerFailure(w, r, err)
+		return
+	}
+	if selection.Version > 0 {
+		if err := s.links.SetWorkspaceHistoryProfile(r.Context(), selection, string(in.Distribution), s.messengerOAuthHandlers.now()); err != nil {
+			chatlinks.WriteMessengerFailure(w, r, err)
+			return
+		}
+	}
 	h := s.messengerOAuthHandlers
 	state := connectState{User: actor.UserID, Provider: "channel:slack", Version: stateVersionNamespacedCSRF}
 	state.SlackHistory = profile
 	state.Nonce = setCSRFNonce(w, "channel_slack_csrf", "/v1/channel-providers/slack")
-	signed := newStateSigner([]byte(h.cfg.StateKey)).sign(state, h.now().Add(connectStateTTL))
+	signed := h.signer().sign(state, h.now().Add(connectStateTTL))
 	httperr.WriteJSON(w, http.StatusOK, struct {
 		AuthorizeURL string `json:"authorize_url"`
 	}{app.AuthorizeBotURL(signed, s.slackChannelCallbackURL())})
@@ -112,7 +129,7 @@ func (s Server) SlackChannelsOAuthCallback(w http.ResponseWriter, r *http.Reques
 		httperr.Write(w, r, apperrors.ErrInvalidArgument)
 		return
 	}
-	state, err := newStateSigner([]byte(h.cfg.StateKey)).verify(params.State, h.now())
+	state, err := h.signer().verify(params.State, h.now())
 	if err != nil || state.Provider != "channel:slack" || !consumeNonceCookie(w, r, "channel_slack_csrf", "/v1/channel-providers/slack", state) {
 		httperr.Write(w, r, apperrors.ErrInvalidArgument)
 		return

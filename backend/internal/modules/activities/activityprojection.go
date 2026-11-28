@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -121,6 +122,7 @@ var activityProjection = []activityColumn{
 	{"a.channel_provider", func(s *activityScan) any { return &s.channelProvider }},
 	{"a.subject", func(s *activityScan) any { return &s.a.Subject }},
 	{"a.body", func(s *activityScan) any { return &s.a.Body }},
+	{meetingoutcome.ReadNotesSQL("a"), func(s *activityScan) any { return &s.a.MeetingNotes }},
 	{"a.ai_assisted", func(s *activityScan) any { return &s.aiAssisted }},
 	{occurredday.BookedStartSQL("a"), func(s *activityScan) any { return &s.a.OccurredAt }},
 	{"a.occurred_precision", func(s *activityScan) any { return &s.occurredPrecision }},
@@ -258,8 +260,10 @@ func activityColumns(ctx context.Context, contentArm string, arg func(any) int) 
 			out[i] = importFacts[c.sql]
 		case replyChannel:
 			out[i] = storekit.ReplyChannelSQL("a", sourceAudience)
+		case meetingoutcome.ReadNotesSQL("a"):
+			out[i] = "CASE WHEN (" + contentArm + ") THEN (" + c.sql + ") END AS meeting_notes"
 		case "a.body":
-			out[i] = "CASE WHEN (" + contentArm + ") THEN a.body END AS body"
+			out[i] = "CASE WHEN (" + contentArm + ") THEN " + c.sql + " END AS " + strings.TrimPrefix(c.sql, "a.")
 		case "a.raw":
 			out[i] = "CASE WHEN (" + contentArm + ") THEN " + chatSourceReadSQL(ctx, "a.raw", safeChatMetadataSQL) + " END AS raw"
 		case "a.source_id":
@@ -428,7 +432,7 @@ func (s *activityScan) contentProjection(ctx context.Context, a *crmcontracts.Ac
 	state := crmcontracts.ActivityContentStateAvailable
 	if !s.contentAvailable {
 		state = crmcontracts.ActivityContentStateWithheld
-		a.Subject, a.Body, a.SourceId = nil, nil, nil
+		a.Subject, a.Body, a.SourceId, a.MeetingNotes = nil, nil, nil, nil
 		a.CanShareInternal = nil
 		a.Language = nil
 		threadKey, captureLabel, audienceReason = nil, nil, nil

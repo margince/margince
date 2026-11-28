@@ -9576,7 +9576,7 @@ paths:
         - name: source_activity_id
           in: query
           schema: { type: string, format: uuid }
-          description: Tasks derived from this readable source activity, under current task visibility.
+          description: Tasks derived from this readable source activity, under current task visibility. With kind=meeting, returns the transcripts recording that readable meeting.
         - name: thread_key
           in: query
           schema: { type: string }
@@ -18685,6 +18685,62 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /messenger/service:
+    get:
+      tags: [Connectors]
+      operationId: getMessengerService
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: The workspace team-messaging service and any conflicting legacy services.
+      responses:
+        '200':
+          description: Active provider identities without credentials or personal account details.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessengerService' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Connectors]
+      operationId: selectMessengerService
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Select one team-messaging service and withdraw other shared and personal connections.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [provider]
+              properties:
+                provider: { $ref: '#/components/schemas/MessengerProvider' }
+                slack_distribution: { type: string, maxLength: 40 }
+      responses:
+        '204': { description: This is the workspace service; other local messaging access is withdrawn. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /messenger/service/{provider}:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
+    delete:
+      tags: [Connectors]
+      operationId: disconnectMessengerService
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Disconnect a team-messaging service and all its personal accounts before switching.
+      responses:
+        '204': { description: Local service and personal access withdrawn; existing History is retained. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /messenger/{provider}/setup:
     parameters:
       - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
@@ -18862,6 +18918,40 @@ paths:
           "$ref": "#/components/responses/Conflict"
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /messenger/{provider}/{record_type}/{id}/outcome-draft:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
+      - { name: record_type, in: path, required: true, schema: { $ref: '#/components/schemas/ChannelLinkRecordType' } }
+      - { $ref: '#/components/parameters/Id' }
+    post:
+      tags: [Connectors]
+      operationId: draftMessengerOutcome
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Draft an editable outcome from explicitly selected native messages without filing private content.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessengerOutcomeDraftRequest'
+      responses:
+        '200':
+          description: An editable draft, never a saved activity.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessengerOutcomeDraft' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: The summary model or provider is unavailable.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /messenger/{provider}/{record_type}/{id}/team:
     parameters:
       - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
@@ -45462,7 +45552,7 @@ components:
       properties:
         purpose:
           type: string
-          enum: [sign_in, mailbox_connect, calendar_connect, documents_connect, extension_connect, messenger_connect]
+          enum: [sign_in, mailbox_connect, calendar_connect, documents_connect, extension_connect, messenger_connect, channel_connect]
           x-extensible-enum: true
           description: >-
             Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and
@@ -50195,6 +50285,7 @@ components:
       additionalProperties: false
       required: [configured, callback_url, events_url, scopes]
       properties:
+        app_manifest: { type: string, maxLength: 65536, description: Downloadable Slack app configuration without credentials. }
         history_profile: { $ref: '#/components/schemas/SlackHistoryProfile' }
         configured: { type: boolean }
         callback_url: { type: string, maxLength: 8192 }
@@ -50262,6 +50353,10 @@ components:
         - "audience_known"
         - "external"
       properties:
+        supports_outcome_draft:
+          type: boolean
+          description: False when provider limits prevent a verified on-demand summary.
+        source_url: { type: string, maxLength: 8192 }
         access:
           type: string
           enum: [workspace, team, private, participants, unknown]
@@ -50340,6 +50435,32 @@ components:
             type: "string"
             maxLength: 1024
           maxItems: 999
+    MessengerOutcomeDraftRequest:
+      type: object
+      additionalProperties: false
+      required: [conversation_id, message_ids]
+      properties:
+        conversation_id: { type: string, minLength: 1, maxLength: 1024 }
+        root_id: { type: string, maxLength: 1024 }
+        message_ids: { type: array, minItems: 1, maxItems: 100, uniqueItems: true, items: { type: string, minLength: 1, maxLength: 1024 } }
+    MessengerOutcomeDraft:
+      type: object
+      additionalProperties: false
+      required: [subject, body]
+      properties:
+        subject: { type: string, maxLength: 512 }
+        body: { type: string, maxLength: 16000 }
+    MessengerService:
+      type: object
+      additionalProperties: false
+      required: [providers]
+      properties:
+        history_profile: { $ref: '#/components/schemas/SlackHistoryProfile' }
+        active_provider: { $ref: '#/components/schemas/MessengerProvider' }
+        providers:
+          type: array
+          maxItems: 3
+          items: { $ref: '#/components/schemas/MessengerProvider' }
     MessengerMessage:
       type: "object"
       additionalProperties: false
@@ -50352,6 +50473,9 @@ components:
         - "edited"
         - "deleted"
       properties:
+        reply_count: { type: integer, minimum: 0, maximum: 1000000 }
+        content_incomplete: { type: boolean, description: Some rich content or attachment contents were not read. }
+        source_url: { type: string, maxLength: 8192 }
         id:
           type: "string"
           maxLength: 1024
@@ -64084,6 +64208,9 @@ components:
             The kind says what sort of interaction happened; this says what carried it. They
             are separate axes, and reading one off the other is what ADR-0107 retired.
         subject: { type: [string, 'null'] }
+        meeting_notes:
+          type: [string, 'null']
+          description: Internal meeting notes, separate from the calendar description and from any transcript. Earlier rep-authored calendar notes are resolved here from their audit proof. Earlier rep-authored calendar notes are resolved here from their audit proof. Visible only with the meeting content. An empty string clears earlier notes.
         body: { type: [string, 'null'] }
         ai_assisted:
           type: boolean
@@ -64886,12 +65013,12 @@ components:
           format: uuid
           description: >-
             A meeting transcript only (`source_system: transcript`), without `source_activity_id`.
-            The open meeting this transcript records. In the same transaction the meeting is marked
+            The open or held meeting this transcript records. In the same transaction the meeting is marked
             held and gains the transcript's deal, project and lead links for each kind it has none of.
             The transcript takes the meeting's time and its deal, project and lead links, keeps no
             outcome of its own, and names the meeting in `source_activity_id`, so held counts count
             the meeting once. A meeting that is archived, missing or hidden from the caller answers 404.
-            A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`.
+            A live meeting marked canceled or no-show is refused with 422 on `records_meeting_id`. A held meeting keeps its existing outcome.
             A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
         follow_up_task:
           $ref: '#/components/schemas/ActivityFollowUpTask'
@@ -65514,6 +65641,10 @@ components:
             Requires activity create authority. A meeting already held cannot add another
             task through this outcome write.
         subject: { type: [string, 'null'], maxLength: 20000 }
+        meeting_notes:
+          type: [string, 'null']
+          maxLength: 20000
+          description: Internal meeting notes, separate from the calendar description and from any transcript. Visible only with the meeting content. An empty string clears earlier notes.
         body: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
         occurred_precision:

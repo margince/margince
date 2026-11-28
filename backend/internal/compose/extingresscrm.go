@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/extdelivery"
+	"github.com/margince/margince/backend/internal/compose/extingress"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -63,6 +64,10 @@ func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, 
 	if err != nil {
 		return extension.Result{}, err
 	}
+	// Each transaction the landing opens checks the member's consent again and
+	// locks it, as a captured activity does, so no write follows a withdrawal.
+	guard, member := extingress.MemberGuard(r.unit, memberConsentHeldTx), extingress.UserUUID(on)
+	runCtx = database.WithTransactionGuard(runCtx, func(ctx context.Context, tx pgx.Tx) error { return guard(ctx, tx, member) })
 	if rec.Kind() == extension.KindSignal {
 		return r.landSignal(runCtx, rec, declared)
 	}

@@ -22,7 +22,8 @@ import (
 // SlackReceiver accepts signed Slack changes as cues for canonical source reads.
 type SlackReceiver struct {
 	*Receiver
-	Roots RootNotices
+	Roots         RootNotices
+	SigningSecret func(context.Context) (string, error)
 }
 
 type slackNotice struct {
@@ -52,6 +53,20 @@ type slackNotice struct {
 func (s *SlackReceiver) Receive(ctx context.Context, d chatlinks.Delivery) (crmcontracts.DispactChannelEventReceipt, error) {
 	ctx = principal.WithActor(ctx, chatLinksPrincipal)
 	var none crmcontracts.DispactChannelEventReceipt
+	var notice slackNotice
+	if json.Unmarshal(d.Body, &notice) != nil {
+		return none, chatlinks.ErrEventMalformed
+	}
+	if slackChallenge(notice) && s.SigningSecret != nil {
+		secret, err := s.SigningSecret(ctx)
+		if err != nil {
+			return none, chatlinks.ErrEventRejected
+		}
+		if err := verifySlackNotice(secret, d, s.Now()); err != nil {
+			return none, err
+		}
+		return crmcontracts.DispactChannelEventReceipt{Challenge: &notice.Challenge}, nil
+	}
 	bot, secret, err := s.Bots.LiveBotEvents(ctx, chatlinks.ProviderSlack)
 	if err != nil {
 		return none, chatlinks.ErrEventRejected
@@ -59,7 +74,6 @@ func (s *SlackReceiver) Receive(ctx context.Context, d chatlinks.Delivery) (crmc
 	if err := verifySlackNotice(secret, d, s.Now()); err != nil {
 		return none, err
 	}
-	var notice slackNotice
 	if json.Unmarshal(d.Body, &notice) != nil {
 		return none, chatlinks.ErrEventMalformed
 	}

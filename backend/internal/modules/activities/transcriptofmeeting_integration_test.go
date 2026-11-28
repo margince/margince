@@ -10,8 +10,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -138,19 +142,54 @@ func TestATranscriptOfABookedMeetingMarksThatMeetingHeldAndCountsOnce(t *testing
 	}
 }
 
-func TestATranscriptCannotRecordAMeetingThatAlreadyHasItsOutcome(t *testing.T) {
+func TestATranscriptCanRecordAHeldMeetingWithoutCountingItTwice(t *testing.T) {
 	e := setupSend(t)
 	customer, deal := seedCustomer(t, e), e.seedDeal(t, "Renewal")
 	held := string(crmcontracts.ActivityMeetingStatusHeld)
 	meeting := customerMeeting(t, e, customer, "Quarterly review", clocktest.Now(t).Add(-2*time.Hour), &held)
-
-	_, err := transcriptOf(t, e, meeting, customer, deal)
-	var refused *followUpFieldError
-	if !errors.As(err, &refused) || refused.Field != fieldRecordsMeetingID {
-		t.Fatalf("recording a held meeting answered %v, want a refusal on %s", err, fieldRecordsMeetingID)
+	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, deal_id) VALUES ($1,'deal',$2)`, meeting.UUID, deal)
+	for range 2 {
+		transcript, err := transcriptAs(meetingCtx(e), t, e, meeting, "[]", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(linksOfKinds(transcript, []string{linkEntityContact})) != 1 {
+			t.Fatal("transcript lost the meeting customer")
+		}
+		if transcript.SourceActivityId == nil || ids.UUID(*transcript.SourceActivityId) != meeting.UUID || transcript.MeetingStatus != nil {
+			t.Fatalf("transcript does not record the original meeting: %+v", transcript)
+		}
 	}
-	if count := heldMeetingsOnDeal(t, e, deal); count != 0 {
-		t.Errorf("the refused create left %d held meetings on the deal, want none", count)
+	if count := heldMeetingsOnDeal(t, e, deal); count != 1 {
+		t.Errorf("held count = %d, want 1", count)
+	}
+	handlers := Handlers{store: meetingStore(e)}
+	for _, query := range []struct {
+		name  string
+		kinds *[]crmcontracts.ListActivitiesParamsKind
+		want  int
+	}{
+		{"default tasks", nil, 0},
+		{"transcripts", new([]crmcontracts.ListActivitiesParamsKind{crmcontracts.ListActivitiesParamsKindMeeting}), 2},
+		{"transcripts and tasks", new([]crmcontracts.ListActivitiesParamsKind{crmcontracts.ListActivitiesParamsKindMeeting, crmcontracts.ListActivitiesParamsKindTask}), 2},
+	} {
+		t.Run(query.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/v1/activities", nil).WithContext(meetingCtx(e))
+			handlers.ListActivities(rec, request, crmcontracts.ListActivitiesParams{
+				Kind: query.kinds, SourceActivityId: new(openapi_types.UUID(meeting.UUID)),
+			})
+			if rec.Code != http.StatusOK {
+				t.Fatalf("list status %d: %s", rec.Code, rec.Body.String())
+			}
+			var page crmcontracts.ActivityListResponse
+			if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+				t.Fatal(err)
+			}
+			if len(page.Data) != query.want {
+				t.Fatalf("linked rows = %d, want %d", len(page.Data), query.want)
+			}
+		})
 	}
 }
 
@@ -259,5 +298,28 @@ func TestARetriedTranscriptOfAMeetingReplaysTheStoredTranscript(t *testing.T) {
 	}
 	if retry.Id != first.Id {
 		t.Errorf("the retry answered activity %s, want the stored %s", retry.Id, first.Id)
+	}
+}
+
+func TestHeldTranscriptAdmissionKeepsTheMeetingWriteAndSourceRules(t *testing.T) {
+	e := setupSend(t)
+	customer := seedCustomer(t, e)
+	theirs := colleagueMeeting(t, e, customer, "workspace")
+	e.exec(t, `UPDATE activity SET meeting_status='held' WHERE id=$1`, theirs.UUID)
+	ctx := transcriptCtx(e, principal.RowScopeOwn)
+	if _, err := transcriptAs(ctx, t, e, theirs, "[]", ""); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("read-only held transcript write: %v", err)
+	}
+	if _, err := meetingStore(e).UpdateActivity(ctx, theirs, UpdateActivityInput{MeetingNotes: new("Not mine")}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("read-only held notes write: %v", err)
+	}
+	held := "held"
+	own := customerMeeting(t, e, customer, "Review", clocktest.Now(t).Add(-time.Hour), &held)
+	if _, err := transcriptAs(meetingCtx(e), t, e, own, "[]", `,"follow_up_task":{"subject":"Send quote"}`); err == nil {
+		t.Fatal("a transcript added a next step to an already held meeting")
+	}
+	e.exec(t, `UPDATE activity SET source_system='transcript',body='Buyer: approved' WHERE id=$1`, own.UUID)
+	if _, err := transcriptAs(meetingCtx(e), t, e, own, "[]", ""); err == nil {
+		t.Fatal("a transcript recorded another transcript")
 	}
 }

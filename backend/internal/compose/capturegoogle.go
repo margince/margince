@@ -149,7 +149,7 @@ func newCaptureRegistryWithGoogle(
 	if appReachable(resolve, c.canSync()) {
 		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota)).
 			WithBackfillTuning(cfg.historyTuning()).
-			WithBounceSink(newBounceSink(pool)).WithSharedMailboxes(gmail.SharedAuthConfig{}))
+			WithBounceSink(newBounceSink(pool, cfg.Blob)).WithSharedMailboxes(gmail.SharedAuthConfig{}))
 		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
 		reg.Register(gdocs.New(newGdocsAuthorizer(resolve, c), gdocs.NewOwner(nil, "")).WithDocs(gdocs.NewDocsAPI(nil, "")))
 	}
@@ -177,7 +177,7 @@ func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig
 	// silently, which reads as an empty inbox rather than as a broken one.
 	google, microsoft := newConnectorAppResolvers(pool, vault, log)
 	reg := newCaptureRegistryWithGoogle(pool, vault, google, c, cfg)
-	registerMicrosoftConnectors(reg, microsoft, g, pool, cfg.historyTuning())
+	registerMicrosoftConnectors(reg, microsoft, g, pool, cfg.Blob, cfg.historyTuning())
 	return reg
 }
 
@@ -290,7 +290,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			gcalAPI:       gcal.NewAPI(nil, ""),
 			gdocsOAuth:    gdocsOAuth,
 			gdocsOwner:    gdocs.NewOwner(nil, ""),
-			signer:        newStateSigner([]byte(c.StateKey)),
+			signer:        newStateSigner([]byte(c.StateKey)).forInstallation(pool),
 			publicBaseURL: c.PublicBaseURL,
 			apiBaseURL:    c.APIBaseURL,
 			publicOrigin:  s.originStatus,

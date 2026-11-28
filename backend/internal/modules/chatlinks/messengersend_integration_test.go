@@ -50,7 +50,7 @@ func (c *receiptClient) Send(_ context.Context, in messaging.Send) (messaging.Re
 
 func setupMessengerSend(t *testing.T, client *receiptClient) (*linkEnv, MessengerSend) {
 	t.Helper()
-	e := setupLinks(t)
+	e := setupSlackMemberLinks(t)
 	vault := keyvault.NewMemory()
 	e.store.WithMessenger(func() keyvault.Vault { return vault }, func(context.Context, MemberGrant, []byte) (messaging.Client, error) { return client, nil })
 	grant, err := e.store.ConnectMember(e.seat(e.rep), MemberGrant{Provider: "slack", Workspace: "TEAM", Member: "REP"}, []byte("member-token"))

@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -194,7 +195,10 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 		where = append(where, ContactIsPartySQL(sprintf("$%d", arg(*in.PartyContactID))))
 	}
 	if in.SourceActivityID != nil {
-		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
+		where = append(where, sprintf("a.source_activity_id = $%d", arg(*in.SourceActivityID)))
+		if in.Kind == nil && len(in.Kinds) == 0 {
+			where = append(where, "a.kind = 'task'")
+		}
 	}
 	if in.Kind != nil {
 		where = append(where, kindPredicate([]string{*in.Kind}, arg))
@@ -333,11 +337,9 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 			arg(*in.ConversationOf), SameCorrespondenceSQL("a", "conversation_anchor", sprintf("$%d::text", arg(in.conversationDomain)), deliveredToSQL(in.ConversationDeliveredTo, arg))))
 	}
 	if in.Query != nil && *in.Query != "" {
-		// subject + body are the two human-readable columns a human would
-		// recognize an item by. The wildcard is escaped, so a caller typing %
-		// searches for a percent sign rather than matching everything.
+		// Escape wildcards so a typed percent sign searches literally.
 		pos := arg("%" + storekit.EscapeLike(*in.Query) + "%")
-		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\')", pos, pos))
+		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\' OR (%s) ILIKE $%d ESCAPE '\\')", pos, pos, meetingoutcome.ReadNotesSQL("a"), pos))
 	}
 	where = append(where, occurredWindowClauses(in, arg)...)
 	if in.OpenStatusOnly {

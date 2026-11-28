@@ -278,6 +278,7 @@ export const SETTINGS_SECTIONS = {
     webhooks: ["settings.part.integrations.webhooks", "webhooks.title"],
     telegram: [
       "settings.part.integrations.telegram",
+      "messenger.serviceTitle",
       "messenger.myAccounts",
       "messenger.apps",
       "messenger.setupDetails",

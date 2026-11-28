@@ -119,7 +119,7 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// wins over the tense convention (P3).
 		"reply":    true,
 		"conflict": true, "budget_degraded": true, "write_rejected": true, "deleted": true,
-		"connected": true, "disconnected": true,
+		"connected": true, "disconnected": true, "selected": true,
 		// A member imported their own LinkedIn network. Past tense like the
 		// rest; the list simply had not met it before.
 		"imported": true,

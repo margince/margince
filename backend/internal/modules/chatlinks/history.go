@@ -17,14 +17,23 @@ import (
 // PullLinks reads the active links of a bot connection, oldest first, so the
 // pull reads each linked channel's history.
 func (s *Store) PullLinks(ctx context.Context, connectionID ids.UUID) ([]Link, error) {
+	return s.linksForConnection(ctx, connectionID, false)
+}
+
+// ConnectionLinks includes quiet links so provider cleanup can end them too.
+func (s *Store) ConnectionLinks(ctx context.Context, connectionID ids.UUID) ([]Link, error) {
+	return s.linksForConnection(ctx, connectionID, true)
+}
+
+func (s *Store) linksForConnection(ctx context.Context, connectionID ids.UUID, includeQuiet bool) ([]Link, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
 	var out []Link
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT `+linkColumns+` FROM chat_link
-			WHERE connection_id = $1 AND archived_at IS NULL AND status = $2
-			AND NOT read_disabled ORDER BY created_at, id`, connectionID, StatusActive)
+			WHERE connection_id=@connection AND archived_at IS NULL AND status=@status
+ AND (@all OR NOT read_disabled) ORDER BY created_at,id`, pgx.StrictNamedArgs{connectionKey: connectionID, linkStatusKey: StatusActive, "all": includeQuiet})
 		if err != nil {
 			return err
 		}

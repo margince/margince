@@ -149,12 +149,10 @@ type callRuntime struct {
 	via     string
 	deps    extensionRuntimeBinding
 
-	// callCtx is the context the INVOCATION arrived on, held for exactly one
-	// value: the workspace. Every capability re-derives the tenant from here
-	// rather than from the context the handler passes in, which is what makes
-	// "a handler cannot widen its own scope" a property of construction
-	// instead of a property of principal.WithWorkspaceID happening to be
-	// unreachable from an extension module. See scoped.
+	// callCtx is the context the invocation arrived on. Every capability takes
+	// the actor, correlation id and causation from here rather than from the
+	// context the handler passes in. That makes "a handler cannot change who
+	// is acting" a property of construction. See scoped.
 	//
 	// Held in a field rather than threaded, because the capability methods
 	// are the published Runtime's and cannot grow a parameter for it.

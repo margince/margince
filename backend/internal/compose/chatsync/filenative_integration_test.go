@@ -83,7 +83,8 @@ func TestNativeOneOffFilingKeepsTheSelectedScopeAndRefusesChangedSources(t *test
 	now := linkedAt.Add(48 * time.Hour)
 	bot := pacedSlackFixture(t, routedSlackHTTP{server.Client(), base}, "synthetic", "T_ONE", "U_BOT", &now)
 	sessions := nativeRootSessions{chatlinks.Session{Provider: "slack", ConnectionID: connection, TeamID: "T_ONE", Chat: bot}}
-	lane := &chosenSummaryBoundary{summary: "Legal has not approved the pilot; starting it remains conditional on approval."}
+	lane := &chosenSummaryBoundary{}
+	lane.summary = "Legal has not approved the pilot; starting it remains conditional on approval."
 	filer := &Filer{Pool: e.pool, Store: e.store, Chats: sessions, Activities: activities.NewStore(e.db()), Contacts: contacts.NewStore(e.db()), Lane: lane, Reauthorize: func(ctx context.Context) (context.Context, error) {
 		if denied {
 			return nil, apperrors.ErrPermissionDenied

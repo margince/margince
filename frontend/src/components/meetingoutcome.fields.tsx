@@ -28,19 +28,22 @@ export type OutcomeDraft = {
 function OutcomeWords({
   draft,
   transcript,
+  readOnlySubject,
   onChange,
 }: Readonly<{
   draft: OutcomeDraft;
   transcript: boolean;
+  readOnlySubject: boolean;
   onChange: (draft: OutcomeDraft) => void;
 }>) {
   const t = useT();
   return (
     <>
-      <Field label={t("log.subject")} required>
+      <Field label={t("log.subject")} required={!readOnlySubject}>
         {(control) => (
           <TextInput
             {...control}
+            readOnly={readOnlySubject}
             value={draft.subject}
             onChange={(event) =>
               onChange({ ...draft, subject: event.target.value })
@@ -126,15 +129,15 @@ export function OutcomeEditFields({
           </Field>
         )}
       </div>
-      {managed ? (
+      {managed && (
         <p className="t-caption">{t("worklist.verb.meetingCalendarManaged")}</p>
-      ) : (
-        <OutcomeWords
-          draft={draft}
-          transcript={transcript}
-          onChange={onChange}
-        />
       )}
+      <OutcomeWords
+        draft={draft}
+        transcript={transcript}
+        readOnlySubject={managed}
+        onChange={onChange}
+      />
       {children}
     </>
   );

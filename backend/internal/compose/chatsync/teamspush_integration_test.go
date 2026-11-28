@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -44,6 +45,12 @@ func (h teamsProtocolHTTP) Do(request *http.Request) (*http.Response, error) {
 }
 
 func TestTeamsSignedActivityBindsNativeReferencesAndRemovalPausesLinks(t *testing.T) {
+	for _, deleted := range []bool{false, true} {
+		t.Run(fmt.Sprintf("team_deleted=%v", deleted), func(t *testing.T) { assertTeamsRemoval(t, deleted) })
+	}
+}
+
+func assertTeamsRemoval(t *testing.T, deleted bool) {
 	const app = "018f3a1b-0000-7000-8000-00000000a001"
 	const tenant = "018f3a1b-0000-7000-8000-00000000a002"
 	const team = "018f3a1b-0000-7000-8000-00000000a003"
@@ -58,10 +65,24 @@ func TestTeamsSignedActivityBindsNativeReferencesAndRemovalPausesLinks(t *testin
 	e.exec(t, `UPDATE chat_link SET provider='teams',channel_slug=$2 WHERE id=$1`, e.link, team+"/C_ONE")
 	rig := oidctokentest.NewRig(t)
 	rig.Endorsements = []string{"msteams"}
+	installed := true
 	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var response any
 		switch r.URL.Path {
+		case "/teams/" + team:
+			if !installed && deleted {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			response = map[string]string{"id": team, "displayName": "Pilot"}
+		case "/teams/" + team + "/installedApps":
+			apps := []map[string]map[string]string{}
+			if installed {
+				apps = append(apps, map[string]map[string]string{"teamsAppDefinition": {"azureADAppId": app}})
+			}
+			response = map[string][]map[string]map[string]string{"value": apps}
+
 		case "/" + tenant + "/oauth2/v2.0/token":
 			if err := r.ParseForm(); err != nil {
 				t.Error(err)
@@ -140,6 +161,22 @@ func TestTeamsSignedActivityBindsNativeReferencesAndRemovalPausesLinks(t *testin
 	if err != nil || statusOf(got) != "already_taken" || pulls != 1 {
 		t.Fatalf("replay applied twice: %+v %v pulls=%d", got, err, pulls)
 	}
+	body["id"] = "unlinked-message"
+	body["channelData"] = map[string]any{"tenant": map[string]string{"id": tenant}, "team": map[string]string{"id": native}, "channel": map[string]string{"id": "UNLINKED"}}
+	unlinked, err := deliver()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err = receiver.Receive(ctx, unlinked)
+	if err != nil || pulls != 1 {
+		t.Fatalf("unapproved channel queued work: %+v %v pulls=%d", got, err, pulls)
+	}
+	var refs int
+	if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM chat_team_thread`).Scan(&refs); err != nil || refs != 1 {
+		t.Fatalf("unapproved activity persisted: %d %v", refs, err)
+	}
+	body["id"] = "root-native-id"
+	body["channelData"] = map[string]any{"tenant": map[string]string{"id": tenant}, "team": map[string]string{"id": native}, "channel": map[string]string{"id": "C_ONE"}}
 	body["serviceUrl"] = "https://smba.trafficmanager.net/emea/"
 	forged, err := deliver()
 	if err != nil {
@@ -153,6 +190,7 @@ func TestTeamsSignedActivityBindsNativeReferencesAndRemovalPausesLinks(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
+	installed = false
 	got, err = receiver.Receive(ctx, removal)
 	if err != nil || statusOf(got) != "link_paused" {
 		t.Fatalf("verified removal did not pause sync: %+v %v", got, err)

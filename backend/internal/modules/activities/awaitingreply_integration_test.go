@@ -365,8 +365,12 @@ func TestTheFollowUpLaneAndTheBadgeAgreeOnASentMessage(t *testing.T) {
 	s := storeAddressing(e, readerAddress)
 	customer := e.customerAt(t, "customer")
 	plain, thread := e.sentTo(t, customer, "", 3*24*time.Hour)
-	invitation, _ := e.sentTo(t, customer, "", 3*24*time.Hour)
-	setCalendarMethod(t, e, invitation, "REQUEST")
+	var calendar []ids.UUID
+	for _, method := range []string{"REQUEST", "REPLY", "REQUEST"} {
+		id, _ := e.sentTo(t, customer, "", 3*24*time.Hour)
+		setCalendarMethod(t, e, id, method)
+		calendar = append(calendar, id)
+	}
 
 	moves := func() map[ids.UUID]crmcontracts.EmailSummaryMove {
 		tx, err := e.owner.Begin(context.Background())
@@ -378,20 +382,25 @@ func TestTheFollowUpLaneAndTheBadgeAgreeOnASentMessage(t *testing.T) {
 				t.Fatal(err)
 			}
 		}()
-		states, err := EmailStatesFor(e.followUpReader(), tx, []ids.UUID{plain, invitation}, clocktest.Now(t))
+		states, err := EmailStatesFor(e.followUpReader(), tx, append([]ids.UUID{plain}, calendar...), clocktest.Now(t))
 		if err != nil {
 			t.Fatal(err)
 		}
-		return map[ids.UUID]crmcontracts.EmailSummaryMove{plain: states[plain].Move, invitation: states[invitation].Move}
+		out := map[ids.UUID]crmcontracts.EmailSummaryMove{plain: states[plain].Move}
+		for _, id := range calendar {
+			out[id] = states[id].Move
+		}
+		return out
 	}
 	got := moves()
 	if !awaited(t, s, e, plain) || got[plain] != crmcontracts.EmailSummaryMoveWaitingForThem {
 		t.Errorf("an unanswered plain mail: lane %v, move %q; want on the lane and waiting_for_them",
 			awaited(t, s, e, plain), got[plain])
 	}
-	if awaited(t, s, e, invitation) || got[invitation] != crmcontracts.EmailSummaryMoveNone {
-		t.Errorf("our invitation: lane %v, move %q; want off the lane and none",
-			awaited(t, s, e, invitation), got[invitation])
+	for _, id := range calendar {
+		if awaited(t, s, e, id) || got[id] != crmcontracts.EmailSummaryMoveNone {
+			t.Errorf("calendar invitation, RSVP or reminder reached ordinary reply tracking: %v %q", id, got[id])
+		}
 	}
 
 	e.afterwards(t, customer, "email", "inbound", thread)

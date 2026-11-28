@@ -8,19 +8,20 @@ import (
 	"errors"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
+	"github.com/margince/margince/backend/internal/platform/teamchat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Native provider identifiers stay consistent across personal consent and channel links.
 const (
-	ProviderDispact = "dispact"
-	ProviderSlack   = "slack"
-	ProviderTeams   = "teams"
+	ProviderDispact = teamchat.Dispact
+	ProviderSlack   = teamchat.Slack
+	ProviderTeams   = teamchat.Teams
 )
 
 // IsChatProvider recognizes the native provider identifiers used by channel links.
 func IsChatProvider(provider string) bool {
-	return provider == ProviderDispact || provider == ProviderSlack || provider == ProviderTeams
+	return teamchat.Supported(provider)
 }
 
 // Chat is the channel API required by the link engine.

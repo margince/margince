@@ -371,3 +371,14 @@
 1795846282_agent_notes_never_move_activity_clocks.down.sql | * | restores the previous clock functions and update triggers without rewriting stored rows
 
 1795847790_proof_history_parent_keys_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+
+1795856759_one_team_messaging_service.up.sql | chat_service | the new singleton table accepts at most one row through UNIQUE/CHECK on singleton; INSERT selects at most one incumbent with LIMIT 1
+1795862763_meeting_note_shape_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+
+
+1795862764_meeting_notes_have_the_shared_text_limit.up.sql | * | replaces text-bound trigger declarations for activity without rewriting stored rows
+1795862764_meeting_notes_have_the_shared_text_limit.down.sql | * | restores the earlier text-bound trigger declarations without rewriting stored rows
+1795862830_attachment_owner_keys_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795862829_an_attachment_goes_with_its_owner.up.sql | * | schema-only keys, checks and trigger definitions; no stored row is rewritten
+1795862829_an_attachment_goes_with_its_owner.down.sql | * | restores the prior schema and trigger; no stored row is rewritten
+1795862830_attachment_owner_keys_are_validated.up.sql | * | validates metadata and removes only a vocabulary check that existing rows break; the guarded shape still refuses new unsupported owners

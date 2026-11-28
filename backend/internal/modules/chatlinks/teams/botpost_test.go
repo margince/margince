@@ -17,7 +17,7 @@ import (
 )
 
 func TestBotUsesConnectorReferencesAndNeverAppOnlyGraphMessageWrites(t *testing.T) {
-	private, unknown := false, false
+	private, unknown, denied := false, false, false
 	writes := []string{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -66,7 +66,13 @@ func TestBotUsesConnectorReferencesAndNeverAppOnlyGraphMessageWrites(t *testing.
 					kind = "private"
 				}
 				response = map[string]string{"id": "CHANNEL", "membershipType": kind}
-			case "/teams/TEAM/members", "/teams/TEAM/channels/CHANNEL/members":
+			case "/teams/TEAM/channels/CHANNEL/messages":
+				if denied {
+					w.WriteHeader(http.StatusForbidden)
+					return
+				}
+				response = map[string][]string{"value": {}}
+			case "/teams/TEAM/members", "/teams/TEAM/channels/CHANNEL/members", "/teams/TEAM/channels/CHANNEL/allMembers":
 				response = map[string]any{"value": []any{map[string]string{"userId": "U1", "tenantId": "TENANT", "email": "jordan@example.test"}}}
 			default:
 				t.Errorf("unexpected Graph resource %s", r.URL.Path)
@@ -100,11 +106,15 @@ func TestBotUsesConnectorReferencesAndNeverAppOnlyGraphMessageWrites(t *testing.
 		t.Fatalf("verified reply failed: %v writes=%v", err, writes)
 	}
 	private = true
-	if _, err := bot.Post(ctx, "TEAM/CHANNEL", "Private update", "private-attempt", ""); !errors.Is(err, messaging.ErrUnsupported) || len(writes) != 3 {
-		t.Fatalf("attempted unsupported private-channel bot delivery: %v writes=%v", err, writes)
+	if _, err := bot.Post(ctx, "TEAM/CHANNEL", "Private update", "private-attempt", ""); err != nil || len(writes) != 4 {
+		t.Fatalf("qualified private-channel delivery failed: %v writes=%v", err, writes)
+	}
+	denied = true
+	if _, err := bot.Post(ctx, "TEAM/CHANNEL", "Denied private update", "denied-attempt", ""); !errors.Is(err, chatwire.ErrNotMember) || len(writes) != 4 {
+		t.Fatalf("private channel without app access was posted: %v %v", err, writes)
 	}
 	private, unknown = false, true
-	if _, err := bot.Post(ctx, "TEAM/CHANNEL", "Uncertain update", "unknown-attempt", ""); !errors.Is(err, messaging.ErrDeliveryUnknown) || len(writes) != 4 {
+	if _, err := bot.Post(ctx, "TEAM/CHANNEL", "Uncertain update", "unknown-attempt", ""); !errors.Is(err, messaging.ErrDeliveryUnknown) || len(writes) != 5 {
 		t.Fatalf("uncertain delivery was treated as safe to retry: %v writes=%v", err, writes)
 	}
 }

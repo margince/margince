@@ -229,6 +229,8 @@ function deliveryFailure(code: string | undefined) {
       return "messenger.failureReconnect";
     case "unavailable":
       return "messenger.failureUnavailable";
+    case "review_access":
+      return "messenger.failureAccess";
     case "review_message":
       return "messenger.failureReview";
     case "unsupported":

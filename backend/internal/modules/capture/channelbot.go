@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/teamchat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -54,6 +55,9 @@ func (r *Registry) readLiveBot(ctx context.Context, provider string) (LiveBot, c
 	}
 	bot := LiveBot{ConnectionID: binding.id}
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := teamchat.Check(ctx, tx, provider); err != nil {
+			return err
+		}
 		return tx.QueryRow(ctx,
 			`SELECT channel_id, coalesce(address, '') FROM channel_connection WHERE id = $1`, binding.id).
 			Scan(&bot.TeamID, &bot.Address)

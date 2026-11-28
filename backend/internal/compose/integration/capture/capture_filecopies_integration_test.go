@@ -112,8 +112,8 @@ func TestAnErasureKeepsAnObjectAnotherRowStillNamesAndTakesItWithTheLastRow(t *t
 	if _, _, err := blob.Get(context.Background(), key); err != nil {
 		t.Fatalf("erasing one of two rows deleted the object the other row still names: %v", err)
 	}
-	if queued := queuedForDeletion(t, env.e, key); queued != 0 {
-		t.Fatal("erasing one of two rows queued the object the other row still names for deletion")
+	if keys := unreferencedFileKeys(t, env.e, key); len(keys) != 0 {
+		t.Fatal("the reaper could remove an object the second row still names")
 	}
 	if err := eraseMessage(t, env.e, blob, "erase-b@globex.example"); err != nil {
 		t.Fatalf("erasing the second message: %v", err)
@@ -121,6 +121,19 @@ func TestAnErasureKeepsAnObjectAnotherRowStillNamesAndTakesItWithTheLastRow(t *t
 	if queued := queuedForDeletion(t, env.e, key); queued != 1 {
 		t.Fatalf("erasing the last row queued its object %d times, want once", queued)
 	}
+	if keys := unreferencedFileKeys(t, env.e, key); len(keys) != 1 || keys[0] != key {
+		t.Fatalf("the last row left the file in use: %v", keys)
+	}
+}
+
+func unreferencedFileKeys(t *testing.T, e *integration.SearchEnv, key string) []string {
+	t.Helper()
+	ctx := principal.SystemActing(e.Admin(), "file-copy-reaper-test")
+	keys, err := activities.NewStore(e.DB()).UnreferencedAttachmentKeys(ctx, []string{key})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return keys
 }
 
 // queuedForDeletion counts the stored-object reap's entries for key.
@@ -172,8 +185,8 @@ func TestAnErasureWaitingOnACaptureThatReusesItsObjectKeepsTheObject(t *testing.
 	if _, _, err := blob.Get(context.Background(), key); err != nil {
 		t.Fatalf("the erasure deleted an object a copy committed while it waited still names: %v", err)
 	}
-	if queued := queuedForDeletion(t, e, key); queued != 0 {
-		t.Fatal("the erasure queued an object a copy committed while it waited still names for deletion")
+	if keys := unreferencedFileKeys(t, e, key); len(keys) != 0 {
+		t.Fatal("the reaper could remove an object the committed copy still names")
 	}
 }
 

@@ -25,6 +25,8 @@ func fixture(t *testing.T, guest bool) (*Client, *bool) {
 		}
 		reply := ""
 		switch r.URL.Path {
+		case "/me/chats":
+			reply = `{"value":[]}`
 		case "/me":
 			reply = `{"id":"U1","displayName":"Alex","userType":"Member","accountEnabled":true}`
 		case "/users/U2":

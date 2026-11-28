@@ -289,7 +289,7 @@ func (s *Store) LinkableProviderChannels(ctx context.Context, kind string, id id
 	}
 	out := make([]chatwire.Channel, 0, len(channels))
 	for _, ch := range channels {
-		if ch.IsPrivate && ch.BotIsMember && !ch.IsArchived && !linked[ch.Slug] {
+		if (ch.IsPrivate || ch.PostingAllowed != nil && !*ch.PostingAllowed) && ch.BotIsMember && !ch.IsArchived && !linked[ch.Slug] {
 			out = append(out, ch)
 		}
 	}
@@ -367,8 +367,7 @@ func linkActor(ctx context.Context) (ids.UUID, error) {
 	return ids.Nil, fmt.Errorf("a channel link records the member who made it: %w", apperrors.ErrPermissionDenied)
 }
 
-// resolveChannel creates the record's channel, or checks the named one: it
-// must exist, be private, and have the bot in it.
+// Public channels are accepted only when the provider explicitly disables outgoing sharing.
 func resolveChannel(ctx context.Context, chat Chat, kind string, id ids.UUID, name string, req LinkRequest) (chatwire.Channel, error) {
 	if req.Mode == ModeCreate {
 		return createChannel(ctx, chat, kind, id, name)
@@ -378,7 +377,7 @@ func resolveChannel(ctx context.Context, chat Chat, kind string, id ids.UUID, na
 		return chatwire.Channel{}, ChatFailure(err)
 	}
 	switch {
-	case !ch.IsPrivate:
+	case !ch.IsPrivate && (ch.PostingAllowed == nil || *ch.PostingAllowed):
 		return chatwire.Channel{}, ErrChannelNotPrivate
 	case !ch.BotIsMember:
 		return chatwire.Channel{}, ErrBotNotMember

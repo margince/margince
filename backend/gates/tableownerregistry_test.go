@@ -369,6 +369,7 @@ var tableOwners = map[string]string{
 	"channel_connection": "internal/modules/capture",
 	// A deal's or project's chat channel, and the ledger of what was posted
 	// there.
+	"chat_service":           "internal/modules/chatlinks",
 	"chat_member_grant":      "internal/modules/chatlinks",
 	"chat_team_installation": "internal/modules/chatlinks",
 	"chat_channel_watch":     "internal/modules/chatlinks",

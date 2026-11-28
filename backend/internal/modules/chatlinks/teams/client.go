@@ -19,6 +19,9 @@ const (
 	messageKind         = "message"
 	privateChannelKind  = "private"
 	standardChannelKind = "standard"
+	sharedChannelKind   = "shared"
+	groupChatKind       = "group"
+	directChatKind      = "oneOnOne"
 )
 
 // Client uses a participant's credential for personal Messenger operations.
@@ -97,7 +100,7 @@ func nextPath(value string) (string, error) {
 
 // People searches native identities through the current participant credential.
 func (c *Client) People(ctx context.Context, query, cursor string) ([]messaging.Member, string, error) {
-	path := "/users?" + url.Values{"$select": {"id,displayName,mail,userPrincipalName,userType,accountEnabled"}, "$top": {"50"}, "$filter": {"startswith(displayName,'" + strings.ReplaceAll(query, "'", "''") + "')"}}.Encode()
+	path := "/users?" + url.Values{"$select": {"id,displayName,mail,userPrincipalName,userType,accountEnabled"}, "$top": {"50"}, "$filter": {"startswith(displayName,'" + strings.ReplaceAll(query, "'", "''") + "') or startswith(surname,'" + strings.ReplaceAll(query, "'", "''") + "') or startswith(mail,'" + strings.ReplaceAll(query, "'", "''") + "') or startswith(userPrincipalName,'" + strings.ReplaceAll(query, "'", "''") + "')"}}.Encode()
 	if cursor != "" {
 		var err error
 		path, err = nextPath(cursor)

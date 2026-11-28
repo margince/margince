@@ -40,12 +40,22 @@ func (b *Bot) waitHistory(ctx context.Context, method string) error {
 	if !b.history.profile.CanonicalSupported() || b.history.meter == nil || b.history.sleep == nil {
 		return chatwire.ErrHistoryProfileNeedsReview
 	}
-	rate := b.history.profile.HistoryPerMinute
+	return b.history.wait(ctx, method)
+}
+
+func (h *historyPacing) wait(ctx context.Context, method string) error {
+	if h == nil || h.profile == nil || h.meter == nil || h.sleep == nil {
+		return chatwire.ErrHistoryProfileNeedsReview
+	}
+	rate := h.profile.HistoryPerMinute
 	if method == repliesMethod {
-		rate = b.history.profile.RepliesPerMinute
+		rate = h.profile.RepliesPerMinute
+	}
+	if rate < 1 || rate > 50 {
+		return chatwire.ErrHistoryProfileNeedsReview
 	}
 	for range 20 {
-		wait, _, err := b.history.meter.Reserve(ctx, ratelimit.Budget{Key: b.history.key + "/" + method, PerMinute: rate, Cost: 1})
+		wait, _, err := h.meter.Reserve(ctx, ratelimit.Budget{Key: h.key + "/" + method, PerMinute: rate, Cost: 1})
 		if err != nil {
 			return errors.Join(chatwire.ErrUnreachable, err)
 		}
@@ -55,17 +65,21 @@ func (b *Bot) waitHistory(ctx context.Context, method string) error {
 		if wait > 15*time.Second {
 			return &connector.RateLimitedError{RetryAfter: wait}
 		}
-		if err := b.history.sleep(ctx, wait); err != nil {
+		if err := h.sleep(ctx, wait); err != nil {
 			return err
 		}
 	}
 	return &connector.RateLimitedError{RetryAfter: time.Minute}
 }
 
-func (b *Bot) pauseHistory(ctx context.Context, method string, err error) error {
+func (b *Bot) pauseHistory(ctx context.Context, method string, failure error) error {
+	return b.history.pause(ctx, method, failure)
+}
+
+func (h *historyPacing) pause(ctx context.Context, method string, err error) error {
 	var limited *connector.RateLimitedError
-	if b.history.meter != nil && errors.As(err, &limited) && limited.RetryAfter > 0 {
-		return errors.Join(err, b.history.meter.Pause(ctx, b.history.key+"/"+method, limited.RetryAfter))
+	if h.meter != nil && errors.As(err, &limited) && limited.RetryAfter > 0 {
+		return errors.Join(err, h.meter.Pause(ctx, h.key+"/"+method, limited.RetryAfter))
 	}
 	return err
 }

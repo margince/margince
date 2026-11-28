@@ -76,6 +76,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// A chat link's level and state are served as they are stored, so the
 	// contract's enums and the CHECKs are one vocabulary.
 	"chat_link.message_detail":      {"internal/contracts", "ChannelMessageDetail"},
+	"chat_service.provider":         {"internal/contracts", "MessengerProvider"},
 	"chat_link.provider":            {"internal/contracts", "MessengerProvider"},
 	"chat_member_grant.provider":    {"internal/contracts", "MessengerProvider"},
 	"chat_member_grant.status":      {"internal/modules/chatlinks", "MemberGrantStatus"},
@@ -121,7 +122,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"record_link.from_type":                {"internal/contracts", "LinkedRecordType"},
 	"record_link.to_type":                  {"internal/contracts", "LinkedRecordType"},
 
-	"attachment.entity_type":       {"internal/shared/ports/datasource", "EntityType"},
+	"attachment.entity_type":       {"internal/contracts", "AttachmentEntityType"},
 	"embedding.entity_type":        {"internal/shared/ports/datasource", "EntityType"},
 	"field_provenance.object_type": {"internal/shared/ports/datasource", "EntityType"},
 	// NOT EntityType, and this is the one binding where the difference is the

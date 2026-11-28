@@ -94,6 +94,7 @@ func TestEveryPolymorphicPairAnswersForItsRecord(t *testing.T) {
 // leaves the corpus without a trace, so a query narrowed past one would pass.
 // Each must still be a candidate before shapeAnswers excuses it.
 var shapedPairsKnown = []polymorphicPair{
+	{table: "attachment", id: "entity_id", discriminator: "entity_type"},
 	{table: "analytics_share", id: "scope_id", discriminator: "scope_kind"},
 	{table: "assurance_task_item", id: "subject_id", discriminator: "subject_kind"},
 	{table: "record_grant", id: "record_id", discriminator: "record_type"},
@@ -169,7 +170,6 @@ var pairResolution = gatekit.Waive(map[string]string{
 	"approval.target_entity_id (target_entity_type)":                     "DECIDE — what the reference means is not settled, so neither shape nor split can be chosen yet",
 	"assurance_exception.subject_id (subject_kind)":                      "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"assurance_input_change.subject_id (subject_kind)":                   "OUTLIVES — a marker that a deal, signal or the workspace changed after the last input check; it holds no personal data, a deleted subject did change, so its row truthfully counts as a change until the next complete run reads past it",
-	"attachment.entity_id (entity_type)":                                 "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"audit_log.actor_id (actor_type)":                                    "OUTLIVES — the row is a record of what happened and is meant to survive the record it names; the reference resolving to nothing is the designed end state, not a leak",
 	"audit_log.entity_id (entity_type)":                                  "OUTLIVES — the row is a record of what happened and is meant to survive the record it names; the reference resolving to nothing is the designed end state, not a leak",
 	"communication_decision.subject_id (subject_kind)":                   "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",

@@ -82,7 +82,7 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 	e := integration.Setup(t)
 	connID, rawID := telegramIngestFixture(t, e)
 
-	// No principal.WithWorkspaceID on the context: the worker itself must resolve
+	// No workspace on the context: the worker itself must resolve
 	// the tenant from job.Args, not from whatever the caller had bound.
 	workIngestArgs(t, newTelegramIngestWorker(e.Pool, CaptureConfig{}, quietTestLogger()),
 		TelegramIngestArgs{ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})

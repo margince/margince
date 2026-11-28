@@ -57,7 +57,7 @@ type Puller struct {
 // or archived channel pauses that link and the others go on. The archive is
 // read here because its notice may never arrive.
 func (p *Puller) Pull(ctx context.Context, connectionID ids.UUID) error {
-	ctx = principal.WithActor(ctx, chatLinksPrincipal)
+	ctx = chatJobContext(ctx)
 	if p.NotificationURL != "" {
 		if err := p.retireChannelWatches(ctx, connectionID); err != nil {
 			p.Log.WarnContext(ctx, "channel notification retirement deferred", "connection_id", connectionID, "error", err)

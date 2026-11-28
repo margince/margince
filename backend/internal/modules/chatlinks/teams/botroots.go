@@ -20,7 +20,7 @@ import (
 )
 
 // Roots discovers canonical roots using provider continuation state.
-func (b *Bot) Roots(ctx context.Context, id string, _ time.Time, cursor string) (chatwire.RootPage, error) {
+func (b *Bot) Roots(ctx context.Context, id string, since time.Time, cursor string) (chatwire.RootPage, error) {
 	if _, err := b.Channel(ctx, id); err != nil {
 		return chatwire.RootPage{}, err
 	}
@@ -32,6 +32,9 @@ func (b *Bot) Roots(ctx context.Context, id string, _ time.Time, cursor string) 
 	if err != nil {
 		return chatwire.RootPage{}, err
 	}
+	if cursor == "" {
+		path = strings.Replace(path, "$top=50", "$top=20", 1) + "&$expand=replies"
+	}
 	page, err := b.graphMessagePage(ctx, path)
 	if err != nil {
 		return chatwire.RootPage{}, err
@@ -41,11 +44,23 @@ func (b *Bot) Roots(ctx context.Context, id string, _ time.Time, cursor string) 
 		if row.ID == "" || row.Root != "" {
 			return chatwire.RootPage{}, chatwire.ErrUnreachable
 		}
+		activity, complete, err := messageActivity(row)
+		if err != nil {
+			return chatwire.RootPage{}, err
+		}
+		// Graph orders roots by the whole reply chain. An incomplete expansion cannot prove an old cutoff.
+		if complete && !since.IsZero() && activity.Before(since) {
+			out.Next = ""
+			break
+		}
 		revision, err := messageRevision(row)
 		if err != nil {
 			return chatwire.RootPage{}, err
 		}
-		out.Roots = append(out.Roots, chatwire.RootRef{ID: row.ID, Revision: revision, UpdatedAt: row.Modified, Deleted: row.Deleted != nil})
+		if !complete {
+			revision += ":" + since.UTC().Format(time.RFC3339Nano)
+		}
+		out.Roots = append(out.Roots, chatwire.RootRef{ID: row.ID, Revision: revision, UpdatedAt: activity, Deleted: row.Deleted != nil})
 	}
 	return out, nil
 }
@@ -189,4 +204,30 @@ func (b *Bot) completeReplies(ctx context.Context, base, root string, parent mes
 		path = next
 	}
 	return nil, "", chatwire.ErrThreadTooLong
+}
+
+func messageActivity(row message) (time.Time, bool, error) {
+	at := row.Modified
+	if row.At.After(at) {
+		at = row.At
+	}
+	if row.Deleted != nil && row.Deleted.After(at) {
+		at = *row.Deleted
+	}
+	for _, raw := range row.Replies {
+		var reply message
+		if json.Unmarshal(raw, &reply) != nil || reply.ID == "" {
+			return time.Time{}, false, chatwire.ErrUnreachable
+		}
+		if reply.Deleted != nil && reply.Deleted.After(at) {
+			at = *reply.Deleted
+		}
+		if reply.Modified.After(at) {
+			at = reply.Modified
+		}
+		if reply.At.After(at) {
+			at = reply.At
+		}
+	}
+	return at, row.RepliesNext == "", nil
 }

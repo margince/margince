@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -18,6 +19,7 @@ import (
 
 // The tiers an event can post at. A link's verbosity admits a tier set.
 const (
+	linkStatusKey  = "status"
 	TierMilestone  = "milestone"
 	TierImportant  = "important"
 	TierEverything = "everything"
@@ -270,23 +272,26 @@ func (s *Store) setLinkStatus(ctx context.Context, linkID ids.UUID, status strin
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		before, err := scanLink(tx.QueryRow(ctx, `SELECT `+linkColumns+` FROM chat_link
-			WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, linkID))
-		if err == pgx.ErrNoRows || (err == nil && before.Status == status) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		after, err := scanLink(tx.QueryRow(ctx, `UPDATE chat_link SET status = $2
-			WHERE id = $1 RETURNING `+linkColumns, linkID, status))
-		if err != nil {
-			return err
-		}
-		_, err = storekit.Audit(ctx, tx, "update", chatLinkEntity, linkID, auditImage(before), auditImage(after))
+	return s.db.Tx(ctx, func(tx pgx.Tx) error { return setLinkStatusTx(ctx, tx, linkID, status) })
+}
+
+func setLinkStatusTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID, status string) error {
+	before, err := scanLink(tx.QueryRow(ctx, "SELECT "+linkColumns+" FROM chat_link WHERE id=@id AND archived_at IS NULL FOR UPDATE", pgx.StrictNamedArgs{"id": linkID}))
+	if err == pgx.ErrNoRows || err == nil && before.Status == status {
+		return nil
+	}
+	if err != nil {
 		return err
-	})
+	}
+	after, err := scanLink(tx.QueryRow(ctx, "UPDATE chat_link SET status=@status WHERE id=@id RETURNING "+linkColumns, pgx.StrictNamedArgs{"id": linkID, linkStatusKey: status}))
+	if err != nil {
+		return err
+	}
+	audit, err := storekit.Audit(ctx, tx, updateKey, chatLinkEntity, linkID, auditImage(before), auditImage(after))
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, audit, linkID, crmcontracts.InternalEventChatLinkStatusChanged{})
 }
 
 // HasPending reports whether a link has items no post carried yet, so a flush

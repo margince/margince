@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/attachmentkeys"
 	"github.com/margince/margince/backend/internal/compose/companyclockrefold"
 	"github.com/margince/margince/backend/internal/compose/companyprofiles"
 	"github.com/margince/margince/backend/internal/compose/consentversions"
@@ -116,7 +117,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		unaskedcommitments.DataTask(), retiredstagecards.DataTask(), colleagueSenderDataTask(), deliveryReportsDataTask(pool, now), liftedAgentCallsDataTask(), mailDealsDataTask(pool), mailBodyCompletenessDataTask(),
 		machineSenderDataTask(), signatureTitleHistoryDataTask(pool), manualSignalNoEvidenceDataTask(), companyprofiles.IndustryTask(), contactEmployersDataTask(pool), unknownEmploymentDataTask(pool), leadScoresFollowOriginDataTask(now), phaseHistoryLinksDataTask(),
 		activities.MeetingNotesDataTask(activities.NewStore(InstallationDB(pool)).WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default()))), activities.CaptureLabelsDataTask(), activities.SearchTextDataTask(), membersOnlyMailDataTask(), signatureWindowDataTask(), unsplitAddressDataTask(), dedupeScanDataTask(),
-		leadMailDataTask(pool), documentLinksDataTask(), requestProofDataTask(), consentversions.DataTask(), identifierspellings.DataTask(), ownDomainFoldDataTask(), participantEvidenceDataTask(), polymorphicKeysDataTask(), initialsNamesDataTask(), seatEmploymentDataTask(), meetingNoonStartsDataTask(), meetingHistoryPrecisionDataTask(), guessedMailboxSeatsDataTask(), matchedMeetingGuestsDataTask(pool),
+		leadMailDataTask(pool), documentLinksDataTask(), requestProofDataTask(), consentversions.DataTask(), identifierspellings.DataTask(), ownDomainFoldDataTask(), participantEvidenceDataTask(), polymorphicKeysDataTask(), attachmentkeys.DataTask(), initialsNamesDataTask(), seatEmploymentDataTask(), meetingNoonStartsDataTask(), meetingHistoryPrecisionDataTask(), guessedMailboxSeatsDataTask(), matchedMeetingGuestsDataTask(pool),
 		meetingGuestAnswersDataTask(pool),
 		calendarDescriptionsDataTask(),
 		calendarMethodsDataTask(pool),

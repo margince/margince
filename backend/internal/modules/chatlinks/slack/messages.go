@@ -18,10 +18,13 @@ import (
 
 // Messages reads provider content through the current participant credential.
 func (c *Client) Messages(ctx context.Context, conversation, root, cursor string) (messaging.Page, error) {
-	if _, err := c.Conversation(ctx, conversation); err != nil {
+	method := historyMethod
+	if root != "" {
+		method = repliesMethod
+	}
+	if err := c.waitParticipantHistory(ctx, method); err != nil {
 		return messaging.Page{}, err
 	}
-	method := "conversations.history"
 	fields := url.Values{channelKey: {conversation}, limitKey: {"15"}, "cursor": {cursor}}
 	if root != "" {
 		method = repliesMethod
@@ -31,22 +34,7 @@ func (c *Client) Messages(ctx context.Context, conversation, root, cursor string
 	if err != nil {
 		return messaging.Page{}, err
 	}
-	var page struct {
-		More     bool `json:"has_more"`
-		Messages []struct {
-			ID     string `json:"ts"`
-			Root   string `json:"thread_ts"`
-			Author string `json:"user"`
-			Bot    string `json:"bot_id"`
-			Text   string `json:"text"`
-			Edited *struct {
-				TS string `json:"ts"`
-			} `json:"edited"`
-		} `json:"messages"`
-		Metadata struct {
-			Next string `json:"next_cursor"`
-		} `json:"response_metadata"`
-	}
+	var page botMessagePage
 	if json.Unmarshal(raw, &page) != nil {
 		return messaging.Page{}, messaging.ErrUnavailable
 	}
@@ -62,11 +50,22 @@ func (c *Client) Messages(ctx context.Context, conversation, root, cursor string
 		if err != nil {
 			return messaging.Page{}, messaging.ErrUnavailable
 		}
-		author := row.Author
+		author := row.User
 		if author == "" {
 			author = row.Bot
 		}
-		out.Messages = append(out.Messages, messaging.Message{ID: row.ID, Root: row.Root, Author: author, Text: row.Text, At: at, Edited: row.Edited != nil})
+		text, incomplete, err := slackMessageText(row.Text, row.Blocks, row.Attachments, nil)
+		if err != nil {
+			return messaging.Page{}, err
+		}
+		var visible strings.Builder
+		visible.WriteString(text)
+		for _, file := range row.Files {
+			visible.WriteString("\n[" + file.Name + ": content not read]")
+		}
+		text = visible.String()
+
+		out.Messages = append(out.Messages, messaging.Message{ReplyCount: row.Replies, ContentIncomplete: len(row.Files) > 0 || incomplete, ID: row.ID, Root: row.Root, Author: author, Text: text, At: at, Edited: row.Edited != nil})
 	}
 	return out, nil
 }

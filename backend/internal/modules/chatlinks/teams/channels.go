@@ -20,6 +20,7 @@ type team struct {
 	Name string `json:"displayName"`
 }
 type discovery struct {
+	NextChats    string `json:"next_chats,omitempty"`
 	Teams        []team
 	NextTeams    string
 	NextChannels string
@@ -31,6 +32,22 @@ func (c *Client) Channels(ctx context.Context, cursor string) ([]messaging.Conve
 	if err != nil {
 		return nil, "", err
 	}
+	if state.NextChats != "" {
+		rooms, next, err := c.chatChoices(ctx, state)
+		if err != nil || len(rooms) > 0 || next.NextChats != "" {
+			if err != nil {
+				return nil, "", err
+			}
+			cursor, err := discoveryCursor(next)
+			return rooms, cursor, err
+		}
+		state = next
+	}
+	return c.channelChoices(ctx, state)
+}
+
+func (c *Client) channelChoices(ctx context.Context, state discovery) ([]messaging.Conversation, string, error) {
+	var err error
 	state, err = c.discoverTeams(ctx, state)
 	if err != nil {
 		return nil, "", err
@@ -65,9 +82,6 @@ func (c *Client) Channels(ctx context.Context, cursor string) ([]messaging.Conve
 	}
 	out := []messaging.Conversation{}
 	for _, ch := range page.Channels {
-		if ch.Kind == "shared" {
-			continue
-		}
 		out = append(out, messaging.Conversation{ID: current.ID + "/" + ch.ID, Name: current.Name + " / " + ch.Name, Kind: "channel", SupportsThreads: true})
 	}
 	state.NextChannels = page.Next
@@ -77,12 +91,12 @@ func (c *Client) Channels(ctx context.Context, cursor string) ([]messaging.Conve
 	if len(state.Teams) == 0 && state.NextTeams == "" {
 		return out, "", nil
 	}
-	next, err := storekit.EncodeOpaque(state)
+	next, err := discoveryCursor(state)
 	return out, next, err
 }
 
 func channelDiscovery(cursor string) (discovery, error) {
-	state := discovery{NextTeams: "https://graph.microsoft.com/v1.0/me/joinedTeams"}
+	state := discovery{NextChats: "https://graph.microsoft.com/v1.0/me/chats?$top=50&$expand=members", NextTeams: "https://graph.microsoft.com/v1.0/me/joinedTeams"}
 	if cursor != "" {
 		if len(cursor) > 65536 {
 			return discovery{}, &storekit.MalformedCursorError{}
@@ -91,7 +105,7 @@ func channelDiscovery(cursor string) (discovery, error) {
 		if err != nil {
 			return discovery{}, err
 		}
-		if len(decoded.Teams) == 0 && decoded.NextTeams == "" {
+		if len(decoded.Teams) == 0 && decoded.NextTeams == "" && decoded.NextChats == "" {
 			return discovery{}, &storekit.MalformedCursorError{}
 		}
 		state = decoded
@@ -133,4 +147,65 @@ func (c *Client) discoverTeams(ctx context.Context, state discovery) (discovery,
 		return state, messaging.ErrUnavailable
 	}
 	return state, nil
+}
+
+func discoveryCursor(state discovery) (string, error) {
+	if state.NextChats == "" && len(state.Teams) == 0 && state.NextTeams == "" {
+		return "", nil
+	}
+	return storekit.EncodeOpaque(state)
+}
+
+func (c *Client) chatChoices(ctx context.Context, state discovery) ([]messaging.Conversation, discovery, error) {
+	path, err := nextPath(state.NextChats)
+	if err != nil || !strings.HasPrefix(path, "/me/chats?") {
+		return nil, state, messaging.ErrInvalid
+	}
+	raw, err := c.http.Call(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, state, err
+	}
+	//nolint:tagliatelle // Microsoft's provider protocol fixes these JSON field names.
+	var page struct {
+		Items []struct {
+			ID      string `json:"id"`
+			Topic   string `json:"topic"`
+			Kind    string `json:"chatType"`
+			URL     string `json:"webUrl"`
+			Members []struct {
+				ID   string `json:"userId"`
+				Name string `json:"displayName"`
+			} `json:"members"`
+		} `json:"value"`
+		Next string `json:"@odata.nextLink"`
+	}
+	if json.Unmarshal(raw, &page) != nil || page.Next != "" && page.Next == state.NextChats {
+		return nil, state, messaging.ErrUnavailable
+	}
+	rooms := []messaging.Conversation{}
+	for _, chat := range page.Items {
+		if chat.ID == "" {
+			return nil, state, messaging.ErrUnavailable
+		}
+		kind := groupChatKind
+		if chat.Kind == directChatKind {
+			kind = "direct"
+		}
+		name := chat.Topic
+		if name == "" {
+			names := []string{}
+			for _, member := range chat.Members {
+				if member.ID != c.user && member.Name != "" {
+					names = append(names, member.Name)
+				}
+			}
+			name = strings.Join(names, ", ")
+		}
+		if name == "" {
+			name = chat.ID
+		}
+		rooms = append(rooms, messaging.Conversation{ID: chat.ID, Name: name, Kind: kind, SourceURL: chat.URL})
+	}
+	state.NextChats = page.Next
+	return rooms, state, nil
 }

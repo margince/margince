@@ -183,6 +183,7 @@ var piiTables = map[string]piiHandling{
 		sarWithholds: []string{"system_text"},
 		retentionErasures: []string{
 			"body = NULL",
+			"meeting_notes = NULL",
 			"system_text = @system_text",
 			"raw = NULL",
 			// The tombstone is part of the erasure, not decoration beside it:

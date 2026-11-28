@@ -10,7 +10,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 33 | 424 | 32 | 41 | 20 |
+| [activities](activities.md) | 33 | 432 | 32 | 46 | 25 |
 | [agents](agents.md) | 3 | 28 | 0 | 5 | 1 |
 | [ai](ai.md) | 12 | 190 | 0 | 2 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 24 | 0 | 2 | 0 |
@@ -19,18 +19,18 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [assurance](assurance.md) | 9 | 83 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 32 | 1 | 2 | 0 |
 | [capture](capture.md) | 25 | 275 | 7 | 27 | 14 |
-| [chatlinks](chatlinks.md) | 10 | 146 | 0 | 9 | 6 |
+| [chatlinks](chatlinks.md) | 11 | 152 | 0 | 9 | 6 |
 | [collections](collections.md) | 13 | 101 | 1 | 9 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 51 | 5 | 6 | 1 |
 | [compose](compose.md) | 44 | 396 | 11 | 30 | 26 |
 | [consent](consent.md) | 23 | 314 | 2 | 44 | 20 |
-| [contacts](contacts.md) | 50 | 718 | 76 | 37 | 14 |
+| [contacts](contacts.md) | 50 | 718 | 79 | 37 | 14 |
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 20 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 93 | 0 | 8 | 1 |
-| [deals](deals.md) | 26 | 379 | 26 | 18 | 2 |
+| [deals](deals.md) | 26 | 379 | 27 | 18 | 2 |
 | [finance](finance.md) | 5 | 73 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 87 | 1 | 2 | 0 |
 | [identity](identity.md) | 22 | 213 | 155 | 7 | 5 |
@@ -42,7 +42,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
 | [platform](platform.md) | 15 | 106 | 1 | 10 | 7 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
-| [projects](projects.md) | 3 | 43 | 11 | 3 | 0 |
+| [projects](projects.md) | 3 | 43 | 12 | 3 | 0 |
 | [recordlinks](recordlinks.md) | 1 | 8 | 0 | 0 | 0 |
 | [reporting](reporting.md) | 14 | 120 | 0 | 12 | 0 |
 | [search](search.md) | 4 | 42 | 0 | 4 | 2 |

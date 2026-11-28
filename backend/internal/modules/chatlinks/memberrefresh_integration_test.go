@@ -17,7 +17,7 @@ import (
 )
 
 func TestConcurrentMemberReadsShareOneRotatingRefreshWithoutChangingAudienceVersion(t *testing.T) {
-	e := setupLinks(t)
+	e := setupSlackMemberLinks(t)
 	vault := keyvault.NewMemory()
 	e.store.WithMessenger(func() keyvault.Vault { return vault }, func(context.Context, MemberGrant, []byte) (messaging.Client, error) {
 		return identityClient{identity: messaging.Identity{Workspace: "TEAM", Member: messaging.Member{ID: "REP", Active: true}}}, nil

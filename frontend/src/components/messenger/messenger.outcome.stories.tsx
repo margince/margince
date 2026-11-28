@@ -44,3 +44,20 @@ export const Review: Story = {
     );
   },
 };
+
+export const DraftAvailable: Story = {
+  args: {
+    scope: messengerScope,
+    conversation: "C_PILOT",
+    messageIds: ["1710000000.000001"],
+  },
+};
+export const SlowSlackHistory: Story = {
+  args: {
+    scope: messengerScope,
+    conversation: "C_PILOT",
+    messageIds: ["1710000000.000001"],
+    supportsDraft: false,
+  },
+  play: Review.play,
+};

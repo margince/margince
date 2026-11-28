@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -56,7 +55,7 @@ type Flusher struct {
 // flush acts as the chat engine's system actor. A rate limit or more pending
 // work answers a River snooze.
 func (w *Flusher) Flush(ctx context.Context, linkID ids.UUID) error {
-	ctx = principal.WithActor(ctx, chatLinksPrincipal)
+	ctx = chatJobContext(ctx)
 	pending, err := w.Store.PendingFor(ctx, linkID)
 	if errors.Is(err, chatlinks.ErrLinkNotFound) {
 		return nil

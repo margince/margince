@@ -10,10 +10,12 @@ import { messengerContext, messengerScope } from "./messenger.testkit";
 
 export function MessengerStory({
   children,
+  provider = "slack",
   manageProviders = false,
   dispactConfigured = true,
 }: Readonly<{
   children: ReactNode;
+  provider?: "dispact" | "slack" | "teams";
   manageProviders?: boolean;
   dispactConfigured?: boolean;
 }>) {
@@ -26,6 +28,8 @@ export function MessengerStory({
           name: "Pilot rollout",
           writable: true,
         }),
+      "GET /messenger/service": () =>
+        jsonResponse({ providers: [provider], active_provider: provider }),
       "GET /me": meRoute(
         {
           activity: ["create"],
@@ -84,6 +88,11 @@ export function MessengerStory({
               state: "matched",
             },
           ],
+        }),
+      [`POST ${path}/outcome-draft`]: () =>
+        jsonResponse({
+          subject: "Legal approval required",
+          body: "The pilot is awaiting Legal approval. Alex will confirm the trial date.",
         }),
       [`GET ${path}/channels`]: () =>
         jsonResponse({

@@ -199,6 +199,15 @@ type InternalEventCaptureSettingsUpdated struct {
 	ChangedKeys []string `json:"changed_keys"`
 }
 
+// InternalEventChatLinkStatusChanged A linked channel changed its local availability status.
+type InternalEventChatLinkStatusChanged struct{}
+
+// InternalEventChatMemberGrantDisconnected Personal team-messaging consent was withdrawn.
+type InternalEventChatMemberGrantDisconnected struct{}
+
+// InternalEventChatServiceSelected The workspace team-messaging service changed.
+type InternalEventChatServiceSelected struct{}
+
 // InternalEventConsentPurposeChanged A human created, renamed or archived a consent purpose.
 type InternalEventConsentPurposeChanged struct {
 	Action InternalEventConsentPurposeChangedAction `json:"action"`
@@ -362,6 +371,20 @@ func (InternalEventBriefOpened) EntityType() string { return "" }
 func (InternalEventCaptureSettingsUpdated) EventType() string { return "capture_settings.updated" }
 
 func (InternalEventCaptureSettingsUpdated) EntityType() string { return "capture_settings" }
+
+func (InternalEventChatLinkStatusChanged) EventType() string { return "chat_link.status_changed" }
+
+func (InternalEventChatLinkStatusChanged) EntityType() string { return "chat_link" }
+
+func (InternalEventChatMemberGrantDisconnected) EventType() string {
+	return "chat_member_grant.disconnected"
+}
+
+func (InternalEventChatMemberGrantDisconnected) EntityType() string { return "chat_member_grant" }
+
+func (InternalEventChatServiceSelected) EventType() string { return "chat_service.selected" }
+
+func (InternalEventChatServiceSelected) EntityType() string { return "chat_service" }
 
 func (InternalEventConsentPurposeChanged) EventType() string { return "consent_purpose.changed" }
 

@@ -3323,6 +3323,18 @@ func (stubs) ConnectDispactParticipant(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "ConnectDispactParticipant")
 }
 
+func (stubs) GetMessengerService(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetMessengerService")
+}
+
+func (stubs) SelectMessengerService(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SelectMessengerService")
+}
+
+func (stubs) DisconnectMessengerService(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.MessengerProvider) {
+	httperr.NotImplemented(w, r, "DisconnectMessengerService")
+}
+
 func (stubs) MessengerOAuthCallback(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.MessengerProvider, params crmcontracts.MessengerOAuthCallbackParams) {
 	httperr.NotImplemented(w, r, "MessengerOAuthCallback")
 }
@@ -3369,6 +3381,10 @@ func (stubs) GetMessengerMessages(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) SendMessengerMessage(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.MessengerProvider, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SendMessengerMessage")
+}
+
+func (stubs) DraftMessengerOutcome(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.MessengerProvider, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DraftMessengerOutcome")
 }
 
 func (stubs) GetMessengerTeam(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.MessengerProvider, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {

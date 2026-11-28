@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/teamchat"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -346,6 +347,9 @@ func (s *ChannelStore) insertConnected(ctx context.Context, provider, address st
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		ctx, err = s.writeAuthority(ctx, tx, principal.ActionCreate)
 		if err != nil {
+			return err
+		}
+		if err := teamchat.Admit(ctx, tx, provider); err != nil {
 			return err
 		}
 		out, err = scanChannelConnection(tx.QueryRow(ctx, `

@@ -85,9 +85,6 @@ func TestBotUsesOnlyItsBoundWorkspaceAndPrivateRoomAudience(t *testing.T) {
 	defer server.Close()
 	bot := fixtureBot(t, server.Client(), "bot-token")
 	bot.client.http.Base = server.URL
-	if bot.threadReader != nil {
-		bot.threadReader.http.Base = server.URL
-	}
 	ctx := context.Background()
 	if _, err := bot.Me(ctx); err != nil {
 		t.Fatal(err)
@@ -143,9 +140,6 @@ func TestBotDoesNotTreatNetworkOutageAsChannelDeletion(t *testing.T) {
 			defer server.Close()
 			bot := fixtureBot(t, server.Client(), "bot-token")
 			bot.client.http.Base = server.URL
-			if bot.threadReader != nil {
-				bot.threadReader.http.Base = server.URL
-			}
 			_, err := bot.Channel(context.Background(), "C_PRIVATE")
 			if errors.Is(err, chatwire.ErrChannelGone) != tc.gone {
 				t.Fatalf("wrong channel lifecycle error: %v", err)
@@ -157,13 +151,13 @@ func TestBotDoesNotTreatNetworkOutageAsChannelDeletion(t *testing.T) {
 	}
 }
 
-func TestReaderMembershipLossAndMissingRootDoNotAssertDeletion(t *testing.T) {
+func TestBotMembershipLossAndMissingRootDoNotAssertDeletion(t *testing.T) {
 	readable := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body := `{"ok":false,"error":"thread_not_found"}`
 		if r.URL.Path == "/conversations.info" {
 			body = `{"ok":true,"channel":{"id":"C_ONE","is_private":true,"is_member":true}}`
-			if r.Header.Get("Authorization") == "Bearer synthetic-reader" && !readable {
+			if r.Header.Get("Authorization") == "Bearer synthetic-bot" && !readable {
 				body = `{"ok":false,"error":"channel_not_found"}`
 			}
 		}
@@ -174,12 +168,10 @@ func TestReaderMembershipLossAndMissingRootDoNotAssertDeletion(t *testing.T) {
 	defer server.Close()
 	bot := fixtureBot(t, server.Client(), "synthetic-bot")
 	bot.client.http.Base = server.URL
-	reader := New(server.Client(), "synthetic-reader", "T_ONE", "U_REP")
-	reader.http.Base = server.URL
-	bot.WithThreadReader(reader, nil)
+
 	page, err := bot.Thread(context.Background(), "C_ONE", "1700000000.000001", "")
-	if page.Deleted || !errors.Is(err, chatwire.ErrHistoryProfileNeedsReview) {
-		t.Fatalf("lost user access became source deletion: %+v %v", page, err)
+	if page.Deleted || !errors.Is(err, chatwire.ErrChannelGone) {
+		t.Fatalf("lost bot access became source deletion: %+v %v", page, err)
 	}
 	readable = true
 	page, err = bot.Thread(context.Background(), "C_ONE", "1700000000.000001", "")

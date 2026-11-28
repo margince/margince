@@ -93,7 +93,7 @@ type Viewer struct {
 // the row gate, which this package cannot reach.
 type Viewers func(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) ([]Viewer, error)
 
-// Store owns chat_link and chat_post_item.
+// Store manages record conversations, participant consent and the shared messaging service.
 type Store struct {
 	historyProfiles HistoryProfileReader
 	vault           func() keyvault.Vault

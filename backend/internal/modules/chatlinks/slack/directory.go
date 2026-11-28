@@ -33,7 +33,7 @@ func (c *Client) directoryPage(ctx context.Context, cursor string) ([]user, stri
 // People searches native identities through the current participant credential.
 func (c *Client) People(ctx context.Context, query, cursor string) ([]messaging.Member, string, error) {
 	seen := map[string]bool{}
-	for range 100 {
+	for range 2 {
 		people, next, err := c.directoryPage(ctx, cursor)
 		if err != nil {
 			return nil, "", err
@@ -41,7 +41,7 @@ func (c *Client) People(ctx context.Context, query, cursor string) ([]messaging.
 		result := []messaging.Member{}
 		for _, u := range people {
 			member := c.person(u)
-			if member.ID != "" && member.Active && !member.External && !u.Bot && strings.Contains(strings.ToLower(member.Name+" "+member.Email), strings.ToLower(query)) {
+			if member.ID != "" && member.Active && !member.External && !u.Bot && strings.Contains(strings.ToLower(member.Name+" "+member.Email+" "+u.Handle+" "+u.Profile.DisplayName), strings.ToLower(query)) {
 				result = append(result, member)
 			}
 		}
@@ -54,7 +54,7 @@ func (c *Client) People(ctx context.Context, query, cursor string) ([]messaging.
 		seen[next] = true
 		cursor = next
 	}
-	return nil, "", messaging.ErrUnavailable
+	return []messaging.Member{}, cursor, nil
 }
 
 func (c *Client) rosterMembers(ctx context.Context, identities []string) ([]messaging.Member, error) {
@@ -68,7 +68,7 @@ func (c *Client) rosterMembers(ctx context.Context, identities []string) ([]mess
 		}
 		members[id] = messaging.Member{}
 	}
-	if len(identities) < 10 {
+	if len(identities) < 50 {
 		for _, id := range identities {
 			member, err := c.member(ctx, id)
 			if err != nil {
@@ -95,7 +95,7 @@ func (c *Client) rosterMembers(ctx context.Context, identities []string) ([]mess
 func (c *Client) fillRoster(ctx context.Context, members map[string]messaging.Member, remaining int) error {
 	cursor := ""
 	seen := map[string]bool{}
-	for range 100 {
+	for range 2 {
 		page, next, err := c.directoryPage(ctx, cursor)
 		if err != nil {
 			return err
@@ -107,13 +107,25 @@ func (c *Client) fillRoster(ctx context.Context, members map[string]messaging.Me
 			}
 		}
 		if remaining == 0 {
+			return nil
+		}
+		if next == "" {
 			break
 		}
-		if next == "" || seen[next] {
+		if seen[next] {
 			return messaging.ErrUnavailable
 		}
-		seen[next] = true
-		cursor = next
+		seen[next], cursor = true, next
+	}
+	for id, member := range members {
+		if member.ID != "" {
+			continue
+		}
+		resolved, err := c.member(ctx, id)
+		if err != nil {
+			return err
+		}
+		members[id] = resolved
 	}
 	return nil
 }

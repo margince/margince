@@ -64,8 +64,10 @@ func (h HTTP) Call(ctx context.Context, method, path string, body json.RawMessag
 
 func providerResponse(method string, response *http.Response, raw json.RawMessage) (json.RawMessage, error) {
 	switch {
-	case response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden:
+	case response.StatusCode == http.StatusUnauthorized:
 		return nil, ErrUnauthorized
+	case response.StatusCode == http.StatusForbidden:
+		return nil, ErrForbidden
 	case response.StatusCode == http.StatusTooManyRequests:
 		wait := retryafter.Of(response)
 		if wait <= 0 || wait > 24*time.Hour {

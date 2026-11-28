@@ -36,8 +36,8 @@ func (s *Store) FloorDraft(ctx context.Context, anchor ids.UUID, activity crmcon
 	if activity.Subject != nil {
 		answering.Topic = *activity.Subject
 	}
-	if activity.Body != nil {
-		answering.Body = *activity.Body
+	if record := MeetingRecordBody(activity); record != nil {
+		answering.Body = *record
 	}
 	subject, body = DeterministicEmailDraft(answering)
 	return subject, body, answering.language()

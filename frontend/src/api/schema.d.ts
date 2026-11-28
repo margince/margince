@@ -12096,6 +12096,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/messenger/service": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The workspace team-messaging service and any conflicting legacy services. */
+        get: operations["getMessengerService"];
+        /** Select one team-messaging service and withdraw other shared and personal connections. */
+        put: operations["selectMessengerService"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/service/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Disconnect a team-messaging service and all its personal accounts before switching. */
+        delete: operations["disconnectMessengerService"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/messenger/{provider}/setup": {
         parameters: {
             query?: never;
@@ -12189,6 +12226,28 @@ export interface paths {
         post?: never;
         /** Disconnect the current member’s Messenger grant. */
         delete: operations["disconnectMessengerIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/outcome-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft an editable outcome from explicitly selected native messages without filing private content. */
+        post: operations["draftMessengerOutcome"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -30617,7 +30676,7 @@ export interface components {
              *     None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
              * @enum {string}
              */
-            purpose: "sign_in" | "mailbox_connect" | "calendar_connect" | "documents_connect" | "extension_connect" | "messenger_connect";
+            purpose: "sign_in" | "mailbox_connect" | "calendar_connect" | "documents_connect" | "extension_connect" | "messenger_connect" | "channel_connect";
             /**
              * Format: uri
              * @description The absolute URL to register, exactly as it must be pasted.
@@ -34923,6 +34982,8 @@ export interface components {
             canonical_supported: boolean;
         };
         ChannelProviderSetup: {
+            /** @description Downloadable Slack app configuration without credentials. */
+            app_manifest?: string;
             history_profile?: components["schemas"]["SlackHistoryProfile"];
             configured: boolean;
             callback_url: string;
@@ -34959,6 +35020,9 @@ export interface components {
             external: boolean;
         };
         MessengerConversation: {
+            /** @description False when provider limits prevent a verified on-demand summary. */
+            supports_outcome_draft?: boolean;
+            source_url?: string;
             /** @enum {string} */
             access?: "workspace" | "team" | "private" | "participants" | "unknown";
             /** @description Whether this conversation supports native thread replies. */
@@ -34990,7 +35054,25 @@ export interface components {
             conversation_id?: string;
             members?: string[];
         };
+        MessengerOutcomeDraftRequest: {
+            conversation_id: string;
+            root_id?: string;
+            message_ids: string[];
+        };
+        MessengerOutcomeDraft: {
+            subject: string;
+            body: string;
+        };
+        MessengerService: {
+            history_profile?: components["schemas"]["SlackHistoryProfile"];
+            active_provider?: components["schemas"]["MessengerProvider"];
+            providers: components["schemas"]["MessengerProvider"][];
+        };
         MessengerMessage: {
+            reply_count?: number;
+            /** @description Some rich content or attachment contents were not read. */
+            content_incomplete?: boolean;
+            source_url?: string;
             id: string;
             root_id: string;
             author: string;
@@ -46152,6 +46234,8 @@ export interface components {
              */
             channel_provider?: components["schemas"]["ProviderRef"] | null;
             subject?: string | null;
+            /** @description Internal meeting notes, separate from the calendar description and from any transcript. Earlier rep-authored calendar notes are resolved here from their audit proof. Earlier rep-authored calendar notes are resolved here from their audit proof. Visible only with the meeting content. An empty string clears earlier notes. */
+            meeting_notes?: string | null;
             body?: string | null;
             /** @description Whether an AI model rewrote the subject or body before it was saved, so a reader sees the words as AI-assisted. Set when the activity is logged and kept through later edits: a human who tidies model words still saved model words. Absent means false. Withheld with the content. */
             readonly ai_assisted?: boolean;
@@ -46675,7 +46759,7 @@ export interface components {
             source_activity_id?: string;
             /**
              * Format: uuid
-             * @description A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
+             * @description A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open or held meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting marked canceled or no-show is refused with 422 on `records_meeting_id`. A held meeting keeps its existing outcome. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
              */
             records_meeting_id?: string;
             /** @description Meeting, call or note only. Create this task and its source activity in one transaction. The task inherits the source links and audience. Replaying a source identity returns the original activity without adding another task. */
@@ -47088,6 +47172,8 @@ export interface components {
             /** @description Optional next step when marking a meeting held. Creates the task in the same transaction, with the meeting as its source and its links and audience inherited. Requires activity create authority. A meeting already held cannot add another task through this outcome write. */
             follow_up_task?: components["schemas"]["ActivityFollowUpTask"];
             subject?: string | null;
+            /** @description Internal meeting notes, separate from the calendar description and from any transcript. Visible only with the meeting content. An empty string clears earlier notes. */
+            meeting_notes?: string | null;
             body?: string | null;
             /** Format: date-time */
             occurred_at?: string;
@@ -78134,7 +78220,7 @@ export interface operations {
                 project_id?: string;
                 /** @description Accepted website submission notes for this form, with readable content only. */
                 website_form_id?: string;
-                /** @description Tasks derived from this readable source activity, under current task visibility. */
+                /** @description Tasks derived from this readable source activity, under current task visibility. With kind=meeting, returns the transcripts recording that readable meeting. */
                 source_activity_id?: string;
                 /** @description One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread. */
                 thread_key?: string;
@@ -88425,6 +88511,81 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getMessengerService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active provider identities without credentials or personal account details. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerService"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    selectMessengerService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    provider: components["schemas"]["MessengerProvider"];
+                    slack_distribution?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description This is the workspace service; other local messaging access is withdrawn. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    disconnectMessengerService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Local service and personal access withdrawn; existing History is retained. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getMessengerSetup: {
         parameters: {
             query?: never;
@@ -88628,6 +88789,49 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    draftMessengerOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessengerOutcomeDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description An editable draft, never a saved activity. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerOutcomeDraft"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The summary model or provider is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getMessengerTeam: {

@@ -14,6 +14,7 @@ package compose
 // the TTL is bounded by the provider's own single-use authorization code.
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -24,7 +25,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -68,19 +72,39 @@ type wireState struct {
 	SlackHistory       *chatwire.HistoryProfile `json:"slack_history,omitempty"`
 	MessagingWorkspace string                   `json:"messaging_workspace,omitempty"`
 	MessengerRecord    *messengerReturnRecord   `json:"messenger_record,omitempty"`
-	User               string                   `json:"u"`
-	Provider           string                   `json:"p"`
-	Nonce              string                   `json:"n"`
-	ReturnTo           string                   `json:"rt,omitempty"`
-	Then               string                   `json:"th,omitempty"`
-	Shared             bool                     `json:"sh,omitempty"`
-	WindowMonths       int                      `json:"iw,omitempty"`
-	Version            int                      `json:"v,omitempty"`
-	Exp                int64                    `json:"exp"` // unix seconds
+	// Workspace is read by no replica of this release. It is written so that a
+	// replica one release older, which requires it, can still verify a state.
+	Workspace    string `json:"ws"`
+	User         string `json:"u"`
+	Provider     string `json:"p"`
+	Nonce        string `json:"n"`
+	ReturnTo     string `json:"rt,omitempty"`
+	Then         string `json:"th,omitempty"`
+	Shared       bool   `json:"sh,omitempty"`
+	WindowMonths int    `json:"iw,omitempty"`
+	Version      int    `json:"v,omitempty"`
+	Exp          int64  `json:"exp"` // unix seconds
 }
 
 // stateSigner mints and verifies signed state tokens with an HMAC key.
-type stateSigner struct{ key []byte }
+type stateSigner struct {
+	key []byte
+	// company names the installation's company for the compatibility field of
+	// the wire form. Nil, or a failed lookup, writes the zero id.
+	company func() ids.UUID
+}
+
+// forInstallation is s naming pool's live company in the states it signs.
+func (s stateSigner) forInstallation(pool *pgxpool.Pool) stateSigner {
+	s.company = func() ids.UUID {
+		company, err := database.ProvenWorkspace(context.Background(), pool)
+		if err != nil {
+			return ids.UUID{}
+		}
+		return company.UUID
+	}
+	return s
+}
 
 // newStateSigner refuses a key below the floor rather than trusting whoever
 // built it to have checked.
@@ -103,7 +127,12 @@ func (s stateSigner) usable() bool { return len(s.key) >= minStateKeyLen }
 // sign returns `base64url(payload).base64url(hmac(payload))`, binding the
 // tuple until exp.
 func (s stateSigner) sign(st connectState, exp time.Time) string {
+	var company ids.UUID
+	if s.company != nil {
+		company = s.company()
+	}
 	payload, _ := json.Marshal(wireState{ //nolint:errchkjson // string/int-only struct never errors
+		Workspace:    company.String(),
 		SlackHistory: st.SlackHistory, MessagingWorkspace: st.MessagingWorkspace, MessengerRecord: st.MessengerRecord,
 		User:         st.User.String(),
 		Provider:     st.Provider,

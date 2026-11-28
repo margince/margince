@@ -19,14 +19,13 @@ On the record, choose the provider and link an existing channel. Review the chan
 scope. A shared room needs a clear thread so other work does not become this record's
 history. Where the provider supports it, you can create a private channel from the same card.
 
-Private Teams channel reads require access for the app in that channel and a setup check.
-Margince cannot send automatic posts to private Teams channels or link shared Teams channels.
+Private and shared Teams channels need the app added to each channel and checked access. Automatic posts also need a clear internal audience whose members may read the CRM record. Create channels and manage their members in Teams.
 
 A channel can belong to a company even when no deal or project exists. Separate threads in a shared
 room can serve separate records. Linking a company does not give its readers access to a hidden
 deal or project.
 
-Slack installation asks the account connecting it for read-only channel history, separately from personal Messenger. That account must be a member of the linked private channels. It asks for no private message history or personal sending permission. Losing that access pauses incoming summaries while the shared bot can still send eligible CRM updates. Reconnect the shared installation to renew consent.
+The shared Slack bot reads channel history and replies with its own permissions. Add it to each linked channel. Personal Messenger consent is separate. Public Slack channels support incoming summaries; automatic CRM sharing requires a private internal channel.
 
 Slack saves how the app is shared, as confirmed by an admin, and the documented history limits. Complete summaries require an internal app or one approved for the Slack app store, with the usual history limits. Other commercial apps show that complete summaries are paused; personal Messenger and CRM posts are separate. Admins can review the saved limits and confirmation time in Settings or the link’s Manage details. Provider retry delays still apply.
 

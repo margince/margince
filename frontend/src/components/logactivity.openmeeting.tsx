@@ -19,6 +19,7 @@ import {
   outgoingBody,
 } from "../lib/activitybody";
 import type { EntityKind } from "../lib/entity";
+import { meetingNotesText } from "../lib/meetingrecord";
 import { unwrap } from "../lib/problem";
 import { useViewerId } from "../lib/session";
 import { writeMeetingOutcome } from "./taskactions.rowwrites";
@@ -37,7 +38,11 @@ export type OpenMeeting = Pick<
   | "version"
   | "links"
   | "body"
+  | "meeting_notes"
+  | "source_system"
+  | "captured_by"
   | "calendar_managed"
+  | "invitation_status"
   | "subject"
   | "occurred_at"
   | "occurred_precision"
@@ -189,7 +194,6 @@ export type MeetingRecord = {
   outcome: boolean;
   linkedDealIds?: string[];
   // The linked note is posted (a calendar-managed meeting only).
-  note: boolean;
   // The follow-up task is posted.
   followUp: boolean;
   // The body each POST step first sent. A retry sends it again unchanged, so
@@ -197,7 +201,7 @@ export type MeetingRecord = {
   sent: Partial<Record<RecordStep, ActivityRequest>>;
 };
 
-type RecordStep = "note" | "follow-up";
+type RecordStep = "follow-up";
 type ActivityRequest = ReturnType<typeof activityRequestBody>;
 
 /**
@@ -272,7 +276,6 @@ export function useRecordOfMeeting(
         ? {
             meeting: open,
             outcome: false,
-            note: false,
             followUp: false,
             sent: {},
           }
@@ -391,7 +394,6 @@ export async function recordOnMeeting(
 ): Promise<string> {
   const { record, draft } = input;
   const { meeting } = record;
-  const managed = meeting.calendar_managed === true;
   const bodyOf = (entry: ActivityDraft) =>
     activityRequestBody(
       entry,
@@ -419,12 +421,8 @@ export async function recordOnMeeting(
         id: meeting.id,
         version: meeting.version,
         status: "held",
-        ...(managed
-          ? {}
-          : {
-              body: appendedNotes(meeting.body, draft.body),
-              aiAssisted: draft.aiAssisted,
-            }),
+        meeting_notes: appendedNotes(meetingNotesText(meeting), draft.body),
+        aiAssisted: draft.aiAssisted,
         // The fields typed on the form describe the meeting they record.
         custom: draft.custom,
         dealFiling: draft.dealFiling?.context,
@@ -435,17 +433,6 @@ export async function recordOnMeeting(
       .filter((link) => link.entity_type === "deal")
       .map((link) => link.entity_id);
     record.outcome = true;
-  }
-  if (managed && !record.note) {
-    // The calendar keeps the meeting's own notes, so the typed ones become a
-    // note. No follow_up_task on it: the task's source would be the note.
-    await post("note", {
-      ...draft,
-      kind: "note",
-      followUp: undefined,
-      custom: undefined,
-    });
-    record.note = true;
   }
   if (draft.followUp && !record.followUp) {
     await post("follow-up", {

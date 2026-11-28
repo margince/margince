@@ -145,7 +145,7 @@ it("records a no-show on a meeting the server says awaits one, then shows it on 
   expect(invalidated).toHaveBeenCalledWith({ queryKey: ["worklist"] });
 });
 
-it("sends only how it went for a meeting its calendar invitation holds", async () => {
+it("saves internal notes and the outcome while the invitation keeps its title and description", async () => {
   const patched: unknown[] = [];
   mount(
     () => [
@@ -167,10 +167,20 @@ it("sends only how it went for a meeting its calendar invitation holds", async (
       englishCopy["worklist.verb.meetingCalendarManaged"],
     ),
   ).toBeTruthy();
-  expect(within(dialog).queryByRole("textbox")).toBeNull();
+  expect(
+    within(dialog).getByRole("textbox", { name: englishCopy["log.subject"] }),
+  ).toHaveProperty("readOnly", true);
+  await user.type(
+    within(dialog).getByRole("textbox", { name: englishCopy["log.body"] }),
+    "Buyer approved",
+  );
   await user.click(within(dialog).getByRole("button", { name: "Log" }));
 
-  await waitFor(() => expect(patched).toEqual([{ meeting_status: "held" }]));
+  await waitFor(() =>
+    expect(patched).toEqual([
+      { meeting_status: "held", meeting_notes: "Buyer approved" },
+    ]),
+  );
 });
 
 it("offers the outcome on a past booked meeting the server stamps as awaiting one", async () => {

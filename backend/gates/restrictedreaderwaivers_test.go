@@ -10,6 +10,7 @@ import "github.com/margince/margince/backend/internal/shared/gatekit"
 const activityCorrectionMetadata = "system data-task progress counts only a capped primary-key page, never content. Immutable IDs stay in that scan so progress advances across every inspected record; the domain corrections exclude restricted rows before reading their content or writing them"
 
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/activities/attachmentownerkeys.go:KeyAttachmentOwnersTx":          "system-only owner repair asks only whether an activity exists; no held content is read or exposed, and a held parent keeps its files",
 	"internal/modules/activities/systemtext.go:readSystemTextForMutation":               "reads the prior system rendering only for an audit before-image after the caller holds activity write authority, including archived recap erasure; no prior content is returned to the caller",
 	"internal/modules/contacts/ensureheld.go:lockHeldForward":                           "pendingforward.Predicate excludes archived and restricted activities before the row lock; only the held activity id leaves",
 	"internal/modules/contacts/ensureheld.go:stampHeldChannelAuthor":                    "the insert composes pendingforward.Predicate, which excludes archived and restricted activities, under the held activity lock",

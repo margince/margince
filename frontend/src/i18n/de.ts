@@ -254,7 +254,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.chatSummary.sourceHelp":
     "Verbinde dein eigenes Messaging-Konto über Messenger in diesem Datensatz. Prüfe dort, ob du den Kanal öffnen kannst, und prüfe den Quellzugriff erneut.",
   "channelInstall.slackReader":
-    "Die gemeinsame Kanalinstallation fragt das installierende Konto auch nach Lesezugriff auf den Kanalverlauf. Dieses Konto muss Mitglied der verknüpften privaten Kanäle sein. Es erhält dadurch weder Zugriff auf Direktnachrichten noch eine persönliche Sendeberechtigung.",
+    "Der gemeinsame Slack-Bot liest Kanalverlauf und Antworten mit eigenen Berechtigungen. Füge den Bot jedem verknüpften Kanal hinzu. Dein persönlicher Messenger braucht eine eigene Zustimmung.",
   "channelProfile.distribution": "Verteilung der Slack-App",
   "channelProfile.declaration":
     "Wähle, wie diese App verteilt wird. Margince speichert deine Angabe und die dokumentierten Verlaufslimits beim Installieren oder erneuten Verbinden.",
@@ -266,9 +266,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "channelProfile.missing":
     "Die Verlaufslimits dieser Installation sind noch nicht bestätigt.",
   "channelProfile.reconnect":
-    "Frage einen Admin, Slack unter Gemeinsame Kanalverbindungen erneut zu verbinden, die App-Verteilung zu bestätigen und Lesezugriff auf den Kanalverlauf zu erlauben. Das installierende Konto muss Mitglied der verknüpften privaten Kanäle sein. Vollständige Zusammenfassungen bleiben pausiert, bis Zugriff und Limits bestätigt sind.",
+    "Ein Admin muss den gemeinsamen Slack-Bot neu verbinden, die App-Verteilung bestätigen und die Bot-Berechtigungen freigeben. Füge den Bot jedem verknüpften Kanal hinzu. Vollständige Zusammenfassungen brauchen bestätigten Zugriff und unterstützte Verlaufslimits.",
   "channelProfile.unsupported":
-    "Diese Verteilung erlaubt nur eine Verlaufs- und eine Thread-Anfrage pro Minute mit 15 Nachrichten pro Seite. Vollständige Kanalzusammenfassungen sind nicht verfügbar. Persönlicher Messenger und CRM-Updates an Slack bleiben unabhängig davon.",
+    "Diese App hat reduzierte Verlaufslimits. Vollständige automatische Zusammenfassungen und sofortige Ergebnisentwürfe sind nicht verfügbar. Persönliche Messenger-Lesevorgänge müssen zwischen Anfragen warten. Erlaubte Sendeaktionen bleiben verfügbar.",
   "channelProfile.limits":
     "Verlauf: {history} Anfragen/Minute, {historyPage} Nachrichten/Seite. Threads: {replies} Anfragen/Minute, {repliesPage} Nachrichten/Seite.",
   "channelProfile.provenance":
@@ -288,14 +288,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "channelInstall.adminRequired":
     "Ein Admin mit Zugriff auf Kanalverbindungen muss diese Verbindung bestätigen.",
   "channelInstall.teamsSteps":
-    "Registriere den Microsoft-Bot mit der Ereignisadresse unten. Lade das App-Paket in Teams hoch, füge es dem gewünschten Team hinzu und bestätige die Teamberechtigungen. Aktualisiere das Team und bestätige anschließend hier die Verbindung.",
+    "Registriere den Microsoft-Bot mit der Ereignisadresse unten. Lade das App-Paket in Teams hoch, füge es jedem gewünschten Team hinzu und gib dessen Berechtigungen frei. Gib diese Teams dann hier frei. Füge die App jedem privaten oder geteilten Kanal separat hinzu.",
   "channelInstall.teamsApp": "Microsoft-App {app}, Verzeichnis-ID {tenant}",
   "channelInstall.refresh": "Installierte Teams aktualisieren",
   "channelInstall.noTeams":
     "Noch keine bestätigte Teaminstallation. Prüfe die Bot-Registrierung, füge die App deinem Team hinzu und aktualisiere die Liste.",
   "channelInstall.team": "Bestätigtes installiertes Team",
   "channelInstall.approval":
-    "Nur dieses Team wird verbunden. Bestehende Verknüpfungen behalten ihr Ziel. Um ein anderes Team zu verbinden, trenne zuerst die aktuelle Verbindung.",
+    "Gib dieses Team für die Teams-Verbindung frei. Du kannst mehrere Teams aus demselben Microsoft-Verzeichnis verbinden. Bestehende Verknüpfungen behalten ihr Ziel.",
   "channelInstall.approve": "Teamverbindung bestätigen",
   "channelInstall.connected":
     "Team verbunden. Du kannst seine Kanäle jetzt von einem Unternehmen, einem Deal oder einem Projekt aus verknüpfen.",
@@ -3024,6 +3024,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.invitation_status": "Einladungsstatus",
   "history.field.attendees": "Eingeladene Teilnehmende",
   "history.field.proposal_status": "Status des Terminvorschlags",
+  "history.field.meeting_notes": "Interne Notizen zum Termin",
   "history.field.meeting_status": "Ergebnis des Termins",
   "history.field.meeting_intent": "Terminbeginn (Ortszeit)",
   "history.field.candidate_company_key": "Zugeordnetes Unternehmen",
@@ -8616,7 +8617,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.recordOfMeetingRecorded":
     "{subject} ist schon als stattgefunden erfasst. Erneutes Speichern ergänzt nur, was nicht gespeichert wurde.",
   "log.recordOfMeetingManaged":
-    "Betreff und Notizen gehören zur Kalendereinladung. Deine Notizen werden hier als Notiz gespeichert, und der Termin wird als stattgefunden markiert.",
+    "Titel und Beschreibung bleiben in der Kalendereinladung. Deine internen Notizen werden an diesem Termin gespeichert, und es wird als stattgefunden markiert.",
   "log.recordOfMeetingTranscript":
     "Das Transkript wird als eigener Eintrag gespeichert, und der Termin wird als stattgefunden markiert.",
   "log.asTranscript": "Dieser Text ist ein Transkript",
@@ -13955,7 +13956,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "channelLink.identityReviewBody":
     "Bestätige den Kanal erneut, damit seine dauerhafte Identität verknüpft wird. Entferne die Verknüpfung und wähle ihn aus der Kanalliste. Der gespeicherte Verlauf bleibt beim Datensatz.",
   "channelLink.privateTeamsReadOnly":
-    "In privaten Teams-Kanälen können Zusammenfassungen übernommen werden. Verwende einen Standardkanal, damit der Bot CRM-Updates senden kann.",
+    "Dieser Kanal kann Zusammenfassungen im Verlauf speichern. Automatische CRM-Beiträge sind für diesen Kanal nicht verfügbar.",
   "channelLink.chooseConversation": "Zu verknüpfende Unterhaltung",
   "channelLink.specificConversation":
     "Eine Unterhaltung in einem gemeinsam genutzten Kanal verknüpfen",
@@ -13963,6 +13964,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "channelLink.none": "Noch kein Kanal",
   "channelLink.noneSub":
     "Ein privater Kanal hält das Team zu diesem Datensatz auf dem Laufenden.",
+  "channelLink.createInTeams":
+    "Erstelle den Kanal und verwalte seine Mitglieder in Teams. Verknüpfe ihn dann hier.",
   "channelLink.create": "Kanal erstellen",
   "channelLink.linkExisting": "Vorhandenen Kanal verknüpfen",
   "channelLink.linkCta": "Kanal verknüpfen",
@@ -15799,6 +15802,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.company_domain_disposition":
     "Entscheidung zur Unternehmensdomain",
   "audit.kind.capture_settings": "Erfassungseinstellungen",
+  "audit.kind.chat_service": "Team-Messaging-Dienst",
   "audit.kind.chat_link": "Chat-Verknüpfung",
   "audit.kind.commission": "Provision",
   "audit.kind.communication_instruction": "Kommunikationsanweisung",
@@ -23395,7 +23399,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingReading": "Termin wird geladen…",
   "worklist.verb.meetingWhatHappened": "Was passiert ist",
   "worklist.verb.meetingBodyHint":
-    "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
+    "Besprochenes und nächste Schritte. Notizen bleiben in Margince.",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Nicht erschienen",
   "worklist.verb.meetingCanceled": "Hat nicht stattgefunden",
@@ -23412,8 +23416,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingCanceledFor": "Hat nicht stattgefunden: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "Die Kalendereinladung führt diesen Termin. Sage ihn über die Einladung ab.",
+  "meeting.transcripts": "Notizen und Transkripte",
+  "meeting.readOnly":
+    "Du kannst diesen Termin lesen, aber mit deinen Zugriffsrechten nicht bearbeiten.",
+  "meeting.transcriptText": "Transkripttext",
+  "meeting.transcriptFileRetry":
+    "Das Transkript ist gespeichert. Die Originaldatei wurde nicht angehängt. Speichere erneut, um den Upload zu wiederholen.",
+  "meeting.internalNotes": "Interne Notizen zum Termin",
+  "meeting.internalNotesHelp":
+    "Wer den Inhalt dieses Termins lesen darf, kann diese Notizen sehen. Sie werden nicht zur Kalendereinladung hinzugefügt.",
   "worklist.verb.meetingCalendarManaged":
-    "Betreff, Notizen und Datum folgen der Kalendereinladung. Hier wird nur das Ergebnis gespeichert.",
+    "Titel und Datum folgen der Kalendereinladung. Notizen bleiben in Margince.",
   "worklist.verb.retry": "Erneut ausf\u00fchren",
   "worklist.verb.retryStarted": "Regel wird erneut ausgeführt…",
   "worklist.verb.retryFailed":
@@ -25930,9 +25943,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "messenger.dispactOpen": "Dispact öffnen",
   "messenger.loadLater": "Weitere Antworten laden",
   "messenger.verb": "Messenger",
-  "messenger.provider": "Nachrichtendienst",
 
-  "messenger.channels": "Kanäle",
+  "messenger.channels": "Unterhaltungen",
   "messenger.people": "Personen",
 
   "messenger.change": "Unterhaltung wechseln",
@@ -25959,10 +25971,43 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "messenger.loadEarlier": "Ältere Nachrichten laden",
   "messenger.newMessages": "Zu den neuesten Nachrichten",
   "messenger.empty": "In dieser Unterhaltung gibt es noch keine Nachrichten.",
+  "messenger.incompleteContent":
+    "Einige Inhalte oder Dateiinhalte wurden nicht gelesen.",
+  "messenger.openSource": "In der Messaging-App öffnen",
+  "messenger.replyCount_one": "Antwort anzeigen ({count}+)",
+  "messenger.replyCount_other": "Antworten anzeigen ({count}+)",
+  "messenger.serviceTitle": "Messaging-Dienst für das Team",
+  "messenger.oneService":
+    "Verwende für dein Unternehmen einen Dienst: Dispact, Slack oder Teams. Messenger und Kanalverknüpfungen nutzen denselben Dienst.",
+  "messenger.chooseService":
+    "Eine Administration wählt unten den Dienst aus. Messenger und Kanalverknüpfungen verwenden diese Auswahl.",
+  "messenger.serviceConflict":
+    "Es gibt ältere Verbindungen zu mehreren Diensten. Bestätige den gewünschten Dienst. Die anderen Konten und Kanalverknüpfungen werden getrennt.",
+  "messenger.switchService": "Dienst wechseln",
+  "messenger.disconnectService": "Dienst trennen",
+  "messenger.switchServiceBody":
+    "Verwende {name} für dein Unternehmen. Andere gemeinsame Verbindungen und persönliche Konten werden getrennt und deren Kanalverknüpfungen beendet. Der Verlauf bleibt erhalten. Verknüpfe Kanäle erneut aus ihren Datensätzen und verbinde persönliche Konten mit diesem Dienst.",
+  "channelInstall.downloadSlack": "Slack-App-Konfiguration herunterladen",
+  "messenger.draftOutcome": "Ergebnis aus diesen Nachrichten entwerfen",
+  "messenger.draftLimited":
+    "Diese Slack-Verbindung liest den Verlauf langsam. Schreibe das Ergebnis selbst oder prüfe es in Slack. Automatische Ergebnisentwürfe brauchen einen unterstützten Verlaufsplan.",
+  "messenger.draftConsent":
+    "Bis zu 100 angezeigte Nachrichten werden an das eingerichtete Zusammenfassungsmodell gesendet. Private Nachrichten bleiben außerhalb des Verlaufs, bis du das Ergebnis prüfst und speicherst.",
+  "messenger.reviewOutcomeDraft":
+    "Prüfe und bearbeite den Entwurf vor dem Speichern. Achte auf Entscheidungen, Bedingungen, Verantwortliche und Termine.",
+  "messenger.useService": "Diesen Dienst verwenden",
   "messenger.reply": "Im Thread antworten",
   "messenger.back": "Zurück zur Unterhaltung",
   "messenger.deleted": "Nachricht gelöscht",
   "messenger.edited": "Bearbeitet",
+  "messenger.lastChecked": "Nachrichten geprüft: {at}",
+  "messenger.failureAccess":
+    "Prüfe den Zugriff auf die Unterhaltung und die App-Berechtigungen. Ein Admin muss die Zustimmung gegebenenfalls erneuern.",
+  "messenger.slackPlan":
+    "Bestätige, wie deine Slack-App verteilt wird. Dieser Leseplan gilt auch für den persönlichen Messenger ohne gemeinsamen Bot.",
+  "messenger.chooseSlackPlan": "Tatsächliche App-Verteilung wählen",
+  "messenger.disconnectServiceBody":
+    "Trenne diesen Dienst und seine persönlichen Konten. Seine Kanalverknüpfungen werden beendet. Der Verlauf bleibt erhalten. Wähle einen Dienst, bevor du dich erneut verbindest.",
   "messenger.loading": "Unterhaltung wird geladen…",
   "messenger.loadProblem": "Unterhaltung nicht verfügbar",
   "messenger.searchPeople": "Personen suchen",
@@ -26020,7 +26065,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Administration muss die App-Einrichtung abschließen, bevor Konten verbunden werden können.",
   "messenger.participantScopes": "Erforderliche Mitgliederberechtigungen",
   "messenger.teamsTenant":
-    "Beschränke die Microsoft-App auf deine Verzeichnis-ID und gewähre die aufgeführten delegierten Berechtigungen in Entra.",
+    "Verbinde die Microsoft-App mit deiner Verzeichnis-ID. Ein Admin muss die aufgeführten delegierten Berechtigungen in Entra freigeben, bevor Teammitglieder sich verbinden können.",
   "messenger.editDraft": "Entwurf bearbeiten",
   "messenger.reviewDelivery": "Vor dem Bearbeiten die Zustellung prüfen",
   "messenger.checkedConversation": "Unterhaltung geprüft",

@@ -118,3 +118,60 @@ it("checks the selected destination before offering its outcome editor", async (
   ).toBeDisabled();
   expect(screen.queryByLabelText("Subject *")).toBeNull();
 });
+
+it("keeps a generated private outcome editable and unsaved until the user logs it", async () => {
+  const writes: unknown[] = [];
+  const requests: unknown[] = [];
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["create"] }, { seat: "full" }),
+    [`GET /deals/${messengerScope.id}`]: () =>
+      jsonResponse({ id: messengerScope.id, name: "Pilot", writable: true }),
+    [`POST /messenger/slack/deal/${messengerScope.id}/outcome-draft`]: (
+      body,
+    ) => {
+      requests.push(body);
+      return jsonResponse({
+        subject: "Approval still pending",
+        body: "Legal has not approved the pilot.",
+      });
+    },
+    "POST /activities": (body) => {
+      writes.push(body);
+      return jsonResponse({ id: "reviewed-outcome", kind: "note" }, 201);
+    },
+  });
+  const user = userEvent.setup();
+  render(
+    <StoryProviders>
+      <MessengerOutcome
+        scope={messengerScope}
+        conversation="C_PRIVATE"
+        messageIds={["source-message"]}
+      />
+    </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: englishCopy["messenger.shareOutcome"],
+    }),
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: englishCopy["messenger.draftOutcome"],
+    }),
+  );
+  const subject = await screen.findByLabelText("Subject *");
+  expect(subject).toHaveValue("Approval still pending");
+  expect(requests).toEqual([
+    { conversation_id: "C_PRIVATE", message_ids: ["source-message"] },
+  ]);
+  expect(writes).toEqual([]);
+  await user.clear(subject);
+  await user.type(subject, "Alex to confirm Legal approval");
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    subject: "Alex to confirm Legal approval",
+    body: "Legal has not approved the pilot.",
+  });
+});

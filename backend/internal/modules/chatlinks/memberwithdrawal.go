@@ -30,12 +30,7 @@ func WithdrawMemberGrantsTx(ctx context.Context, tx pgx.Tx, user ids.UserID) err
 		return err
 	}
 	for _, grant := range grants {
-		if _, err := tx.Exec(ctx, "UPDATE chat_member_grant SET status='disconnected',consent_version=consent_version+1 WHERE id=@id", pgx.StrictNamedArgs{"id": grant.ID}); err != nil {
-			return err
-		}
-		after := grant
-		after.Status = "disconnected"
-		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "chat_member_grant", grant.ID, grantImage(grant), grantImage(after), map[string]any{reasonKey: "member_departed"}); err != nil {
+		if err := disconnectMemberGrantTx(ctx, tx, grant, "member_departed"); err != nil {
 			return err
 		}
 	}

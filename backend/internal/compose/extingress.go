@@ -131,7 +131,7 @@ func (r *callRuntime) refusedRecord(ctx context.Context, class extension.RecordR
 // unit retry a deliberate drop on every poll, forever, so it is a success here
 // with a disposition that says what happened.
 func (r *callRuntime) landRecord(ctx context.Context, sink *capture.Sink, rec extension.Record, declared extension.IngressSource, on extension.UserID) (extension.Result, error) {
-	ctx = capture.WithMemberGuard(ctx, extingress.MemberGuard(r.unit, memberConsentedTx))
+	ctx = capture.WithMemberGuard(ctx, extingress.MemberGuard(r.unit, memberConsentHeldTx))
 	chosen, err := extingress.ChosenRef(rec.ChosenSubject)
 	if err != nil {
 		return extension.Result{}, r.ingressRefusal(ctx, err)

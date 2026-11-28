@@ -8,12 +8,14 @@ import { Button } from "../design-system/atoms";
 import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWriteRecord } from "../lib/capability";
+import { meetingNotesText } from "../lib/meetingrecord";
 import { isVersionSkewOf, problemFieldErrorsOf } from "../lib/problem";
 import { worklistKey } from "../lib/workkeys";
 import {
   type MeetingDialogMode,
   MeetingOutcomeDialog,
 } from "./meetingoutcome.dialog";
+import { MeetingTranscripts } from "./meetingtranscripts";
 import { readMeetingStatus, useMeetingOutcome } from "./taskactions";
 
 const readPrior = (id: string) => readMeetingStatus(id).catch(() => null);
@@ -31,6 +33,25 @@ export function RecordMeetingOutcome({
   activity: Activity;
   invalidateKeys: readonly QueryKey[];
 }>) {
+  return (
+    <>
+      <MeetingOutcomeControls
+        activity={activity}
+        invalidateKeys={invalidateKeys}
+      />
+      <MeetingTranscripts
+        key={activity.id}
+        activity={activity}
+        invalidateKeys={invalidateKeys}
+      />
+    </>
+  );
+}
+
+function MeetingOutcomeControls({
+  activity,
+  invalidateKeys,
+}: Readonly<{ activity: Activity; invalidateKeys: readonly QueryKey[] }>) {
   const writable = useCanWriteRecord("activity", activity);
   if (!writable) {
     return null;
@@ -55,8 +76,7 @@ export function RecordMeetingOutcome({
 
 /**
  * "Add notes" or "Edit notes" on a held meeting, so what was discussed can be
- * written the day after. A live invitation keeps the meeting's notes, and the
- * server refuses them from here, so such a meeting offers none.
+ * written the day after without changing its calendar invitation.
  */
 function HeldMeetingNotes({
   activity,
@@ -70,13 +90,12 @@ function HeldMeetingNotes({
   if (
     activity.kind !== "meeting" ||
     activity.meeting_status !== "held" ||
-    activity.calendar_managed === true ||
     activity.content_state === "withheld"
   ) {
     return null;
   }
   const title = activity.subject ?? undefined;
-  const edits = Boolean(activity.body?.trim());
+  const edits = Boolean(meetingNotesText(activity).trim());
   return (
     <>
       <Button

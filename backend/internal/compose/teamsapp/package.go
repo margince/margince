@@ -78,6 +78,7 @@ type authorization struct {
 type manifest struct {
 	Schema          string        `json:"$schema"`
 	ManifestVersion string        `json:"manifestVersion"`
+	ChannelFeatures string        `json:"supportsChannelFeatures"`
 	Version         string        `json:"version"`
 	ID              string        `json:"id"`
 	Name            appName       `json:"name"`
@@ -109,7 +110,7 @@ func Archive(cfg Config) ([]byte, error) {
 	for _, scope := range teams.BotScopes {
 		grants = append(grants, permission{Name: scope, Type: "Application"})
 	}
-	app := manifest{Schema: "https://developer.microsoft.com/en-us/json-schemas/teams/v1.20/MicrosoftTeams.schema.json", ManifestVersion: "1.20", Version: "1.0.0", ID: cfg.AppID, Name: appName{Short: "Margince", Full: "Margince record messaging"}, Description: appName{Short: "Company, deal and project updates", Full: "Link approved team channels to companies, deals and projects in Margince. Keep CRM History current with useful conversation recaps and send eligible record updates to the channel. Personal Messenger access requires separate consent."}, Developer: developer{Name: "Margince", Website: cfg.Origin, Privacy: cfg.PrivacyURL, Terms: cfg.TermsURL}, Icons: appIcons{Color: "color.png", Outline: "outline.png"}, AccentColor: "#07584c", Bots: []bot{{ID: cfg.AppID, Scopes: []string{"team"}}}, Domains: []string{origin.Hostname()}, WebApp: webApp{ID: cfg.AppID}, Authorization: authorization{Permissions: permissions{ResourceSpecific: grants}}}
+	app := manifest{Schema: "https://developer.microsoft.com/en-us/json-schemas/teams/v1.25/MicrosoftTeams.schema.json", ManifestVersion: "1.25", ChannelFeatures: "tier1", Version: "1.0.0", ID: cfg.AppID, Name: appName{Short: "Margince", Full: "Margince record messaging"}, Description: appName{Short: "Company, deal and project updates", Full: "Link approved team channels to companies, deals and projects in Margince. Keep CRM History current with useful conversation recaps and send eligible record updates to the channel. Personal Messenger access requires separate consent."}, Developer: developer{Name: "Margince", Website: cfg.Origin, Privacy: cfg.PrivacyURL, Terms: cfg.TermsURL}, Icons: appIcons{Color: "color.png", Outline: "outline.png"}, AccentColor: "#07584c", Bots: []bot{{ID: cfg.AppID, Scopes: []string{"team"}}}, Domains: []string{origin.Hostname()}, WebApp: webApp{ID: cfg.AppID}, Authorization: authorization{Permissions: permissions{ResourceSpecific: grants}}}
 	raw, err := json.MarshalIndent(app, "", "  ")
 	if err != nil {
 		return nil, err

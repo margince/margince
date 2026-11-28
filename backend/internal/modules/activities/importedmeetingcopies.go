@@ -169,6 +169,9 @@ func (s *Store) foldImportedMeetingCopyTx(
 // The task runs as the system, so the importer's own principal, read now, takes
 // the place of the caller the live import has.
 func importedCopyMayFold(ctx context.Context, tx pgx.Tx, importer ImporterPrincipal, imported, calendar ids.ActivityID) (bool, error) {
+	if notes, err := MeetingCopyHasInternalNotesTx(ctx, tx, imported); err != nil || notes {
+		return false, err
+	}
 	var stamp string
 	if err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE id = $1`, imported).Scan(&stamp); err != nil {
 		return false, fmt.Errorf("activities: reading who imported a meeting copy: %w", err)

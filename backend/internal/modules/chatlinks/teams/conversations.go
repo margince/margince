@@ -38,6 +38,7 @@ func (c *Client) Conversation(ctx context.Context, id string) (messaging.Convers
 	//nolint:tagliatelle // Microsoft's provider protocol fixes these JSON field names.
 	var response struct {
 		ID         string `json:"id"`
+		URL        string `json:"webUrl"`
 		Name       string `json:"displayName"`
 		Topic      string `json:"topic"`
 		Kind       string `json:"chatType"`
@@ -46,9 +47,9 @@ func (c *Client) Conversation(ctx context.Context, id string) (messaging.Convers
 	if json.Unmarshal(raw, &response) != nil || response.ID == "" {
 		return messaging.Conversation{}, messaging.ErrUnavailable
 	}
-	out := messaging.Conversation{Access: "participants", ID: id, Name: response.Topic, Kind: "group"}
+	out := messaging.Conversation{SourceURL: response.URL, Access: "participants", ID: id, Name: response.Topic, Kind: groupChatKind}
 	membersPath := path + "/members"
-	if response.Kind == "oneOnOne" {
+	if response.Kind == directChatKind {
 		out.Kind = "direct"
 	}
 	if isChannel {
@@ -56,8 +57,11 @@ func (c *Client) Conversation(ctx context.Context, id string) (messaging.Convers
 		out.Access = privateChannelKind
 		out.SupportsThreads = true
 		out.Name = response.Name
-		if response.Membership == "shared" {
+		if response.Membership != standardChannelKind && response.Membership != privateChannelKind && response.Membership != sharedChannelKind {
 			return messaging.Conversation{}, messaging.ErrUnsupported
+		}
+		if response.Membership != standardChannelKind {
+			membersPath = path + "/allMembers"
 		}
 		if response.Membership == standardChannelKind {
 			out.Access = "team"
@@ -65,7 +69,7 @@ func (c *Client) Conversation(ctx context.Context, id string) (messaging.Convers
 			membersPath = "/teams/" + url.PathEscape(team) + "/members"
 		}
 	}
-	members, err := c.members(ctx, membersPath)
+	members, err := c.members(ctx, membersPath, isChannel && response.Membership == standardChannelKind)
 	if err != nil {
 		return messaging.Conversation{}, err
 	}
@@ -81,7 +85,7 @@ func (c *Client) Conversation(ctx context.Context, id string) (messaging.Convers
 	return out, nil
 }
 
-func (c *Client) members(ctx context.Context, path string) ([]messaging.Member, error) {
+func (c *Client) members(ctx context.Context, path string, teamRoster bool) ([]messaging.Member, error) {
 	out := []messaging.Member{}
 	for range 20 {
 		raw, err := c.http.Call(ctx, http.MethodGet, path, nil)
@@ -91,6 +95,7 @@ func (c *Client) members(ctx context.Context, path string) ([]messaging.Member, 
 		//nolint:tagliatelle // Microsoft's provider protocol fixes these JSON field names.
 		var page struct {
 			Members []struct {
+				Type   string   `json:"@odata.type"`
 				ID     string   `json:"userId"`
 				Tenant string   `json:"tenantId"`
 				Name   string   `json:"displayName"`
@@ -103,8 +108,16 @@ func (c *Client) members(ctx context.Context, path string) ([]messaging.Member, 
 			return nil, messaging.ErrUnavailable
 		}
 		for _, m := range page.Members {
-			if m.ID == "" || m.Tenant == "" {
+			if m.ID == "" {
 				return nil, messaging.ErrUnavailable
+			}
+			if m.Tenant == "" {
+				// Team rosters identify outside users through the guest role; chat
+				// and shared-channel rosters need the user's explicit tenant.
+				if !teamRoster || m.Roles == nil || m.Type != "#microsoft.graph.aadUserConversationMember" {
+					return nil, messaging.ErrUnavailable
+				}
+				m.Tenant = c.tenant
 			}
 			out = append(out, messaging.Member{ID: m.ID, Name: m.Name, Email: m.Email, Active: true, External: m.Tenant != c.tenant || slices.Contains(m.Roles, "guest")})
 		}
@@ -140,9 +153,9 @@ func (c *Client) OpenPeople(ctx context.Context, people []string) (messaging.Con
 	if err != nil {
 		return messaging.Conversation{}, err
 	}
-	kind := "group"
+	kind := groupChatKind
 	if len(people) == 1 {
-		kind = "oneOnOne"
+		kind = directChatKind
 	}
 	//nolint:tagliatelle // Microsoft's provider protocol fixes these JSON field names.
 	body, err := json.Marshal(struct {

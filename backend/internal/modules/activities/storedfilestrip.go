@@ -123,7 +123,7 @@ func (s *Store) WithholdStoredFilesTx(ctx context.Context, tx pgx.Tx, files []St
 			map[string]any{fieldBytesWithheld: false}, map[string]any{fieldBytesWithheld: true}); err != nil {
 			return fmt.Errorf("activities: auditing a withheld file: %w", err)
 		}
-		if err := storedobjects.RecordTx(ctx, tx, storedobjects.KindAttachment, f.Key); err != nil {
+		if err := storedobjects.RecordDeletionTx(ctx, tx, storedobjects.KindAttachment, f.Key); err != nil {
 			return err
 		}
 	}

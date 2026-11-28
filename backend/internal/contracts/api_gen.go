@@ -8179,6 +8179,7 @@ func (e ConnectorAppSource) Valid() bool {
 // Defines values for ConnectorAppRedirectUriPurpose.
 const (
 	ConnectorAppRedirectUriPurposeCalendarConnect  ConnectorAppRedirectUriPurpose = "calendar_connect"
+	ConnectorAppRedirectUriPurposeChannelConnect   ConnectorAppRedirectUriPurpose = "channel_connect"
 	ConnectorAppRedirectUriPurposeDocumentsConnect ConnectorAppRedirectUriPurpose = "documents_connect"
 	ConnectorAppRedirectUriPurposeExtensionConnect ConnectorAppRedirectUriPurpose = "extension_connect"
 	ConnectorAppRedirectUriPurposeMailboxConnect   ConnectorAppRedirectUriPurpose = "mailbox_connect"
@@ -8190,6 +8191,8 @@ const (
 func (e ConnectorAppRedirectUriPurpose) Valid() bool {
 	switch e {
 	case ConnectorAppRedirectUriPurposeCalendarConnect:
+		return true
+	case ConnectorAppRedirectUriPurposeChannelConnect:
 		return true
 	case ConnectorAppRedirectUriPurposeDocumentsConnect:
 		return true
@@ -34829,6 +34832,9 @@ type Activity struct {
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
 
+	// MeetingNotes Internal meeting notes, separate from the calendar description and from any transcript. Earlier rep-authored calendar notes are resolved here from their audit proof. Earlier rep-authored calendar notes are resolved here from their audit proof. Visible only with the meeting content. An empty string clears earlier notes.
+	MeetingNotes *string `json:"meeting_notes,omitempty"`
+
 	// MeetingNotesConnection A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
 	MeetingNotesConnection *ActivityMeetingNotesConnection `json:"meeting_notes_connection,omitempty"`
 
@@ -42533,6 +42539,8 @@ type ChannelProviderEntryCredentialModel string
 
 // ChannelProviderSetup defines model for ChannelProviderSetup.
 type ChannelProviderSetup struct {
+	// AppManifest Downloadable Slack app configuration without credentials.
+	AppManifest    *string              `json:"app_manifest,omitempty"`
 	CallbackUrl    string               `json:"callback_url"`
 	Configured     bool                 `json:"configured"`
 	EventsUrl      string               `json:"events_url"`
@@ -48804,7 +48812,7 @@ type CreateActivityRequest struct {
 	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 
-	// RecordsMeetingId A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
+	// RecordsMeetingId A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open or held meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting marked canceled or no-show is refused with 422 on `records_meeting_id`. A held meeting keeps its existing outcome. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
 	RecordsMeetingId *openapi_types.UUID `json:"records_meeting_id,omitempty"`
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
@@ -61383,6 +61391,10 @@ type MessengerConversation struct {
 	Kind          MessengerConversationKind    `json:"kind"`
 	Members       []MessengerMember            `json:"members"`
 	Name          string                       `json:"name"`
+	SourceUrl     *string                      `json:"source_url,omitempty"`
+
+	// SupportsOutcomeDraft False when provider limits prevent a verified on-demand summary.
+	SupportsOutcomeDraft *bool `json:"supports_outcome_draft,omitempty"`
 
 	// SupportsThreads Whether this conversation supports native thread replies.
 	SupportsThreads *bool `json:"supports_threads,omitempty"`
@@ -61424,19 +61436,37 @@ type MessengerMembers struct {
 
 // MessengerMessage defines model for MessengerMessage.
 type MessengerMessage struct {
-	At      time.Time `json:"at"`
-	Author  string    `json:"author"`
-	Deleted bool      `json:"deleted"`
-	Edited  bool      `json:"edited"`
-	Id      string    `json:"id"`
-	RootId  string    `json:"root_id"`
-	Text    string    `json:"text"`
+	At     time.Time `json:"at"`
+	Author string    `json:"author"`
+
+	// ContentIncomplete Some rich content or attachment contents were not read.
+	ContentIncomplete *bool   `json:"content_incomplete,omitempty"`
+	Deleted           bool    `json:"deleted"`
+	Edited            bool    `json:"edited"`
+	Id                string  `json:"id"`
+	ReplyCount        *int    `json:"reply_count,omitempty" maximum:"1000000" minimum:"0"`
+	RootId            string  `json:"root_id"`
+	SourceUrl         *string `json:"source_url,omitempty"`
+	Text              string  `json:"text"`
 }
 
 // MessengerOpenRequest defines model for MessengerOpenRequest.
 type MessengerOpenRequest struct {
 	ConversationId *string   `json:"conversation_id,omitempty"`
 	Members        *[]string `json:"members,omitempty"`
+}
+
+// MessengerOutcomeDraft defines model for MessengerOutcomeDraft.
+type MessengerOutcomeDraft struct {
+	Body    string `json:"body"`
+	Subject string `json:"subject"`
+}
+
+// MessengerOutcomeDraftRequest defines model for MessengerOutcomeDraftRequest.
+type MessengerOutcomeDraftRequest struct {
+	ConversationId string   `json:"conversation_id"`
+	MessageIds     []string `json:"message_ids" unique:"items"`
+	RootId         *string  `json:"root_id,omitempty"`
 }
 
 // MessengerPage defines model for MessengerPage.
@@ -61462,6 +61492,13 @@ type MessengerSendRequest struct {
 	RequestId             openapi_types.UUID  `json:"request_id"`
 	RootId                *string             `json:"root_id,omitempty"`
 	Text                  string              `json:"text"`
+}
+
+// MessengerService defines model for MessengerService.
+type MessengerService struct {
+	ActiveProvider *MessengerProvider   `json:"active_provider,omitempty"`
+	HistoryProfile *SlackHistoryProfile `json:"history_profile,omitempty"`
+	Providers      []MessengerProvider  `json:"providers"`
 }
 
 // MessengerSetup defines model for MessengerSetup.
@@ -73228,6 +73265,9 @@ type UpdateActivityRequest struct {
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
 
+	// MeetingNotes Internal meeting notes, separate from the calendar description and from any transcript. Visible only with the meeting content. An empty string clears earlier notes.
+	MeetingNotes *string `json:"meeting_notes,omitempty"`
+
 	// MeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
 	// `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
 	// gives, held against the kind the row already carries rather than one the
@@ -79010,7 +79050,7 @@ type ListActivitiesParams struct {
 	// WebsiteFormId Accepted website submission notes for this form, with readable content only.
 	WebsiteFormId *openapi_types.UUID `form:"website_form_id,omitempty" json:"website_form_id,omitempty"`
 
-	// SourceActivityId Tasks derived from this readable source activity, under current task visibility.
+	// SourceActivityId Tasks derived from this readable source activity, under current task visibility. With kind=meeting, returns the transcripts recording that readable meeting.
 	SourceActivityId *openapi_types.UUID `form:"source_activity_id,omitempty" json:"source_activity_id,omitempty"`
 
 	// ThreadKey One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread.
@@ -85246,6 +85286,12 @@ type ConnectDispactParticipantJSONBody struct {
 	PersonalToken *string `json:"personal_token,omitempty"`
 }
 
+// SelectMessengerServiceJSONBody defines parameters for SelectMessengerService.
+type SelectMessengerServiceJSONBody struct {
+	Provider          MessengerProvider `json:"provider"`
+	SlackDistribution *string           `json:"slack_distribution,omitempty"`
+}
+
 // MessengerOAuthCallbackParams defines parameters for MessengerOAuthCallback.
 type MessengerOAuthCallbackParams struct {
 	State string  `form:"state" json:"state"`
@@ -89765,6 +89811,9 @@ type SaveMyWorkingHoursJSONRequestBody = SaveWorkingHoursRequest
 // ConnectDispactParticipantJSONRequestBody defines body for ConnectDispactParticipant for application/json ContentType.
 type ConnectDispactParticipantJSONRequestBody ConnectDispactParticipantJSONBody
 
+// SelectMessengerServiceJSONRequestBody defines body for SelectMessengerService for application/json ContentType.
+type SelectMessengerServiceJSONRequestBody SelectMessengerServiceJSONBody
+
 // ConnectMessengerJSONRequestBody defines body for ConnectMessenger for application/json ContentType.
 type ConnectMessengerJSONRequestBody = MessengerConnectRequest
 
@@ -89773,6 +89822,9 @@ type OpenMessengerConversationJSONRequestBody = MessengerOpenRequest
 
 // SendMessengerMessageJSONRequestBody defines body for SendMessengerMessage for application/json ContentType.
 type SendMessengerMessageJSONRequestBody = MessengerSendRequest
+
+// DraftMessengerOutcomeJSONRequestBody defines body for DraftMessengerOutcome for application/json ContentType.
+type DraftMessengerOutcomeJSONRequestBody = MessengerOutcomeDraftRequest
 
 // RaiseNoticeJSONRequestBody defines body for RaiseNotice for application/json ContentType.
 type RaiseNoticeJSONRequestBody = RaiseNoticeRequest
@@ -90644,6 +90696,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "meeting_intent")
 	}
 
+	if raw, found := object["meeting_notes"]; found {
+		err = json.Unmarshal(raw, &a.MeetingNotes)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_notes': %w", err)
+		}
+		delete(object, "meeting_notes")
+	}
+
 	if raw, found := object["meeting_notes_connection"]; found {
 		err = json.Unmarshal(raw, &a.MeetingNotesConnection)
 		if err != nil {
@@ -91195,6 +91255,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
+		}
+	}
+
+	if a.MeetingNotes != nil {
+		object["meeting_notes"], err = json.Marshal(a.MeetingNotes)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_notes': %w", err)
 		}
 	}
 
@@ -101609,6 +101676,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "meeting_intent")
 	}
 
+	if raw, found := object["meeting_notes"]; found {
+		err = json.Unmarshal(raw, &a.MeetingNotes)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_notes': %w", err)
+		}
+		delete(object, "meeting_notes")
+	}
+
 	if raw, found := object["meeting_status"]; found {
 		err = json.Unmarshal(raw, &a.MeetingStatus)
 		if err != nil {
@@ -101758,6 +101833,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
+		}
+	}
+
+	if a.MeetingNotes != nil {
+		object["meeting_notes"], err = json.Marshal(a.MeetingNotes)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_notes': %w", err)
 		}
 	}
 
@@ -106612,6 +106694,15 @@ type ServerInterface interface {
 	// Connect your own Dispact personal token to the configured workspace.
 	// (POST /messenger/dispact/credential)
 	ConnectDispactParticipant(w http.ResponseWriter, r *http.Request)
+	// The workspace team-messaging service and any conflicting legacy services.
+	// (GET /messenger/service)
+	GetMessengerService(w http.ResponseWriter, r *http.Request)
+	// Select one team-messaging service and withdraw other shared and personal connections.
+	// (PUT /messenger/service)
+	SelectMessengerService(w http.ResponseWriter, r *http.Request)
+	// Disconnect a team-messaging service and all its personal accounts before switching.
+	// (DELETE /messenger/service/{provider})
+	DisconnectMessengerService(w http.ResponseWriter, r *http.Request, provider MessengerProvider)
 	// Complete participant consent using signed state and the initiating browser's nonce.
 	// (GET /messenger/{provider}/callback)
 	MessengerOAuthCallback(w http.ResponseWriter, r *http.Request, provider MessengerProvider, params MessengerOAuthCallbackParams)
@@ -106648,6 +106739,9 @@ type ServerInterface interface {
 	// Send once under the participant’s reviewed audience.
 	// (POST /messenger/{provider}/{record_type}/{id}/messages)
 	SendMessengerMessage(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id)
+	// Draft an editable outcome from explicitly selected native messages without filing private content.
+	// (POST /messenger/{provider}/{record_type}/{id}/outcome-draft)
+	DraftMessengerOutcome(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id)
 	// Resolve the owner and assigned record team to this participant's provider directory.
 	// (GET /messenger/{provider}/{record_type}/{id}/team)
 	GetMessengerTeam(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id)
@@ -112690,6 +112784,24 @@ func (_ Unimplemented) ConnectDispactParticipant(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The workspace team-messaging service and any conflicting legacy services.
+// (GET /messenger/service)
+func (_ Unimplemented) GetMessengerService(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Select one team-messaging service and withdraw other shared and personal connections.
+// (PUT /messenger/service)
+func (_ Unimplemented) SelectMessengerService(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disconnect a team-messaging service and all its personal accounts before switching.
+// (DELETE /messenger/service/{provider})
+func (_ Unimplemented) DisconnectMessengerService(w http.ResponseWriter, r *http.Request, provider MessengerProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Complete participant consent using signed state and the initiating browser's nonce.
 // (GET /messenger/{provider}/callback)
 func (_ Unimplemented) MessengerOAuthCallback(w http.ResponseWriter, r *http.Request, provider MessengerProvider, params MessengerOAuthCallbackParams) {
@@ -112759,6 +112871,12 @@ func (_ Unimplemented) GetMessengerMessages(w http.ResponseWriter, r *http.Reque
 // Send once under the participant’s reviewed audience.
 // (POST /messenger/{provider}/{record_type}/{id}/messages)
 func (_ Unimplemented) SendMessengerMessage(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Draft an editable outcome from explicitly selected native messages without filing private content.
+// (POST /messenger/{provider}/{record_type}/{id}/outcome-draft)
+func (_ Unimplemented) DraftMessengerOutcome(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -151055,6 +151173,78 @@ func (siw *ServerInterfaceWrapper) ConnectDispactParticipant(w http.ResponseWrit
 	handler.ServeHTTP(w, r)
 }
 
+// GetMessengerService operation middleware
+func (siw *ServerInterfaceWrapper) GetMessengerService(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMessengerService(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SelectMessengerService operation middleware
+func (siw *ServerInterfaceWrapper) SelectMessengerService(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SelectMessengerService(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectMessengerService operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectMessengerService(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectMessengerService(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // MessengerOAuthCallback operation middleware
 func (siw *ServerInterfaceWrapper) MessengerOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
@@ -151704,6 +151894,56 @@ func (siw *ServerInterfaceWrapper) SendMessengerMessage(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SendMessengerMessage(w, r, provider, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DraftMessengerOutcome operation middleware
+func (siw *ServerInterfaceWrapper) DraftMessengerOutcome(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DraftMessengerOutcome(w, r, provider, recordType, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -170407,6 +170647,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/messenger/dispact/credential", wrapper.ConnectDispactParticipant)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/messenger/service", wrapper.GetMessengerService)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/messenger/service", wrapper.SelectMessengerService)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/messenger/service/{provider}", wrapper.DisconnectMessengerService)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/messenger/{provider}/callback", wrapper.MessengerOAuthCallback)
 	})
 	r.Group(func(r chi.Router) {
@@ -170441,6 +170690,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/messenger/{provider}/{record_type}/{id}/messages", wrapper.SendMessengerMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/messenger/{provider}/{record_type}/{id}/outcome-draft", wrapper.DraftMessengerOutcome)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/messenger/{provider}/{record_type}/{id}/team", wrapper.GetMessengerTeam)

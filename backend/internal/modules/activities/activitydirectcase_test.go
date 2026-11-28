@@ -11,13 +11,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The direct case keeps every projection column as declared, bar three it gates
-// per query and the two import facts, which render per caller. Body and raw sit behind the content decision. The reply channel
-// sits behind the caller's audience on the source it reads.
-func TestDirectCaseGatesOnlyBodyRawAndTheReplyChannelSource(t *testing.T) {
+// Body, raw and meeting notes share the supplied content decision.
+// The reply channel uses the audience of its source.
+func TestDirectCaseGatesContentAndTheReplyChannelSource(t *testing.T) {
 	const opaqueDecision = "coalesce(a.audience = 'workspace', false)"
 	for _, decision := range []string{"TRUE", "FALSE", "NULL::boolean", opaqueDecision} {
 		t.Run(decision, func(t *testing.T) {
@@ -47,6 +47,9 @@ func TestDirectCaseGatesOnlyBodyRawAndTheReplyChannelSource(t *testing.T) {
 			for i, column := range activityProjection {
 				want := column.sql
 				switch {
+				case column.sql == meetingoutcome.ReadNotesSQL("a"):
+					want = "CASE WHEN (" + decision + ") THEN (" + column.sql + ") END AS meeting_notes"
+					gated++
 				case column.sql == "a.body" || column.sql == "a.raw":
 					want = "CASE WHEN (" + decision + ") THEN " + column.sql + " END AS " + strings.TrimPrefix(column.sql, "a.")
 					gated++
@@ -64,11 +67,11 @@ func TestDirectCaseGatesOnlyBodyRawAndTheReplyChannelSource(t *testing.T) {
 					t.Errorf("column %d = %q, want %q", i, columns[i], want)
 				}
 			}
-			if gated != 3 {
-				t.Fatalf("gated %d columns, want body, raw and the reply channel only", gated)
+			if gated != 4 {
+				t.Fatalf("gated %d columns, want body, raw, meeting notes and the reply channel", gated)
 			}
-			if decision == opaqueDecision && strings.Count(projection, decision) != 3 {
-				t.Fatal("supplied decision was not reused for both values and the final boolean")
+			if decision == opaqueDecision && strings.Count(projection, decision) != 4 {
+				t.Fatal("supplied decision was not reused for every content value and the final boolean")
 			}
 			if calls != 0 {
 				t.Fatal("rendering a supplied decision registered new audience arguments")

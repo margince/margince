@@ -6,7 +6,6 @@ package activities
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -15,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -136,26 +136,40 @@ func (s *Store) ReadyForRecap(ctx context.Context, id ids.ActivityID, asOf time.
 	if err != nil || len(rows) == 0 {
 		return false, err
 	}
-	meeting := rows[0]
+	var ready bool
+	err = database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+		var err error
+		ready, err = meetingReadyForRecapTx(ctx, tx, rows[0])
+		return err
+	})
+	return ready, err
+}
+
+// meetingReadyForRecapTx is shared by event admission and the recap worker.
+// Provider descriptions alone are not rep notes; old body edits need their audit proof.
+func meetingReadyForRecapTx(ctx context.Context, tx pgx.Tx, meeting crmcontracts.Activity) (bool, error) {
 	if meeting.SourceSystem != nil && provenance.ImporterNamespace(*meeting.SourceSystem) {
 		return false, nil
 	}
-	if !meetingReadyForRecap(meeting) {
+	if meeting.Kind != crmcontracts.ActivityKindMeeting || meeting.MeetingStatus == nil || *meeting.MeetingStatus != crmcontracts.ActivityMeetingStatusHeld {
 		return false, nil
 	}
-	capturedBody := meeting.CapturedBy != nil && strings.HasPrefix(*meeting.CapturedBy, "connector:")
-	if !capturedBody && (meeting.CapturedBy != nil || meeting.SourceSystem == nil) {
+	if meeting.MeetingNotes != nil {
+		return values.HasVisibleText(*meeting.MeetingNotes), nil
+	}
+	if !values.HasVisibleText(deref(meeting.Body)) {
+		return false, nil
+	}
+	if meetingoutcome.LegacyManualNotes(meeting.SourceSystem, meeting.InvitationStatus != nil, meeting.CapturedBy) {
 		return true, nil
 	}
 	var notes bool
-	err = database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM audit_log edit
- WHERE edit.entity_type='activity' AND edit.entity_id=@id AND `+meetingBodyAuthoredSQL+`)`, pgx.NamedArgs{"id": id}).Scan(&notes)
-	})
+	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM audit_log edit
+ WHERE edit.entity_type='activity' AND edit.entity_id=@id AND `+meetingBodyAuthoredSQL+`)`, pgx.NamedArgs{"id": ids.UUID(meeting.Id)}).Scan(&notes)
 	return notes, err
 }
 
 func meetingReadyForRecap(meeting crmcontracts.Activity) bool {
 	return meeting.Kind == crmcontracts.ActivityKindMeeting && meeting.MeetingStatus != nil &&
-		*meeting.MeetingStatus == crmcontracts.ActivityMeetingStatusHeld && meeting.Body != nil && values.HasVisibleText(*meeting.Body)
+		*meeting.MeetingStatus == crmcontracts.ActivityMeetingStatusHeld && values.HasVisibleText(meetingNotesText(meeting))
 }

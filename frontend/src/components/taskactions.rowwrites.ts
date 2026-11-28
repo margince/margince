@@ -111,6 +111,7 @@ export type MeetingOutcomeWrite = {
   // Each sent only when given, so an answer alone never touches the notes.
   subject?: string;
   body?: string | null;
+  meeting_notes?: string | null;
   // A model polished the notes this write carries.
   aiAssisted?: boolean;
   start?: Readonly<{
@@ -141,6 +142,9 @@ export async function writeMeetingOutcome(
         ...(input.dealFiling ? { deal_filing: input.dealFiling } : {}),
         ...(input.subject === undefined ? {} : { subject: input.subject }),
         ...(input.body === undefined ? {} : { body: input.body }),
+        ...(input.meeting_notes === undefined
+          ? {}
+          : { meeting_notes: input.meeting_notes }),
         ...(input.aiAssisted ? { ai_assisted: true } : {}),
         ...input.start,
         ...input.custom,
@@ -166,7 +170,7 @@ export async function writeMeetingNotes(
   input: Readonly<{
     id: string;
     version: number | undefined;
-    body: string | null;
+    meeting_notes: string | null;
   }>,
   t: ReturnType<typeof useT>,
 ): Promise<components["schemas"]["Activity"]> {
@@ -176,7 +180,7 @@ export async function writeMeetingNotes(
         path: { id: input.id },
         ...ifMatch(requireVersion(input.version)),
       },
-      body: { body: input.body },
+      body: { meeting_notes: input.meeting_notes ?? "" },
     }),
     t,
   );

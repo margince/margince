@@ -25,8 +25,8 @@ type TeamsBotCheck struct {
 // NeedsAddress reports whether installation consent requires a provider base address.
 func (TeamsBotCheck) NeedsAddress() bool { return false }
 
-// FixedIdentity requires reconnects to preserve the established installation identity.
-func (TeamsBotCheck) FixedIdentity() bool { return true }
+// FixedIdentity allows more teams while Confirm keeps the application and tenant pinned.
+func (TeamsBotCheck) FixedIdentity() bool { return false }
 
 // ValidateToken rejects unusable installation credential payloads before confirmation.
 func (TeamsBotCheck) ValidateToken(token string) error {

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -36,7 +37,6 @@ func (c LiveChats) openSlack(ctx context.Context, registry *capture.Registry) (*
 	if clock == nil {
 		clock = time.Now
 	}
-	var readerFailure error
 	bot, err := registry.LiveBotUsing(principal.WithActor(ctx, chatLinksPrincipal), chatlinks.ProviderSlack, func(ctx context.Context, raw []byte) ([]byte, error) {
 		credential, err := readSlackCredential(raw, app.ClientID)
 		if err != nil {
@@ -49,14 +49,6 @@ func (c LiveChats) openSlack(ctx context.Context, registry *capture.Registry) (*
 			return nil, err
 		}
 		credential.Credential = fresh
-		if credential.SlackReader != nil {
-			fresh, err := refreshSlackToken(ctx, *credential.SlackReader, flow.RefreshChannelReader, clock())
-			if err != nil {
-				readerFailure = slackReaderFailure(err)
-			} else {
-				credential.SlackReader = &fresh
-			}
-		}
 
 		return json.Marshal(credential)
 	})
@@ -67,16 +59,19 @@ func (c LiveChats) openSlack(ctx context.Context, registry *capture.Registry) (*
 	if err != nil || credential.Workspace != bot.TeamID {
 		return nil, chatwire.ErrTokenRejected
 	}
-	native := slack.NewBot(c.HTTP, credential.Credential.AccessToken, credential.Workspace, credential.Member).WithHistoryProfile(credential.SlackHistory, credential.Credential.AppID)
+	profile, err := c.HistoryProfile(ctx, chatlinks.ProviderSlack)
+	if err != nil {
+		return nil, err
+	}
+	native := slack.NewBot(c.HTTP, credential.Credential.AccessToken, credential.Workspace, credential.Member).WithHistoryProfile(profile, credential.Credential.AppID)
 	if _, err := native.Me(ctx); err != nil {
 		return nil, err
 	}
-	reader, failure := c.slackThreadReader(ctx, credential, readerFailure)
-	return native.WithThreadReader(reader, failure), nil
+	return native, nil
 }
 
-func (c LiveChats) openTeams(ctx context.Context, bot capture.LiveBot) (*teams.Bot, string, error) {
-	if c.App == nil {
+func (c LiveChats) openTeams(ctx context.Context, bot capture.LiveBot) (*teamChats, string, error) {
+	if c.App == nil || c.TeamThreads == nil {
 		return nil, "", messaging.ErrUnsupported
 	}
 	app, err := c.App(ctx, chatlinks.ProviderTeams)
@@ -87,29 +82,50 @@ func (c LiveChats) openTeams(ctx context.Context, bot capture.LiveBot) (*teams.B
 	if json.Unmarshal([]byte(bot.Token), &credential) != nil || credential.Credential.AppID != app.ClientID || credential.Workspace != app.Tenant || bot.TeamID != credential.Workspace+"/"+credential.Member {
 		return nil, "", chatwire.ErrTokenRejected
 	}
-	if c.TeamThreads == nil {
-		return nil, "", messaging.ErrUnsupported
+	selected := slices.Clone(credential.AllowedTeams)
+	if len(selected) == 0 {
+		selected = []string{credential.Member}
 	}
-	installation, err := c.TeamThreads.TeamInstallationByNative(principal.WithActor(ctx, chatLinksPrincipal), app.ClientID, credential.Workspace, credential.NativeTeam)
+	if len(selected) > 100 {
+		return nil, "", messaging.ErrInvalid
+	}
+	installations, err := c.TeamThreads.TeamInstallations(principal.WithActor(ctx, chatLinksPrincipal), app.ClientID, app.Tenant)
 	if err != nil {
 		return nil, "", err
 	}
-	if !installation.Installed || installation.Team != credential.Member || installation.BotMember != credential.BotMember {
-		return nil, "", chatwire.ErrNotMember
-	}
-	native, err := TeamsBot(ctx, c.HTTP, app, credential)
-	if err != nil {
-		return nil, "", err
-	}
-	if _, err := native.Me(ctx); err != nil {
-		return nil, "", err
-	}
-	if c.TeamThreads != nil {
-		native.WithThreadReferences(func(readCtx context.Context, channel, root string) (teams.ConversationReference, error) {
-			return c.TeamThreads.TeamThread(principal.WithActor(readCtx, chatLinksPrincipal), app.ClientID, credential.Workspace, channel, root)
+	router, err := c.approvedTeams(ctx, app, selected, installations)
+	return router, credential.Workspace, err
+}
+
+func (c LiveChats) approvedTeams(ctx context.Context, app capture.ConnectorApp, selected []string, installations []chatlinks.TeamInstallation) (*teamChats, error) {
+	router := &teamChats{bots: map[string]*teams.Bot{}}
+	for _, installation := range installations {
+		if !slices.Contains(selected, installation.Team) || !installation.Installed {
+			continue
+		}
+		credential := chatwire.BotCredential{Workspace: app.Tenant, Member: installation.Team, NativeTeam: installation.NativeTeam, BotMember: installation.BotMember, ServiceURL: installation.ServiceURL, Credential: messaging.Credential{AppID: app.ClientID}}
+		var bot *teams.Bot
+		var err error
+		if router.Bot == nil {
+			bot, err = TeamsBot(ctx, c.HTTP, app, credential)
+		} else {
+			bot, err = router.ForTeam(credential)
+		}
+		if err != nil {
+			return nil, err
+		}
+		bot.WithThreadReferences(func(readCtx context.Context, channel, root string) (teams.ConversationReference, error) {
+			return c.TeamThreads.TeamThread(principal.WithActor(readCtx, chatLinksPrincipal), app.ClientID, app.Tenant, channel, root)
 		})
+		if router.Bot == nil {
+			router.Bot = bot
+		}
+		router.bots[installation.Team] = bot
 	}
-	return native, credential.Workspace, nil
+	if router.Bot == nil {
+		return nil, chatwire.ErrNotMember
+	}
+	return router, nil
 }
 
 // TeamsBot opens distinct Graph-read and Bot Framework-delivery credentials.
@@ -150,7 +166,7 @@ func readSlackCredential(raw []byte, app string) (chatwire.BotCredential, error)
 
 // ConnectSlack stores the reviewed native installation through the channel owner.
 func ConnectSlack(ctx context.Context, profile *chatwire.HistoryProfile, granted slack.Authorization, signing string, connect func(context.Context, capture.ConnectRequest) (capture.ChannelConnection, error)) error {
-	raw, err := json.Marshal(chatwire.BotCredential{SlackReader: granted.Reader, SlackReaderMember: granted.ReaderMember, SlackHistory: profile, Workspace: granted.Workspace, Member: granted.Member, Credential: granted.Credential})
+	raw, err := json.Marshal(chatwire.BotCredential{SlackHistory: profile, Workspace: granted.Workspace, Member: granted.Member, Credential: granted.Credential})
 	if err != nil {
 		return err
 	}

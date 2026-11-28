@@ -30,11 +30,15 @@ const (
 	errorNotInChannel    = "not_in_channel"
 	grantTypeParam       = "grant_type"
 	redirectURIParam     = "redirect_uri"
+	publicReadScope      = "channels:read"
+	publicHistoryScope   = "channels:history"
+	historyMethod        = "conversations.history"
 	repliesMethod        = "conversations.replies"
 )
 
 // Client uses a participant's credential for personal Messenger operations.
 type Client struct {
+	history   *historyPacing
 	http      messaging.HTTP
 	workspace string
 	user      string
@@ -59,7 +63,7 @@ type envelope struct {
 func (c *Client) call(ctx context.Context, method, path string, body json.RawMessage) (json.RawMessage, error) {
 	raw, err := c.http.Call(ctx, method, "/"+path, body)
 	if err != nil {
-		return nil, err
+		return nil, c.pauseParticipantHistory(ctx, path, err)
 	}
 	var result envelope
 	if json.Unmarshal(raw, &result) != nil {
@@ -72,8 +76,12 @@ func (c *Client) call(ctx context.Context, method, path string, body json.RawMes
 		return raw, nil
 	}
 	switch result.Error {
-	case "invalid_auth", "not_authed", "token_revoked", "account_inactive", "missing_scope":
+	case "invalid_auth", "not_authed", "token_revoked", "account_inactive":
 		return nil, messaging.ErrUnauthorized
+	case "missing_scope":
+		return nil, messaging.ErrConsentRequired
+	case "no_permission", "restricted_action":
+		return nil, messaging.ErrForbidden
 	case errorChannelNotFound, "not_in_channel", "user_not_found", "users_not_found", "thread_not_found", "message_not_found":
 		return nil, &apiRefusal{code: result.Error}
 	case "internal_error", "fatal_error":
@@ -101,6 +109,7 @@ func (c *Client) Identity(ctx context.Context) (messaging.Identity, error) {
 }
 
 type user struct {
+	Handle      string `json:"name"`
 	ID          string `json:"id"`
 	Team        string `json:"team_id"`
 	Name        string `json:"real_name"`
@@ -110,11 +119,18 @@ type user struct {
 	SingleGuest bool   `json:"is_ultra_restricted"`
 	Stranger    bool   `json:"is_stranger"`
 	Profile     struct {
-		Email string `json:"email"`
+		Email       string `json:"email"`
+		DisplayName string `json:"display_name"`
 	} `json:"profile"`
 }
 
 func (c *Client) person(u user) messaging.Member {
+	if u.Name == "" {
+		u.Name = u.Profile.DisplayName
+	}
+	if u.Name == "" {
+		u.Name = u.Handle
+	}
 	return messaging.Member{ID: u.ID, Name: u.Name, Email: u.Profile.Email, Bot: u.Bot, Active: !u.Deleted, External: u.Team != c.workspace || u.Guest || u.SingleGuest || u.Stranger}
 }
 
@@ -163,7 +179,7 @@ func (c channel) conversation() messaging.Conversation {
 
 // Channels lists native rooms available to the current credential.
 func (c *Client) Channels(ctx context.Context, cursor string) ([]messaging.Conversation, string, error) {
-	raw, err := c.call(ctx, http.MethodGet, "conversations.list?"+url.Values{limitKey: {"100"}, cursorKey: {cursor}, "exclude_archived": {"true"}, "types": {"public_channel,private_channel"}}.Encode(), nil)
+	raw, err := c.call(ctx, http.MethodGet, "users.conversations?"+url.Values{limitKey: {"100"}, cursorKey: {cursor}, "exclude_archived": {"true"}, "types": {"public_channel,private_channel,mpim,im"}}.Encode(), nil)
 	if err != nil {
 		return nil, "", err
 	}
@@ -178,7 +194,7 @@ func (c *Client) Channels(ctx context.Context, cursor string) ([]messaging.Conve
 	}
 	out := []messaging.Conversation{}
 	for _, ch := range page.Channels {
-		if ch.Member && !ch.Archived {
+		if !ch.Archived {
 			out = append(out, ch.conversation())
 		}
 	}

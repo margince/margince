@@ -25,6 +25,7 @@ import {
   withCreator,
 } from "./provenanceof";
 import { TIMELINE_KIND_LABEL, type TimelineEntry } from "./timelineentry";
+import { MeetingNotesText } from "./timelinetext";
 import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
 import { TranscriptSummary } from "./transcriptsummary";
 
@@ -255,7 +256,11 @@ function transcriptSlots(
   activity: Activity,
 ): Pick<TimelineEntry, "detail" | "lead"> {
   if (!isTranscriptActivity(activity)) {
-    return {};
+    return activity.kind === "meeting" &&
+      activity.meeting_notes &&
+      activity.meeting_notes !== activity.body
+      ? { detail: <MeetingNotesText notes={activity.meeting_notes} /> }
+      : {};
   }
   return {
     detail: <TranscriptReadCard activityId={activity.id} />,

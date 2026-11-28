@@ -22,15 +22,17 @@ import (
 )
 
 type botMessage struct {
-	ID      string `json:"ts"`
-	Root    string `json:"thread_ts"`
-	Text    string `json:"text"`
-	User    string `json:"user"`
-	Bot     string `json:"bot_id"`
-	Subtype string `json:"subtype"`
-	Replies int    `json:"reply_count"`
-	Latest  string `json:"latest_reply"`
-	Edited  *struct {
+	Attachments []json.RawMessage `json:"attachments"`
+	ID          string            `json:"ts"`
+	Root        string            `json:"thread_ts"`
+	Text        string            `json:"text"`
+	User        string            `json:"user"`
+	Bot         string            `json:"bot_id"`
+	Subtype     string            `json:"subtype"`
+	Replies     int               `json:"reply_count"`
+	Blocks      []json.RawMessage `json:"blocks"`
+	Latest      string            `json:"latest_reply"`
+	Edited      *struct {
 		TS string `json:"ts"`
 	} `json:"edited"`
 	Files []struct {
@@ -51,22 +53,13 @@ func (b *Bot) readMessages(ctx context.Context, method string, fields url.Values
 	if err := b.waitHistory(ctx, method); err != nil {
 		return botMessagePage{}, err
 	}
-	if method == "conversations.history" {
+	if method == historyMethod {
 		fields.Set("limit", strconv.Itoa(b.history.profile.HistoryPageSize))
 	} else {
 		fields.Set("limit", strconv.Itoa(b.history.profile.RepliesPageSize))
 	}
-	reader := b.client
-	if method == repliesMethod {
-		if b.threadFailure != nil {
-			return botMessagePage{}, b.threadFailure
-		}
-		if b.threadReader == nil {
-			return botMessagePage{}, chatwire.ErrHistoryProfileNeedsReview
-		}
-		reader = b.threadReader
-	}
-	raw, err := reader.call(ctx, http.MethodGet, method+"?"+fields.Encode(), nil)
+
+	raw, err := b.client.call(ctx, http.MethodGet, method+"?"+fields.Encode(), nil)
 	if err != nil {
 		if method == "conversations.replies" {
 			return botMessagePage{}, b.pauseHistory(ctx, method, threadReadFailure(err))
@@ -90,7 +83,7 @@ func (b *Bot) Roots(ctx context.Context, id string, since time.Time, cursor stri
 	if !since.IsZero() {
 		fields.Set("oldest", fmt.Sprintf("%d.%06d", since.Unix(), since.Nanosecond()/1000))
 	}
-	page, err := b.readMessages(ctx, "conversations.history", fields)
+	page, err := b.readMessages(ctx, historyMethod, fields)
 	if err != nil {
 		return chatwire.RootPage{}, err
 	}
@@ -115,9 +108,6 @@ func (b *Bot) Roots(ctx context.Context, id string, since time.Time, cursor stri
 
 // Thread reads canonical thread state with explicit continuation and deletion evidence.
 func (b *Bot) Thread(ctx context.Context, id, root, cursor string) (chatwire.ThreadPage, error) {
-	if err := b.readableThreadChannel(ctx, id); err != nil {
-		return chatwire.ThreadPage{}, err
-	}
 	if err := b.readableChannel(ctx, id); err != nil {
 		return chatwire.ThreadPage{}, err
 	}
@@ -188,6 +178,15 @@ func (b *Bot) message(ctx context.Context, row botMessage, authors map[string]me
 		}
 		out.UserName, out.UserEmail = author.Name, author.Email
 	}
+	members := []messaging.Member{}
+	for _, author := range authors {
+		members = append(members, author)
+	}
+	text, _, err := slackMessageText(row.Text, row.Blocks, row.Attachments, members)
+	if err != nil {
+		return chatwire.Message{}, err
+	}
+	out.Text = text
 	for _, file := range row.Files {
 		out.Files = append(out.Files, chatwire.File{Name: file.Name, MimeType: file.Type})
 	}
@@ -205,7 +204,7 @@ func (b *Bot) History(ctx context.Context, id string, after int64, limit int) (c
 	fields := url.Values{"channel": {id}, "limit": {"100"}, "oldest": {fmt.Sprintf("%d.%06d", after/1000000, after%1000000)}}
 	out := chatwire.HistoryPage{Messages: []chatwire.Message{}}
 	for range 100 {
-		page, err := b.readMessages(ctx, "conversations.history", fields)
+		page, err := b.readMessages(ctx, historyMethod, fields)
 		if err != nil {
 			return chatwire.HistoryPage{}, err
 		}
@@ -245,31 +244,10 @@ func (b *Bot) readableChannel(ctx context.Context, id string) error {
 	return nil
 }
 
-func (b *Bot) readableThreadChannel(ctx context.Context, id string) error {
-	if b.threadFailure != nil {
-		return b.threadFailure
-	}
-	if b.threadReader == nil {
-		return chatwire.ErrHistoryProfileNeedsReview
-	}
-	raw, err := b.threadReader.call(ctx, http.MethodGet, "conversations.info?"+url.Values{"channel": {id}}.Encode(), nil)
-	if err != nil {
-		return threadReadFailure(err)
-	}
-	var response struct {
-		Channel channel `json:"channel"`
-	}
-	if json.Unmarshal(raw, &response) != nil || response.Channel.ID != id {
-		return chatwire.ErrUnreachable
-	}
-	room := response.Channel
-	if !room.Member || room.Archived || room.IM || room.MPIM {
-		return chatwire.ErrHistoryProfileNeedsReview
-	}
-	return nil
-}
-
 func threadReadFailure(err error) error {
+	if errors.Is(err, messaging.ErrConsentRequired) {
+		return errors.Join(chatwire.ErrHistoryProfileNeedsReview, err)
+	}
 	var refusal *apiRefusal
 	if errors.Is(err, messaging.ErrUnauthorized) || errors.Is(err, messaging.ErrNotFound) || errors.As(err, &refusal) && (refusal.code == errorChannelNotFound || refusal.code == "not_in_channel") {
 		return errors.Join(chatwire.ErrHistoryProfileNeedsReview, err)

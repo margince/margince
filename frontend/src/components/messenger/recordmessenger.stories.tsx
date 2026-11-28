@@ -9,8 +9,10 @@ const meta = {
   title: "Records/Team chat/Messenger",
   component: RecordMessenger,
   decorators: [
-    (Story) => (
-      <MessengerStory>
+    (Story, context) => (
+      <MessengerStory
+        provider={context.name === "Account Consent" ? "dispact" : "slack"}
+      >
         <Story />
       </MessengerStory>
     ),
@@ -44,12 +46,6 @@ export const PrivateTeamConversation: Story = {
     await userEvent.click(
       within(canvasElement).getByRole("button", { name: "Messenger" }),
     );
-    await userEvent.click(
-      await page.findByRole("combobox", {
-        name: englishCopy["messenger.provider"],
-      }),
-    );
-    await userEvent.click(await page.findByRole("option", { name: "Slack" }));
     await userEvent.click(
       await page.findByRole("button", {
         name: englishCopy["messenger.messageTeam"],

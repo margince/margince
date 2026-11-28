@@ -15,6 +15,12 @@ import (
 
 // HistoryProfile records the installation limits used to judge catch-up support.
 func (c LiveChats) HistoryProfile(ctx context.Context, provider string) (*chatwire.HistoryProfile, error) {
+	if provider == "slack" && c.Profiles != nil {
+		profile, err := c.Profiles(principal.WithActor(ctx, chatLinksPrincipal), provider)
+		if err != nil || profile != nil {
+			return profile, err
+		}
+	}
 	if provider != "slack" || c.Vault == nil || c.Vault() == nil {
 		return nil, nil //nolint:nilnil // History profiles are optional outside a connected Slack installation.
 	}

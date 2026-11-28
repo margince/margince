@@ -103,6 +103,7 @@ var updatedFieldWrites = map[string][]string{
 	"handling_automation_id":        {"handling_automation_id"},
 	"host_user_id":                  {participantRows},
 	"is_done":                       {"is_done"},
+	"meeting_notes":                 {"meeting_notes"},
 	"meeting_recap_became_ready":    {},
 	"meeting_status":                {colMeetingStatus},
 	"meeting_status_cleared":        {colMeetingStatus},

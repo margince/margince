@@ -9,6 +9,7 @@ import {
   useMessengerIdentity,
   useMessengerSetup,
 } from "../../components/messenger/messenger.queries";
+import { useMessengerService } from "../../components/messenger/messenger.service";
 import { Disclosure } from "../../design-system/atoms";
 import { CopyAction } from "../../design-system/clipboardcopy";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -19,18 +20,32 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useViewerId } from "../../lib/session";
 import { ChannelInstallations } from "./channelinstallations";
+import { MessagingServiceSwitch } from "./messagingserviceswitch";
 import { OAuthProviderRow } from "./oauth-apps-card";
 
 export function MessagingProvidersPanel() {
   const t = useT();
   const canManage = useCanWrite("capture_settings", "update");
   const reason = useId();
+  const service = useMessengerService();
+  const selected =
+    service.data?.active_provider ?? service.data?.providers?.[0];
+  if (!selected)
+    return (
+      <>
+        <MessagingServiceSwitch />
+        <p>{t("messenger.chooseService")}</p>
+      </>
+    );
   return (
     <>
+      <MessagingServiceSwitch />
       <Panel title={t("messenger.myAccounts")}>
         <PanelBody>
           <ProviderList>
-            {MESSENGER_PROVIDERS.map((provider) => (
+            {MESSENGER_PROVIDERS.filter(
+              (provider) => !selected || selected === provider.value,
+            ).map((provider) => (
               <ParticipantRow
                 key={provider.value}
                 provider={provider.value}
@@ -45,14 +60,18 @@ export function MessagingProvidersPanel() {
         <PanelBody>
           {!canManage && <p id={reason}>{t("oauthApp.noWriteReason")}</p>}
           <ProviderList>
-            <OAuthProviderRow
-              provider="slack"
-              refusedBy={canManage ? undefined : reason}
-            />
-            <OAuthProviderRow
-              provider="microsoft"
-              refusedBy={canManage ? undefined : reason}
-            />
+            {(!selected || selected === "slack") && (
+              <OAuthProviderRow
+                provider="slack"
+                refusedBy={canManage ? undefined : reason}
+              />
+            )}
+            {(!selected || selected === "teams") && (
+              <OAuthProviderRow
+                provider="microsoft"
+                refusedBy={canManage ? undefined : reason}
+              />
+            )}
           </ProviderList>
         </PanelBody>
       </Panel>

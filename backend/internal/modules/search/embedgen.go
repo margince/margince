@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 )
 
 // EmbedGen keeps the vector store current: it consumes entity events
@@ -67,7 +68,7 @@ var embedText = map[string]string{
 	// the ROWS it returns, not the fact that a phrase from a colleague's legal
 	// mail is what pulled them back. A limited activity is therefore not indexed
 	// at all, and audiencerescope drops the vector when a row narrows.
-	entityActivity: `SELECT concat_ws(' ', a.subject, a.body) FROM activity a WHERE a.id = $1 AND a.archived_at IS NULL AND ` + activityIndexable("a"),
+	entityActivity: `SELECT concat_ws(' ', a.subject, a.body, nullif((` + meetingoutcome.ReadNotesSQL("a") + `),a.body)) FROM activity a WHERE a.id = $1 AND a.archived_at IS NULL AND ` + activityIndexable("a"),
 	entityProject:  `SELECT concat_ws(' ', name, key, description) FROM project WHERE id = $1 AND archived_at IS NULL`,
 	// NO product or offer_template ENTRY, and adding one back needs a schema
 	// change first, not just a line here. `embedding.entity_type` carries a

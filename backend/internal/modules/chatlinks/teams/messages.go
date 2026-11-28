@@ -17,14 +17,23 @@ import (
 
 //nolint:tagliatelle // Microsoft's provider protocol fixes these JSON field names.
 type message struct {
-	WebURL   string     `json:"webUrl"`
-	ID       string     `json:"id"`
-	Modified time.Time  `json:"lastModifiedDateTime"`
-	Root     string     `json:"replyToId"`
-	At       time.Time  `json:"createdDateTime"`
-	Edited   *time.Time `json:"lastEditedDateTime"`
-	Deleted  *time.Time `json:"deletedDateTime"`
-	From     struct {
+	Attachments []struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Type    string `json:"contentType"`
+		Content string `json:"content"`
+		URL     string `json:"contentUrl"`
+	} `json:"attachments"`
+	Replies     []json.RawMessage `json:"replies"`
+	RepliesNext string            `json:"replies@odata.nextLink"`
+	WebURL      string            `json:"webUrl"`
+	ID          string            `json:"id"`
+	Modified    time.Time         `json:"lastModifiedDateTime"`
+	Root        string            `json:"replyToId"`
+	At          time.Time         `json:"createdDateTime"`
+	Edited      *time.Time        `json:"lastEditedDateTime"`
+	Deleted     *time.Time        `json:"deletedDateTime"`
+	From        struct {
 		User struct {
 			ID   string `json:"id"`
 			Name string `json:"displayName"`
@@ -52,13 +61,31 @@ func (m message) normalized() (messaging.Message, error) {
 			return messaging.Message{}, messaging.ErrUnavailable
 		}
 	}
+	incomplete := false
+	var visible strings.Builder
+	visible.WriteString(text)
+	for _, attachment := range m.Attachments {
+		name := attachment.Name
+		if name == "" {
+			name = "Message attachment"
+		}
+		if attachment.Content != "" && (attachment.Type == "application/vnd.microsoft.card.adaptive" || attachment.Type == "application/vnd.microsoft.card.hero" || attachment.Type == "application/vnd.microsoft.card.thumbnail") {
+			card, complete := messaging.RichContent(json.RawMessage(attachment.Content))
+			visible.WriteString("\n" + card)
+			incomplete = incomplete || !complete
+		} else {
+			visible.WriteString("\n[" + name + ": content not read]")
+			incomplete = true
+		}
+	}
+	text = visible.String()
 	if m.Deleted != nil {
 		text = ""
 	}
 	if m.ID == "" {
 		return messaging.Message{}, messaging.ErrUnavailable
 	}
-	return messaging.Message{SourceURL: m.WebURL, ID: m.ID, Root: m.Root, Author: author, Text: text, At: m.At, Edited: m.Edited != nil, Deleted: m.Deleted != nil}, nil
+	return messaging.Message{ReplyCount: len(m.Replies), ContentIncomplete: incomplete, SourceURL: m.WebURL, ID: m.ID, Root: m.Root, Author: author, Text: text, At: m.At, Edited: m.Edited != nil, Deleted: m.Deleted != nil}, nil
 }
 
 func messagePath(conversation, root string) (string, error) {
@@ -84,6 +111,9 @@ func (c *Client) Messages(ctx context.Context, conversation, root, cursor string
 		return messaging.Page{}, err
 	}
 	path, err = graphPagePath(path, cursor)
+	if err == nil && root == "" && cursor == "" && strings.HasPrefix(path, "/teams/") {
+		path += "&$expand=replies"
+	}
 	if err != nil {
 		return messaging.Page{}, err
 	}

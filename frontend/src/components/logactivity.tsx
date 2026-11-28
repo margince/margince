@@ -83,6 +83,7 @@ export function LogActivityForm({
   taskToComplete,
   inheritSourceLinks = false,
   onLoggedOnly,
+  initialDraft,
 }: Readonly<{
   entityType?: EntityKind;
   entityId?: string;
@@ -93,6 +94,8 @@ export function LogActivityForm({
   // Opened as Add task: no other kind is offered, so no date stops at today.
   onlyTasks?: boolean;
   onlyNotes?: boolean;
+  initialDraft?: Readonly<{ subject: string; body: string }>;
+
   sourceActivityId?: string;
   taskToComplete?: Readonly<{ id: string; version?: number }>;
   inheritSourceLinks?: boolean;
@@ -109,9 +112,10 @@ export function LogActivityForm({
   const queryClient = useQueryClient();
   const recordZone = useViewerZone();
   const reportUnattached = useReportUnattached();
-  const [draft, setDraft] = useState<ActivityDraft>(() =>
-    freshDraft(recordZone, askedKind),
-  );
+  const [draft, setDraft] = useState<ActivityDraft>(() => ({
+    ...freshDraft(recordZone, askedKind),
+    ...initialDraft,
+  }));
   // Follow a changed request before paint, preserving the words already entered.
   const [lastAsked, setLastAsked] = useState(askedKind);
   if (askedKind !== lastAsked) {
