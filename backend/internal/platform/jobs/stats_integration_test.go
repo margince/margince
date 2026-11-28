@@ -468,7 +468,7 @@ func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
 // nothing (embed_drift_sweep) is counted as one pass. It is a real declared
 // kind and not a made-up one, because the dispatcher exclusion is derived from
 // the contract.
-func TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace(t *testing.T) {
+func TestSweepCountsAStandaloneFleetPassByKind(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 

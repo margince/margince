@@ -394,7 +394,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
 | `jobcensus_test.go` | H3 | Every job kind api/jobs.yaml declares is wired in internal/compose, and every wired kind is declared. |
 | `jobregistration_test.go` | H2 | The unexported marker can be implemented only in compose, including its tests. |
-| `jobrole_test.go` | H2 | Every River job declares its kind in api/jobs.yaml, and a job answers for the whole installation: it names no workspace and has no WorkspaceID method. |
+| `jobrole_test.go` | H2 | Every River job declares its kind in api/jobs.yaml, and a job names no workspace and has no WorkspaceID method. |
 | `laneinputscope_test.go` | H3 | A path-filtered lane runs on a change to the scripts it executes. |
 | `langcopylanguagetables_test.go` | H2 | Every copy table keyed by language is read by a test that holds it to the style pages. |
 | `languagecolumns_test.go` | H2 | Every language or locale column has a foreign key to the language table or the locale shape check. |
@@ -602,7 +602,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `gitcontent_test.go` | H3 | What belongs to the repository, as against what happens to be in a working tree. |
 | `gitfixtureisolation_test.go` | H1 | Every test that builds a git repository keeps the caller's git config out of it. |
 | `jobfault_test.go` | H2 | Every River worker returns through jobs.Fault. |
-| `jobfleetwide_test.go` | H2 | A FleetWide declaration is a promise: this job enumerates and enqueues, and does no tenant write of its own (jobs.FleetWide). |
+| `jobfleetwide_test.go` | H2 | A FleetWide declaration is a promise: this job enumerates and enqueues, or runs one pass over the installation, and writes no tenant row inline (jobs.FleetWide). |
 | `jobnoworkspacearg_test.go` | H2 | An installation holds one company, so no job names a workspace. |
 | `listenvelope_test.go` | H2 | The contract's list envelope has one shape, and httperr.withEmptyLists relies on it. |
 | `manifestdigest_test.go` | H2 | Every hash a generated unit manifest publishes says which algorithm produced it. |
