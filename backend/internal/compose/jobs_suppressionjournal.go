@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -85,7 +86,7 @@ func (w *suppressionJournalWorker) exportWorkspace(ctx context.Context, workspac
 	// The system principal, bound here rather than inherited: a queue carries
 	// no actor, and ExportSuppressions is gated on the contact delete grant.
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), suppressionJournalActor)
-	eraser := privacy.NewEraser(InstallationDB(w.pool)).WithCountry(identity.CountryForDecision).WithJournalStore(w.blob).WithExtensions(ExtensionData())
+	eraser := privacy.NewEraser(database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace))).WithCountry(identity.CountryForDecision).WithJournalStore(w.blob).WithExtensions(ExtensionData())
 	written, err := eraser.ExportSuppressions(ctx)
 	if err != nil {
 		return err

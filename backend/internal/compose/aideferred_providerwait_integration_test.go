@@ -148,7 +148,7 @@ func TestVoiceBuildsSplitTheBudgetWaitFromTheProviderWait(t *testing.T) {
 			worker := newVoiceBuildWorker(env.e.Pool, brainFunc(func(context.Context, model.Request) (model.Response, error) {
 				return model.Response{}, c.cause
 			}), slog.New(slog.DiscardHandler))
-			if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+			if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 				t.Fatal(err)
 			}
 			budget, provider := deferredLine(t, env.e, "voice_build")

@@ -105,7 +105,7 @@ func setupVatRecheck(t *testing.T) *vatRecheckEnv {
 
 func (v *vatRecheckEnv) work(t *testing.T, requested bool) {
 	t.Helper()
-	err := v.worker.Work(context.Background(), &river.Job[CheckCompanyVatArgs]{
+	err := v.worker.Work(boundBackground(t), &river.Job[CheckCompanyVatArgs]{
 		Args: CheckCompanyVatArgs{
 			CompanyID: v.companyID.UUID,
 			Requested: requested,
@@ -354,7 +354,7 @@ func TestAThrottledRegisterReschedulesRatherThanAskingAgain(t *testing.T) {
 		return time.Date(2026, 8, 31, 9, 0, 0, 0, time.UTC)
 	})
 
-	err := v.worker.Work(context.Background(), &river.Job[CheckCompanyVatArgs]{
+	err := v.worker.Work(boundBackground(t), &river.Job[CheckCompanyVatArgs]{
 		Args: CheckCompanyVatArgs{CompanyID: v.companyID.UUID, Requested: true},
 	})
 
@@ -386,7 +386,7 @@ func TestAConsultationThatFailedRecordsNothingAndDoesNotRetryInLine(t *testing.T
 		return time.Date(2026, 8, 31, 9, 0, 0, 0, time.UTC)
 	})
 
-	err := v.worker.Work(context.Background(), &river.Job[CheckCompanyVatArgs]{
+	err := v.worker.Work(boundBackground(t), &river.Job[CheckCompanyVatArgs]{
 		Args: CheckCompanyVatArgs{CompanyID: v.companyID.UUID, Requested: true},
 	})
 	if err == nil {

@@ -107,7 +107,7 @@ func TestALookupWithNoEnricherConfiguredRecordsWhatItCouldNotRead(t *testing.T) 
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	worker := &technicalEnrichWorker{pool: e.Pool, enricher: nil}
 
-	err := worker.Work(context.Background(), &river.Job[TechnicalEnrichCompanyArgs]{
+	err := worker.Work(boundBackground(t), &river.Job[TechnicalEnrichCompanyArgs]{
 		JobRow: &rivertype.JobRow{},
 		Args:   TechnicalEnrichCompanyArgs{CompanyID: company},
 	})

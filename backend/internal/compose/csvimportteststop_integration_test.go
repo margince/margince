@@ -96,7 +96,7 @@ func TestARefusedTestRunReturnsToDraftWithItsReason(t *testing.T) {
 		t.Fatalf("losing the stored file: %v", err)
 	}
 
-	if err := validateWorkerFor(e, h).Work(context.Background(), &river.Job[ImportValidateArgs]{Args: args}); err != nil {
+	if err := validateWorkerFor(e, h).Work(boundBackground(t), &river.Job[ImportValidateArgs]{Args: args}); err != nil {
 		t.Fatalf("the test run answered %v, want nil once its run says why it stopped", err)
 	}
 	run, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), args.RunID)

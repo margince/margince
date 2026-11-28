@@ -6,7 +6,6 @@
 package compose
 
 import (
-	"context"
 	"fmt"
 	"slices"
 	"testing"
@@ -62,7 +61,7 @@ func testedRun(t *testing.T, e *integration.Env, handler importHandlers, profile
 		t.Fatal(err)
 	}
 	args := ImportValidateArgs{RunID: run.ID, Attempt: run.JobAttempt}
-	if err := validateWorkerFor(e, handler).Work(context.Background(), &river.Job[ImportValidateArgs]{Args: args}); err != nil {
+	if err := validateWorkerFor(e, handler).Work(boundBackground(t), &river.Job[ImportValidateArgs]{Args: args}); err != nil {
 		t.Fatal(err)
 	}
 	if run, err = runs.GetStaged(ctx, run.ID); err != nil {
@@ -140,7 +139,7 @@ func TestImportApprovalReleasesTheDisplayedRowsThroughTheQueuedWriter(t *testing
 	}
 	args := ImportCommitArgs{RunID: run.ID, Attempt: approved.JobAttempt}
 	worker := commitWorkerFor(e, handler)
-	if err := worker.Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
 		t.Fatal(err)
 	}
 	finished, err := migration.NewRunStore(e.DB()).GetStaged(ctx, run.ID)
@@ -150,7 +149,7 @@ func TestImportApprovalReleasesTheDisplayedRowsThroughTheQueuedWriter(t *testing
 	if !finished.SourceReleased || finished.Report.ReviewPlan != nil {
 		t.Fatal("completed import retained source cells in its review plan")
 	}
-	if err := worker.Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
 		t.Fatalf("completed delivery was not idempotent: %v", err)
 	}
 }
@@ -173,7 +172,7 @@ func approvedAsShown(t *testing.T, e *integration.Env, handler importHandlers, r
 		t.Fatalf("the approval shows %v, want %v", shown, want)
 	}
 	commit := ImportCommitArgs{RunID: run.ID, Attempt: approvedThroughDecision(t, e, service, id, hash, run).JobAttempt}
-	if err := commitWorkerFor(e, handler).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: commit}); err != nil {
+	if err := commitWorkerFor(e, handler).Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: commit}); err != nil {
 		t.Fatal(err)
 	}
 	finished, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), run.ID)

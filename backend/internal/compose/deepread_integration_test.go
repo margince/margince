@@ -332,7 +332,7 @@ func TestDeepReadBudgetDeferralSnoozesTheDurableJob(t *testing.T) {
 	worker.now = func() time.Time { return now }
 	read, args := startDeepRead(t, e, company)
 
-	err := worker.Work(context.Background(), &river.Job[SiteDeepReadArgs]{Args: args})
+	err := worker.Work(boundBackground(t), &river.Job[SiteDeepReadArgs]{Args: args})
 	var snooze *river.JobSnoozeError
 	if !errors.As(err, &snooze) || snooze.Duration != next.Sub(now) {
 		t.Fatalf("Work error = %v, want snooze for %s", err, next.Sub(now))
@@ -354,7 +354,7 @@ func TestDeepReadProviderOutageSnoozesUntilTheProbe(t *testing.T) {
 	worker.now = func() time.Time { return now }
 	read, args := startDeepRead(t, e, company)
 
-	err := worker.Work(context.Background(), &river.Job[SiteDeepReadArgs]{Args: args})
+	err := worker.Work(boundBackground(t), &river.Job[SiteDeepReadArgs]{Args: args})
 	var snooze *river.JobSnoozeError
 	if !errors.As(err, &snooze) || snooze.Duration != probe.Sub(now) {
 		t.Fatalf("Work error = %v, want snooze for %s, not a failed attempt", err, probe.Sub(now))

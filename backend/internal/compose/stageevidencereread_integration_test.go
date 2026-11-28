@@ -69,7 +69,7 @@ func (f *rereadFixture) read(args StageEvidenceReadArgs) {
 	f.t.Helper()
 	f.lane.about = args.ActivityID
 	worker := newStageEvidenceReadWorker(f.Pool, f.lane, slog.New(slog.DiscardHandler))
-	if err := worker.Work(context.Background(), &river.Job[StageEvidenceReadArgs]{Args: args}); err != nil {
+	if err := worker.Work(boundBackground(f.t), &river.Job[StageEvidenceReadArgs]{Args: args}); err != nil {
 		f.t.Fatalf("reading activity %s: %v", args.ActivityID, err)
 	}
 }
@@ -108,7 +108,7 @@ func (f *rereadFixture) sweep(args StageEvidenceRereadArgs, page int) {
 	f.t.Helper()
 	worker := newStageEvidenceRereadWorker(f.Pool, true, slog.New(slog.DiscardHandler))
 	worker.Page = page
-	if err := worker.Work(context.Background(), &river.Job[StageEvidenceRereadArgs]{Args: args}); err != nil {
+	if err := worker.Work(boundBackground(f.t), &river.Job[StageEvidenceRereadArgs]{Args: args}); err != nil {
 		f.t.Fatalf("running the sweep: %v", err)
 	}
 }
@@ -261,7 +261,7 @@ func TestWithNoModelLaneTheSweepQueuesNothing(t *testing.T) {
 	f.mail("cfo@buyer-corp.test")
 	worker := newStageEvidenceRereadWorker(f.Pool, false, slog.New(slog.DiscardHandler))
 	args := StageEvidenceRereadArgs{Domain: "buyer-corp.test", Removal: ids.NewV7()}
-	if err := worker.Work(context.Background(), &river.Job[StageEvidenceRereadArgs]{Args: args}); err != nil {
+	if err := worker.Work(boundBackground(f.t), &river.Job[StageEvidenceRereadArgs]{Args: args}); err != nil {
 		t.Fatal(err)
 	}
 	if readings := queuedJobs[StageEvidenceReadArgs](f); len(readings) != 0 {

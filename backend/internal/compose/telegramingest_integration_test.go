@@ -169,7 +169,7 @@ func TestIngestWorkerTreatsAUniqueViolationAsRetryable(t *testing.T) {
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 
 	worker := &telegramIngestWorker{pool: e.Pool, sink: uniqueViolationSink{}, log: quiet}
-	err := worker.Work(context.Background(), &river.Job[TelegramIngestArgs]{
+	err := worker.Work(boundBackground(t), &river.Job[TelegramIngestArgs]{
 		Args: TelegramIngestArgs{ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()},
 	})
 	if err == nil {

@@ -79,7 +79,7 @@ func setupAssuranceJob(t *testing.T) *assuranceJobEnv {
 func (e *assuranceJobEnv) run(t *testing.T) error {
 	t.Helper()
 	worker := &assuranceRunWorker{sweep: e.worker}
-	return worker.Work(context.Background(), &river.Job[AssuranceRunArgs]{
+	return worker.Work(boundBackground(t), &river.Job[AssuranceRunArgs]{
 		Args: AssuranceRunArgs{RequestedBy: e.Rep1.String()},
 	})
 }

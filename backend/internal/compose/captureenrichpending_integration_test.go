@@ -146,7 +146,7 @@ func TestSharedSignatureDeferralSnoozesTheWholePendingPass(t *testing.T) {
 			reader := NewCaptureEnricher(h.e.Pool, h.brain, slog.New(slog.DiscardHandler))
 			reader.now = func() time.Time { return now }
 			worker := &captureEnrichWorker{pool: h.e.Pool, enricher: reader, log: reader.log}
-			err := worker.Work(context.Background(), &river.Job[CaptureEnrichArgs]{Args: CaptureEnrichArgs{Pending: true}})
+			err := worker.Work(boundBackground(t), &river.Job[CaptureEnrichArgs]{Args: CaptureEnrichArgs{Pending: true}})
 			snooze, ok := errors.AsType[*river.JobSnoozeError](err)
 			if !ok || snooze.Duration != min(delay, 15*time.Minute) {
 				t.Fatalf("deferral=%v want snooze %v", err, min(delay, 15*time.Minute))

@@ -107,7 +107,7 @@ func corpusUploader(e *integration.Env) context.Context {
 
 func (o *orphanIngest) work(t *testing.T) error {
 	t.Helper()
-	return o.worker.Work(context.Background(), &river.Job[KnowledgeIngestArgs]{
+	return o.worker.Work(boundBackground(t), &river.Job[KnowledgeIngestArgs]{
 		JobRow: &rivertype.JobRow{CreatedAt: clocktest.Now(t), Attempt: max(o.attempt, 1)},
 		Args:   KnowledgeIngestArgs{DocumentID: o.doc},
 	})

@@ -26,7 +26,7 @@ func approvedLeadRun(t *testing.T, e *integration.Env) (importHandlers, ImportCo
 	e.GrantRole(t, e.AdminUser, "admin")
 	h, profile := leadSourceHandlers(t, e)
 	test := queuedLeadTest(t, e, h, profile)
-	if err := validateWorkerFor(e, h).Work(context.Background(), &river.Job[ImportValidateArgs]{Args: test}); err != nil {
+	if err := validateWorkerFor(e, h).Work(boundBackground(t), &river.Job[ImportValidateArgs]{Args: test}); err != nil {
 		t.Fatalf("testing the run: %v", err)
 	}
 	approved, err := migration.NewRunStore(e.DB()).Approve(importAdmin(e), test.RunID, 0, workedByHand)
@@ -50,7 +50,7 @@ func TestACommitSliceLandsTheApprovedRunAndCompletesIt(t *testing.T) {
 	h, args := approvedLeadRun(t, e)
 	worker := commitWorkerFor(e, h)
 
-	if err := worker.Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
 		t.Fatalf("the slice answered %v, want nil for a run it finished", err)
 	}
 	run, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), args.RunID)
@@ -62,7 +62,7 @@ func TestACommitSliceLandsTheApprovedRunAndCompletesIt(t *testing.T) {
 	}
 
 	// The same job delivered again finds its attempt finished and writes nothing.
-	if err := worker.Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
 		t.Fatalf("a finished attempt's job answered %v, want a quiet nil", err)
 	}
 }
@@ -77,7 +77,7 @@ func TestASliceWhoseRunIsLockedSnoozesWithoutClaimingIt(t *testing.T) {
 	}
 	defer release()
 
-	err = commitWorkerFor(e, h).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args})
+	err = commitWorkerFor(e, h).Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: args})
 	var snooze *river.JobSnoozeError
 	if !errors.As(err, &snooze) || snooze.Duration != importLockWait {
 		t.Fatalf("the slice answered %v, want a snooze of %v while another slice holds the run", err, importLockWait)
@@ -98,7 +98,7 @@ func TestASliceWhoseRunIsLockedSnoozesWithoutClaimingIt(t *testing.T) {
 func TestAnUndoSliceReversesTheCommittedRun(t *testing.T) {
 	e := integration.Setup(t)
 	h, args := approvedLeadRun(t, e)
-	if err := commitWorkerFor(e, h).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
+	if err := commitWorkerFor(e, h).Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
 		t.Fatalf("committing the run: %v", err)
 	}
 	runs := migration.NewRunStore(e.DB())
@@ -109,7 +109,7 @@ func TestAnUndoSliceReversesTheCommittedRun(t *testing.T) {
 
 	worker := &importUndoWorker{slicer: commitWorkerFor(e, h).slicer}
 	undo := ImportUndoArgs{RunID: args.RunID, Attempt: undoing.JobAttempt}
-	if err := worker.Work(context.Background(), &river.Job[ImportUndoArgs]{Args: undo}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[ImportUndoArgs]{Args: undo}); err != nil {
 		t.Fatalf("the undo slice answered %v, want nil for a run it finished", err)
 	}
 	run, err := runs.GetStaged(importAdmin(e), args.RunID)

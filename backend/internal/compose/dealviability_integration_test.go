@@ -137,7 +137,7 @@ func (v *viabilityEnv) customerWrites(t *testing.T, deal ids.UUID, at time.Time)
 func (v *viabilityEnv) check(t *testing.T) {
 	t.Helper()
 	worker := &assuranceRunWorker{sweep: v.worker}
-	if err := worker.Work(context.Background(), &river.Job[AssuranceRunArgs]{
+	if err := worker.Work(boundBackground(t), &river.Job[AssuranceRunArgs]{
 		Args: AssuranceRunArgs{RequestedBy: v.Rep1.String()},
 	}); err != nil {
 		t.Fatalf("the input check: %v", err)

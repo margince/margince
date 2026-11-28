@@ -9,7 +9,6 @@ package compose
 // store refuses as a duplicate is skipped without aborting that transaction.
 
 import (
-	"context"
 	"testing"
 
 	"github.com/riverqueue/river"
@@ -45,7 +44,7 @@ func TestAReviewedLeadRowNamingAHeldEmailIsSkippedAndTheNextRowLands(t *testing.
 			t.Fatal(err)
 		}
 		args := ImportValidateArgs{RunID: run.ID, Attempt: run.JobAttempt}
-		if err := validateWorkerFor(e, h).Work(context.Background(), &river.Job[ImportValidateArgs]{Args: args}); err != nil {
+		if err := validateWorkerFor(e, h).Work(boundBackground(t), &river.Job[ImportValidateArgs]{Args: args}); err != nil {
 			t.Fatal(err)
 		}
 		run, err = migration.NewRunStore(e.DB()).GetStaged(ctx, run.ID)
@@ -61,7 +60,7 @@ func TestAReviewedLeadRowNamingAHeldEmailIsSkippedAndTheNextRowLands(t *testing.
 		t.Fatal(err)
 	}
 	args := ImportCommitArgs{RunID: approved.ID, Attempt: approved.JobAttempt}
-	if err := commitWorkerFor(e, h).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
+	if err := commitWorkerFor(e, h).Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
 		t.Fatal(err)
 	}
 	store := contacts.NewStore(e.DB())

@@ -95,7 +95,7 @@ func TestAReadingForARequesterWhoMayNoLongerReadTheMeetingFailsWithAReason(t *te
 	job := &river.Job[TranscriptProposeArgs]{JobRow: &rivertype.JobRow{}, Args: TranscriptProposeArgs{
 		ActivityID: e.activity.UUID, TranscriptReadID: started.ID, RequestedBy: "human:" + e.Rep1.String(),
 	}}
-	if err := worker.Work(context.Background(), job); err != nil {
+	if err := worker.Work(boundBackground(t), job); err != nil {
 		t.Fatalf("working the reading: %v", err)
 	}
 	done, err := e.Activities.GetTranscriptRead(e.ctx, e.activity, started.ID)

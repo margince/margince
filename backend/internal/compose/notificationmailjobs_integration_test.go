@@ -96,7 +96,11 @@ func (e *noticeMailEnv) workRung(notice ids.UUID, attempt int) error {
 		JobRow: &rivertype.JobRow{Attempt: attempt, MaxAttempts: notificationMailJobAttempts},
 		Args:   SendNotificationEmailArgs{NoticeID: notice.String()},
 	}
-	return e.worker.Work(context.Background(), job)
+	ctx, err := bindInstallation(context.Background(), e.worker.pool)
+	if err != nil {
+		return err
+	}
+	return e.worker.Work(ctx, job)
 }
 
 // emailState is the claim and its cause as the row holds them.

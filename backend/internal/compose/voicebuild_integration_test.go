@@ -463,7 +463,7 @@ func TestVoiceBuildWorkEndToEnd(t *testing.T) {
 	env, build := seedVoiceBuild(t, quote, 6)
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{judgeScore: 0.9, quote: quote}, slog.New(slog.DiscardHandler))
 
-	if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+	if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 		t.Fatalf("Work: %v", err)
 	}
 	finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
@@ -480,7 +480,7 @@ func TestVoiceBuildWorkEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+	if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 		t.Fatalf("redelivered Work on a terminal build: %v", err)
 	}
 	after, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
@@ -511,7 +511,7 @@ func TestVoiceBuildWorkSkipsAnotherSessionOwner(t *testing.T) {
 		t.Fatalf("rival claim: %v claimed=%v", err, claimed)
 	}
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{judgeScore: 0.9, quote: "Contended quote."}, slog.New(slog.DiscardHandler))
-	err = worker.Work(context.Background(), voiceBuildJob(env, build))
+	err = worker.Work(boundBackground(t), voiceBuildJob(env, build))
 	if err != nil {
 		t.Fatalf("a live rival claim should skip the duplicate: %v", err)
 	}
@@ -530,7 +530,7 @@ func TestVoiceBuildWorkWithoutABrainFailsClosed(t *testing.T) {
 			env, build := seedVoiceBuild(t, "Brainless quote.", 6)
 			integration.SetBaseLanguage(env.e.Admin(), t, env.e.Pool, tc.language)
 			worker := newVoiceBuildWorker(env.e.Pool, nil, slog.New(slog.DiscardHandler))
-			if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+			if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 				t.Fatalf("Work: %v", err)
 			}
 			integration.SetBaseLanguage(env.e.Admin(), t, env.e.Pool, "en")
@@ -639,7 +639,7 @@ func builtVoiceEnv(t *testing.T, quote string) *voiceBuildEnv {
 	t.Helper()
 	env, build := seedVoiceBuild(t, quote, 6)
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{judgeScore: 0.9, quote: quote}, slog.New(slog.DiscardHandler))
-	if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+	if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 		t.Fatalf("build Work: %v", err)
 	}
 	return env
@@ -706,7 +706,7 @@ func TestVoiceBuildWorkRecordsAnInvalidModelAnswerAsFailed(t *testing.T) {
 		return model.Response{Text: "not the requested JSON object"}, nil
 	}), slog.New(slog.DiscardHandler))
 
-	if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+	if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 		t.Fatalf("Work must own the failure on the row, not error the job: %v", err)
 	}
 	finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
@@ -753,7 +753,7 @@ func TestVoiceBuildTellsTheOwnerWhichProviderFailureItWas(t *testing.T) {
 				return model.Response{}, refusal.err
 			}), slog.New(slog.DiscardHandler))
 
-			if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+			if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 				t.Fatalf("Work owns the failure on the row: %v", err)
 			}
 			finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
@@ -802,7 +802,7 @@ func TestVoiceBuildAlwaysReachesATerminalState(t *testing.T) {
 				return model.Response{Text: answer}, nil
 			}), slog.New(slog.DiscardHandler))
 
-			if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+			if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 				t.Fatalf("Work owns the failure on the row: %v", err)
 			}
 			finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
@@ -884,7 +884,7 @@ func TestAVoiceBuildThatStopsRunningEndsItsWorker(t *testing.T) {
 		return scripted.Complete(ctx, req)
 	}), slog.New(slog.DiscardHandler))
 
-	if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+	if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 		t.Fatalf("Work on a build that stopped running: %v", err)
 	}
 	callsAtStop := calls

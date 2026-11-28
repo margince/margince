@@ -125,7 +125,7 @@ func TestATeamRequestMailNamesTheLinkAsItStandsWhenItLeaves(t *testing.T) {
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: notificationMailJobAttempts},
 		Args:   SendNotificationEmailArgs{NoticeID: env.requestNotice(t).String()},
 	}
-	if err := env.worker.Work(context.Background(), job); err != nil {
+	if err := env.worker.Work(boundBackground(t), job); err != nil {
 		t.Fatalf("the notification mail worker refused the job: %v", err)
 	}
 	if env.relay.count() != 1 || env.relay.sends[0] != env.memberAddress(t) {
