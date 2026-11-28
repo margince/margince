@@ -865,27 +865,27 @@ func ingestDuringWithdrawal(t *testing.T, e *ingressEnv, ingest func() error) er
 			t.Errorf("ending the withdrawal: %v", err)
 		}
 	})
-	var withdrawer int
+	var withdrawer int32
 	if err := withdrawal.QueryRow(ctx,
 		`DELETE FROM extension_secret WHERE extension_name = $1 AND user_id = $2 RETURNING pg_backend_pid()`,
 		ingressUnit, e.member).Scan(&withdrawer); err != nil {
 		t.Fatalf("starting the withdrawal: %v", err)
 	}
-	landed := make(chan error, 1)
-	go func() { landed <- ingest() }()
-	for waiting := false; !waiting; {
-		select {
-		case err := <-landed:
-			t.Fatalf("the record finished (%v) while the withdrawal was still open; it must wait for it", err)
-		case <-time.After(10 * time.Millisecond):
-		}
-		if err := e.Pool.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid)))`, withdrawer).Scan(&waiting); err != nil {
-			t.Fatal(err)
-		}
+	probe, err := e.Pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer probe.Release()
+	var landed error
+	returned := make(chan struct{})
+	go func() {
+		defer close(returned)
+		landed = ingest()
+	}()
+	testdb.AwaitQueuedBehind(t, probe.Conn(), withdrawer, 1, returned, "the ingest")
 	if err := withdrawal.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
-	return <-landed
+	<-returned
+	return landed
 }
