@@ -11957,6 +11957,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeKeyTakenUnnamed": "Một mục đích khác đã dùng khóa này.",
   "privacy.purposeKey": "Khóa",
   "privacy.purposeLabel": "Nhãn",
+  "privacy.purposeKeyHint":
+    "Chỉ dùng chữ cái a đến z (không dấu), chữ số 0 đến 9 và dấu gạch dưới, ví dụ marketing_email. Khóa đi theo nhãn cho đến khi bạn tự nhập.",
+  "privacy.purposeKeyShape":
+    "Khóa chỉ được chứa chữ cái a đến z (không dấu), chữ số 0 đến 9 và dấu gạch dưới.",
+  "privacy.purposeLabelTaken":
+    "Nhãn này giống với {label}. Chọn một nhãn khác để phân biệt hai mục đích.",
   "privacy.purposeDoi": "Cần xác nhận kép",
   "privacy.purposeFrequency": "Tần suất",
   "privacy.purposeFrequency.weekly": "Khoảng mỗi tuần một lần",
@@ -12423,6 +12429,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Câu trả lời bạn đã nhập sẽ không được lưu. Khi hoàn tất, hệ thống ghi lại kết quả xóa: Đã xóa, hoặc Không có dữ liệu.",
   "privacy.erasureAnswer.erased": "Đã xóa",
   "privacy.erasureAnswer.nothing_held": "Không có dữ liệu (đã xóa trước đó)",
+  "privacy.answerRemoved":
+    "Câu trả lời đã được gỡ cùng thông tin người yêu cầu",
   "privacy.legalHoldTitle": "Bị chặn do lưu trữ pháp lý",
   "privacy.legalHold":
     "Liên hệ này đang trong thời hạn lưu trữ theo luật định, nên quyền xóa không được ưu tiên ở đây (Điều 17(3)(b)). Lệnh chặn áp dụng cho mọi vai trò, kể cả quản trị viên, và không thể vượt qua. Lần thử xóa này đã được ghi vào nhật ký hoạt động.",

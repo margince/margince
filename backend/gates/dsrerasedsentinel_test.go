@@ -11,6 +11,9 @@ package gates
 // privacy engine writes the same word into the SQL that retires the subject's
 // other cases. If they diverged, a retired case would hold a word the guard no
 // longer knows, and a rewrite of a closed request's answer would pass.
+//
+// The placeholder that SQL writes over the subject is held the same way. Consent
+// reads it to tell the screen the case names no one.
 
 import (
 	"go/ast"
@@ -29,22 +32,38 @@ const (
 
 func TestBothErasureWritersLeaveTheSameWordInPlaceOfTheAnswer(t *testing.T) {
 	t.Parallel()
-	consentWord := erasedResolutionConst(t)
-	source, err := gatekit.ReadFile(privacySentinelFile)
-	if err != nil {
-		t.Fatalf("reading the privacy erasure writer: %v", err)
-	}
+	consentWord := consentSentinelConst(t, "erasedResolution")
 	statement := "resolution = CASE WHEN resolution IS NULL THEN NULL ELSE '" + consentWord + "' END"
-	if !strings.Contains(string(source), statement) {
+	if !strings.Contains(privacySentinelSource(t), statement) {
 		t.Errorf("%s no longer writes %q in place of the answer, which is what consent's erasedResolution says an erasure leaves.\n"+
 			"\tChange both or neither: consent's guard reads that word to tell a repeated erasure from a rewrite.",
 			privacySentinelFile, consentWord)
 	}
 }
 
-// erasedResolutionConst reads consent's constant from its source, so the gate
-// holds the writer to the owner instead of keeping its own copy of the word.
-func erasedResolutionConst(t *testing.T) string {
+func TestConsentKnowsThePlaceholderTheErasureWritesOverTheSubject(t *testing.T) {
+	t.Parallel()
+	prefix := consentSentinelConst(t, "erasedSubjectPrefix")
+	statement := "SET subject_ref = '" + prefix + "' || id,"
+	if !strings.Contains(privacySentinelSource(t), statement) {
+		t.Errorf("%s no longer writes %q over a retired case's subject, which is what consent's erasedSubjectPrefix reads.\n"+
+			"\tChange both or neither: the request list would show the placeholder as the subject's name.",
+			privacySentinelFile, statement)
+	}
+}
+
+func privacySentinelSource(t *testing.T) string {
+	t.Helper()
+	source, err := gatekit.ReadFile(privacySentinelFile)
+	if err != nil {
+		t.Fatalf("reading the privacy erasure writer: %v", err)
+	}
+	return string(source)
+}
+
+// consentSentinelConst reads one of consent's constants from its source, so the
+// gate holds the writer to the owner instead of keeping its own copy.
+func consentSentinelConst(t *testing.T, name string) string {
 	t.Helper()
 	file, err := gatekit.ParseFile(consentSentinelFile, 0)
 	if err != nil {
@@ -57,7 +76,7 @@ func erasedResolutionConst(t *testing.T) string {
 		}
 		for _, spec := range gen.Specs {
 			value, isValue := spec.(*ast.ValueSpec)
-			if !isValue || len(value.Names) != 1 || value.Names[0].Name != "erasedResolution" || len(value.Values) != 1 {
+			if !isValue || len(value.Names) != 1 || value.Names[0].Name != name || len(value.Values) != 1 {
 				continue
 			}
 			literal, isLiteral := value.Values[0].(*ast.BasicLit)
@@ -66,11 +85,11 @@ func erasedResolutionConst(t *testing.T) string {
 			}
 			word, err := strconv.Unquote(literal.Value)
 			if err != nil {
-				t.Fatalf("erasedResolution is not a string literal: %v", err)
+				t.Fatalf("%s is not a string literal: %v", name, err)
 			}
 			return word
 		}
 	}
-	t.Fatal("consent declares no erasedResolution constant, so this gate would agree with any privacy writer")
+	t.Fatalf("consent declares no %s constant, so this gate would agree with any privacy writer", name)
 	return ""
 }

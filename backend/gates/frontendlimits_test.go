@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -139,6 +140,11 @@ func TestTheFrontendsCopiesOfServerLimitsMatchTheirOwners(t *testing.T) {
 			read:  regexp.MustCompile(`export const REMOTE_IMAGE_BOX\s*=\s*["']([^"'\n]*)["']\s*;`),
 			owner: fixed(activities.RemoteImageBoxAttribute),
 			drift: "the approval card looks for a box activities.RemoteImageBoxAttribute never marks, so it finds none",
+		},
+		{
+			file: "../frontend/src/features/privacy/privacy.purposes.tsx", name: "PURPOSE_KEY_PATTERN",
+			read:  regexp.MustCompile(`\bPURPOSE_KEY_PATTERN\s*=\s*/(.+?)/;`),
+			owner: fixed(commsauthz.PurposeKeyPattern.String()),
 		},
 	}
 	sources := map[string]string{}

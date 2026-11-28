@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
@@ -35,7 +34,6 @@ import {
   DSR_STATUS_LABEL,
   type DsrClosing,
   type DsrStatus,
-  ERASURE_ANSWER_LABEL,
   isIllegalTransition,
   isOverdue,
   isTerminal,
@@ -46,6 +44,7 @@ import { RequestProof } from "./privacy.proofreading";
 import "./privacy.css";
 import { labelFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
+import { answerText, useClosingDraft, writtenAnswer } from "./privacy.answer";
 import {
   DsrDispute,
   DsrProofFields,
@@ -61,8 +60,12 @@ type UpdateDataSubjectRequest =
 type User = components["schemas"]["User"];
 
 // A record id that does not resolve may be hidden or erased, and the server
-// sends both the same, so the wording claims neither.
+// sends both the same, so the wording claims neither. A retired subject reads
+// the same, never as the placeholder the erasure left.
 export function subjectName(dsr: DataSubjectRequest, t: Translator): string {
+  if (dsr.subject_erased) {
+    return t("notice.recordUnavailable");
+  }
   if (dsr.subject_label) {
     return dsr.subject_label;
   }
@@ -223,7 +226,7 @@ export function DsrDetail({
   const t = useT();
   const queryClient = useQueryClient();
   const canWork = useCanWrite("privacy_request", "update");
-  const [closing, setClosing] = useState<DsrClosing>(() => requestClosing(dsr));
+  const [closing, editClosing] = useClosingDraft(dsr);
   const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const email = useRequesterEmail();
 
@@ -264,7 +267,7 @@ export function DsrDetail({
   }
 
   function draft(change: Partial<DsrClosing>) {
-    setClosing((current) => ({ ...current, ...change }));
+    editClosing(change);
     if ("requesterEmail" in change) faults.edited(REQUESTER_EMAIL);
     if (patch.isError) patch.reset();
   }
@@ -350,7 +353,7 @@ export function DsrDetail({
             <DsrTransitions
               status={dsr.status}
               ready={(next) =>
-                closingReady(next, closing, dsr.resolution, dsr.kind)
+                closingReady(next, closing, writtenAnswer(dsr), dsr.kind)
               }
               pending={patch.isPending}
               onTransition={transition}
@@ -422,14 +425,10 @@ function DsrFacts({
     });
   }
   if (dsr.resolution && isTerminal(dsr.status)) {
-    // An erasure's answer is a fixed word, shown in the reader's language. By
-    // the value, not the case's kind: an erasure retires the subject's other
-    // cases with the same word.
-    const fixed = ERASURE_ANSWER_LABEL[dsr.resolution];
     facts.push({
       key: "resolution",
       term: t("privacy.resolution"),
-      value: fixed ? t(fixed) : dsr.resolution,
+      value: answerText(dsr, t),
     });
   }
 
@@ -468,12 +467,4 @@ function DsrAssignee({
       )}
     </Field>
   );
-}
-
-function requestClosing(dsr: DataSubjectRequest): DsrClosing {
-  return {
-    resolution: dsr.resolution ?? "",
-    identityCheck: dsr.identity_verified ? "confirm_link" : "",
-    requesterEmail: "",
-  };
 }

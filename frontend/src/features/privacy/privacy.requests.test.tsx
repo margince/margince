@@ -398,6 +398,144 @@ it("prefills the identity check for a request opened through its confirm link", 
   ).toContain(en["privacy.identityCheck.confirm_link"]);
 });
 
+// A refetch can bring the request back retired while its drawer is open. The
+// answer drafted before then may name who asked, so no later write carries it.
+describe("a request retired while its drawer is open", () => {
+  const DRAFTED: DataSubjectRequest = {
+    ...NAMED,
+    kind: "access",
+    status: "open",
+    resolution: "Sent the package to Lena Hoffmann.",
+    identity_verified: true,
+  };
+  const RETIRED: DataSubjectRequest = {
+    ...DRAFTED,
+    subject_ref: "erased+d1",
+    subject_label: null,
+    subject_kind: null,
+    subject_erased: true,
+    resolution: "erased",
+    resolution_removed: true,
+  };
+
+  function renderRetiring(first: DataSubjectRequest = DRAFTED) {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const drawer = (dsr: DataSubjectRequest) => (
+      <DsrDetail
+        dsr={dsr}
+        titleId="dsr-title"
+        nowMs={Date.parse("2026-07-15T00:00:00Z")}
+        onClose={() => {}}
+        onFulfilErasure={() => {}}
+      />
+    );
+    const view = rtlRender(drawer(first), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>
+          <LocaleProvider initial="en">{children}</LocaleProvider>
+        </QueryClientProvider>
+      ),
+    });
+    return (next: DataSubjectRequest = RETIRED) => view.rerender(drawer(next));
+  }
+
+  async function answerBox() {
+    return screen.findByRole("textbox", { name: en["privacy.resolution"] });
+  }
+
+  // Mutation: keep the draft across the retirement and the old answer is sent.
+  it("sends no answer drafted before the retirement", async () => {
+    const patched: Patched[] = [];
+    stub(undefined, patched);
+    const retire = renderRetiring();
+    expect(await answerBox()).toHaveValue(DRAFTED.resolution);
+
+    retire();
+    expect(await answerBox()).toHaveValue("");
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["privacy.inProgress"] }),
+    );
+
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]?.body).toEqual({ status: "in_progress" });
+  });
+
+  it("sends an answer typed after the retirement", async () => {
+    const patched: Patched[] = [];
+    stub(undefined, patched);
+    const retire = renderRetiring();
+    await answerBox();
+
+    retire();
+    const user = userEvent.setup();
+    await user.type(await answerBox(), "Nothing left to send.");
+    await user.click(
+      await screen.findByRole("button", { name: en["privacy.inProgress"] }),
+    );
+
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]?.body).toEqual({
+      status: "in_progress",
+      resolution: "Nothing left to send.",
+    });
+  });
+
+  // A case with no answer yet keeps none through the retirement. The flag on the
+  // subject is then what tells the drawer that a typed draft went stale.
+  //
+  // Mutation: reset only on a changed answer and the typed draft is sent.
+  it("sends no draft typed on an unanswered case before the retirement", async () => {
+    const patched: Patched[] = [];
+    stub(undefined, patched);
+    const refresh = renderRetiring({ ...DRAFTED, resolution: null });
+    const user = userEvent.setup();
+    await user.type(await answerBox(), "Sent the package to Lena Hoffmann.");
+
+    refresh({ ...RETIRED, resolution: null, resolution_removed: false });
+    expect(await answerBox()).toHaveValue("");
+    await user.click(
+      await screen.findByRole("button", { name: en["privacy.inProgress"] }),
+    );
+
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]?.body).toEqual({ status: "in_progress" });
+  });
+
+  // Another officer answers the retired case. Their answer, never the one drafted
+  // before the retirement, fills the box, whether or not this drawer saw the
+  // retirement first.
+  //
+  // Mutation: keep the draft once the flag clears and the old answer is sent.
+  it.each([
+    ["after the retirement was seen", [RETIRED]],
+    ["when the first refresh already holds it", []],
+  ])("shows a newer answer %s", async (_case, before) => {
+    const patched: Patched[] = [];
+    stub(undefined, patched);
+    const refresh = renderRetiring();
+    await answerBox();
+
+    for (const dsr of before) refresh(dsr);
+    refresh({
+      ...RETIRED,
+      resolution: "Nothing held.",
+      resolution_removed: false,
+    });
+    expect(await answerBox()).toHaveValue("Nothing held.");
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["privacy.inProgress"] }),
+    );
+
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]?.body).toEqual({
+      status: "in_progress",
+      resolution: "Nothing held.",
+    });
+  });
+});
+
 describe("closing a request with the requester's address", () => {
   const ACCESS: DataSubjectRequest = {
     ...NAMED,

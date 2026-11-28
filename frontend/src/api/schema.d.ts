@@ -58495,7 +58495,16 @@ export interface components {
          */
         ConsentPurposeFrequency: "weekly" | "monthly" | "quarterly";
         CreateConsentPurposeRequest: {
+            /**
+             * @description Trimmed and lower-cased, then it may hold only lower-case letters, digits and underscores
+             *     (`marketing_email`). Anything else is a 422 on `key`. A key another purpose holds, archived
+             *     ones included, is a 409.
+             */
             key: string;
+            /**
+             * @description What every consent screen names the purpose by. A label that reads as a listed purpose's
+             *     label or key, case, spacing and underscores aside, is a 422 on `label`.
+             */
             label: string;
             /** @default false */
             requires_double_opt_in: boolean;
@@ -59441,6 +59450,17 @@ export interface components {
              * @enum {string|null}
              */
             subject_kind?: null | "contact" | "lead";
+            /**
+             * @description True when the request no longer names its subject: an erasure of that subject, or the end of
+             *     the request's proof period, replaced `subject_ref` with a placeholder. Show the subject as a
+             *     record that is not available, never the placeholder.
+             */
+            subject_erased?: boolean;
+            /**
+             * @description True when the answer recorded on the request was removed with its subject, and `resolution`
+             *     holds the placeholder left in its place rather than an answer anyone wrote.
+             */
+            resolution_removed?: boolean;
             /** @enum {string} */
             status: "open" | "in_progress" | "fulfilled" | "rejected";
             /**

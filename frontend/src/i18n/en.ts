@@ -12229,6 +12229,12 @@ export const en = {
   "privacy.purposeKeyTakenUnnamed": "Another purpose already uses this key.",
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
+  "privacy.purposeKeyHint":
+    "Only the letters a to z (no accents), the digits 0 to 9 and underscores, such as marketing_email. It follows the label until you type your own.",
+  "privacy.purposeKeyShape":
+    "Key may hold only the letters a to z (no accents), the digits 0 to 9 and underscores.",
+  "privacy.purposeLabelTaken":
+    "This label reads like {label}. Choose another label to tell the two purposes apart.",
   "privacy.purposeDoi": "Requires double opt-in",
   "privacy.purposeFrequency": "How often",
   "privacy.purposeFrequency.weekly": "About once a week",
@@ -12679,6 +12685,7 @@ export const en = {
     "The answer you typed is not kept. Fulfilling records what the erasure found: Erased, or Nothing held.",
   "privacy.erasureAnswer.erased": "Erased",
   "privacy.erasureAnswer.nothing_held": "Nothing held (already erased)",
+  "privacy.answerRemoved": "Answer removed with the requester’s details",
   "privacy.legalHoldTitle": "Blocked by legal hold",
   "privacy.legalHold":
     "This contact is inside a statutory retention window, so erasure does not take precedence here (Art. 17(3)(b)). The block applies to every role, including administrators, with no override. The attempt was audited.",

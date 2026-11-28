@@ -283,7 +283,7 @@ If two colleagues open the same request, the second sees "Someone else decided t
 
 Closing a request keeps a proof of the answer. It holds the request number, the email address the request came from, and the day it arrived. It holds its kind, how the identity was checked, the result, who closed it and when. For an erasure it also holds how many records of each kind were erased. It holds no mail and no other contact data.
 
-The proof is kept for three years after the end of the year the request was closed. Margince deletes it in the first month of the year after that. The request then no longer names who asked, and its history no longer shows it either.
+The proof is kept for three years after the end of the year the request was closed. Margince deletes it in the first month of the year after that. The request then names **Record not available** instead of who asked, and its history no longer shows who asked either. An answer recorded on it then reads **Answer removed with the requester’s details**.
 
 If someone disputes the answer, open the closed request and choose **Record a complaint**. The proof is then kept past its date. Choose **Close the complaint** when it is settled. Margince deletes the proof at the start of the next year.
 
@@ -322,7 +322,7 @@ Carrying one out is hard to do by mistake. You type **ERASE** to confirm, and th
 > activity and derived values. It cannot be undone. The erasure itself is
 > audited.
 
-The confirm button reads **Erase and suppress**.
+The confirm button reads **Erase and suppress**. The erasure also takes the contact off their other requests. Those then name **Record not available**, and an answer recorded on one reads **Answer removed with the requester’s details**.
 
 An erasure is not answered in your own words. Typed words could name the contact the erasure removes. Fulfilling records one of two answers:
 
@@ -361,7 +361,7 @@ If nothing is held, the screen says so, and it is good news: "No records held. E
 
 ## Consent
 
-Consent in Margince is recorded for each **purpose**. **Settings → Privacy and retention → Consent purposes** holds the list of purposes: the reasons this company uses the data of the humans in it. Each purpose has a key, a label, and a mark for whether it needs double opt-in.
+Consent in Margince is recorded for each **purpose**. **Settings → Privacy and retention → Consent purposes** holds the list of purposes: the reasons this company uses the data of the humans in it. Each purpose has a key, a label, and a mark for whether it needs double opt-in, and the list shows each key under its label. In **Add purpose**, the key follows the label until you type your own. A key holds only `a`–`z`, `0`–`9` and `_`, such as `marketing_email`. Margince refuses a label that reads like the label or key of a purpose on the list, whatever its capitals.
 
 You can rename or archive a purpose while it has no references. Any consent, notice, wording or scheduled send fixes the purpose. To change it after use, create a new purpose. These changes need a human with the consent settings update grant. On a contact you can **Record consent** or **Withdraw** consent for a purpose.
 

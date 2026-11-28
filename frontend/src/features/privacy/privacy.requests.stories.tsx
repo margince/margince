@@ -137,7 +137,24 @@ export default meta;
 
 type Story = StoryObj<typeof DsrDetail>;
 
-export const Rows: Story = { render: table([ASSIGNED, EXTERNAL, CLOSED]) };
+// A case an erasure retired: its subject and answer are placeholders.
+const RETIRED: DataSubjectRequest = {
+  id: "d4",
+  kind: "access",
+  subject_ref: "erased+d4",
+  subject_erased: true,
+  status: "fulfilled",
+  resolution: "erased",
+  resolution_removed: true,
+  due_at: "2026-07-12T00:00:00Z",
+  due_overridden: false,
+  dispute_open: false,
+  created_at: "2026-06-01T00:00:00Z",
+};
+
+export const Rows: Story = {
+  render: table([ASSIGNED, EXTERNAL, CLOSED, RETIRED]),
+};
 
 export const RowsPhone: Story = {
   globals: { viewport: { value: "phone" } },
@@ -165,6 +182,8 @@ export const ReadOnly: Story = {
 
 /** Closed, with its answer kept. */
 export const Closed: Story = { render: drawer(CLOSED) };
+
+export const Retired: Story = { render: drawer(RETIRED) };
 
 export const WorkingPhone: Story = {
   globals: { viewport: { value: "phone" } },

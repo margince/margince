@@ -48983,10 +48983,17 @@ type CreateCompanyRequestSizeBand string
 // CreateConsentPurposeRequest defines model for CreateConsentPurposeRequest.
 type CreateConsentPurposeRequest struct {
 	// Frequency Absent means monthly.
-	Frequency           *ConsentPurposeFrequency `json:"frequency,omitempty"`
-	Key                 string                   `json:"key"`
-	Label               string                   `json:"label"`
-	RequiresDoubleOptIn *bool                    `json:"requires_double_opt_in,omitempty"`
+	Frequency *ConsentPurposeFrequency `json:"frequency,omitempty"`
+
+	// Key Trimmed and lower-cased, then it may hold only lower-case letters, digits and underscores
+	// (`marketing_email`). Anything else is a 422 on `key`. A key another purpose holds, archived
+	// ones included, is a 409.
+	Key string `json:"key"`
+
+	// Label What every consent screen names the purpose by. A label that reads as a listed purpose's
+	// label or key, case, spacing and underscores aside, is a 422 on `label`.
+	Label               string `json:"label"`
+	RequiresDoubleOptIn *bool  `json:"requires_double_opt_in,omitempty"`
 }
 
 // CreateContactEnrichmentRunRequest defines model for CreateContactEnrichmentRunRequest.
@@ -50363,7 +50370,16 @@ type DataSubjectRequest struct {
 	Kind             DataSubjectRequestKind   `json:"kind"`
 	Proof            *DataSubjectRequestProof `json:"proof,omitempty"`
 	Resolution       *string                  `json:"resolution,omitempty"`
-	Status           DataSubjectRequestStatus `json:"status"`
+
+	// ResolutionRemoved True when the answer recorded on the request was removed with its subject, and `resolution`
+	// holds the placeholder left in its place rather than an answer anyone wrote.
+	ResolutionRemoved *bool                    `json:"resolution_removed,omitempty"`
+	Status            DataSubjectRequestStatus `json:"status"`
+
+	// SubjectErased True when the request no longer names its subject: an erasure of that subject, or the end of
+	// the request's proof period, replaced `subject_ref` with a placeholder. Show the subject as a
+	// record that is not available, never the placeholder.
+	SubjectErased *bool `json:"subject_erased,omitempty"`
 
 	// SubjectKind Which kind of record `subject_label` was read from. Null when nothing resolved: an
 	// external identifier, an erased subject, or one the caller may not read.

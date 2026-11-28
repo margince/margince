@@ -3,13 +3,21 @@
 
 package commsauthz
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 // NormalizedPurposeKey is how two purpose keys are compared: a key typed with
 // a stray space or a capital names the same purpose.
 func NormalizedPurposeKey(key string) string {
 	return strings.TrimSpace(strings.ToLower(key))
 }
+
+// PurposeKeyPattern is what a new purpose's key may hold once normalised. Mail,
+// forms and the consent screens name a purpose by it, so it holds no spaces.
+// Its declared type keeps it out of this package's census of reason codes.
+var PurposeKeyPattern *regexp.Regexp = regexp.MustCompile(`^[a-z0-9_]+$`)
 
 // CanonicalPurpose is the one purpose key a message is judged, unsubscribed
 // and stored under. A legacy key and a marketing purpose that name two

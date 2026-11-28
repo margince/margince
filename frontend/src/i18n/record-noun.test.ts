@@ -372,6 +372,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "health.setup.recovery.todo",
     // The data subject who asked for the erasure: the privacy term itself.
     "create.addressErased",
+    // The requester of a privacy request is the human being it is about.
+    "privacy.answerRemoved",
   ],
   vi: [
     "webForms.field.notifyOwnerHint",
@@ -938,6 +940,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // The person who runs the server restores the backup.
     "health.setup.recovery.happened",
     "health.setup.recovery.todo",
+    // The requester of a privacy request is the human being it is about.
+    "privacy.answerRemoved",
   ],
 };
 

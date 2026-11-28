@@ -33,7 +33,7 @@ func (e *PurposeInUseError) MessageFault() (string, string) {
 func (s *Store) RenamePurpose(ctx context.Context, id ids.PurposeID, label string) (Purpose, error) {
 	label = strings.TrimSpace(label)
 	if label == "" {
-		return Purpose{}, &ValidationError{Field: "label", Reason: "a label is required"}
+		return Purpose{}, &ValidationError{Field: fieldLabel, Reason: "a label is required"}
 	}
 	return s.changeUnusedPurpose(ctx, id, &label)
 }
@@ -62,7 +62,7 @@ func (s *Store) changeUnusedPurpose(ctx context.Context, id ids.PurposeID, label
 		if err != nil {
 			return err
 		}
-		before := map[string]any{"label": out.Label, "archived_at": nil}
+		before := map[string]any{fieldLabel: out.Label, "archived_at": nil}
 		action := "renamed"
 		var archived *time.Time
 		if label == nil {
@@ -71,6 +71,8 @@ func (s *Store) changeUnusedPurpose(ctx context.Context, id ids.PurposeID, label
 			archived = &now
 		} else if *label == out.Label {
 			return nil
+		} else if err := lockPurposeLabels(ctx, tx, *label, id); err != nil {
+			return err
 		}
 		if _, err := tx.Exec(ctx, `UPDATE consent_purpose SET label=coalesce($2,label),archived_at=$3 WHERE id=$1`, id, label, archived); err != nil {
 			return err
@@ -78,7 +80,7 @@ func (s *Store) changeUnusedPurpose(ctx context.Context, id ids.PurposeID, label
 		if label != nil {
 			out.Label = *label
 		}
-		return auditPurposeChange(ctx, tx, id, action, before, map[string]any{"label": out.Label, "archived_at": archived})
+		return auditPurposeChange(ctx, tx, id, action, before, map[string]any{fieldLabel: out.Label, "archived_at": archived})
 	})
 	var pgerr *pgconn.PgError
 	if errors.As(err, &pgerr) && pgerr.ConstraintName == "consent_purpose_in_use" {

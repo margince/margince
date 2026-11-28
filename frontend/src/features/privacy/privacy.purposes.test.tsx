@@ -32,6 +32,14 @@ const TRANSACTIONAL = {
   created_at: "2026-01-02T09:00:00Z",
 };
 
+const NEWSLETTER = {
+  ...TRANSACTIONAL,
+  id: "p2",
+  key: "ban_tin",
+  label: "Bản tin",
+  class: "marketing",
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -39,7 +47,10 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function stub(answer: () => Response): unknown[] {
+function stub(
+  answer: () => Response,
+  listed: unknown[] = [TRANSACTIONAL],
+): unknown[] {
   const posted: unknown[] = [];
   vi.stubGlobal(
     "fetch",
@@ -58,7 +69,7 @@ function stub(answer: () => Response): unknown[] {
         return answer();
       }
       if (path.endsWith("/consent-purposes")) {
-        return json({ data: [TRANSACTIONAL] });
+        return json({ data: listed });
       }
       return json({ data: [], page: { next_cursor: null, has_more: false } });
     }),
@@ -66,7 +77,7 @@ function stub(answer: () => Response): unknown[] {
   return posted;
 }
 
-async function addPurpose(key: string, label: string) {
+async function openAdd() {
   rtlRender(
     <QueryClientProvider
       client={
@@ -87,6 +98,11 @@ async function addPurpose(key: string, label: string) {
   const keyBox = within(dialog).getByRole("textbox", {
     name: en["privacy.purposeKey"],
   });
+  return { user, dialog, keyBox };
+}
+
+async function addPurpose(key: string, label: string) {
+  const { user, dialog, keyBox } = await openAdd();
   if (key) await user.type(keyBox, key);
   if (label) {
     await user.type(
@@ -166,6 +182,178 @@ describe("Add purpose", () => {
     expect(screen.queryByText(/conflict/)).toBeNull();
   });
 
+  it("fills the key from the label until the admin types one", async () => {
+    const posted = stub(() => json(TRANSACTIONAL, 201));
+    const { user, dialog, keyBox } = await openAdd();
+    const labelBox = within(dialog).getByRole("textbox", {
+      name: en["privacy.purposeLabel"],
+    });
+
+    await user.type(labelBox, "Partner-News (Ü)");
+    expect(keyBox).toHaveValue("partner_news_u");
+
+    await user.clear(keyBox);
+    await user.type(keyBox, "digest");
+    await user.type(labelBox, " weekly");
+    expect(keyBox).toHaveValue("digest");
+    expect(posted).toHaveLength(0);
+  });
+
+  // Mutation: drop the shape check and the key with a space is sent.
+  it("refuses a key with a space before sending", async () => {
+    const posted = stub(refused({}, 500));
+    const { keyBox } = await addPurpose("marketing email", "Mail digest");
+
+    expect(
+      await screen.findByText(en["privacy.purposeKeyShape"]),
+    ).toBeVisible();
+    expect(keyBox).toHaveAttribute("aria-invalid", "true");
+    expect(posted).toHaveLength(0);
+  });
+
+  // Go lowers İ to i, a key the server takes. Mutation: lowering the whole key
+  // with toLowerCase leaves a combining dot, and the form refuses it.
+  it("sends a key with a dotted capital I, which the server lowers to i", async () => {
+    const created = {
+      ...NEWSLETTER,
+      id: "p8",
+      key: "iletisim",
+      label: "Mail digest",
+    };
+    const posted = stub(() => json(created, 201));
+    await addPurpose("\u0130letisim", created.label);
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ key: "\u0130letisim" });
+  });
+
+  // The slip this guards: key and label swapped, so the label is a listed key.
+  it.each([
+    ["a listed key", "transactional"],
+    ["a listed label, case and spacing aside", " transactional  EMAIL"],
+  ])("refuses a label that reads as %s", async (_, label) => {
+    const posted = stub(refused({}, 500));
+    const { dialog } = await addPurpose("receipts", label);
+
+    expect(
+      await screen.findByText(
+        "This label reads like Transactional email. Choose another label to tell the two purposes apart.",
+      ),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByRole("textbox", { name: en["privacy.purposeLabel"] }),
+    ).toHaveAttribute("aria-invalid", "true");
+    expect(posted).toHaveLength(0);
+  });
+
+  // One label typed as a base letter and a combining mark reads as the listed one.
+  // Mutation: drop the NFC step and the decomposed label is sent.
+  it("refuses a label that differs from a listed one only in how its accent is encoded", async () => {
+    const posted = stub(refused({}, 500), [TRANSACTIONAL, NEWSLETTER]);
+    await addPurpose("tin_moi", "Ba\u0309n tin");
+
+    expect(
+      await screen.findByText(
+        `This label reads like ${NEWSLETTER.label}. Choose another label to tell the two purposes apart.`,
+      ),
+    ).toBeVisible();
+    expect(posted).toHaveLength(0);
+  });
+
+  // Case maps up then down as on the server, so these read as the listed one.
+  // Mutation: lower-case without upper-casing first and the typed label is sent.
+  it.each([
+    ["Straße", "STRASSE"],
+    ["Straße", "STRAẞE"],
+    ["Kilavuz", "Kılavuz"],
+  ])(
+    "refuses a label that reads like %s once its case is mapped",
+    async (label, typed) => {
+      const listed = { ...NEWSLETTER, id: "p4", key: "anschrift", label };
+      const posted = stub(refused({}, 500), [TRANSACTIONAL, listed]);
+      await addPurpose("street", typed);
+
+      expect(
+        await screen.findByText(
+          `This label reads like ${label}. Choose another label to tell the two purposes apart.`,
+        ),
+      ).toBeVisible();
+      expect(posted).toHaveLength(0);
+    },
+  );
+
+  // Spacing splits on the server's set: U+0085 is a space, U+FEFF is not.
+  // Mutation: split on \s and the first label is sent, the second refused.
+  it("reads a next-line character as a space, like the server", async () => {
+    const listed = {
+      ...NEWSLETTER,
+      id: "p5",
+      key: "digest",
+      label: "Mail digest",
+    };
+    const posted = stub(refused({}, 500), [TRANSACTIONAL, listed]);
+    await addPurpose("weekly", "Mail\u0085digest");
+
+    expect(
+      await screen.findByText(
+        "This label reads like Mail digest. Choose another label to tell the two purposes apart.",
+      ),
+    ).toBeVisible();
+    expect(posted).toHaveLength(0);
+  });
+
+  it("sends a label joined by a zero-width no-break space, as the server accepts it", async () => {
+    const listed = {
+      ...NEWSLETTER,
+      id: "p5",
+      key: "digest",
+      label: "Mail digest",
+    };
+    const created = {
+      ...listed,
+      id: "p6",
+      key: "weekly",
+      label: "Mail\ufeffdigest",
+    };
+    const posted = stub(() => json(created, 201), [TRANSACTIONAL, listed]);
+    await addPurpose(created.key, created.label);
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+  });
+
+  // The ends trim as the server trims them, so a zero-width no-break space at
+  // either end stays in the label that is sent. Mutation: trim() strips it.
+  it.each([["\ufeffMail digest"], ["Mail digest\ufeff"]])(
+    "keeps a zero-width no-break space at an end of %j, as the server does",
+    async (label) => {
+      const listed = {
+        ...NEWSLETTER,
+        id: "p5",
+        key: "digest",
+        label: "Mail digest",
+      };
+      const created = { ...listed, id: "p7", key: "weekly", label };
+      const posted = stub(() => json(created, 201), [TRANSACTIONAL, listed]);
+      await addPurpose(created.key, label);
+
+      await waitFor(() => expect(posted).toHaveLength(1));
+      expect(posted[0]).toMatchObject({ label });
+    },
+  );
+
+  it("sends a label whose accent is another one", async () => {
+    const created = {
+      ...NEWSLETTER,
+      id: "p3",
+      key: "ban_tin_2",
+      label: "Bán tin",
+    };
+    const posted = stub(() => json(created, 201), [TRANSACTIONAL, NEWSLETTER]);
+    await addPurpose(created.key, created.label);
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+  });
+
   it("puts a refused field on the field the refusal names, by its label", async () => {
     stub(
       refused(
@@ -243,6 +431,21 @@ function renderCard() {
     </QueryClientProvider>,
   );
 }
+
+describe("Registered purposes", () => {
+  it("shows each purpose's key under its label", async () => {
+    stubCounts({ contact: ["read"] });
+    renderCard();
+
+    const table = await screen.findByRole("table", {
+      name: en["privacy.purposesRegistry"],
+    });
+    const cell = within(table).getByText(TRANSACTIONAL.label).closest("td");
+    expect(cell).toHaveTextContent(
+      `${TRANSACTIONAL.label}${TRANSACTIONAL.key}`,
+    );
+  });
+});
 
 describe("Mail sent per purpose", () => {
   it("shows a compliance reader each purpose with its class and count", async () => {

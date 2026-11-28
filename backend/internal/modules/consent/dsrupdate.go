@@ -47,6 +47,9 @@ func validateDSRUpdate(current dsrRow, in UpdateDSRInput) *ValidationError {
 		}
 		next = *in.Status
 	}
+	if verr := placeholderAnswer(current, in); verr != nil {
+		return verr
+	}
 	if !closedDSRStatus(next) {
 		return nil
 	}
@@ -70,6 +73,19 @@ func validateDSRUpdate(current dsrRow, in UpdateDSRInput) *ValidationError {
 		return &ValidationError{Field: fieldResolution, Reason: "closing a request needs its answer"}
 	}
 	return &ValidationError{Field: fieldResolution, Reason: "a closed request keeps its answer"}
+}
+
+// placeholderAnswer refuses the erasure's placeholder as a new answer on a case
+// the erasure retired. There the wire reads that word as the answer it removed.
+func placeholderAnswer(current dsrRow, in UpdateDSRInput) *ValidationError {
+	if !subjectErased(current) || in.Resolution == nil || *in.Resolution != erasedResolution ||
+		sameAnswer(current.Resolution, in.Resolution) {
+		return nil
+	}
+	return &ValidationError{
+		Field:  fieldResolution,
+		Reason: "on a case an erasure retired, this word stands for the answer the erasure removed; write the answer in other words",
+	}
 }
 
 // resolutionChanged is what the audit row claims about the answer. A write that

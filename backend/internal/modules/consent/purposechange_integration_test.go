@@ -58,6 +58,28 @@ func TestAnUnusedPurposeCanChangeWithItsAuditAndEvent(t *testing.T) {
 	}
 }
 
+func TestARenameCannotBeMistakenForAnotherListedPurpose(t *testing.T) {
+	e := setupChannelConsent(t)
+	ctx := purposeConfigurer(e)
+	if _, err := e.store.CreatePurpose(ctx, "partner_news", "Partner news", false, ""); err != nil {
+		t.Fatal(err)
+	}
+	spring, err := e.store.CreatePurpose(ctx, "spring_news", "Spring news", false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, label := range []string{"PARTNER   news", "partner_news"} {
+		var refused *ValidationError
+		if _, err := e.store.RenamePurpose(ctx, spring.ID, label); !errors.As(err, &refused) || refused.Field != "label" {
+			t.Fatalf("RenamePurpose(%q) = %v, want a refusal on label", label, err)
+		}
+	}
+	renamed, err := e.store.RenamePurpose(ctx, spring.ID, "Spring_News")
+	if err != nil || renamed.Label != "Spring_News" {
+		t.Fatalf("a rename to the purpose's own key: %+v %v", renamed, err)
+	}
+}
+
 func TestConsentAndWordingReferencesPreventPurposeChanges(t *testing.T) {
 	for _, reference := range []string{"grant", "lead state", "text id", "text key", "decision", "scheduled legacy", "scheduled marketing", "scheduled spaced", "automation action", "automation params", "staged draft"} {
 		t.Run(reference, func(t *testing.T) {

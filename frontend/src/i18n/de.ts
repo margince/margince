@@ -12292,6 +12292,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein anderer Zweck verwendet diesen Schlüssel bereits.",
   "privacy.purposeKey": "Schlüssel",
   "privacy.purposeLabel": "Bezeichnung",
+  "privacy.purposeKeyHint":
+    "Nur die Buchstaben a bis z (ohne Umlaute), die Ziffern 0 bis 9 und Unterstriche, etwa marketing_email. Er folgt der Bezeichnung, bis du einen eigenen eingibst.",
+  "privacy.purposeKeyShape":
+    "Der Schlüssel darf nur die Buchstaben a bis z (ohne Umlaute), die Ziffern 0 bis 9 und Unterstriche enthalten.",
+  "privacy.purposeLabelTaken":
+    "Diese Bezeichnung ähnelt {label}. Wähle eine andere, um die beiden Zwecke zu unterscheiden.",
   "privacy.purposeDoi": "Double-Opt-in erforderlich",
   "privacy.purposeFrequency": "Wie oft",
   "privacy.purposeFrequency.weekly": "Etwa einmal pro Woche",
@@ -12763,6 +12769,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Deine eingegebene Antwort wird nicht gespeichert. Beim Erfüllen wird festgehalten, was die Löschung vorfand: Gelöscht oder Nichts vorhanden.",
   "privacy.erasureAnswer.erased": "Gelöscht",
   "privacy.erasureAnswer.nothing_held": "Nichts vorhanden (bereits gelöscht)",
+  "privacy.answerRemoved":
+    "Antwort mit den Angaben zur anfragenden Person entfernt",
   "privacy.legalHoldTitle": "Durch Legal Hold blockiert",
   "privacy.legalHold":
     "Die Löschung hat hier keinen Vorrang, da für diesen Kontakt eine gesetzliche Aufbewahrungsfrist läuft (Art. 17 Abs. 3 lit. b). Die Sperre gilt für jede Rolle, auch für Admins, und lässt sich nicht übersteuern. Der Versuch wurde im Audit-Log festgehalten.",
