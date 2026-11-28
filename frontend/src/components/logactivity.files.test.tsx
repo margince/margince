@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { browserZone } from "../format/timezone";
+import { en as englishCopy } from "../i18n/en";
 import { CompanyZoneProvider } from "../lib/companyzone";
 import {
   contactDocuments,
@@ -244,7 +245,10 @@ async function logWith(files: File[]) {
   fireEvent.change(screen.getByRole("textbox", { name: "Subject" }), {
     target: { value: "Kickoff with Brandt IT" },
   });
-  await user.upload(await screen.findByLabelText("Attach files"), files);
+  await user.upload(
+    await screen.findByLabelText(englishCopy["log.files"]),
+    files,
+  );
   await user.click(screen.getByRole("button", { name: "Log" }));
   return user;
 }
@@ -349,14 +353,14 @@ it("takes no new file while the log is out", async () => {
   renderForm();
   await logWith([pdf("price-list.pdf")]);
   await waitFor(() => expect(uploads(calls)).toHaveLength(1));
-  expect(screen.getByLabelText("Attach files").hasAttribute("disabled")).toBe(
-    true,
-  );
+  expect(
+    screen.getByLabelText(englishCopy["log.files"]).hasAttribute("disabled"),
+  ).toBe(true);
   release();
   await waitFor(() =>
-    expect(screen.getByLabelText("Attach files").hasAttribute("disabled")).toBe(
-      false,
-    ),
+    expect(
+      screen.getByLabelText(englishCopy["log.files"]).hasAttribute("disabled"),
+    ).toBe(false),
   );
   expect(uploaded(calls)).toEqual([["price-list.pdf", 201]]);
 });
@@ -380,7 +384,7 @@ it("refuses a file over the installation limit before anything is logged", async
   const calls = stubApi();
   const user = userEvent.setup();
   renderForm();
-  const input = await screen.findByLabelText("Attach files");
+  const input = await screen.findByLabelText(englishCopy["log.files"]);
   // The hint names the limit once the installation has stated it.
   await screen.findByText("Up to 1 MB.");
   await user.upload(
@@ -399,7 +403,7 @@ it("refuses a file over the installation limit before anything is logged", async
 it("names each dropped file the server would refuse, before anything is logged", async () => {
   const calls = stubApi();
   renderForm();
-  const input = await screen.findByLabelText("Attach files");
+  const input = await screen.findByLabelText(englishCopy["log.files"]);
   await screen.findByText("Up to 1 MB.");
   // A drop skips the picker's filter, so these reach the form as they are.
   fireEvent.drop(input, {
@@ -436,7 +440,7 @@ it("names each dropped file the server would refuse, before anything is logged",
 it("judges a file's kind as the server does: by its declared type, else its ending", async () => {
   stubApi();
   renderForm();
-  const input = await screen.findByLabelText("Attach files");
+  const input = await screen.findByLabelText(englishCopy["log.files"]);
   await screen.findByText("Up to 1 MB.");
   fireEvent.drop(input, {
     dataTransfer: {
@@ -455,7 +459,7 @@ it("judges a file's kind as the server does: by its declared type, else its endi
 it("clears a file's refusal once a file of that name is accepted", async () => {
   stubApi();
   renderForm();
-  const input = await screen.findByLabelText("Attach files");
+  const input = await screen.findByLabelText(englishCopy["log.files"]);
   await screen.findByText("Up to 1 MB.");
   const refusal = /blank\.pdf was not added/;
   fireEvent.drop(input, {
@@ -474,7 +478,7 @@ it("clears a file's refusal once a file of that name is accepted", async () => {
 it("clears the refused-file lines once the activity is logged", async () => {
   const calls = stubApi();
   renderForm();
-  const input = await screen.findByLabelText("Attach files");
+  const input = await screen.findByLabelText(englishCopy["log.files"]);
   fireEvent.drop(input, {
     dataTransfer: { files: [new File(["MZ"], "setup.exe", { type: "" })] },
   });
@@ -490,7 +494,7 @@ it("lets a picked file be taken off before logging", async () => {
   const calls = stubApi();
   const user = userEvent.setup();
   renderForm();
-  await user.upload(await screen.findByLabelText("Attach files"), [
+  await user.upload(await screen.findByLabelText(englishCopy["log.files"]), [
     pdf("draft.pdf"),
   ]);
   await user.click(screen.getByRole("button", { name: /Remove draft\.pdf/ }));
@@ -509,7 +513,7 @@ it("offers no files to a seat that may not change activities", async () => {
     expect(calls.some((call) => call.key === "GET /me")).toBe(true),
   );
   await screen.findByRole("textbox", { name: "Subject" });
-  expect(screen.queryByLabelText("Attach files")).toBeNull();
+  expect(screen.queryByLabelText(englishCopy["log.files"])).toBeNull();
 });
 
 it("logs a task outcome with its file and completes the task when selected", async () => {
@@ -531,9 +535,7 @@ it("says the task is still open when only its completion fails, and a retry only
   renderForm(true);
   const user = await logWith([pdf("outcome.pdf")]);
   expect(
-    await screen.findByText(
-      "The activity was logged, but the task is still open. Retry to close it.",
-    ),
+    await screen.findByText(englishCopy["tasks.log.completeFailed"]),
   ).toBeTruthy();
   expect(creates(calls)).toBe(1);
   // The logged words can no longer be edited, so no edit is lost on the retry.
@@ -556,7 +558,9 @@ it("keeps the task open when completion is unchecked", async () => {
   const calls = stubApi();
   renderForm(true);
   const user = userEvent.setup();
-  await user.click(screen.getByRole("checkbox", { name: "Mark task done" }));
+  await user.click(
+    screen.getByRole("checkbox", { name: englishCopy["tasks.log.markDone"] }),
+  );
   await logWith([pdf("outcome.pdf")]);
   await waitFor(() => expect(uploaded(calls)).toEqual([["outcome.pdf", 201]]));
   expect(calls.some((call) => call.key === "PATCH /activities/task-one")).toBe(

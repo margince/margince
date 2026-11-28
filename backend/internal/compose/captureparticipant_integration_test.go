@@ -71,7 +71,7 @@ type participantRow struct {
 func readParticipants(t *testing.T, e *integration.Env, activityID ids.UUID) []participantRow {
 	t.Helper()
 	var out []participantRow
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT role, user_id, contact_id, coalesce(address, '')
 			  FROM activity_participant WHERE activity_id = $1
@@ -214,7 +214,7 @@ func TestDeletingAContactOrAUserIsNotBlockedByGraphRows(t *testing.T) {
 
 	var contact, activityID ids.UUID
 	var doomed ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
 			VALUES ('Departing Contact', $1, 'manual', 'human:test', 'workspace')
@@ -251,7 +251,7 @@ func TestDeletingAContactOrAUserIsNotBlockedByGraphRows(t *testing.T) {
 		t.Fatalf("seeding: %v", err)
 	}
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `DELETE FROM app_user WHERE id = $1`, doomed)
 		return err
 	}); err != nil {
@@ -260,7 +260,7 @@ func TestDeletingAContactOrAUserIsNotBlockedByGraphRows(t *testing.T) {
 			"that only records who was on a thread", err)
 	}
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `DELETE FROM contact WHERE id = $1`, contact)
 		return err
 	}); err != nil {
@@ -270,7 +270,7 @@ func TestDeletingAContactOrAUserIsNotBlockedByGraphRows(t *testing.T) {
 	}
 
 	var ghosts int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM linkedin_connection WHERE matched_contact_id = $1`,
 			contact).Scan(&ghosts)
@@ -297,7 +297,7 @@ func TestRelinkRepointsOnlyTheContactItDisplaced(t *testing.T) {
 	corrected := e.SeedContact(t, "The Real Contact", &e.Rep1)
 
 	var activityID ids.ActivityID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO activity (kind, subject, direction, occurred_at, source, captured_by)
 			VALUES ('email', 'Verwechslung', 'inbound', now(), 'gmail:m-9', 'connector:gmail')
@@ -325,7 +325,7 @@ func TestRelinkRepointsOnlyTheContactItDisplaced(t *testing.T) {
 	}
 
 	got := map[ids.UUID]string{}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
 			`SELECT contact_id, role FROM activity_participant WHERE activity_id = $1`, activityID)
 		if err != nil {

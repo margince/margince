@@ -41,7 +41,7 @@ func (l *leadMailEnv) moveAddress(t *testing.T, from, to string) (ids.LeadID, ti
 		t.Fatalf("changing the lead's address to %s: %v", to, err)
 	}
 	var changed time.Time
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT max(occurred_at) FROM audit_log
 			WHERE entity_type = 'lead' AND entity_id = $1 AND before ? 'email'`, lead).Scan(&changed)
 	}); err != nil {
@@ -80,7 +80,7 @@ func TestAnAddressALeadTookLaterFilesNoEarlierMail(t *testing.T) {
 func (l *leadMailEnv) createdAt(t *testing.T, lead ids.LeadID) time.Time {
 	t.Helper()
 	var created time.Time
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT created_at FROM lead WHERE id = $1`, lead).Scan(&created)
 	}); err != nil {
 		t.Fatalf("reading when the lead was created: %v", err)
@@ -130,7 +130,7 @@ func assertFilesOnlySince(t *testing.T, l *leadMailEnv, address string, lead ids
 func (l *leadMailEnv) importedLead(t *testing.T, address string) ids.LeadID {
 	t.Helper()
 	var run ids.UUID
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO import_run (connector, status, mapping, source_ref, captured_by)
 			VALUES ('csv', 'running', '{}'::jsonb, 'leads.csv', 'human:test') RETURNING id`).Scan(&run)
@@ -176,7 +176,7 @@ func TestALeadsEarlierHistoryIsFiledAndItsClockStartsAtCreation(t *testing.T) {
 	runLeadFirstResponse(t, l, answered)
 	var created time.Time
 	var responded *time.Time
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT created_at, first_response_at FROM lead WHERE id = $1`, lead).Scan(&created, &responded)
 	}); err != nil {
 		t.Fatal(err)
@@ -307,7 +307,7 @@ func TestAPersonalSenderVerdictTakesTheSendersMailOffItsLead(t *testing.T) {
 func (l *leadMailEnv) settleSenderVerdict(t *testing.T, address string, mail ids.UUID, kind string) {
 	t.Helper()
 	var question ids.UUID
-	err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT id FROM capture_pending_counterparty
 			WHERE email = $1 AND owner_id = $2`, address, l.owner).Scan(&question)
 	})

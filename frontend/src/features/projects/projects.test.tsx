@@ -16,6 +16,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ABSENT } from "../../format/absent";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { openFilterValues } from "../../testing/listquery.testkit";
 import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
@@ -172,7 +173,7 @@ describe("ProjectsScreen", () => {
     await user.click(
       await screen.findByRole("button", { name: "Archived too" }),
     );
-    expect(screen.queryByText("No projects yet")).toBeNull();
+    expect(screen.queryByText(englishCopy["project.emptyTitle"])).toBeNull();
     await waitFor(() =>
       expect(
         urls.some(
@@ -186,7 +187,9 @@ describe("ProjectsScreen", () => {
   it("shows the instructional plate on a first run", async () => {
     projectsBackend({ projects: [] });
     render(<ProjectsScreen />);
-    expect(await screen.findByText("No projects yet")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["project.emptyTitle"]),
+    ).toBeTruthy();
     expect(
       screen.getByText(/starts in the initiative phase during the deal/),
     ).toBeTruthy();
@@ -208,7 +211,7 @@ describe("ProjectsScreen", () => {
   it("names the page at heading level on the first run too", async () => {
     projectsBackend({ projects: [] });
     render(<ProjectsScreen />);
-    await screen.findByText("No projects yet");
+    await screen.findByText(englishCopy["project.emptyTitle"]);
     expect(
       screen
         .getAllByRole("heading", { level: 1 })
@@ -349,7 +352,7 @@ describe("ProjectsScreen — the customer column", () => {
     });
     render(<ProjectsScreen />);
     const row = await phoneRowOf("Hidden one");
-    expect(row.caption).toEqual(["Hidden for your role"]);
+    expect(row.caption).toEqual([englishCopy["state.withheld"]]);
   });
 });
 

@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   company360,
   companyBackstop,
@@ -73,7 +74,9 @@ describe("ticking a task on a company's Tasks tab", () => {
       }),
     );
 
-    expect(await screen.findByText("Task completed")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["worklist.verb.completed"]),
+    ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Undo" }));
 
     await waitFor(() => expect(writes).toHaveLength(2));

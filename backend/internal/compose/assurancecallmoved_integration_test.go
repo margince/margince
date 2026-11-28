@@ -50,7 +50,7 @@ func setupCall(t *testing.T) *callEnv {
 		t.Fatalf("finding the fixture deal: %v", err)
 	}
 	var period forecasting.Period
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		period, _, err = ForecastPeriodAt(e.Admin(), tx, forecasting.PeriodQuarter, e.at)
 		return err
@@ -243,7 +243,7 @@ func TestACallSupersededDuringThePassLeavesNoOpenFinding(t *testing.T) {
 func TestACallForAnotherDayKeepsItsWindowAndTheServersClock(t *testing.T) {
 	e := setupCall(t)
 	var next, last forecasting.Period
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		this, _, err := ForecastPeriodAt(e.Admin(), tx, forecasting.PeriodQuarter, e.at)
 		if err != nil {
 			return err
@@ -269,7 +269,7 @@ func TestACallForAnotherDayKeepsItsWindowAndTheServersClock(t *testing.T) {
 		if d := takenAt.Sub(e.at); d > time.Second || d < -time.Second {
 			t.Fatalf("the baseline is stamped %s, want the server's clock %s", takenAt, e.at)
 		}
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			refs, err := newForecastStoreFor(e.Pool).SnapshotRefsTx(e.Admin(), tx, period,
 				forecasting.Scope{Kind: forecasting.ScopeWorkspace}, "EUR")
 			if err == nil && len(refs) != 0 {

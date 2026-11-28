@@ -1,0 +1,633 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package aitasks_test
+
+// docs/reference/ai-prompts.md — every instruction this build sends a model,
+// and how many untrusted spans each request carries.
+//
+// Rendered by DRIVING each site's real case over its own committed corpus
+// fixture and reading the requests it issued, exactly as certcanary_test.go
+// does. A page that re-assembled prompts from the constants would be a second
+// copy of them, free to drift from what production sends; this one cannot,
+// because it reads the wire.
+//
+// The span count says what ONE REAL CALL CARRIED for that site's own committed
+// scenario. It is deliberately NOT the site's batch capacity: capture_classify
+// asks about ten messages in production and shows one span here, because its
+// fixture holds one message. Reading this column as capacity would be reading
+// the fixture as the code.
+//
+// It is still worth publishing, because it is measured rather than claimed: a
+// site whose request carries several untrusted spans is one where a hostile
+// item has neighbours to speak for, and that is the hazard
+// docs/explanation/prompt-shape.md frames. A zero means no fenced region was
+// found at all, which is itself worth seeing.
+//
+// The boundary nonce is canonicalised. It is fresh per call by design, so a
+// page carrying the real one would differ on every run and say nothing.
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"reflect"
+	"regexp"
+	"slices"
+	"sort"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/aitasks/testmodel"
+	"github.com/margince/margince/backend/internal/compose/modelcontract"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+)
+
+var updateAIPrompts = flag.Bool("update-ai-prompts", false,
+	"rewrite docs/reference/ai-prompts.md from the prompts this build actually sends")
+
+var aiPromptsPage = filepath.Join("..", "..", "..", "..", "docs", "reference", "ai-prompts.md")
+
+// aiPromptsDoc is the artifact of RECORD: structured, one object per site, for
+// a differ and for anything that wants to read these prompts as data. The
+// markdown beside it is rendered from this document rather than from a second
+// walk, so a page cannot describe a payload it does not match.
+var aiPromptsDoc = filepath.Join("..", "..", "..", "..", "docs", "reference", "ai-prompts.json")
+
+type (
+	promptDocument   = modelcontract.Document
+	promptEntry      = modelcontract.Entry
+	decisionQuestion = modelcontract.DecisionQuestion
+)
+
+// isolation is what the page publishes about a site's exposure to a hostile
+// item, and it is DERIVED wherever it can be.
+//
+// An earlier version of this page carried a hand-written judgement per site —
+// "do several mutually untrusted authors share this prompt?" — and it was wrong
+// twice, in opposite directions, before a reviewer caught it. The fact is not
+// visible to a scanner: one fenced span can hold a whole thread written by two
+// parties, and several spans can all be one author's. A list that cannot be
+// derived and keeps being wrong is worse than no list, because the page reads
+// authoritative either way.
+//
+// So the column now says only what a real request shows, plus the two sites
+// whose own code DECLARES isolation in words. The judgement the reader actually
+// needs is the test in docs/explanation/prompt-shape.md, which no table can
+// answer for them.
+type isolation string
+
+const (
+	// declaredOnePerCall: the site's own comment says it judges one item per
+	// call and why. Held by declaredIsolation below.
+	declaredOnePerCall isolation = "one per call (declared in code)"
+	// severalFencedItems: this call carried more than one separately fenced
+	// region, so a hostile item had a neighbour in the prompt.
+	severalFencedItems isolation = "several fenced items"
+	// oneFencedItem: this call carried at most one fenced region. It does NOT
+	// mean one author — a single span can hold a thread two parties wrote.
+	oneFencedItem isolation = "one fenced item"
+)
+
+// declaredIsolation names the sites that refuse to batch on purpose, against
+// the sentence in the code that says so. The sentence is checked to still
+// exist: a declaration deleted from the code must not keep a claim alive on
+// this page.
+// gatekit:fixture the sentence each site's own code uses to declare it judges one item per call — expected data, checked to still exist, not a waived cost
+var declaredIsolation = map[string]string{
+	"capture_counterparty_verdict/verdict":   "ONE SENDER PER MODEL CALL.",
+	"capture_confidentiality_verdict/thread": "ONE THREAD PER CALL,",
+}
+
+// sitePrompt is one site as the wire shows it.
+type sitePrompt struct {
+	task    string
+	variant string
+	// systems holds the DISTINCT instructions the case issued, in order. A case
+	// that sends two different prompts publishes both: rendering only the first
+	// would hide the second from a page that claims to show what is sent.
+	systems []string
+	// schema is the answer shape the request carries. Providers with
+	// schema-constrained decoding enforce it AT GENERATION, so it is part of
+	// what the model was told, not commentary on it — and a page that omitted
+	// it could stay byte-identical while the answer vocabulary changed.
+	schema string
+	// spans is how many separately fenced untrusted regions this scenario's
+	// request carried. NOT the site's capacity — see the file comment.
+	spans int
+	// requests is how many calls the case issued for one scenario.
+	requests int
+	// shape is what this site does with untrusted items.
+	shape isolation
+	// unschemed is how many of the case's requests ask for JSON in their
+	// instruction and carry no response schema to hold the model to it.
+	unschemed int
+	// decisions holds the DISTINCT decision questions the site's decision form
+	// asked across its scenarios, for the same reason systems holds every
+	// distinct instruction: a question that varied by scenario and was shown
+	// once would leave the rest unpublished.
+	decisions []decisionQuestion
+}
+
+func TestTheAIPromptsPageIsCurrent(t *testing.T) {
+	t.Parallel()
+	census, err := compose.NewTaskCensus()
+	if err != nil {
+		t.Fatalf("building the task census: %v", err)
+	}
+	scenarios, err := aicert.LoadCorpus("../aicert/corpus", census)
+	if err != nil {
+		t.Fatalf("loading the corpus: %v", err)
+	}
+	// EVERY scenario, not the first per site. A site's instruction can differ
+	// between scenarios — a scenario's grounding can change what the window
+	// carries, and the window is IN the prompt — so publishing one scenario's prompt
+	// would leave the others unpublished and their drift unnoticed. That is the
+	// same fail-short this page exists to refuse.
+	bySite := map[string][]aicert.Scenario{}
+	for _, sc := range scenarios {
+		key := sc.Task + "/" + sc.Site
+		bySite[key] = append(bySite[key], sc)
+	}
+	var prompts []sitePrompt
+	for _, site := range census.All() {
+		key := string(site.Task) + "/" + site.Variant
+		runs, ok := bySite[key]
+		if !ok {
+			// Skipping would write a page missing this site and still report
+			// success — the page would be short and nothing would say so.
+			// certcanary_test.go holds the same obligation for its own reason;
+			// this one is held here because THIS test writes the artifact.
+			t.Errorf("site %s has no corpus scenario, so it cannot be published — "+
+				"the page would be short and would not say so", key)
+			continue
+		}
+		var got sitePrompt
+		seenSystem := map[string]bool{}
+		failed := false
+		for _, sc := range runs {
+			one, refused, readErr := readSitePrompt(census, sc)
+			if readErr != nil {
+				t.Errorf("%s (%s): %v", key, sc.Name, readErr)
+				failed = true
+				break
+			}
+			if refused != nil {
+				t.Logf("%s (%s): the case refused the stand-in reply (%v); publishing the %d request(s) it had already issued",
+					key, sc.Name, refused, one.requests)
+			}
+			if got.task == "" {
+				// The first scenario sets the measured figures; the rest
+				// contribute any instruction the first did not carry.
+				got = one
+				for _, system := range one.systems {
+					seenSystem[system] = true
+				}
+				continue
+			}
+			got.decisions = appendDistinctQuestions(got.decisions, one.decisions)
+			got.unschemed += one.unschemed
+			for _, system := range one.systems {
+				if seenSystem[system] {
+					continue
+				}
+				seenSystem[system] = true
+				got.systems = append(got.systems, system)
+			}
+		}
+		if failed {
+			continue
+		}
+		switch declared, isDeclared := declaredIsolation[key]; {
+		case isDeclared:
+			if !declarationStillInTree(t, declared) {
+				t.Errorf("site %s is published as isolated on the strength of %q, which is no longer "+
+					"anywhere in backend/ — either the decision was reversed or the sentence moved, and "+
+					"this page must not keep asserting it", key, declared)
+			}
+			got.shape = declaredOnePerCall
+		case got.spans > 1:
+			got.shape = severalFencedItems
+		default:
+			got.shape = oneFencedItem
+		}
+		checkSchemaDeclared(t, key, got.unschemed > 0)
+		prompts = append(prompts, got)
+	}
+	checkDeclaredSchemalessReached(t, prompts)
+	if len(prompts) == 0 {
+		// Under-recognition is the one failure this must not have: an empty
+		// walk would rewrite the page to nothing and report success.
+		t.Fatal("no site yielded a prompt, so this page would be rendered from nothing")
+	}
+	sort.Slice(prompts, func(i, j int) bool {
+		if prompts[i].task != prompts[j].task {
+			return prompts[i].task < prompts[j].task
+		}
+		return prompts[i].variant < prompts[j].variant
+	})
+
+	doc := promptDocument{Sites: make([]promptEntry, 0, len(prompts))}
+	for _, p := range prompts {
+		entry := promptEntry{
+			Task: p.task, Site: p.variant, Isolation: string(p.shape),
+			Systems: p.systems, SpansInScenario: p.spans, Calls: p.requests,
+		}
+		if len(p.systems) > 0 {
+			entry.SystemBytes, entry.SystemTokens,
+				entry.RulesBytes, entry.BoundaryBytes, entry.AfterBoundaryBytes,
+				entry.CacheablePercent = promptParts(p.systems[0])
+		}
+		if p.schema != "" {
+			entry.AnswerSchema = json.RawMessage(p.schema)
+		}
+		entry.DecisionQuestions = p.decisions
+		doc.Sites = append(doc.Sites, entry)
+	}
+	encoded, err := json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		t.Fatalf("encoding the prompt document: %v", err)
+	}
+	encoded = append(encoded, '\n')
+	// The page is rendered FROM the document, never from a second walk: a page
+	// built from its own pass could disagree with the payload it claims to
+	// describe, and nothing would catch it.
+	rendered := renderAIPromptsPage(doc)
+
+	if t.Failed() {
+		// Something above could not be read. Writing now would publish a
+		// SHORTER document and report success, which is the one way a
+		// regenerate can quietly delete a site.
+		t.Fatal("prompts could not be collected for every site; refusing to rewrite the artifacts from a partial pass")
+	}
+	if *updateAIPrompts {
+		for path, body := range map[string][]byte{aiPromptsDoc: encoded, aiPromptsPage: []byte(rendered)} {
+			if writeErr := os.WriteFile(path, body, 0o600); writeErr != nil {
+				t.Fatalf("writing %s: %v", path, writeErr)
+			}
+		}
+		return
+	}
+	for path, want := range map[string]string{aiPromptsDoc: string(encoded), aiPromptsPage: rendered} {
+		published, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Fatalf("reading %s: %v", path, readErr)
+		}
+		if string(published) != want {
+			t.Errorf("%s is stale — it no longer matches the prompts this build sends.\n"+
+				"    Regenerate with: cd backend && go test ./internal/compose/aitasks/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts",
+				path)
+		}
+	}
+}
+
+// readSitePrompt drives one site's real case and reads what it sent.
+func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePrompt, refused error, err error) {
+	factory, bound := census.CaseFor(ai.Task(sc.Task), sc.Site)
+	if !bound {
+		return sitePrompt{}, nil, errors.New("no case is bound to this site")
+	}
+	prepared, prepErr := factory.Prepare(json.RawMessage(sc.Fixture), json.RawMessage(sc.Expect.Answer))
+	if prepErr != nil {
+		return sitePrompt{}, nil, fmt.Errorf("the site refused its own committed fixture: %w", prepErr)
+	}
+	recorder := &testmodel.Recorder{}
+	// A case may refuse the stand-in reply — that is its validator working, not
+	// a failure of this page, and the requests already issued are what gets
+	// published. The refusal is still reported rather than dropped: a site that
+	// began refusing for a NEW reason is worth seeing in the log, and
+	// certcanary_test.go reports the same event the same way.
+	if _, runErr := prepared.Run(context.Background(), recorder); runErr != nil {
+		refused = runErr
+	}
+	if len(recorder.Requests) == 0 {
+		return sitePrompt{}, refused, errors.New("the case issued no request, so it has no prompt to publish")
+	}
+	var systems []string
+	seen := map[string]bool{}
+	unschemed := 0
+	for _, req := range recorder.Requests {
+		if strings.Contains(req.System+fmt.Sprint(req.Messages), "JSON") && len(req.ResponseSchema) == 0 {
+			unschemed++
+		}
+		canonical := promptfence.Canonicalize(req.System, req.System)
+		if seen[canonical] {
+			continue
+		}
+		seen[canonical] = true
+		systems = append(systems, canonical)
+	}
+	first := recorder.Requests[0]
+	spans := 0
+	for _, msg := range first.Messages {
+		spans += fencedSpansIn(first.System, msg.Content)
+	}
+	return sitePrompt{
+		task:      sc.Task,
+		variant:   sc.Site,
+		systems:   systems,
+		schema:    canonicalSchema(first.ResponseSchema),
+		spans:     spans,
+		requests:  len(recorder.Requests),
+		unschemed: unschemed,
+		decisions: decisionQuestionsOf(prepared),
+	}, refused, nil
+}
+
+// decisionQuestionsOf reads a case's decision form, by the same interface the
+// certification lane asks it through, sorted by question name; nil for a site
+// with no decision form.
+func decisionQuestionsOf(prepared aitasks.PreparedCase) []decisionQuestion {
+	form, decides := prepared.(aitasks.DecisionCase)
+	if !decides {
+		return nil
+	}
+	req := form.DecisionRequest()
+	questions := make([]decisionQuestion, 0, len(req.Questions))
+	for name, q := range req.Questions {
+		questions = append(questions, decisionQuestion{
+			Name: name, Type: string(q.Type), Instructions: q.Instructions, Criteria: q.Criteria,
+		})
+	}
+	sort.Slice(questions, func(i, j int) bool { return questions[i].Name < questions[j].Name })
+	return questions
+}
+
+// appendDistinctQuestions adds each question of more that held differs from
+// every one already held, compared as a whole.
+func appendDistinctQuestions(held, more []decisionQuestion) []decisionQuestion {
+	for _, q := range more {
+		if !slices.ContainsFunc(held, func(h decisionQuestion) bool { return reflect.DeepEqual(h, q) }) {
+			held = append(held, q)
+		}
+	}
+	return held
+}
+
+// mintedID matches a record id in its canonical spelling. Some sites build the
+// answer schema PER CALL — the citation enum is that call's own passage or
+// message ids — so the ids differ on every run and a page carrying them would
+// churn forever without anything about the product having changed.
+var mintedID = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
+
+// canonicalSchema renders the answer shape stably: sorted by the JSON encoder,
+// with per-call ids replaced by a placeholder. What survives is the VOCABULARY
+// — which is what a reader comes for, and what changes when the contract does.
+func canonicalSchema(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var decoded any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		// Unreadable is a fact worth publishing rather than hiding: a request
+		// carrying a schema no parser accepts is a defect, and a blank cell
+		// would look like "no schema".
+		return "unreadable: " + err.Error()
+	}
+	pretty, err := json.MarshalIndent(decoded, "", "  ")
+	if err != nil {
+		return "unrenderable: " + err.Error()
+	}
+	return mintedID.ReplaceAllString(string(pretty), "<id minted for this call>")
+}
+
+// fencedSpansIn counts the separately wrapped untrusted regions in one turn, by
+// the boundary the SYSTEM prompt declares. Counting the opening marker is what
+// makes "how many untrusted items does this call carry" a fact read off the
+// wire rather than a claim about the code.
+func fencedSpansIn(system, content string) int {
+	marker, declared := promptfence.MarkerIn(system)
+	if !declared {
+		return 0
+	}
+	return strings.Count(content, "<"+marker)
+}
+
+// renderAIPromptsPage writes the published markdown.
+func renderAIPromptsPage(doc promptDocument) string {
+	var b strings.Builder
+	// The HTML-comment marker is what exempts a generated page from the docs
+	// length budget (gates/docspagelength_test.go). The prose below repeats it
+	// for a human; the comment is what the gate reads.
+	b.WriteString("<!-- Generated: do not edit by hand. -->\n\n")
+	b.WriteString("# The prompts this build sends\n\n")
+	b.WriteString("Regenerate with\n")
+	b.WriteString("`cd backend && go test ./internal/compose/aitasks/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts`.\n\n")
+	b.WriteString("Every instruction below was read off a real request, by driving that site's\n")
+	b.WriteString("own certification case over its own committed fixture, so it is the text\n")
+	b.WriteString("production sends.\n\n")
+	b.WriteString("The data boundary is a random marker minted per call; it is shown here as a\n")
+	b.WriteString("fixed placeholder so this page does not change on every run. Why it is random,\n")
+	b.WriteString("and what follows from it, is in\n")
+	b.WriteString("[prompt-shape.md](../explanation/prompt-shape.md).\n\n")
+
+	b.WriteString("## What one real call carried\n\n")
+	b.WriteString("**isolation** is derived from the request. It says whether a hostile item\n")
+	b.WriteString("had a neighbour in the same prompt to argue about.\n\n")
+	b.WriteString("| value | meaning |\n|---|---|\n")
+	b.WriteString("| `" + string(declaredOnePerCall) + "` | the site's own comment says it judges one item per call, and why. Two sites. |\n")
+	b.WriteString("| `several fenced items` | this call carried more than one separately fenced region. |\n")
+	b.WriteString("| `one fenced item` | this call carried at most one. A single fenced region can still hold a whole thread two parties wrote. |\n\n")
+	b.WriteString("Whether the parties in a prompt are mutually untrusted is the question that\n")
+	b.WriteString("decides safety, and it cannot be read off a request. The test for it is in\n")
+	b.WriteString("[prompt-shape.md](../explanation/prompt-shape.md); no column here answers it.\n\n")
+	b.WriteString("**spans in this scenario** is what one scenario produced, and says nothing\n")
+	b.WriteString("about the site's batch capacity. `capture_classify` asks about ten messages in\n")
+	b.WriteString("production and shows 1 here, because its fixture holds one message.\n\n")
+	b.WriteString("Where a request carries several untrusted spans, a hostile item has neighbours\n")
+	b.WriteString("it could speak for: the hazard [prompt-shape.md](../explanation/prompt-shape.md)\n")
+	b.WriteString("frames. A 0 means no fenced region was found in that call at all.\n\n")
+	b.WriteString("| task | site | isolation | spans in this scenario | calls |\n|---|---|---|---:|---:|\n")
+	for _, p := range doc.Sites {
+		fmt.Fprintf(&b, "| `%s` | `%s` | %s | %d | %d |\n", p.Task, p.Site, p.Isolation, p.SpansInScenario, p.Calls)
+	}
+
+	b.WriteString("\n## The instructions\n\n")
+	b.WriteString("A site whose task declares a decision form also shows its **decision\n")
+	b.WriteString("question**: what the decision model is asked before the task's LLM ladder,\n")
+	b.WriteString("read from the site's adapter over the same fixture. The question is\n")
+	b.WriteString("instructions plus one criterion per label; the structured state it reads is\n")
+	b.WriteString("per call and not shown. How the lane is chosen and when it falls back is in\n")
+	b.WriteString("[ai-runtime.md](../explanation/ai-runtime.md#the-decision-lane).\n\n")
+	for _, p := range doc.Sites {
+		fmt.Fprintf(&b, "### `%s` / `%s`\n\n", p.Task, p.Site)
+		if p.SystemBytes > 0 {
+			fmt.Fprintf(&b, "`system %s B (~%s tok)`: rules %s B · boundary %s B · after boundary %s B · "+
+				"**cacheable %d%%**\n\n",
+				thousands(p.SystemBytes), thousands(p.SystemTokens), thousands(p.RulesBytes),
+				thousands(p.BoundaryBytes), thousands(p.AfterBoundaryBytes), p.CacheablePercent)
+		}
+		for i, system := range p.Systems {
+			label := "system prompt"
+			if len(p.Systems) > 1 {
+				label = fmt.Sprintf("system prompt %d of %d", i+1, len(p.Systems))
+			}
+			fmt.Fprintf(&b, "<details><summary>%s</summary>\n\n```\n", label)
+			b.WriteString(strings.TrimRight(system, "\n"))
+			b.WriteString("\n```\n\n</details>\n\n")
+		}
+		if len(p.AnswerSchema) > 0 {
+			b.WriteString("<details><summary>answer shape (enforced at generation)</summary>\n\n```json\n")
+			b.WriteString(strings.TrimRight(string(p.AnswerSchema), "\n"))
+			b.WriteString("\n```\n\n</details>\n\n")
+		}
+		for _, q := range p.DecisionQuestions {
+			writeDecisionQuestion(&b, q)
+		}
+	}
+	return b.String()
+}
+
+// writeDecisionQuestion renders one decision question: its instructions and a
+// criterion per label, in label order. Inside a code block, because a
+// criterion is prose that may carry any markdown character.
+func writeDecisionQuestion(b *strings.Builder, q decisionQuestion) {
+	fmt.Fprintf(b, "<details><summary>decision question <code>%s</code> (%s)</summary>\n\n```\n", q.Name, q.Type)
+	fmt.Fprintf(b, "instructions:\n  %s\n\ncriteria:\n", strings.TrimSpace(q.Instructions))
+	labels := make([]string, 0, len(q.Criteria))
+	for label := range q.Criteria {
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+	for _, label := range labels {
+		fmt.Fprintf(b, "  %s: %s\n", label, strings.TrimSpace(q.Criteria[label]))
+	}
+	b.WriteString("```\n\n</details>\n\n")
+}
+
+// promptParts splits one instruction into the three parts prompt-shape.md
+// names, and answers how much of it a prefix cache could reuse.
+//
+// The boundary sentence is where a shared prefix must stop: it is the first
+// thing in the prompt that differs per call. Anything AFTER it is dead weight
+// for caching however identical it is, which is the whole reason the split is
+// published — agent_loop carried 97 KB there until the line was moved.
+func promptParts(system string) (bytes, tokens, rules, boundary, after, cacheable int) {
+	bytes = len(system)
+	// The same ~4-bytes-per-token heuristic the agent window bounds itself
+	// with. Coarse on purpose: this is for comparing prompts, not billing.
+	tokens = bytes / 4
+	start := strings.Index(system, boundarySentenceOpens)
+	if start < 0 {
+		// No boundary declared: the site shows the model no captured text, so
+		// the whole instruction is stable.
+		return bytes, tokens, bytes, 0, 0, 100
+	}
+	rules = start
+	end := strings.Index(system[start:], boundarySentenceCloses)
+	if end < 0 {
+		boundary = bytes - start
+	} else {
+		boundary = end + len(boundarySentenceCloses)
+	}
+	after = bytes - start - boundary
+	if bytes > 0 {
+		cacheable = 100 * rules / bytes
+	}
+	return bytes, tokens, rules, boundary, after, cacheable
+}
+
+// The fence rule's first and last words, which bracket the one per-call part of
+// an instruction. Matched as text because the rule is assembled by
+// promptfence.Fence.Rule and this page reads the finished string.
+const (
+	boundarySentenceOpens  = "Data is delimited by"
+	boundarySentenceCloses = "is part of the data."
+)
+
+// thousands renders a byte count with separators, so a 98,677 does not read as
+// a 9,867 at a glance.
+func thousands(n int) string {
+	in := strconv.Itoa(n)
+	var out strings.Builder
+	for i, digit := range in {
+		if i > 0 && (len(in)-i)%3 == 0 {
+			out.WriteString(",")
+		}
+		out.WriteRune(digit)
+	}
+	return out.String()
+}
+
+// declarationStillInTree reports whether a sentence a site is published as
+// relying on is still written in the code. A page that kept asserting an
+// isolation after the comment declaring it was deleted would be making a claim
+// nobody holds. The walk root is the backend module, three levels up. This test
+// runs with its own package directory as the working directory, like the
+// artifact paths above it.
+func declarationStillInTree(t *testing.T, sentence string) bool {
+	t.Helper()
+	found := false
+	err := filepath.WalkDir(filepath.Join("..", "..", ".."), func(p string, d fs.DirEntry, walkErr error) error {
+		switch {
+		case walkErr != nil:
+			return walkErr
+		// A test file is skipped, and skipping THIS one is the point: the
+		// declarations are string literals in the map above, so a walk that
+		// read its own source would find every sentence it was looking for and
+		// could never fail. The declaration has to be in production code,
+		// which is where the decision is made and where a reader meets it.
+		case found, d.IsDir(), !strings.HasSuffix(p, ".go"), strings.HasSuffix(p, "_test.go"):
+			return nil
+		}
+		body, readErr := os.ReadFile(p)
+		if readErr != nil {
+			return readErr
+		}
+		if strings.Contains(string(body), sentence) {
+			found = true
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("searching for the declaration %q: %v", sentence, err)
+	}
+	return found
+}
+
+// declaredSchemaless names the sites that ask for JSON and send no response
+// schema, against the sentence in their code that says why.
+// gatekit:fixture each site's own sentence for why its JSON reply has no schema. Expected data, checked to still exist.
+var declaredSchemaless = map[string]string{
+	"brief_ranking/rank": "carries no ResponseSchema: BoundToCandidates enforces",
+	"cert_judge/judge":   "It carries no ResponseSchema: its digest stamps every judged",
+}
+
+// checkSchemaDeclared holds a site whose request asks for JSON to send the
+// schema providers enforce at generation, or to say in its code why not.
+func checkSchemaDeclared(t *testing.T, key string, unschemed bool) {
+	t.Helper()
+	sentence, declared := declaredSchemaless[key]
+	switch {
+	case unschemed && !declared:
+		t.Errorf("site %s asks for JSON and sends no response schema: declare one from its reply struct, "+
+			"or say in its code why not and add that sentence to declaredSchemaless", key)
+	case declared && !unschemed:
+		t.Errorf("site %s is declared schemaless but every request now carries a schema; remove it from declaredSchemaless", key)
+	case declared && !declarationStillInTree(t, sentence):
+		t.Errorf("site %s is declared schemaless on the strength of %q, which is no longer in backend/", key, sentence)
+	}
+}
+
+func checkDeclaredSchemalessReached(t *testing.T, prompts []sitePrompt) {
+	t.Helper()
+	read := map[string]bool{}
+	for _, p := range prompts {
+		read[p.task+"/"+p.variant] = true
+	}
+	for key := range declaredSchemaless {
+		if !read[key] {
+			t.Errorf("declaredSchemaless names %s, which no corpus scenario reaches", key)
+		}
+	}
+}

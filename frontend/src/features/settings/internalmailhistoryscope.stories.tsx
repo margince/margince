@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { InternalMailHistoryScope } from "./internalmailhistoryscope";
 
 const meta = {
@@ -26,7 +27,7 @@ export const NotAuthorized: Story = {
     await userEvent.click(await canvas.findByRole("checkbox"));
     await expect(canvas.getByRole("checkbox")).toBeChecked();
     await expect(
-      canvas.getByLabelText("Historical mail received on or after (UTC)"),
+      canvas.getByLabelText(englishCopy["internalMail.historySince"]),
     ).toBeVisible();
   },
 };

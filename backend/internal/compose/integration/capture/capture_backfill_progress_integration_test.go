@@ -67,7 +67,7 @@ func (c *reportingConnector) BackfillPage(ctx context.Context, _ connector.Auth,
 // they are cleared, which the summed status read alone cannot show.
 func readInflight(t *testing.T, e *integration.SearchEnv, id ids.UUID) (scanned, captured int) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
 			SELECT inflight_scanned, inflight_captured FROM capture_backfill WHERE id = $1`, id).
 			Scan(&scanned, &captured)

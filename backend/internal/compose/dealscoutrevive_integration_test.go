@@ -56,7 +56,7 @@ func (e *scoutEnv) revivedCorrection(t *testing.T, deal ids.DealID) deals.DealCo
 		t.Fatalf("no deal_revive correction on the deal: %v", err)
 	}
 	var correction deals.DealCorrection
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		correction, err = e.Deals.CorrectionForAudit(e.Admin(), tx, auditID)
 		return err
 	}); err != nil {

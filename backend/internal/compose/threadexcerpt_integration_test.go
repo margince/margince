@@ -36,7 +36,7 @@ const seededCorrespondent = "buyer@seeded.test"
 func seedThreadMail(t *testing.T, e *integration.Env, threadKey string, bodyRunes, minutesAgo int) {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, thread_key, occurred_at,
 			                      source_system, source_id, source, captured_by,
@@ -63,7 +63,7 @@ func TestAThreadReportsHowMuchOfItselfWasNotRead(t *testing.T) {
 	seedThreadMail(t, e, key, extractBodyLimit+over, 1)
 
 	var messages []threadMessage
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		messages, err = threadMessages(context.Background(), tx, &settledThread{Key: key})
 		return err
@@ -190,7 +190,7 @@ func TestNewMailIsReadBeforeTheOlderRange(t *testing.T) {
 func seedThreadMailAt(t *testing.T, e *integration.Env, threadKey string, at time.Time) {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, thread_key, occurred_at,
 			                      source_system, source_id, source, captured_by,
@@ -208,7 +208,7 @@ func seedThreadMailAt(t *testing.T, e *integration.Env, threadKey string, at tim
 // its cursor the way the pass does.
 func read(t *testing.T, e *integration.Env, thread *settledThread) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		messages, err := threadMessages(context.Background(), tx, thread)
 		thread.Messages = messages
 		return err

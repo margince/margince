@@ -40,7 +40,7 @@ const (
 // same id to somebody else. Returns the two participant row ids.
 func seedRosterRowsFor(t *testing.T, e *Env, contactID ids.UUID) (mine, decoy ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, source, captured_by)
@@ -77,7 +77,7 @@ func seedRosterRowsFor(t *testing.T, e *Env, contactID ids.UUID) (mine, decoy id
 func participantRowExists(t *testing.T, e *Env, row ids.UUID) bool {
 	t.Helper()
 	var found bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT EXISTS (SELECT 1 FROM activity_participant WHERE id = $1)`, row).Scan(&found)
 	}); err != nil {

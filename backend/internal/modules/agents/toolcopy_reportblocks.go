@@ -12,7 +12,7 @@ var describeReportBlocksCopy = toolCopy{
 	Limits: "It describes the grammar; it composes nothing and returns no numbers. It is NOT " +
 		"a prerequisite: an unknown block kind is refused by name with the whole set, so a " +
 		"first attempt costs one refusal. The grammar is the same for every caller, because it " +
-		"is the engine's and not a workspace's.",
+		"is the engine's and not a company's.",
 	Instead: "Compose directly when the blocks needed are the obvious ones, and read the " +
 		"refusal when a kind is wrong: it carries the accepted set. This tool answers the " +
 		"same document as the margince://schema/report-blocks resource, for a caller that " +

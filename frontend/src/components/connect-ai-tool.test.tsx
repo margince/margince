@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProviderMark } from "../design-system/provider-mark";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { AI_CHOICE_MARKS, AI_PLACES } from "../lib/aiconnect";
 import * as download from "../lib/download";
 import { ConnectAiTool, ConnectAiToolCard } from "./connect-ai-tool";
@@ -76,13 +77,17 @@ async function pick(
 ) {
   await pickOption(
     user,
-    await screen.findByRole("combobox", { name: "Which AI do you use?" }),
+    await screen.findByRole("combobox", {
+      name: englishCopy["aiAccess.connect.toolQuestion"],
+    }),
     ai,
   );
   if (place !== undefined) {
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Where do you use it?" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["aiAccess.connect.placeQuestion"],
+      }),
       place,
     );
   }
@@ -98,37 +103,43 @@ describe("ConnectAiToolCard", () => {
   it("opens on Claude for a company plan, with the admin first and no address to paste", async () => {
     renderCard();
     expect(
-      (await screen.findByRole("combobox", { name: "Which AI do you use?" }))
-        .textContent,
+      (
+        await screen.findByRole("combobox", {
+          name: englishCopy["aiAccess.connect.toolQuestion"],
+        })
+      ).textContent,
     ).toContain("Claude");
     expect(
-      screen.getByRole("combobox", { name: "Where do you use it?" })
-        .textContent,
-    ).toContain("Claude app: web, desktop or phone");
+      screen.getByRole("combobox", {
+        name: englishCopy["aiAccess.connect.placeQuestion"],
+      }).textContent,
+    ).toContain(englishCopy["aiAccess.place.claudeApp"]);
     expect(
       screen
-        .getByRole("button", { name: "My company’s" })
+        .getByRole("button", { name: englishCopy["aiAccess.plan.company"] })
         .getAttribute("aria-pressed"),
     ).toBe("true");
     expect(
-      screen.getByText(
-        "Your Claude owner adds Margince once for the whole team.",
-      ),
+      screen.getByText(englishCopy["aiAccess.claude.adminLine"]),
     ).toBeTruthy();
     expect(steps()).toEqual([
-      "In Claude, open “Customize”, then “Connectors”.",
-      "Find Margince and choose “Connect”.",
-      "Margince opens. Sign in and choose Authorize. Done.",
+      englishCopy["aiAccess.claude.openConnectors"],
+      englishCopy["aiAccess.claude.connect"],
+      englishCopy["aiAccess.step.allow"],
     ]);
     expect(
-      screen.queryByRole("textbox", { name: "Margince address" }),
+      screen.queryByRole("textbox", {
+        name: englishCopy["aiAccess.connect.address"],
+      }),
     ).toBeNull();
   });
 
   it("shows the address inside the step that asks the reader to paste it", async () => {
     renderCard();
     await choose(userEvent.setup(), "My own");
-    const address = screen.getByRole("textbox", { name: "Margince address" });
+    const address = screen.getByRole("textbox", {
+      name: englishCopy["aiAccess.connect.address"],
+    });
     expect(address.textContent).toBe(MCP_URL);
     const items = within(pathBox()).getAllByRole("listitem");
     expect(items).toHaveLength(3);
@@ -148,7 +159,11 @@ describe("ConnectAiToolCard", () => {
     expect(steps()).toEqual([]);
     expect(screen.queryByRole("button", { name: /Download guide/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /Help from/ })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "My company’s" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["aiAccess.plan.company"],
+      }),
+    );
     expect(steps()).toHaveLength(3);
     for (const group of screen.getAllByRole("group")) {
       expect(
@@ -170,7 +185,7 @@ describe("ConnectAiToolCard", () => {
     expect(filename).toBe("margince-setup-claude.md");
     expect(type).toMatch(/^text\/markdown/);
     expect(String(markdown)).toContain(MCP_URL);
-    expect(String(markdown)).toContain("Find Margince and choose “Connect”.");
+    expect(String(markdown)).toContain(englishCopy["aiAccess.claude.connect"]);
   });
 
   it("dates the guide on the day the steps were checked, in every zone", async () => {
@@ -197,7 +212,11 @@ describe("ConnectAiToolCard", () => {
       configurable: true,
       value: { writeText },
     });
-    await user.click(screen.getByRole("button", { name: "Copy address" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["aiAccess.connect.copyAddress"],
+      }),
+    );
     expect(writeText).toHaveBeenCalledWith(MCP_URL);
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Copied" })).toBeTruthy(),
@@ -209,9 +228,13 @@ describe("ConnectAiToolCard", () => {
     // user-event installs its own clipboard on setup, so this case reuses one.
     await pick(user, "ChatGPT / Codex");
     await user.click(screen.getByRole("button", { name: "My own" }));
-    await user.click(screen.getByRole("button", { name: "Copy address" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["aiAccess.connect.copyAddress"],
+      }),
+    );
     expect(
-      await screen.findByText("Select the address and copy it by hand."),
+      await screen.findByText(englishCopy["aiAccess.connect.copyRemedy"]),
     ).toBeTruthy();
   });
 
@@ -225,7 +248,7 @@ describe("ConnectAiToolCard", () => {
       "https://support.google.com/gemini/answer/17209137",
     );
     expect(
-      screen.getByText("For now only in the US, in English, on the web."),
+      screen.getByText(englishCopy["aiAccess.gemini.ownNote"]),
     ).toBeTruthy();
     await pick(user, "Copilot");
     expect(
@@ -239,11 +262,11 @@ describe("ConnectAiToolCard", () => {
     await pick(user, "Claude", "Claude Code in Visual Studio");
     expect(screen.queryByRole("button", { name: "My own" })).toBeNull();
     expect(
-      screen.getByText(
-        "Run the command in Visual Studio’s terminal: “View”, then “Terminal”.",
-      ),
+      screen.getByText(englishCopy["aiAccess.runIn.visualStudio"]),
     ).toBeTruthy();
-    const command = screen.getByRole("textbox", { name: "Text to copy" });
+    const command = screen.getByRole("textbox", {
+      name: englishCopy["aiAccess.connect.command"],
+    });
     expect(command.textContent).toBe(
       `claude mcp add --transport http --scope user margince ${MCP_URL}`,
     );
@@ -252,7 +275,9 @@ describe("ConnectAiToolCard", () => {
     ).toBeTruthy();
     await pick(user, "Claude", "Claude Code in a terminal");
     expect(
-      screen.getByRole("textbox", { name: "Text to copy" }).textContent,
+      screen.getByRole("textbox", {
+        name: englishCopy["aiAccess.connect.command"],
+      }).textContent,
     ).toBe(command.textContent);
     expect(screen.queryByText(/terminal: “View”/)).toBeNull();
   });
@@ -262,7 +287,9 @@ describe("ConnectAiToolCard", () => {
     const user = userEvent.setup();
     await pick(user, "Copilot", "GitHub Copilot in Visual Studio");
     expect(
-      screen.getByRole("textbox", { name: "Text to copy" }).textContent,
+      screen.getByRole("textbox", {
+        name: englishCopy["aiAccess.connect.command"],
+      }).textContent,
     ).toBe(`{ "servers": { "margince": { "url": "${MCP_URL}" } } }`);
     expect(
       screen
@@ -276,10 +303,14 @@ describe("ConnectAiToolCard", () => {
     const user = userEvent.setup();
     await pick(user, "Cursor");
     expect(
-      screen.queryByRole("combobox", { name: "Where do you use it?" }),
+      screen.queryByRole("combobox", {
+        name: englishCopy["aiAccess.connect.placeQuestion"],
+      }),
     ).toBeNull();
     expect(
-      screen.getByRole("textbox", { name: "Text to copy" }).textContent,
+      screen.getByRole("textbox", {
+        name: englishCopy["aiAccess.connect.command"],
+      }).textContent,
     ).toBe(`{ "mcpServers": { "margince": { "url": "${MCP_URL}" } } }`);
   });
 
@@ -288,11 +319,15 @@ describe("ConnectAiToolCard", () => {
     const user = userEvent.setup();
     await pick(user, "Lumo");
     expect(
-      screen.queryByRole("combobox", { name: "Where do you use it?" }),
+      screen.queryByRole("combobox", {
+        name: englishCopy["aiAccess.connect.placeQuestion"],
+      }),
     ).toBeNull();
     expect(steps()).toHaveLength(4);
     expect(steps()[1]).toContain("“Remote (HTTP)”");
-    const address = screen.getByRole("textbox", { name: "Margince address" });
+    const address = screen.getByRole("textbox", {
+      name: englishCopy["aiAccess.connect.address"],
+    });
     expect(address.textContent).toBe(MCP_URL);
     expect(
       within(pathBox()).getAllByRole("listitem")[2].contains(address),
@@ -305,10 +340,14 @@ describe("ConnectAiToolCard", () => {
     const user = userEvent.setup();
     await pick(user, "Another AI tool");
     expect(
-      screen.queryByRole("combobox", { name: "Where do you use it?" }),
+      screen.queryByRole("combobox", {
+        name: englishCopy["aiAccess.connect.placeQuestion"],
+      }),
     ).toBeNull();
     expect(
-      screen.getByRole("textbox", { name: "Margince address" }).textContent,
+      screen.getByRole("textbox", {
+        name: englishCopy["aiAccess.connect.address"],
+      }).textContent,
     ).toBe(MCP_URL);
     expect(screen.getByText(/OAuth in your browser/)).toBeTruthy();
     expect(screen.getByText(/Authorization: Bearer/)).toBeTruthy();
@@ -340,10 +379,12 @@ describe("ConnectAiToolCard", () => {
   it("says AI tools cannot connect yet instead of giving steps", async () => {
     renderCard(404);
     expect(
-      await screen.findByText("AI tools cannot connect to Margince yet."),
+      await screen.findByText(englishCopy["agents.connectorOff"]),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("combobox", { name: "Which AI do you use?" }),
+      screen.queryByRole("combobox", {
+        name: englishCopy["aiAccess.connect.toolQuestion"],
+      }),
     ).toBeNull();
     expect(screen.queryByTestId("aiconnect-path")).toBeNull();
   });
@@ -377,7 +418,9 @@ describe("the picker's marks", () => {
     renderCard();
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("combobox", { name: "Which AI do you use?" }),
+      await screen.findByRole("combobox", {
+        name: englishCopy["aiAccess.connect.toolQuestion"],
+      }),
     );
     const expected = [
       ["Claude", "claude"],

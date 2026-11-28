@@ -29,7 +29,7 @@ import (
 func legacyInteraction(t *testing.T, e *integration.Env, contact ids.UUID, capturedBy string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO activity (kind, subject, direction, occurred_at, source, captured_by, counterparty_email)
@@ -51,7 +51,7 @@ func legacyInteraction(t *testing.T, e *integration.Env, contact ids.UUID, captu
 func seedGraphContact(t *testing.T, e *integration.Env, name string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
 			VALUES ($1, $2,
@@ -77,7 +77,7 @@ func TestTheBackfillWorkerRecoversHistoryAndThenStops(t *testing.T) {
 	}
 
 	var participants int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity_participant WHERE user_id = $1`, e.Rep1).Scan(&participants)
 	}); err != nil {
@@ -94,7 +94,7 @@ func TestTheBackfillWorkerRecoversHistoryAndThenStops(t *testing.T) {
 	if err := worker.backfillOneWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("second backfill pass: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity_participant WHERE user_id = $1`, e.Rep1).Scan(&participants)
 	}); err != nil {
@@ -112,7 +112,7 @@ func TestTheReconcileWorkerRebuildsTheProjection(t *testing.T) {
 
 	// Participants exist, but nothing has folded them — the state after a
 	// backfill runs with no consumer, or after a projection is lost.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity_participant (activity_id, user_id, role)
@@ -136,7 +136,7 @@ func TestTheReconcileWorkerRebuildsTheProjection(t *testing.T) {
 	}
 
 	var edges int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM graph_interaction_edge WHERE contact_id = $1`, contact).Scan(&edges)
 	}); err != nil {

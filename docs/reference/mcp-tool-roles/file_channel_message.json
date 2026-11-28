@@ -1,5 +1,5 @@
 {
-  "tool": "change_activities",
+  "tool": "run_research",
   "action": "file_channel_message",
   "verb": "file_channel_message",
   "allowed_for": [

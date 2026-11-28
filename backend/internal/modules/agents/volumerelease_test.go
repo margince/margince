@@ -7,11 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -69,6 +71,11 @@ func TestACrossedWriteThresholdPutsTheQuestionToTheConnectingHuman(t *testing.T)
 
 	if _, ok := errors.AsType[*StepUpStagedError](err); !ok {
 		t.Fatalf("a write past its threshold → %v, want a staged step-up", err)
+	}
+	header := httptest.NewRecorder().Header()
+	ratelimit.SetRefusalHeaders(header, err)
+	if header.Get("RateLimit-Limit") != "200" || header.Get("RateLimit-Remaining") != "0" || header.Get("Retry-After") == "" || header.Get("RateLimit-Reset") != header.Get("Retry-After") {
+		t.Fatalf("the staged refusal lost its pacing headers: %v", header)
 	}
 	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
 		t.Error("a staged step-up no longer reads as a budget refusal; every budget-aware caller would miss it")

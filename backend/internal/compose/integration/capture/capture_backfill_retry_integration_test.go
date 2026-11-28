@@ -49,7 +49,7 @@ func (f *flakyConnector) BackfillPage(ctx context.Context, auth connector.Auth, 
 // must not lose across a transient fault.
 func readBackfillRetryState(t *testing.T, e *integration.SearchEnv, id ids.UUID) (status string, failures int, errClass *string, cursor []byte) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
 			SELECT status, consecutive_failures, last_error_class, cursor
 			FROM capture_backfill WHERE id = $1`, id).
@@ -271,7 +271,7 @@ func TestBackfillPageWithARefusedMessageCommitsAndMovesOn(t *testing.T) {
 	}
 	_, scanned, captured, _ := readBackfillRow(t, e, run.ID)
 	var failed int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT failed FROM capture_backfill WHERE id = $1`, run.ID).Scan(&failed)
 	}); err != nil {
 		t.Fatal(err)

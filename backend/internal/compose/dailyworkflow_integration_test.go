@@ -527,7 +527,7 @@ func (o *owedEnv) dispatch(t *testing.T, c Commitment, want CommitmentOutcome) {
 	t.Helper()
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), o.e.WS), "human:"+o.e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(o.e.Pool, approvals.NewService(o.e.DB()))
-	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 		outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 		if err == nil && outcome != want {
 			t.Errorf("dispatch = %q, want %q", outcome, want)

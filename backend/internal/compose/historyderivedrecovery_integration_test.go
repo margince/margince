@@ -34,7 +34,7 @@ func TestDurableHistoryWorkRecoversWithoutRetainingItsRiverJobs(t *testing.T) {
 		t.Fatal(err)
 	}
 	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error {
 		return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{ids.From[ids.ContactKind](ids.UUID(contact.Id))}, &run)
 	}); err != nil {
 		t.Fatal(err)
@@ -120,7 +120,7 @@ func TestTerminalReleaseAndPendingReadsStayBoundedAndSkipBusyContacts(t *testing
 		contactsIDs = append(contactsIDs, ids.From[ids.ContactKind](ids.UUID(contact.Id)))
 	}
 	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, contactsIDs, &run) }); err != nil {
+	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, contactsIDs, &run) }); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := b.registry.CancelBackfill(b.human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep1)); err != nil {
@@ -133,7 +133,7 @@ func TestTerminalReleaseAndPendingReadsStayBoundedAndSkipBusyContacts(t *testing
 	var once sync.Once
 	unblock := func() { once.Do(func() { close(release) }) }
 	go func() {
-		done <- database.WithWorkspaceTx(ctx, b.env.Pool, func(tx pgx.Tx) error {
+		done <- database.WithTx(ctx, b.env.Pool, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(ctx, `SELECT contact_id FROM contact_signature_enrich_state WHERE contact_id=@contact FOR UPDATE`, pgx.NamedArgs{"contact": contactsIDs[0]}); err != nil {
 				return err
 			}

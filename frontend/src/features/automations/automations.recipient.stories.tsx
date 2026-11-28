@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { configuredAutomation } from "./automations.fixtures";
 import { AutomationRecipientSummary } from "./automations.recipient";
@@ -32,7 +33,9 @@ export const RecordOwner: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText("Tasks go to the record owner"),
+      within(canvasElement).getByText(
+        englishCopy["auto.recipient.tasksToOwner"],
+      ),
     ).toBeVisible();
   },
 };
@@ -55,7 +58,7 @@ export const NoAuthorizerYet: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByText(
-        "Tasks go to whoever authorizes this automation",
+        englishCopy["auto.recipient.tasksToAuthorizer"],
       ),
     ).toBeVisible();
   },

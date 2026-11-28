@@ -14,6 +14,7 @@ import {
 } from "vitest";
 import { stubClipboard } from "../../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import type { GrantSpec } from "../../../testing/mefixture";
 import type { RouteMap } from "../../../testing/story-utils";
 import { jsonResponse, stubWithSession } from "../../../testing/story-utils";
@@ -115,8 +116,12 @@ describe("an account waiting on an administrator", () => {
     renderAct();
 
     await screen.findByRole("radio", { name: /Google/ });
-    expect(screen.queryByText("Available now")).toBeNull();
-    expect(screen.queryByText("Waiting for an administrator")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["ob.conv.connect.availableNow"]),
+    ).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["ob.conv.connect.waitingAdmin"]),
+    ).toBeNull();
   });
 });
 
@@ -136,7 +141,9 @@ describe("a reader who cannot register the app", () => {
     expect(screen.getByText(/Before anyone at Test Workspace/)).toBeVisible();
     // Nothing on the step may press into a consent that would be refused.
     expect(
-      screen.queryByRole("button", { name: "Connect mail and calendar" }),
+      screen.queryByRole("button", {
+        name: englishCopy["ob.conv.connect.connectBoth"],
+      }),
     ).toBeNull();
     // A link to Settings is a dead end: the onboarding gate sends it back.
     // The band's Account link is the one page it lets through.
@@ -150,12 +157,14 @@ describe("a reader who cannot register the app", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Copy request for your administrator",
+        name: englishCopy["ob.conv.connect.copyRequest"],
       }),
     );
     await waitFor(() => expect(clipboard.written).toEqual([request]));
     expect(
-      screen.getByRole("button", { name: "Request copied" }),
+      screen.getByRole("button", {
+        name: englishCopy["ob.conv.connect.requestCopied"],
+      }),
     ).toBeInTheDocument();
   });
 
@@ -167,14 +176,18 @@ describe("a reader who cannot register the app", () => {
     await pick(user, /Google/);
 
     await user.click(
-      screen.getByRole("button", { name: "Use another mail provider" }),
+      screen.getByRole("button", {
+        name: englishCopy["ob.conv.connect.useImap"],
+      }),
     );
 
     expect(
       screen.getByRole("radio", { name: /Other mail provider/ }),
     ).toBeChecked();
     expect(
-      await screen.findByRole("heading", { name: "Connect mail host" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["ob.conv.connect.dialogHeadlineImap"],
+      }),
     ).toBeInTheDocument();
   });
 
@@ -190,11 +203,13 @@ describe("a reader who cannot register the app", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Copy request for your administrator",
+        name: englishCopy["ob.conv.connect.copyRequest"],
       }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Use another mail provider" }),
+      screen.queryByRole("button", {
+        name: englishCopy["ob.conv.connect.useImap"],
+      }),
     ).toBeNull();
   });
 
@@ -219,7 +234,7 @@ describe("a reader who cannot register the app", () => {
     expect(screen.queryByText(/is not set up/)).toBeNull();
     await user.click(
       screen.getByRole("button", {
-        name: "Copy request for your administrator",
+        name: englishCopy["ob.conv.connect.copyRequest"],
       }),
     );
     await waitFor(() =>
@@ -240,7 +255,7 @@ describe("a reader who cannot register the app", () => {
     const primaries = document.querySelectorAll(".btn-primary");
     expect(primaries).toHaveLength(1);
     expect(primaries[0]).toHaveTextContent(
-      "Copy request for your administrator",
+      englishCopy["ob.conv.connect.copyRequest"],
     );
     expect(
       screen.getByText(
@@ -256,7 +271,9 @@ describe("an administrator", () => {
     renderAct();
 
     await screen.findByRole("radio", { name: /Google.*Needs setup/ });
-    expect(screen.queryByText("Waiting for an administrator")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["ob.conv.connect.waitingAdmin"]),
+    ).toBeNull();
   });
 
   // Registering the app in place survives the onboarding gate, and the
@@ -304,7 +321,7 @@ describe("an administrator", () => {
 
     expect(
       screen.queryByRole("button", {
-        name: "Copy request for your administrator",
+        name: englishCopy["ob.conv.connect.copyRequest"],
       }),
     ).toBeNull();
     await user.click(
@@ -315,8 +332,13 @@ describe("an administrator", () => {
       await screen.findByLabelText("Client ID"),
       "111-abc.apps.googleusercontent.com",
     );
-    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
-    await user.click(screen.getByRole("button", { name: "Save Google app" }));
+    await user.type(
+      screen.getByLabelText(englishCopy["oauthApp.clientSecret"]),
+      "GOCSPX-secret",
+    );
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["oauthApp.google.save"] }),
+    );
 
     await waitFor(() => expect(drawer).not.toBeInTheDocument());
     expect(puts).toEqual([
@@ -327,9 +349,13 @@ describe("an administrator", () => {
     ]);
     // The same pick, now an ask: nothing navigated and nothing was re-picked.
     expect(
-      await screen.findByRole("button", { name: "Connect mail and calendar" }),
+      await screen.findByRole("button", {
+        name: englishCopy["ob.conv.connect.connectBoth"],
+      }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Waiting for an administrator")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["ob.conv.connect.waitingAdmin"]),
+    ).toBeNull();
     expect(assign).not.toHaveBeenCalled();
   });
 });
@@ -371,7 +397,9 @@ describe("a role or seat that cannot capture", () => {
       expect(await screen.findByText(says)).toBeInTheDocument();
       expect(screen.queryByRole("radio")).toBeNull();
       expect(
-        await screen.findByRole("button", { name: "Skip for now" }),
+        await screen.findByRole("button", {
+          name: englishCopy["ob.conv.connect.skip"],
+        }),
       ).toBeInTheDocument();
     },
   );

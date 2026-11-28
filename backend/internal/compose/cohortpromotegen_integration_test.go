@@ -41,7 +41,7 @@ import (
 // itself would prove nothing about the repair.
 func seedStrandedMeeting(t *testing.T, e *integration.Env, address string) (contact, meeting ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO activity (kind, subject, occurred_at, source, captured_by)
@@ -77,7 +77,7 @@ func seedStrandedMeeting(t *testing.T, e *integration.Env, address string) (cont
 // address match, the link is attendance — and one number could not say which.
 func meetingIsFiledUnder(t *testing.T, e *integration.Env, contact, meeting ids.UUID) (named, linked bool) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			SELECT EXISTS (SELECT 1 FROM activity_participant
@@ -154,7 +154,7 @@ func TestARedeliveredContactEventRepairsTheCohortOnce(t *testing.T) {
 	}
 
 	var links int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity_link WHERE activity_id = $1 AND contact_id = $2`,
 			meeting, contact).Scan(&links)

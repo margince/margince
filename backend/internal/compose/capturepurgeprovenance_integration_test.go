@@ -284,7 +284,7 @@ func TestASenderPurgeKeepsTheContactOfMailItMustRetain(t *testing.T) {
 func capturedMailFrom(t *testing.T, e *integration.Env, address string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT a.id FROM activity a JOIN capture_import i ON i.activity_id = a.id
 			 WHERE i.user_id = $1 AND a.counterparty_email = $2`, e.Rep1, address).Scan(&id)
@@ -301,7 +301,7 @@ func TestASenderPurgeAnonymisesAContactTheVerdictCreated(t *testing.T) {
 	connectRep1Mailbox(t, e)
 	mail := seedPurgeableMail(t, e, mintedAddress, "Termin", e.Rep1)
 	verdictCtx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), verdictActor)
-	if err := database.WithWorkspaceTx(verdictCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(verdictCtx, e.Pool, func(tx pgx.Tx) error {
 		_, err := createCounterpartyRecords(verdictCtx, tx, e.Contacts, nil, counterpartyCreation{
 			Email: mintedAddress, DisplayName: "Assistenz", Domain: purgeDomain,
 			OwnerID: e.Rep1, ActivityID: mail, Source: verdictReason, CapturedBy: verdictActor,
@@ -395,7 +395,7 @@ func mintThroughCapture(t *testing.T, e *integration.Env, key string) ids.UUID {
 // received a message.
 func seedMailboxConnection(t *testing.T, e *integration.Env, user ids.UUID, provider, address string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
 			VALUES ($1, $2, 'connected', 'test-credential', $3)`, user, provider, address)
@@ -409,7 +409,7 @@ func seedMailboxConnection(t *testing.T, e *integration.Env, user ids.UUID, prov
 // It goes through the writer a shared-message purge uses.
 func releaseEveryImportOf(t *testing.T, e *integration.Env, address string, user ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT a.id FROM activity a JOIN capture_import i ON i.activity_id = a.id
 			 WHERE i.user_id = $1 AND a.counterparty_email = $2`, user, address)
@@ -434,7 +434,7 @@ func releaseEveryImportOf(t *testing.T, e *integration.Env, address string, user
 func contactCapturedBy(t *testing.T, e *integration.Env, id ids.UUID) string {
 	t.Helper()
 	var by string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(captured_by, '') FROM contact WHERE id = $1`, id).Scan(&by)
 	}); err != nil {
@@ -447,7 +447,7 @@ func contactNameAndArchived(t *testing.T, e *integration.Env, id ids.UUID) (stri
 	t.Helper()
 	var name string
 	var archived bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(full_name, ''), archived_at IS NOT NULL FROM contact WHERE id = $1`,
 			id).Scan(&name, &archived)

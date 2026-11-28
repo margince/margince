@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { Panel } from "../../design-system/panel";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -205,7 +206,9 @@ export const RequesterEmailRefused: Story = {
       "Sent the export.",
     );
     await userEvent.type(
-      page.getByRole("textbox", { name: "Requester’s email address" }),
+      page.getByRole("textbox", {
+        name: englishCopy["privacy.requesterEmail"],
+      }),
       "not-an-email",
     );
     await userEvent.click(page.getByRole("button", { name: "Fulfill" }));

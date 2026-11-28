@@ -126,7 +126,7 @@ func TestTheProviderSeamDoesNotOpenTheImporterNamespace(t *testing.T) {
 	importer := principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:admin",
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
-			"import_run": {Create: true},
+			"import_run": {Create: true, Read: true, Update: true, Delete: true},
 		}},
 	}
 	ctx := principal.WithActor(context.Background(), importer)

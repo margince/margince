@@ -35,6 +35,7 @@ import {
   unwrap,
 } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { PurposeActions } from "./privacy.purposeactions";
 import "./privacy.css";
 
 type ConsentPurpose = components["schemas"]["ConsentPurpose"];
@@ -370,6 +371,7 @@ export function ConsentPurposesCard() {
 
 function PurposeTable({ purposes }: Readonly<{ purposes: ConsentPurpose[] }>) {
   const t = useT();
+  const canChange = useCanWrite("consent_config", "update");
   // The key under the label tells apart two purposes whose labels read alike.
   const columns: DataTableColumn<ConsentPurpose>[] = [
     {
@@ -377,19 +379,23 @@ function PurposeTable({ purposes }: Readonly<{ purposes: ConsentPurpose[] }>) {
       header: t("privacy.purpose"),
       render: (purpose) => (
         <CellStack>
-          {purpose.requires_double_opt_in ? (
-            <CellStrip>
-              <span>{purpose.label}</span>
-              <Badge>{t("privacy.purposeDoiBadge")}</Badge>
-            </CellStrip>
-          ) : (
+          <CellStrip>
             <span>{purpose.label}</span>
-          )}
+            {purpose.requires_double_opt_in && (
+              <Badge>{t("privacy.purposeDoiBadge")}</Badge>
+            )}
+          </CellStrip>
           <span className="t-caption">{purpose.key}</span>
         </CellStack>
       ),
     },
   ];
+  if (canChange)
+    columns.push({
+      key: "actions",
+      header: t("table.actions"),
+      render: (purpose) => <PurposeActions purpose={purpose} />,
+    });
   return (
     <DataTable
       label={t("privacy.purposesRegistry")}

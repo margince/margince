@@ -145,7 +145,7 @@ func TestDeletingBoughtDataReachesAnArchivedContact(t *testing.T) {
 func plantBoughtHandle(t *testing.T, e *Env, contact ids.UUID, handle string) ids.UUID {
 	t.Helper()
 	var rowID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO contact_social (contact_id, platform, handle)
 			VALUES ($1, 'linkedin', $2) RETURNING id`, contact, handle).Scan(&rowID)
@@ -189,7 +189,7 @@ func plantBoughtTitle(t *testing.T, e *Env, title string) ids.UUID {
 		VALUES ($1, 'Revert Subject', 'Revert', $2, 'manual', 'human:x')`, contact, title)
 
 	var run ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO provider_run
 			       (contact_id, subject_kind, provider, trigger, state, connection_version,
@@ -225,7 +225,7 @@ func titleOf(t *testing.T, e *Env, contact ids.UUID) string {
 //craft:ignore naked-any the args and destination forward straight to pgx, whose own Exec/Scan take any
 func execAsOwner(t *testing.T, e *Env, statement string, args ...any) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), statement, args...)
 		return err
 	}); err != nil {
@@ -238,7 +238,7 @@ func execAsOwner(t *testing.T, e *Env, statement string, args ...any) {
 //craft:ignore naked-any same: this is pgx's own signature, one call deeper
 func queryAsOwner(t *testing.T, e *Env, statement string, into any, args ...any) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), statement, args...).Scan(into)
 	}); err != nil {
 		t.Fatal(err)

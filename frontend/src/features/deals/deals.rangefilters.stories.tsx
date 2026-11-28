@@ -6,6 +6,7 @@ import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { ListSurface } from "../../design-system/listsurface";
 import { LocaleProvider, useLocale, useT } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { useCompanyZone } from "../../lib/companyzone";
 import { playOpenViewStep } from "../../testing/listview.play";
 import { dealRangeChips } from "./deals.rangefilters";
@@ -67,7 +68,9 @@ export const CloseDateStep: Story = {
       await panel.findByRole("button", { name: "Close date" }),
     );
     await expect(
-      await panel.findByRole("radio", { name: "This fiscal quarter" }),
+      await panel.findByRole("radio", {
+        name: englishCopy["reporting.this_quarter"],
+      }),
     ).toBeVisible();
     await expect(screen.getByRole("button", { name: "Apply" })).toBeTruthy();
   },

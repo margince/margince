@@ -34,7 +34,7 @@ func TestAProbedLinkTargetMakesTheArchiveWait(t *testing.T) {
 
 	held, release := make(chan struct{}), make(chan struct{})
 	holding := make(chan error, 1)
-	// once, because WithWorkspaceTx may run the closure again and a second
+	// once, because WithTx may run the closure again and a second
 	// close would panic in a goroutine the test cannot recover.
 	var announce sync.Once
 	go func() {

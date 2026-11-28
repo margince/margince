@@ -60,7 +60,7 @@ func stageLegacyDeepReadProposal(
 	digest := sha256.Sum256(proposedChange)
 	var approvalID ids.ApprovalID
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		approvalID, err = svc.StageOrJoinPendingInTx(ctx, tx, approvals.StageInput{
 			Kind:           deepReadProposalKind,

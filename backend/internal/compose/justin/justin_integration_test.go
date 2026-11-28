@@ -179,7 +179,7 @@ func TestTheWriteButtonRepliesToTheReadersOwnWaitingThread(t *testing.T) {
 func seatLogins(t *testing.T, e *integration.Env, seats ...ids.UUID) map[ids.UUID]string {
 	t.Helper()
 	addresses := map[ids.UUID]string{}
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, seat := range seats {
 			var address string
 			if err := tx.QueryRow(context.Background(), `SELECT email FROM app_user WHERE id=$1`, seat).Scan(&address); err != nil {
@@ -200,7 +200,7 @@ func seatLogins(t *testing.T, e *integration.Env, seats ...ids.UUID) map[ids.UUI
 func connectSeatMailboxes(t *testing.T, e *integration.Env, seats ...ids.UUID) map[ids.UUID]string {
 	t.Helper()
 	addresses := seatLogins(t, e, seats...)
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, seat := range seats {
 			if _, err := tx.Exec(context.Background(), `INSERT INTO capture_connection (user_id, provider, mail_posture, account_label) VALUES ($1,'gmail','shared',$2)`, seat, addresses[seat]); err != nil {
 				return err

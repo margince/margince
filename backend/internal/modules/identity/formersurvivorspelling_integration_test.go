@@ -78,7 +78,7 @@ func TestTheSurvivorSpelledAsTypedWinsAMergedLineage(t *testing.T) {
 		var got ids.UserID
 		var found bool
 		seat := principal.WithWorkspaceID(ctx, e.ws.UUID)
-		if err := database.WithWorkspaceTx(seat, e.svc.db.Pool(), func(tx pgx.Tx) error {
+		if err := database.WithTx(seat, e.svc.db.Pool(), func(tx pgx.Tx) error {
 			var err error
 			got, found, err = mergedFormerSurvivor(seat, tx, address)
 			return err

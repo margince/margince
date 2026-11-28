@@ -61,7 +61,7 @@ func TestADayCallCountsInTheThirtyDaysItsDateFallsIn(t *testing.T) {
 			}
 
 			for company, want := range map[ids.UUID]int{inside: 3, outside: 0} {
-				err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 					got, err := companyActivityCount30d(e.Admin(), tx, []ids.UUID{company}, now)
 					if err == nil && got != want {
 						t.Errorf("%d activities in the 30 days, want %d", got, want)

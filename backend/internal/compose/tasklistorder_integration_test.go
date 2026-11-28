@@ -77,7 +77,7 @@ func TestBothPagesRankTwoPromisesTheSameWay(t *testing.T) {
 func seedEmployerOf(t *testing.T, e *integration.Env, contact ids.UUID, name string) ids.UUID {
 	t.Helper()
 	companyID := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO company (id, owner_id, display_name, name_source, source, captured_by)
 			VALUES ($1, $2, $3, 'domain', 'connector:gmail', 'connector:gmail')`,

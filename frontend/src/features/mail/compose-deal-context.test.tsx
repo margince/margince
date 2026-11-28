@@ -6,6 +6,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installComposeClock,
   jsonResponse,
@@ -144,7 +145,7 @@ describe("the deal a message to a contact is about", () => {
     await pressSend(user);
 
     expect(
-      await screen.findByText("Choose the deal this follow-up is about."),
+      await screen.findByText(englishCopy["compose.missingDeal"]),
     ).toBeTruthy();
     expect(sent.some((s) => s.key === "POST /emails")).toBe(false);
   });
@@ -202,7 +203,7 @@ describe("the deal a message to a contact is about", () => {
     await pressSend(user);
 
     expect(
-      await screen.findByText("Choose the deal this follow-up is about."),
+      await screen.findByText(englishCopy["compose.missingDeal"]),
     ).toBeTruthy();
     expect(sent.some((s) => s.key === "POST /emails")).toBe(false);
   });
@@ -230,7 +231,7 @@ describe("the deal a message to a contact is about", () => {
 
     await pressSend(user);
     expect(
-      await screen.findByText("Choose the deal this follow-up is about."),
+      await screen.findByText(englishCopy["compose.missingDeal"]),
     ).toBeTruthy();
     expect(sent.some((s) => s.key === "POST /emails")).toBe(false);
   });
@@ -301,7 +302,7 @@ it("saves the chosen deal and uses the same filing after reopening", async () =>
   );
   first.unmount();
   render(composer());
-  await screen.findByText("Saved draft restored");
+  await screen.findByText(englishCopy["compose.savedDraftRestored"]);
   expect(
     (await screen.findByRole("combobox", { name: DEAL_PICK })).textContent,
   ).toContain("Acme Renewal");
@@ -347,7 +348,7 @@ it("keeps an explicit cleared filing instead of reviving an agent's old deal", a
       onClose={vi.fn()}
     />,
   );
-  await screen.findByText("Saved draft restored");
+  await screen.findByText(englishCopy["compose.savedDraftRestored"]);
   expect(screen.queryByRole("combobox", { name: DEAL_PICK })).toBeNull();
   await pressSend(user);
   await waitFor(() =>
@@ -400,7 +401,7 @@ it("keeps the saved deal while its visible choices are still loading", async () 
       onClose={vi.fn()}
     />,
   );
-  await screen.findByText("Saved draft restored");
+  await screen.findByText(englishCopy["compose.savedDraftRestored"]);
   await pressSend(user);
   expect(sent.some((item) => item.key === "POST /emails")).toBe(false);
   writeMessage("Body", "Edited while loading.");
@@ -447,7 +448,7 @@ it("saves a cleared deal from an older draft even when its words stay the same",
       onClose={onClose}
     />,
   );
-  await screen.findByText("Saved draft restored");
+  await screen.findByText(englishCopy["compose.savedDraftRestored"]);
   const deal = await screen.findByRole("combobox", { name: DEAL_PICK });
   expect(deal.textContent).toContain("Acme Renewal");
   await pickOption(user, deal, "No deal");

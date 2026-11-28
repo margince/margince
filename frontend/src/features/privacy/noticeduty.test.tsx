@@ -123,13 +123,11 @@ describe("a privacy-notice duty on the Focus card", () => {
     renderWorklist();
     const user = userEvent.setup();
 
-    expect(
-      await screen.findByText("Privacy notice owed (GDPR Art. 14)"),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["noticeDuty.title"])).toBeTruthy();
     expect(screen.getByText(en["noticeDuty.what"])).toBeTruthy();
     expect(
       await screen.findByRole("button", {
-        name: "Ask them to confirm their details",
+        name: en["noticeDuty.askConfirm"],
       }),
     ).toBeTruthy();
     expect(
@@ -137,7 +135,7 @@ describe("a privacy-notice duty on the Focus card", () => {
     ).toBeTruthy();
 
     await user.click(
-      screen.getByRole("button", { name: "Send privacy notice" }),
+      screen.getByRole("button", { name: en["noticeDuty.sendNotice"] }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(
@@ -201,7 +199,7 @@ describe("a privacy-notice duty on the Focus card", () => {
     expect(
       await within(facts).findByText(en["notice.unassigned"]),
     ).toBeTruthy();
-    expect(within(facts).getByText("Art. 14 notice")).toBeTruthy();
+    expect(within(facts).getByText(en["notice.rule.art14"])).toBeTruthy();
     expect(within(facts).getByText(en["notice.ruleHint.art14"])).toBeTruthy();
   });
 

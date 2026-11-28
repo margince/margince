@@ -18,6 +18,7 @@ import { writeMessage } from "../../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse, stubRoutes } from "./compose.testkit";
 import { ScheduledSendsScreen } from "./scheduledsends";
 
@@ -194,7 +195,9 @@ it("schedules the edited message first and withdraws the old one after", async (
   await user.type(subject, "The renewal quote, revised");
   writeMessage("Body", "Here is the revised quote.");
   await user.click(
-    await screen.findByRole("button", { name: "Schedule send" }),
+    await screen.findByRole("button", {
+      name: englishCopy["compose.schedule"],
+    }),
   );
   await waitFor(() =>
     expect(sent.map((call) => call.key)).toContain(
@@ -243,7 +246,9 @@ it("leaves the original waiting when the new send is refused", async () => {
     await screen.findByRole("button", { name: "Edit: The renewal quote" }),
   );
   await user.click(
-    await screen.findByRole("button", { name: "Schedule send" }),
+    await screen.findByRole("button", {
+      name: englishCopy["compose.schedule"],
+    }),
   );
   await waitFor(() =>
     expect(sent.some((call) => call.key === "POST /emails")).toBe(true),
@@ -279,7 +284,9 @@ it("writes a reply again on its thread and withdraws the old one after", async (
   );
   expect(await screen.findByLabelText("Subject")).toHaveValue("Re: the quote");
   await user.click(
-    await screen.findByRole("button", { name: "Schedule send" }),
+    await screen.findByRole("button", {
+      name: englishCopy["compose.schedule"],
+    }),
   );
   await waitFor(() =>
     expect(sent.map((call) => call.key)).toContain(
@@ -330,7 +337,9 @@ it("opens on the message's own read and keeps its markup, files and draft when s
   expect(composer.getByText("quote.pdf")).toBeVisible();
   expect(composer.getByText("terms.pdf")).toBeVisible();
   await user.click(
-    await screen.findByRole("button", { name: "Schedule send" }),
+    await screen.findByRole("button", {
+      name: englishCopy["compose.schedule"],
+    }),
   );
   await waitFor(() =>
     expect(sent.map((call) => call.key)).toContain(
@@ -357,7 +366,9 @@ it("sends without a seeded file the reader removed", async () => {
     await screen.findByRole("button", { name: "Remove quote.pdf" }),
   );
   await user.click(
-    await screen.findByRole("button", { name: "Schedule send" }),
+    await screen.findByRole("button", {
+      name: englishCopy["compose.schedule"],
+    }),
   );
   await waitFor(() =>
     expect(sent.some((call) => call.key === "POST /emails")).toBe(true),
@@ -388,7 +399,7 @@ it("refuses Edit for an operator reason, says why and still withdraws the messag
   );
   await user.click(
     within(await screen.findByRole("dialog")).getByRole("button", {
-      name: "Withdraw message",
+      name: englishCopy["sched.withdrawConfirm"],
     }),
   );
   await waitFor(() =>
@@ -450,9 +461,7 @@ it("offers a retry when the message's own read fails, and opens once it lands", 
     await screen.findByRole("button", { name: "Edit: The renewal quote" }),
   );
   const failed = within(await screen.findByRole("dialog"));
-  expect(
-    await failed.findByText("Could not load this view. Reload the page."),
-  ).toBeVisible();
+  expect(await failed.findByText(englishCopy["common.error"])).toBeVisible();
   await user.click(failed.getByRole("button", { name: "Retry" }));
   expect(await screen.findByLabelText("Subject")).toHaveValue(
     "The renewal quote",
@@ -472,7 +481,9 @@ it("holds the composer in a loading state until the message's own read lands", a
     await screen.findByRole("button", { name: "Edit: The renewal quote" }),
   );
   const loading = within(await screen.findByRole("dialog"));
-  expect(loading.getByText("Loading message…")).toBeInTheDocument();
+  expect(
+    loading.getByText(englishCopy["sched.editLoading"]),
+  ).toBeInTheDocument();
   land(jsonResponse(NEW_MESSAGE));
   expect(await screen.findByLabelText("Subject")).toHaveValue(
     "The renewal quote",
@@ -515,7 +526,9 @@ it.each([
       await screen.findByRole("button", { name: `Edit: ${row.subject}` }),
     );
     const refusal = within(await screen.findByRole("dialog"));
-    expect(await refusal.findByText("Message changed")).toBeVisible();
+    expect(
+      await refusal.findByText(englishCopy["sched.editStale.title"]),
+    ).toBeVisible();
     await waitFor(() =>
       expect(
         sent.filter((call) => call.key === "GET /scheduled-sends"),
@@ -544,7 +557,9 @@ it("reads a message whose own read answers 404 as changed, not as a failed load"
     await screen.findByRole("button", { name: "Edit: The renewal quote" }),
   );
   const refusal = within(await screen.findByRole("dialog"));
-  expect(await refusal.findByText("Message changed")).toBeVisible();
+  expect(
+    await refusal.findByText(englishCopy["sched.editStale.title"]),
+  ).toBeVisible();
   expect(refusal.queryByRole("button", { name: "Retry" })).toBeNull();
   await waitFor(() =>
     expect(
@@ -598,7 +613,7 @@ it.each([
     expect(screen.getByLabelText("Subject")).toHaveValue(
       "The renewal quote, revised",
     );
-    expect(screen.queryByText("Message changed")).toBeNull();
+    expect(screen.queryByText(englishCopy["sched.editStale.title"])).toBeNull();
     expect(
       sent.filter((call) => call.key === "GET /scheduled-sends"),
     ).toHaveLength(2);
@@ -624,7 +639,9 @@ it("holds the loading state for a reply whose own read lands before its thread",
   );
   await act(async () => {});
   expect(
-    within(screen.getByRole("dialog")).getByText("Loading message…"),
+    within(screen.getByRole("dialog")).getByText(
+      englishCopy["sched.editLoading"],
+    ),
   ).toBeInTheDocument();
   answer(jsonResponse(THREAD_EMAIL));
   expect(await screen.findByLabelText("Subject")).toHaveValue("Re: the quote");
@@ -700,10 +717,10 @@ it("keeps a reply waiting on its thread when a later read of the message fails",
   );
   await act(async () => {});
   const waiting = within(screen.getByRole("dialog"));
-  expect(waiting.getByText("Loading message…")).toBeInTheDocument();
   expect(
-    screen.queryByText("Could not load this view. Reload the page."),
-  ).toBeNull();
+    waiting.getByText(englishCopy["sched.editLoading"]),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(englishCopy["common.error"])).toBeNull();
   answer(jsonResponse(THREAD_EMAIL));
   expect(await screen.findByLabelText("Subject")).toHaveValue("Re: the quote");
 });

@@ -58,7 +58,7 @@ func CountUnlistedDealSources(ctx context.Context, q datatask.Querier, maximum i
 // CorrectOfferSourcesTx moves one page of offers whose source predates the fixed
 // list onto its channel, and audits each. A row on the list is left out, so a
 // replay changes nothing.
-// No event follows: offer.updated says a draft was edited, and this edits none.
+// The shared source tracker publishes the stored channel without changing draft terms.
 func CorrectOfferSourcesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, runID ids.UUID) ([]ids.UUID, error) {
 	corrected, err := storekit.CorrectRecordSources(ctx, tx, "offer",
 		`SELECT id, source, `+provenance.LegacyRecordSourceChannelSQL("source")+` FROM offer

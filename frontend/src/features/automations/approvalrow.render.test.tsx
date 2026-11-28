@@ -480,7 +480,7 @@ describe("the offer to put an approved change back", () => {
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
 
     const undo = await screen.findByRole("button", {
-      name: "Undo on record",
+      name: en["decision.undoOnRecord"],
     });
     await userEvent.click(undo);
     expect(globalThis.location.hash).toBe("#/deals/d1");
@@ -503,7 +503,9 @@ describe("the offer to put an approved change back", () => {
       await screen.findByText(en["decision.waitingForAgent"]),
     ).toBeInTheDocument();
     expect(screen.queryByText(en["decision.applied"])).toBeNull();
-    expect(screen.queryByRole("button", { name: "Undo on record" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["decision.undoOnRecord"] }),
+    ).toBeNull();
   });
 
   // A rejection changed nothing, so there is nothing to put back and no offer.
@@ -521,7 +523,9 @@ describe("the offer to put an approved change back", () => {
     await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS);
 
     await vi.waitFor(() => expect(rejectCalls(fetched)).toBe(1));
-    expect(screen.queryByRole("button", { name: "Undo on record" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["decision.undoOnRecord"] }),
+    ).toBeNull();
   });
 
   // A step-up names no record, so there is no history to send anyone to. Same
@@ -544,7 +548,9 @@ describe("the offer to put an approved change back", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
     await waitFor(() => expect(approveCalls(fetched)).toBe(1));
-    expect(screen.queryByRole("button", { name: "Undo on record" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["decision.undoOnRecord"] }),
+    ).toBeNull();
   });
 });
 

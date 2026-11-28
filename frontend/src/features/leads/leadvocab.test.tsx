@@ -169,7 +169,7 @@ describe("LeadOriginsCard", () => {
       </Providers>,
     );
     const manual = await screen.findByTestId("lead-origin-manual");
-    expect(within(manual).getByText("Created manually")).toBeTruthy();
+    expect(within(manual).getByText(en["lead.source.manual"])).toBeTruthy();
     expect(within(manual).queryByText("manual")).toBeNull();
     expect(within(manual).getByText("3")).toBeTruthy();
     // No always-open text box: a rename goes through the row's menu.

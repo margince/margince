@@ -49,7 +49,7 @@ func (h dataTaskHandlers) PreviewMailDealRepair(w http.ResponseWriter, r *http.R
 	// The preview decides under the data task's own identity, as its executor does.
 	system := datatask.Acting(ctx, mailDealsDataTask(h.pool).ID)
 	var preview capture.DealRepairPreview
-	err := database.WithWorkspaceTx(system, h.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(system, h.pool, func(tx pgx.Tx) error {
 		var err error
 		preview, err = mailDealRepair(h.pool).PreviewTx(system, tx, after, in.Limit)
 		return err

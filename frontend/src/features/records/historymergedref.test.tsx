@@ -5,6 +5,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { RecordHistory } from "./historyentries";
 
 // What the reader of a merge survivor's History sees: the merge explained in
@@ -83,10 +84,16 @@ describe("a merge on the survivor's History", () => {
     );
     render(<RecordHistory kind="contact" id="c1" currency={null} />);
 
-    expect(await screen.findByText("Merged in from")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["history.field.merged_from_id"]),
+    ).toBeTruthy();
     expect(await screen.findByText("Ann Smith")).toBeTruthy();
-    expect(screen.getByText("Email addresses moved over")).toBeTruthy();
-    expect(screen.getByText("Relationships moved over")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["history.field.relinked_emails"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["history.field.relinked_relationships"]),
+    ).toBeTruthy();
     expect(screen.getByText("Chief Merge Officer")).toBeTruthy();
     expect(screen.queryByText(FOLDED_IN)).toBeNull();
     expect(screen.queryByText("merged from id")).toBeNull();
@@ -114,7 +121,9 @@ describe("a merge on the survivor's History", () => {
     );
     render(<RecordHistory kind="contact" id="c1" currency={null} />);
 
-    expect(await screen.findByText("another record")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["history.mergedRecordUnnamed"]),
+    ).toBeTruthy();
     expect(screen.queryByText(FOLDED_IN)).toBeNull();
   });
 });

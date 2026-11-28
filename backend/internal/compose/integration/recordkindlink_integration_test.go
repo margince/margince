@@ -49,7 +49,7 @@ func kindFixture(t *testing.T) (live, archived ids.UUID) {
 }
 
 func probe(ctx context.Context, e *Env, id ids.UUID, f func(context.Context, pgx.Tx, string, ids.UUID) error) error {
-	return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error { return f(ctx, tx, probeKind, id) })
+	return database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error { return f(ctx, tx, probeKind, id) })
 }
 
 func TestALinkToAnExtensionRecordNeedsALiveRowAndTheKindsReadRight(t *testing.T) {
@@ -168,7 +168,7 @@ func TestAnAuditRowNamesAnExtensionKindAndTheRuleThatAdmittedIt(t *testing.T) {
 	live, _ := kindFixture(t)
 	worker := kindWorker(e, principal.ObjectGrant{Read: true, Update: true})
 	var auditID ids.UUID
-	err := database.WithWorkspaceTx(worker, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(worker, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		auditID, err = storekit.AuditEvent(worker, tx, "update", probeKind, live, map[string]any{"code": "A"})
 		return err
@@ -193,7 +193,7 @@ func TestALinkToAnUndeclaredExtensionKindIsRefused(t *testing.T) {
 	e := Setup(t)
 	kindFixture(t)
 	admin := e.Admin()
-	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return auth.EnsureLinkTarget(admin, tx, "ext:kindlink:ghost", ids.NewV7())
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {

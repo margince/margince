@@ -370,7 +370,7 @@ func TestASendCheckWaitsForAnUncommittedErasureAndRefuses(t *testing.T) {
 		var erasure int32
 		go func() {
 			ctx := principal.WithWorkspaceID(context.Background(), r.e.WS)
-			committed <- database.WithWorkspaceTx(ctx, r.e.Pool, func(tx pgx.Tx) error {
+			committed <- database.WithTx(ctx, r.e.Pool, func(tx pgx.Tx) error {
 				if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&erasure); err != nil {
 					return err
 				}

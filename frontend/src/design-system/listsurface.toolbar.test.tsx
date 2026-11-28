@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { precedes } from "../testing/domorder";
 import {
   openView,
@@ -138,7 +139,9 @@ it("reads every dial's value on its row, in the order the panel holds them", asy
     "Filters, Status, changed",
     "Sort, Created, descending, changed",
   ]);
-  const archived = within(panel).getByRole("button", { name: "Show archived" });
+  const archived = within(panel).getByRole("button", {
+    name: englishCopy["list.showArchived"],
+  });
   const save = within(panel).getByRole("button", { name: "Save view" });
   expect(precedes(archived, save)).toBe(true);
 });
@@ -166,7 +169,9 @@ it("presses Show archived on and off from its row", async () => {
   const user = userEvent.setup();
   render(<Surface />);
   const panel = await openView(user);
-  const archived = within(panel).getByRole("button", { name: "Show archived" });
+  const archived = within(panel).getByRole("button", {
+    name: englishCopy["list.showArchived"],
+  });
   expect(archived).toHaveAttribute("aria-pressed", "false");
   expect(archived).toHaveTextContent("Off");
 
@@ -190,11 +195,15 @@ it("steps into an attribute and back out to its row", async () => {
     name: "Status, back to all filters",
   });
   expect(back).toHaveFocus();
-  expect(screen.queryByPlaceholderText("Search attributes")).toBeNull();
+  expect(
+    screen.queryByPlaceholderText(englishCopy["table.filterSearch"]),
+  ).toBeNull();
 
   await user.click(back);
   expect(screen.getByRole("button", { name: "Status" })).toHaveFocus();
-  expect(screen.getByPlaceholderText("Search attributes")).toBeInTheDocument();
+  expect(
+    screen.getByPlaceholderText(englishCopy["table.filterSearch"]),
+  ).toBeInTheDocument();
 });
 
 // The step replaced the row the reader pressed, so Back hands focus to it.
@@ -471,9 +480,12 @@ it.each([
     const panel = within(await openView(user));
     const step = panel.getByRole("group", { name: row.split(",")[0] });
     await user.click(
-      within(step).getByRole(press === "Delete filter" ? "button" : "radio", {
-        name: press,
-      }),
+      within(step).getByRole(
+        press === englishCopy["table.deleteFilter"] ? "button" : "radio",
+        {
+          name: press,
+        },
+      ),
     );
 
     expect(writes).toEqual([[key, ""]]);
@@ -510,7 +522,9 @@ it("puts a value step's search above its options and its any option", async () =
   ).toBe(true);
   // A filter that does not apply has nothing to delete.
   expect(
-    within(step).queryByRole("button", { name: "Delete filter" }),
+    within(step).queryByRole("button", {
+      name: englishCopy["table.deleteFilter"],
+    }),
   ).toBeNull();
 });
 
@@ -571,7 +585,9 @@ it("hands focus to the next chip after a delete, and to View once none is left",
       .find((group) => group.classList.contains("open"));
     if (menu === undefined) throw new Error(`no open ${filter} menu`);
     await user.click(
-      within(menu).getByRole("button", { name: "Delete filter" }),
+      within(menu).getByRole("button", {
+        name: englishCopy["table.deleteFilter"],
+      }),
     );
   };
 
@@ -598,7 +614,9 @@ it("draws a bare list's Show archived as a pressed button", async () => {
   render(<Bare />);
 
   expect(screen.queryByRole("checkbox")).toBeNull();
-  const archived = screen.getByRole("button", { name: "Show archived" });
+  const archived = screen.getByRole("button", {
+    name: englishCopy["list.showArchived"],
+  });
   expect(archived).toHaveAttribute("aria-pressed", "false");
   await user.click(archived);
   expect(archived).toHaveAttribute("aria-pressed", "true");
@@ -624,17 +642,23 @@ it("keeps the panel open while the list turns bare under it", async () => {
 
   const panel = await openView(user);
   await user.click(
-    within(panel).getByRole("button", { name: "Show archived" }),
+    within(panel).getByRole("button", {
+      name: englishCopy["list.showArchived"],
+    }),
   );
   expect(screen.getByRole("dialog")).toBe(panel);
   expect(
-    within(panel).getByRole("button", { name: "Show archived" }),
+    within(panel).getByRole("button", {
+      name: englishCopy["list.showArchived"],
+    }),
   ).toHaveAttribute("aria-pressed", "false");
 
   await user.keyboard("{Escape}");
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(screen.queryByRole("searchbox")).toBeNull();
-  expect(screen.getByRole("button", { name: "Show archived" })).toHaveFocus();
+  expect(
+    screen.getByRole("button", { name: englishCopy["list.showArchived"] }),
+  ).toHaveFocus();
 });
 
 // A failed read the dials depend on is said on the toolbar, outside the

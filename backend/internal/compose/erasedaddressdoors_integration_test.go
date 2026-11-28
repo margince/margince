@@ -143,7 +143,7 @@ func TestACSVImportSkipsAnErasedAddressAndLandsTheRest(t *testing.T) {
 func importingAdmin(e *integration.Env) context.Context {
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
-	perms.Objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	perms.Objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	return e.As(e.AdminUser, nil, perms)
 }
 

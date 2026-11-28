@@ -1,7 +1,16 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import type { ListQuery } from "../../components/listquery";
+import {
+  type ListPage,
+  type ListQuery,
+  type ListReach,
+  listFetchLimit,
+} from "../../components/listquery";
 import type { MessageKey } from "../../i18n/en";
+import { salutationChoice } from "../../lib/contactsalutation";
 import { ProblemError, unwrap } from "../../lib/problem";
 import { listQueryParams } from "../../lib/tagfilter";
 import type { Lead } from "./leads.list";
@@ -32,6 +41,7 @@ export function leadsQueryParams(query: ListQuery) {
 // not a repeatable list, so no rows channel is used here.
 export function mapLeadBody(values: Record<string, string>): CreateLeadRequest {
   return {
+    salutation: salutationChoice(values),
     full_name: values.full_name?.trim() || undefined,
     email: values.email?.trim() || undefined,
     linkedin_url: values.linkedin_url?.trim() || undefined,
@@ -95,4 +105,34 @@ export async function createLead(
     }),
     t,
   );
+}
+
+// One page of the lead list, at the cursor or, for a pager, at an offset.
+export async function fetchLeadsPage(
+  query: ListQuery,
+  cursor: string | null,
+  signal?: AbortSignal,
+  reach?: ListReach,
+): Promise<ListPage<Lead>> {
+  const data = unwrap(
+    await api.GET("/leads", {
+      signal,
+      params: {
+        query: {
+          ...leadsQueryParams(query),
+          cursor: cursor || undefined,
+          limit: listFetchLimit(query.perPage, reach),
+          offset: reach?.offset,
+        },
+      },
+    }),
+  );
+  return {
+    data: data.data,
+    page: {
+      next_cursor: data.page.next_cursor ?? null,
+      has_more: data.page.has_more,
+      total: data.page.total,
+    },
+  };
 }

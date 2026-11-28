@@ -1732,11 +1732,11 @@ slop-trend: test-craft-pin
 test-comment-budget:
 	@./scripts/test-check-comment-budget.sh
 
-## rls-store-path — DB-free floor under the row-scope runtime proof: no
-## internal/modules statement may address the superuser pool directly, where
-## the database applies no per-workspace filter of its own; per-workspace work
-## runs inside WithWorkspaceTx, which is what bounds it.
-## A genuinely cross-workspace query carries a `// rls-exempt: <reason>` line.
+## rls-store-path — DB-free floor under the write shape: no internal/modules
+## statement may address the pool directly, because it would commit outside the
+## transaction that holds the audit and outbox rows. Module work runs inside
+## database.WithTx, which is what bounds it.
+## A statement that must run on the pool carries a `// pool-exempt: <reason>` line.
 rls-store-path:
 	@./scripts/check-rls-store-path.sh
 

@@ -64,7 +64,7 @@ func TestWebsiteAddressWritersQueueThroughTheConfiguredProductionBinding(t *test
 			t.Fatalf("%s: %v", name, err)
 		}
 		var queued int
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `SELECT count(*) FROM river_job
 				WHERE kind = 'geocode_company' AND args->>'company_id' = $1`, id.String()).Scan(&queued)
 		}); err != nil {

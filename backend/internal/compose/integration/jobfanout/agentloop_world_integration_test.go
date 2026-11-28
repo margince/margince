@@ -179,7 +179,7 @@ func waitOutDayEnd(t *testing.T, now time.Time, loc *time.Location, after func(t
 func (re *runnerEnv) installationZone(t *testing.T) *time.Location {
 	t.Helper()
 	var name string
-	err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		var err error
 		name, err = identity.TimezoneAppliedTx(re.wsCtx, tx)
 		return err

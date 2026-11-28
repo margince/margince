@@ -29,7 +29,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -51,9 +53,11 @@ func captureWorkspace(t *testing.T) (context.Context, *database.DB, string) {
 	pool := integration.SchemaPool(t)
 	ws := ids.NewV7()
 	ctx := context.Background()
-	if _, err := pool.Exec(ctx,
-		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seed workspace: %v", err)
+	}
+	if err := storekit.RecordInstallationTx(ctx, pool, ws, clocktest.Now(t)); err != nil {
+		t.Fatalf("seed the installation: %v", err)
 	}
 	// The seat the mailbox is granted as. It has to be a real app_user: the
 	// audit trail carries on_behalf_of as a foreign key, so a principal naming

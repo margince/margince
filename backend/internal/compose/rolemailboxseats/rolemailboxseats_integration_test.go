@@ -49,7 +49,7 @@ func TestTheTaskTakesTheSeatOffARoleMailboxAnswerAndLeavesTheRest(t *testing.T) 
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	run := func() datatask.BatchOut {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = rolemailboxseats.DataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 50, RunID: ids.NewV7()})
 			return err

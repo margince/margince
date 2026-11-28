@@ -76,7 +76,7 @@ func holdColleagueImport(t *testing.T, e *integration.Env, activity ids.Activity
 	written := make(chan error, 1)
 	go func() {
 		defer close(c.finished)
-		c.err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		c.err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			err := tx.QueryRow(e.Admin(), `SELECT pg_backend_pid()`).Scan(&c.pid)
 			if err == nil {
 				_, err = tx.Exec(e.Admin(), `INSERT INTO capture_import (activity_id, user_id, posture_at_import) VALUES ($1, $2, 'shared')`, activity, e.Rep3)

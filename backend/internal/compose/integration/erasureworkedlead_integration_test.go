@@ -26,7 +26,7 @@ func seedHistoricalWorkedLead(ctx context.Context, t *testing.T, e *Env, contact
 	if err != nil {
 		t.Fatalf("creating the historical lead: %v", err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE lead SET from_contact_id = $2 WHERE id = $1`, lead.Id, contact)
 		return err
 	}); err != nil {
@@ -58,7 +58,7 @@ func TestErasingAContactAnonymizesTheLeadWorkedFromIt(t *testing.T) {
 
 	var name string
 	var leadTitle *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT full_name, title FROM lead WHERE id = $1`, lead.Id).
 			Scan(&name, &leadTitle)
 	}); err != nil {
@@ -145,7 +145,7 @@ func TestErasingTheSurvivorReachesTheMergedAwayContactsLead(t *testing.T) {
 
 	for i, leadID := range leadIDs {
 		var name string
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `SELECT full_name FROM lead WHERE id = $1`, leadID).Scan(&name)
 		}); err != nil {
 			t.Fatalf("reading lead %d back: %v", i, err)
@@ -162,7 +162,7 @@ func TestALeadWithholdsAContactItsReaderCannotOpen(t *testing.T) {
 	e := Setup(t)
 	// Capture-private: only its owner opens it, whatever anybody else's scope.
 	private := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO contact (id, owner_id, full_name, visibility, source, captured_by)
 			 VALUES ($1, $2, 'Dana Example', 'owner', 'manual', 'human:x')`, private, e.Rep3)

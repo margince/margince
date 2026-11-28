@@ -309,7 +309,7 @@ func TestTheNoonBatchPagesReplaysAndRefusesAMalformedCursor(t *testing.T) {
 		in := datatask.BatchIn{Limit: 1, RunID: ids.NewV7()}
 		for {
 			var out datatask.BatchOut
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				var err error
 				out, err = step.Batch(ctx, tx, in)
 				return err
@@ -330,7 +330,7 @@ func TestTheNoonBatchPagesReplaysAndRefusesAMalformedCursor(t *testing.T) {
 	if changed, _ := pass(); changed != 0 {
 		t.Errorf("a replay from a nil cursor restored %d more meetings", changed)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := step.Batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"not an id"`), Limit: 10})
 		return err
 	}); err == nil {

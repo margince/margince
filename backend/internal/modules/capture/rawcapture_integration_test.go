@@ -49,7 +49,7 @@ func TestInsertRawCaptureTxIsIdempotentOnUpdateID(t *testing.T) {
 	_, pool := setupCaptureDB(t)
 
 	var firstID, secondID ids.UUID
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		firstID, err = capture.InsertRawCaptureTx(ctx, tx, capture.RawRecord{
 			SourceSystem: "telegram",
@@ -61,7 +61,7 @@ func TestInsertRawCaptureTxIsIdempotentOnUpdateID(t *testing.T) {
 		t.Fatalf("first insert: %v", err)
 	}
 
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		secondID, err = capture.InsertRawCaptureTx(ctx, tx, capture.RawRecord{
 			SourceSystem: "telegram",
@@ -78,7 +78,7 @@ func TestInsertRawCaptureTxIsIdempotentOnUpdateID(t *testing.T) {
 	}
 
 	var count int
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM raw_capture WHERE source_system = 'telegram' AND source_id = 'update-1'`,
 		).Scan(&count)
@@ -92,7 +92,7 @@ func TestInsertRawCaptureTxIsIdempotentOnUpdateID(t *testing.T) {
 	// jsonb round-trips through Postgres's own key ordering, so the
 	// assertion checks content rather than a byte-exact literal.
 	var text string
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT payload->'message'->>'text' FROM raw_capture WHERE source_system = 'telegram' AND source_id = 'update-1'`,
 		).Scan(&text)
@@ -114,7 +114,7 @@ func TestInsertRawCaptureTxJoinsTheCallersTransaction(t *testing.T) {
 	_, pool := setupCaptureDB(t)
 
 	rollbackErr := &intentionalRollback{}
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := capture.InsertRawCaptureTx(ctx, tx, capture.RawRecord{
 			SourceSystem: "telegram",
 			SourceID:     "update-rollback",
@@ -128,11 +128,11 @@ func TestInsertRawCaptureTxJoinsTheCallersTransaction(t *testing.T) {
 		return rollbackErr
 	})
 	if err != rollbackErr {
-		t.Fatalf("WithWorkspaceTx returned %v, want the forced rollback error", err)
+		t.Fatalf("WithTx returned %v, want the forced rollback error", err)
 	}
 
 	var count int
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM raw_capture WHERE source_system = 'telegram' AND source_id = 'update-rollback'`,
 		).Scan(&count)
@@ -145,8 +145,7 @@ func TestInsertRawCaptureTxJoinsTheCallersTransaction(t *testing.T) {
 }
 
 // intentionalRollback is a distinct error identity, so the test can confirm
-// WithWorkspaceTx propagated exactly the forced failure rather than some
-// other fault masking the rollback.
+// WithTx propagated the forced failure and no other fault masked the rollback.
 type intentionalRollback struct{}
 
 func (*intentionalRollback) Error() string {

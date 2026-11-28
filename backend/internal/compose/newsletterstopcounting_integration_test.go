@@ -59,7 +59,7 @@ func TestANewsletterMovesNoClockAndTheDataTaskTakesOneBack(t *testing.T) {
 func (f *relationshipFixture) ghosted(t *testing.T, activity ids.UUID) int {
 	t.Helper()
 	ctx := principal.SystemActing(f.e.Admin(), signalScanActor)
-	if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		_, err := WriteGhostedSignals(ctx, tx, f.now)
 		return err
 	}); err != nil {

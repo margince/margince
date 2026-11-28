@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { StageLadder } from "./stageladder";
 
 // The ladder every record with stages draws: a deal's pipeline, a project's
@@ -215,9 +216,9 @@ async function pagersMatchOverflow(canvasElement: HTMLElement) {
     throw new Error("The ladder drew no run of open stages.");
   }
   const later = () =>
-    canvas.queryByRole("button", { name: "Show later stages" });
+    canvas.queryByRole("button", { name: englishCopy["stageLadder.later"] });
   const earlier = () =>
-    canvas.queryByRole("button", { name: "Show earlier stages" });
+    canvas.queryByRole("button", { name: englishCopy["stageLadder.earlier"] });
   await waitFor(() => {
     const hidden = run.scrollWidth - run.clientWidth;
     expect(Boolean(earlier())).toBe(hidden > 1 && run.scrollLeft > 1);

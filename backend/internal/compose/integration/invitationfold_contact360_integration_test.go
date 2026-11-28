@@ -26,7 +26,7 @@ func TestTheContactPageFoldsAMeetingsInvitationMailOntoIt(t *testing.T) {
 	meeting, invitation, written := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	uid := "kickoff-" + ids.NewV7().String() + "@google.com"
 	starts := clocktest.Now(t).Add(-48 * time.Hour).UTC()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := e.Admin()
 		for _, step := range []struct {
 			sql  string

@@ -7,6 +7,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { CompanyContractsCard } from "./companycontracts";
 
@@ -106,7 +107,7 @@ describe("a contract row", () => {
     ]);
 
     expect(
-      await screen.findByText("Replaced by a later contract"),
+      await screen.findByText(en["contracts.replacedByUnnamed"]),
     ).toBeTruthy();
   });
 

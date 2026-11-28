@@ -191,8 +191,8 @@ func (r *Registry) noteCostShare(ctx context.Context) {
 		return
 	}
 	noteWarning(ctx, warningCostShare, fmt.Sprintf(
-		"This agent has spent %d of the %d model tokens that are its share of this workspace's AI budget for the current window. "+
-			"Nothing is being withheld; the workspace's own budget guardrail is what acts on overspend.",
+		"This agent has spent %d of the %d model tokens that are its share of this company's AI budget for the current window. "+
+			"Nothing is being withheld; the company's own budget guardrail is what acts on overspend.",
 		reading.Observed, reading.Limit))
 }
 

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import type { Locale } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { listsMe } from "../../testing/lists.fixtures";
 import {
   installFetchStub,
@@ -161,7 +162,9 @@ export const Lists: Story = {
   render: page(base, "en", undefined, true),
   play: async () => {
     const lists = within(await screen.findByRole("region", { name: "Lists" }));
-    const add = await lists.findByRole("button", { name: "Add to Shortlist" });
+    const add = await lists.findByRole("button", {
+      name: englishCopy["lists.addToShortlist"],
+    });
     // The record page arrives with a fade from opacity 0.
     await waitFor(() => expect(add).toBeVisible());
   },
@@ -216,13 +219,17 @@ export const ReachEdit: Story = {
       await screen.findByRole("button", { name: "Edit Email and phone" }),
     );
     const reach = within(
-      await screen.findByRole("dialog", { name: "Email and phone" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["record.reach.label"],
+      }),
     );
     await expect(reach.getByRole("textbox", { name: "Email" })).toHaveValue(
       "jonas@nordwind.example",
     );
     await waitFor(() =>
-      expect(reach.getByRole("group", { name: "LinkedIn URL" })).toBeVisible(),
+      expect(
+        reach.getByRole("group", { name: englishCopy["create.linkedinUrl"] }),
+      ).toBeVisible(),
     );
   },
 };
@@ -238,7 +245,7 @@ export const ProjectFlow: Story = {
     const about = within(await screen.findByRole("dialog", { name: "About" }));
     await user.click(about.getByRole("button", { name: "Change Project" }));
     const search = await screen.findByRole("dialog", {
-      name: "Attach project",
+      name: englishCopy["lead.rail.project.attach"],
     });
     await waitFor(() => expect(search).toBeVisible());
   },
@@ -268,9 +275,11 @@ export const TagsWithheld: Story = {
   ),
   play: async () => {
     const registration = within(
-      await screen.findByRole("region", { name: "Registration" }),
+      await screen.findByRole("region", {
+        name: englishCopy["record.registration"],
+      }),
     );
-    const note = await registration.findByText("Hidden for your role");
+    const note = await registration.findByText(englishCopy["state.withheld"]);
     // The page fades in as it arrives, so the note is visible once that ends.
     await waitFor(() => expect(note).toBeVisible());
   },

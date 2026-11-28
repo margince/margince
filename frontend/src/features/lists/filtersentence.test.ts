@@ -397,7 +397,7 @@ describe("a filter read as one sentence", () => {
     expect(
       read(newGroup("and", [newLeaf("stage_id", "in", ["s1", "s2"])]), german),
     ).toBe(
-      `${de["filters.field.stage_id"]} ${de["filters.sentence.inCounted"]} 2 Phasen`,
+      `${de["history.field.stage_id"]} ${de["filters.sentence.inCounted"]} 2 Phasen`,
     );
     expect(
       read(newGroup("and", [newLeaf("owner_id", "in", ["u1"])]), german),

@@ -77,6 +77,9 @@ type dataResetHandlers struct {
 	runtime *ResetRuntime
 	// blob is the object store holding the bytes the swept rows referenced.
 	blob blobstore.Store
+	// objectsKey answers the id the object keys are stored under. Nil reads it
+	// from the installation through pool.
+	objectsKey func(context.Context) (ids.UUID, error)
 	// vault holds the sealed credentials the swept connection rows referenced.
 	// Its storage carries no workspace_id, so the sweep cannot reach it and the
 	// ciphertext would otherwise outlive the installation it belonged to.
@@ -104,7 +107,7 @@ func (h dataResetHandlers) run(ctx context.Context, confirmation string) (resetC
 	// installation nothing, and quiescing the job fleet is not nothing. The
 	// sweep re-checks inside its own transaction — one row read that closes
 	// the window where the company is renamed in between.
-	if err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		return confirmResetCompanyName(ctx, tx, confirmation)
 	}); err != nil {
 		return resetCounts{}, err
@@ -227,7 +230,7 @@ func confirmResetCompanyName(ctx context.Context, tx pgx.Tx, confirmation string
 // is the runtime phase's first act, ahead of the stream purge, so the relay has
 // nothing staged to ship into streams that were just emptied (clearOutbox).
 func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, confirmation string, counts *resetCounts) error {
-	return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		if err := confirmResetCompanyName(ctx, tx, confirmation); err != nil {
 			return err
 		}
@@ -250,7 +253,16 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// and it double-counted them. Deleted.
 		counts.secretRefs = secretRefs
 
+		// The sweep clears installation_state. Three facts outlive a reset, so
+		// they are written back.
+		kept, err := storekit.KeptInstallationFactsTx(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if err := sweepWorkspaceData(ctx, tx, tables); err != nil {
+			return err
+		}
+		if err := kept.RestoreTx(ctx, tx); err != nil {
 			return err
 		}
 		// The provider platform needs no pass of its own any more. It used to:
@@ -355,9 +367,17 @@ func (h dataResetHandlers) purgeUnjoinableSurfaces(ctx context.Context, logger *
 		}
 	}
 	if h.blob != nil {
-		// The prefix must end at the key separator or the store refuses it:
-		// "<ws>" alone would reach into a sibling tenant whose id extends it.
-		n, err := h.blob.DeletePrefix(ctx, wsID.String()+"/")
+		// Under the stored-key id, the one every writer names. The prefix must
+		// end at the key separator or the store refuses it.
+		read := h.objectsKey
+		if read == nil {
+			read = func(ctx context.Context) (ids.UUID, error) { return storekit.ReadStoredKeyWorkspace(ctx, h.pool) }
+		}
+		keyed, err := read(ctx)
+		if err != nil {
+			return err
+		}
+		n, err := h.blob.DeletePrefix(ctx, keyed.String()+"/")
 		if err != nil {
 			return err
 		}

@@ -22,15 +22,12 @@ Margince Settings puts its pages in these groups:
 - **Compliance**: Privacy and retention, Jurisdiction, Audit log.
 - **System**: System health, [Configuration](configuration.md), Extensions, Reset data, About Margince.
 
-Some pages joined others as tabs. Search still finds them by their old names:
 - **Pipelines**, **Acquisition sources**, **Loss reasons** and **Outcome reviews** are tabs of **Deals**.
 - **Fields**, **Tags** and **Responsibility roles** are tabs of **Records and fields**.
 - **Capture activity** is the **Activity** tab of **Connections**.
 
 You see only the pages your permissions open. **About Margince** is open to everyone. The Reset data page appears only where the installation turns it on.
-
 ### Which settings page do I need for my own account?
-Your own things in Margince are under **You** in Settings.
 - Change your password, display name, profile picture, email signature, language or theme (appearance): **Account**.
 - Turn on two-step sign-in, with a code from your phone: **Account**.
 - Set when customers can book you, and share your booking link: **Meetings**, in **When people can book** and **Booking links**.
@@ -179,6 +176,8 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 The Integrations page in Settings (group **Data**) shows what the installation is connected to, as against what one colleague connected.
 
 **Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Accounting source** connects the system your invoices come from and links its customers to companies; see [Contracts and invoices](contracts-and-invoices.md#how-do-i-connect-my-accounting-system). **Webhooks** send a signed message to another system when events you picked happen, and you can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
+
+**Messaging providers** connects Dispact, Slack and Microsoft Teams for shared channel links. Your own Messenger connection is separate from the shared bot. See [Chat channels](chat-channels.md) for record history and automatic posts, and [Messenger](messenger.md) for sending as yourself.
 
 **Telegram bot** is the one bot that sends and receives messages for the whole company. Admin and Ops connect or change it; other readers see which bot it is. Forms on your website have a page of their own, **Website forms**; see [Connecting your website](connect-your-website.md). **Shared mailboxes** are mailboxes no one user owns, such as sales@, each read by one team. Only admins connect one, change its team or whether its mail is held or shared, import its older mail, or disconnect it. See [Shared mailboxes](who-can-see-an-email.md#shared-mailboxes).
 

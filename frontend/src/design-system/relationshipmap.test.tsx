@@ -5,6 +5,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { RelationshipMap, type RelationshipMapLabels } from "./relationshipmap";
 import type { RelationshipMapModel } from "./relationshipmap.layout";
 
@@ -166,7 +167,9 @@ test("a contact with no route says so rather than showing an empty panel", () =>
       labels={LABELS}
     />,
   );
-  expect(screen.getByText("No route recorded")).not.toBeNull();
+  expect(
+    screen.getByText(englishCopy["co.contacts.map.noRoute"]),
+  ).not.toBeNull();
 });
 
 test("pressing a node focuses it, and pressing it again clears", async () => {
@@ -332,5 +335,7 @@ test("an account with nothing recorded says what to do about it", () => {
       labels={LABELS}
     />,
   );
-  expect(screen.getByText("No route recorded yet")).not.toBeNull();
+  expect(
+    screen.getByText(englishCopy["co.contacts.map.emptyTitle"]),
+  ).not.toBeNull();
 });

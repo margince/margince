@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { jsonResponse } from "../testing/company.fixtures";
 import { meFixture } from "../testing/mefixture";
 import {
@@ -198,12 +199,10 @@ describe("removing an app", () => {
   it("says what removing it changes before anything is typed", async () => {
     mount(stored(), "google", { view: "remove" });
     expect(
-      await screen.findByText(
-        "Gmail and Google Calendar connections use this app.",
-      ),
+      await screen.findByText(englishCopy["oauthApp.google.removeUsedBy"]),
     ).toBeTruthy();
     expect(
-      screen.getByText("First-run setup asks for an app again."),
+      screen.getByText(englishCopy["oauthApp.removeFirstRun"]),
     ).toBeTruthy();
   });
 
@@ -335,8 +334,13 @@ describe("the app setup drawer", () => {
     });
     seedDependents(qc);
     await user.type(await openFields(), ` ${CLIENT_ID} `);
-    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret ");
-    await user.click(screen.getByRole("button", { name: "Save Google app" }));
+    await user.type(
+      screen.getByLabelText(englishCopy["oauthApp.clientSecret"]),
+      "GOCSPX-secret ",
+    );
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["oauthApp.google.save"] }),
+    );
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(calls).toEqual([
@@ -353,10 +357,13 @@ describe("the app setup drawer", () => {
     const user = userEvent.setup();
     const { onClose } = mount(absent(), "google", { view: "drawer" });
     await user.type(await openFields(), CLIENT_ID);
-    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
+    await user.type(
+      screen.getByLabelText(englishCopy["oauthApp.clientSecret"]),
+      "GOCSPX-secret",
+    );
     await user.keyboard("{Escape}");
 
-    await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+    await screen.findByRole("dialog", { name: englishCopy["unsaved.title"] });
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -367,11 +374,13 @@ describe("the app setup drawer", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     const question = await screen.findByRole("dialog", {
-      name: "Discard unsaved changes?",
+      name: englishCopy["unsaved.title"],
     });
     expect(onClose).not.toHaveBeenCalled();
     await user.click(
-      within(question).getByRole("button", { name: "Discard changes" }),
+      within(question).getByRole("button", {
+        name: englishCopy["unsaved.discard"],
+      }),
     );
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
@@ -387,8 +396,13 @@ describe("the app setup drawer", () => {
       holdWrites: held,
     });
     await user.type(await openFields(), CLIENT_ID);
-    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
-    await user.click(screen.getByRole("button", { name: "Save Google app" }));
+    await user.type(
+      screen.getByLabelText(englishCopy["oauthApp.clientSecret"]),
+      "GOCSPX-secret",
+    );
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["oauthApp.google.save"] }),
+    );
     await waitFor(() => expect(calls.length).toBe(1));
 
     await user.keyboard("{Escape}");
@@ -412,15 +426,20 @@ describe("the app setup drawer", () => {
       holdWrites: held,
     });
     await user.type(await openFields(), CLIENT_ID);
-    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
-    await user.click(screen.getByRole("button", { name: "Save Google app" }));
+    await user.type(
+      screen.getByLabelText(englishCopy["oauthApp.clientSecret"]),
+      "GOCSPX-secret",
+    );
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["oauthApp.google.save"] }),
+    );
     await waitFor(() => expect(calls.length).toBe(1));
     expect(reloadIsHeld()).toBe(true);
 
     answer();
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(
-      screen.queryByRole("dialog", { name: "Discard unsaved changes?" }),
+      screen.queryByRole("dialog", { name: englishCopy["unsaved.title"] }),
     ).toBeNull();
   });
 
@@ -431,16 +450,20 @@ describe("the app setup drawer", () => {
       refuseWrites: true,
     });
     await user.type(await openFields(), CLIENT_ID);
-    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
-    await user.click(screen.getByRole("button", { name: "Save Google app" }));
+    await user.type(
+      screen.getByLabelText(englishCopy["oauthApp.clientSecret"]),
+      "GOCSPX-secret",
+    );
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["oauthApp.google.save"] }),
+    );
     await waitFor(() => expect(calls.length).toBe(1));
 
     expect(await screen.findAllByText(/client_id invalid/)).not.toHaveLength(0);
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Client secret")).toHaveProperty(
-      "value",
-      "GOCSPX-secret",
-    );
+    expect(
+      screen.getByLabelText(englishCopy["oauthApp.clientSecret"]),
+    ).toHaveProperty("value", "GOCSPX-secret");
     expect(reloadIsHeld()).toBe(true);
   });
 
@@ -448,11 +471,16 @@ describe("the app setup drawer", () => {
     const user = userEvent.setup();
     mount(absent(), "google", { view: "drawer" });
     const id = await openFields();
-    const save = screen.getByRole("button", { name: "Save Google app" });
+    const save = screen.getByRole("button", {
+      name: englishCopy["oauthApp.google.save"],
+    });
     expect(save).toHaveProperty("disabled", true);
     await user.type(id, CLIENT_ID);
     expect(save).toHaveProperty("disabled", true);
-    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
+    await user.type(
+      screen.getByLabelText(englishCopy["oauthApp.clientSecret"]),
+      "GOCSPX-secret",
+    );
     expect(save).toHaveProperty("disabled", false);
   });
 
@@ -467,11 +495,17 @@ describe("the app setup drawer", () => {
     const id = await screen.findByLabelText<HTMLInputElement>("Client ID");
     await waitFor(() => expect(id.value).toBe(ENTRA_ID));
     expect(
-      screen.getByLabelText<HTMLInputElement>("Directory (tenant) ID").value,
+      screen.getByLabelText<HTMLInputElement>(englishCopy["oauthApp.tenant"])
+        .value,
     ).toBe(DIRECTORY);
-    await user.type(screen.getByLabelText("Client secret"), "rotated");
+    await user.type(
+      screen.getByLabelText(englishCopy["oauthApp.clientSecret"]),
+      "rotated",
+    );
     await user.click(
-      screen.getByRole("button", { name: "Save Microsoft app" }),
+      screen.getByRole("button", {
+        name: englishCopy["oauthApp.microsoft.save"],
+      }),
     );
 
     await waitFor(() => expect(calls.length).toBe(1));
@@ -497,7 +531,7 @@ describe("the app setup drawer", () => {
       reason.id,
     );
     expect(
-      screen.getByRole("button", { name: "Save Google app" }),
+      screen.getByRole("button", { name: englishCopy["oauthApp.google.save"] }),
     ).toHaveProperty("disabled", true);
   });
 
@@ -508,20 +542,27 @@ describe("the app setup drawer", () => {
       refuseWrites: true,
     });
     await user.type(await openFields(), CLIENT_ID);
-    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
-    await user.click(screen.getByRole("button", { name: "Save Google app" }));
+    await user.type(
+      screen.getByLabelText(englishCopy["oauthApp.clientSecret"]),
+      "GOCSPX-secret",
+    );
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["oauthApp.google.save"] }),
+    );
 
-    expect(await screen.findByText("App not saved")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["oauthApp.saveFailed"]),
+    ).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it("tells a reader who cannot set up company apps why Save is refused", async () => {
     mount(absent(), "google", { view: "drawer", canManage: false });
     expect(
-      await screen.findByText("Only an admin can set up company apps"),
+      await screen.findByText(englishCopy["oauthApp.noWriteReason"]),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Save Google app" }),
+      screen.getByRole("button", { name: englishCopy["oauthApp.google.save"] }),
     ).toHaveProperty("disabled", true);
   });
 
@@ -534,13 +575,18 @@ describe("the app setup drawer", () => {
       view: "drawer",
     });
     const directory = await screen.findByLabelText<HTMLInputElement>(
-      "Directory (tenant) ID",
+      englishCopy["oauthApp.tenant"],
     );
     await waitFor(() => expect(directory.value).toBe(DIRECTORY));
-    await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.type(
+      screen.getByLabelText(englishCopy["oauthApp.clientSecret"]),
+      "s3cret",
+    );
     await user.clear(directory);
     await user.click(
-      screen.getByRole("button", { name: "Save Microsoft app" }),
+      screen.getByRole("button", {
+        name: englishCopy["oauthApp.microsoft.save"],
+      }),
     );
 
     await waitFor(() => expect(calls.length).toBe(1));
@@ -550,6 +596,6 @@ describe("the app setup drawer", () => {
   it("asks for a directory only for Microsoft", async () => {
     mount(absent(), "google", { view: "drawer" });
     await screen.findByLabelText("Client ID");
-    expect(screen.queryByLabelText("Directory (tenant) ID")).toBeNull();
+    expect(screen.queryByLabelText(englishCopy["oauthApp.tenant"])).toBeNull();
   });
 });

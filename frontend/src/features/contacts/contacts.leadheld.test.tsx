@@ -8,6 +8,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { ContactsScreen } from "./contacts";
 
@@ -92,7 +93,7 @@ async function submit(button: string) {
     "dana@example.test",
   );
   await user.click(screen.getByRole("button", { name: "Create" }));
-  await screen.findByText("This is already a lead.");
+  await screen.findByText(englishCopy["contact.leadHeld.title"]);
   return user;
 }
 
@@ -105,7 +106,11 @@ describe("a contact form over a live lead", () => {
       field: "emails",
     });
     const user = await submit("new-record");
-    await user.click(screen.getByRole("button", { name: "Convert the lead" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["contact.leadHeld.convert"],
+      }),
+    );
     await waitFor(() => expect(posted).toHaveLength(2));
     expect(posted[1]).toMatchObject({
       full_name: "Dana Buyer",
@@ -125,7 +130,11 @@ describe("a contact form over a live lead", () => {
       field: "email",
     });
     const user = await submit("quick-capture");
-    await user.click(screen.getByRole("button", { name: "Convert the lead" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["contact.leadHeld.convert"],
+      }),
+    );
     await waitFor(() => expect(posted).toHaveLength(2));
     expect(posted[1]).toMatchObject({ convert_lead_ids: ["lead-2"] });
   });
@@ -139,24 +148,38 @@ describe("a contact form over a live lead", () => {
     });
     const user = await submit("new-record");
     expect(
-      screen.queryByRole("button", { name: "Convert the lead" }),
+      screen.queryByRole("button", {
+        name: englishCopy["contact.leadHeld.convert"],
+      }),
     ).toBeNull();
     expect(
-      screen.getByText("Ask the lead’s owner to convert the lead."),
+      screen.getByText(englishCopy["contact.leadHeld.noConvert"]),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "View existing record" }),
+      screen.queryByRole("button", {
+        name: englishCopy["dedupe.viewExisting"],
+      }),
     ).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Open the lead" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["contact.leadHeld.open"],
+      }),
+    );
     expect(window.location.hash).toBe("#/leads/lead-3");
   });
 
   it("names no lead the reader cannot open", async () => {
     stubWrites("/contacts", {});
     await submit("new-record");
-    expect(screen.queryByRole("button", { name: "Open the lead" })).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Convert the lead" }),
+      screen.queryByRole("button", {
+        name: englishCopy["contact.leadHeld.open"],
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["contact.leadHeld.convert"],
+      }),
     ).toBeNull();
   });
 });

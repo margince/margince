@@ -534,7 +534,7 @@ func TestTheBundlingHoldsTheTaskItFilesOnto(t *testing.T) {
 	}
 	t.Cleanup(releaseHold)
 	go func() {
-		done <- database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		done <- database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			open, err := taskStillOpenTx(e.Admin(), tx, tasks[0].id)
 			if err != nil {
 				return err
@@ -560,7 +560,7 @@ func TestTheBundlingHoldsTheTaskItFilesOnto(t *testing.T) {
 	// with NOWAIT so the assertion is "the row is held", not "this was slow" —
 	// and the refusal is returned rather than swallowed, because NOWAIT aborts
 	// the transaction it was asked in.
-	probe := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	probe := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.Admin(),
 			`SELECT id FROM activity WHERE id = $1 FOR UPDATE NOWAIT`, tasks[0].id)
 		return err
@@ -601,7 +601,7 @@ func TestTheHeldTaskReadsAsClosedOnceSomebodyAnswersIt(t *testing.T) {
 	open := func() bool {
 		t.Helper()
 		var answer bool
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var err error
 			answer, err = taskStillOpenTx(e.Admin(), tx, tasks[0].id)
 			return err

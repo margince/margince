@@ -14,6 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ContractForm } from "./contractform";
 
 afterEach(() => {
@@ -62,7 +63,9 @@ function show() {
 // here sits in the pinned foot and joins the form by its `form` attribute.
 async function fieldsForm() {
   const title = await screen.findByLabelText(/^Title/);
-  const save = screen.getByRole("button", { name: "Record contract" });
+  const save = screen.getByRole("button", {
+    name: englishCopy["contracts.form.save"],
+  });
   const form = (title as HTMLInputElement).form;
   expect(form).not.toBeNull();
   expect((save as HTMLButtonElement).form).toBe(form);
@@ -104,7 +107,9 @@ it("sends one write while the first is still out", async () => {
   const { title, form } = await fieldsForm();
   await user.type(title, "MSA");
   fireEvent.submit(form);
-  const save = screen.getByRole("button", { name: "Record contract" });
+  const save = screen.getByRole("button", {
+    name: englishCopy["contracts.form.save"],
+  });
   await waitFor(() => expect(save).toHaveAttribute("aria-busy", "true"));
 
   await user.click(save);
@@ -127,7 +132,9 @@ it("brings a repeated identical refusal back into view", async () => {
   const user = userEvent.setup();
   const { title } = await fieldsForm();
   await user.type(title, "MSA");
-  const save = screen.getByRole("button", { name: "Record contract" });
+  const save = screen.getByRole("button", {
+    name: englishCopy["contracts.form.save"],
+  });
 
   await user.click(save);
   expect(await screen.findByRole("alert")).toHaveTextContent(

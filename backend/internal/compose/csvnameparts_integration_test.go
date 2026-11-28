@@ -100,7 +100,7 @@ func importedContact(t *testing.T, e *integration.Env, in contacts.CreateContact
 	w := newCSVWriters(e.DB(), run.ID, migration.PartMapping{Object: migration.ObjectContact},
 		runOptions{}, &linkResolver{sourceSystem: "csv:names"}, importColumns{})
 	id := ids.UUID(created.Id)
-	if err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
 		return w.identities.RecordIdentityTx(ctx, tx, run.ID, w.sourceSystem, w.object, importedRow, id, migration.OriginCreated)
 	}); err != nil {
 		t.Fatalf("recording the import's identity: %v", err)

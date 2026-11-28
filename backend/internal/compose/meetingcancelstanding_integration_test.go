@@ -28,7 +28,7 @@ func TestACancellationWaitsForTheSeatsImportInFlight(t *testing.T) {
 	release := sync.OnceFunc(func() { close(commit) })
 	t.Cleanup(release)
 	go func() {
-		written <- database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		written <- database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var pid int32
 			err := tx.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&pid)
 			if err == nil {

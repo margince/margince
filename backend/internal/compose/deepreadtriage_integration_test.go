@@ -84,7 +84,7 @@ func captureMailFrom(t *testing.T, e *integration.Env, owner ids.UUID, domain, e
 	t.Helper()
 	ctx := e.As(owner, nil, integration.AdminPerms)
 	activityID := ids.New[ids.ActivityKind]()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO activity (id, kind, subject, direction, source_system, source_id, source, captured_by, occurred_at)
 			VALUES (@activity, 'email', 'hi', 'inbound', 'gmail', @source, 'gmail:seed', 'connector:gmail', @at)`,
@@ -119,7 +119,7 @@ func captureMailFrom(t *testing.T, e *integration.Env, owner ids.UUID, domain, e
 func triageState(t *testing.T, e *integration.Env, domain string) (status, readStatus string, companies int) {
 	t.Helper()
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx,
 			`SELECT status FROM company_domain_disposition WHERE domain = $1`, domain).Scan(&status); err != nil {
 			return err
@@ -199,7 +199,7 @@ func TestTriageReadsOnAndCreatesTheCompanyTheSiteNames(t *testing.T) {
 	var name, nameSource string
 	var employments int
 	var boundToCompany bool
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
 			SELECT o.display_name, o.name_source FROM company o
 			JOIN company_domain d ON d.company_id = o.id

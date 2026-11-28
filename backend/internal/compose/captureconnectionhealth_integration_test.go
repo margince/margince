@@ -154,7 +154,7 @@ func TestMeetingNotesHealthAgreesForTheOwnerAndTheFleet(t *testing.T) {
 			if !found {
 				t.Fatal("notes connection missing")
 			}
-			err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				fleet, err := capture.FleetConcernsTx(e.Admin(), tx, at)
 				if err != nil {
 					return err

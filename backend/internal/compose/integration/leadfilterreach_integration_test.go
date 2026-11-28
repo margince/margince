@@ -62,7 +62,7 @@ func TestMeNamesTheCompanyDialsOfTheLeadListForASeatWithoutCompanyRead(t *testin
 	narrowSignedInRole(t, e, "lead_reach_no_company_read", `{"company": {"create": false, "read": false, "update": false, "delete": false}}`)
 
 	refused := refusedLeadFilters(t, e)
-	want := []string{"country", "industry", "partner_accepted", "partner_company_id", "size_band"}
+	want := []string{"company_id", "country", "industry", "partner_accepted", "partner_company_id", "size_band"}
 	if !slices.Equal(refused, want) {
 		t.Errorf("/me refused %v, want %v", refused, want)
 	}

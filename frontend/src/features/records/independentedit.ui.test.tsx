@@ -14,6 +14,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   company,
   emptyPage,
@@ -236,8 +237,16 @@ it("saves a deal's name across an unrelated update using the fresh version", asy
     }),
   );
   render(<DealScreen id="x" />);
-  fireEvent.click(await screen.findByRole("button", { name: "More actions" }));
-  fireEvent.click(await screen.findByRole("button", { name: "Edit details" }));
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: englishCopy["record.moreActions"],
+    }),
+  );
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: englishCopy["deal.editDetails"],
+    }),
+  );
   // The drawer's own field; the page's head renames the deal too.
   const drawer = await screen.findByRole("dialog");
   fireEvent.click(

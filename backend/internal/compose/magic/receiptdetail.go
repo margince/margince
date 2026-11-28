@@ -72,7 +72,7 @@ func (s *Service) ReceiptChanges(ctx context.Context, records []ReceiptRecord) (
 	if len(byType) == 0 {
 		return out, nil
 	}
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		for entityType, wanted := range byType {
 			entries, err := receiptEntries(ctx, tx, entityType, wanted)
 			if err != nil {

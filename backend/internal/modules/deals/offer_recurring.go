@@ -35,6 +35,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -180,6 +181,9 @@ func validBillingShape(model *string, intervalMonths *int) error {
 				Field:  billingIntervalColumn,
 				Reason: "a recurring price needs the number of months one billing period spans",
 			}
+		}
+		if !crmcontracts.ProductBillingIntervalMonths(*intervalMonths).Valid() {
+			return &BillingShapeError{Field: billingIntervalColumn, Reason: "choose a billing interval offered by the product schema"}
 		}
 	default:
 		return &BillingShapeError{

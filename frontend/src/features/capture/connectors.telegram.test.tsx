@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { useMe } from "../../lib/session";
 import { meFixture } from "../../testing/mefixture";
 import { WorkspaceBotPanel } from "./connectors.telegram";
@@ -128,7 +129,9 @@ describe("the Telegram connector panel", () => {
 
     const rows = await screen.findAllByTestId("telegram-connection");
     await userEvent.click(
-      within(rows[1]).getByRole("button", { name: "Replace token" }),
+      within(rows[1]).getByRole("button", {
+        name: englishCopy["connectors.telegramEditToken"],
+      }),
     );
     // The second bot is the pending one. The form showing its status proves it
     // bound to that row and not to the first.
@@ -176,7 +179,9 @@ describe("the Telegram connector panel", () => {
     render(<WorkspaceBotPanel provider="telegram" />);
     // The panel is its own tab, so a blank one would read as a broken page.
     expect(await screen.findByText(readOnlyNote)).toBeTruthy();
-    expect(await screen.findByText("No bot connected")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["connectors.telegramEmptyTitle"]),
+    ).toBeTruthy();
     expect(screen.queryByTestId("telegram-connect")).toBeNull();
   });
 
@@ -203,7 +208,9 @@ describe("the Telegram connector panel", () => {
     render(<WorkspaceBotPanel provider="telegram" />);
     const row = await screen.findByTestId("telegram-connection");
     expect(
-      await within(row).findByRole("button", { name: "Replace token" }),
+      await within(row).findByRole("button", {
+        name: englishCopy["connectors.telegramEditToken"],
+      }),
     ).toBeTruthy();
     expect(
       within(row).queryByRole("button", { name: "Disconnect" }),
@@ -228,9 +235,7 @@ describe("the Telegram connector panel", () => {
       </>,
     );
     expect(
-      await screen.findByText(
-        "Messaging channels are not configured on this installation.",
-      ),
+      await screen.findByText(englishCopy["connectors.telegramNotConfigured"]),
     ).toBeTruthy();
     // Absence proves nothing while /me is in flight, when every grant is false.
     await screen.findByText("session settled");

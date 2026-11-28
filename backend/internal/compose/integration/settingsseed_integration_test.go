@@ -35,7 +35,7 @@ func TestASecondSeedKeepsTheStoredValueAndSaysItDiscardedTheNewOne(t *testing.T)
 	const first, second = "The First Installation", "The Second Installation"
 
 	var storedFirst, storedSecond bool
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		// Through the real writer. A hand-inserted row would prove nothing about
 		// the path bootstrap actually takes.
 		if _, err := tx.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, identity.Name.Key()); err != nil {
@@ -58,7 +58,7 @@ func TestASecondSeedKeepsTheStoredValueAndSaysItDiscardedTheNewOne(t *testing.T)
 	// than through a Store, because the question is what the table holds, not
 	// what a registry resolves.
 	var got string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT value #>> '{}' FROM setting WHERE key = $1`, identity.Name.Key()).Scan(&got)
 	}); err != nil {

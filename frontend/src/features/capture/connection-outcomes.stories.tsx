@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import {
@@ -135,7 +136,9 @@ export const OneListFailed: Story = {
   render: story(SOME, { held: "failed" }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Could not load")).toBeVisible();
+    await expect(
+      await canvas.findByText(englishCopy["connectionOutcomes.unread"]),
+    ).toBeVisible();
     await expect(
       canvas.getByRole("button", {
         name: "Retry Mail not shared with the team",

@@ -252,7 +252,7 @@ func ReadDealOutcomeReviews(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (
 }
 
 const reviewSelect = `SELECT r.id, r.activity_id, r.deal_id, r.closing_occurrence_id, r.outcome,
-	r.template_key, r.template_version, r.questions, r.answers, r.choice_answers, r.revision, r.created_at
+	r.template_key, r.template_version, r.questions, r.answers, r.choice_answers, r.created_at
 	FROM activity_review_response`
 
 // readOutcomeReview answers one review, bounded by the deal it is about.
@@ -285,7 +285,7 @@ func scanOutcomeReview(row pgx.Row) (crmcontracts.OutcomeReview, error) {
 	var questions, answers, choices []byte
 	if err := row.Scan(&id, &activityID, &dealID, &occurrenceID, &outcome,
 		&out.TemplateKey, &out.TemplateVersion, &questions, &answers, &choices,
-		&out.Revision, &out.CreatedAt); err != nil {
+		&out.CreatedAt); err != nil {
 		return crmcontracts.OutcomeReview{}, err
 	}
 	out.UpdatedAt = out.CreatedAt

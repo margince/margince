@@ -154,7 +154,7 @@ func (p contactsEnsurer) afterEnsure(ctx context.Context, in capture.EnsureReque
 // returned: the message is already captured, and the verdict worker's
 // PublishAnsweredContactsWorkspace makes any promotion this one loses.
 func (p contactsEnsurer) promoteOnReply(ctx context.Context, in capture.EnsureRequest, contactID ids.ContactID) {
-	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		return publishAnsweredTx(ctx, tx, p.store, contactID, in.Email)
 	})
 	if err != nil {
@@ -169,7 +169,7 @@ func (p contactsEnsurer) promoteOnReply(ctx context.Context, in capture.EnsureRe
 // Its own transaction and logged, like promoteOnReply: the message is already
 // captured, and LiftVendorMarksWorkspace makes any clearing this one loses.
 func (p contactsEnsurer) liftVendorMark(ctx context.Context, email string, contactID ids.ContactID) {
-	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		return liftVendorMarkTx(ctx, tx, p.store, contactID, email)
 	})
 	if err != nil {

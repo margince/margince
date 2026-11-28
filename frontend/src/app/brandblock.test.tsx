@@ -56,9 +56,9 @@ describe("The rail's brand block", () => {
     // The attribution stands beside the link, not in it: it is not somewhere a
     // press should lead.
     const attribution = document.querySelector(".ws-company");
-    expect(attribution?.textContent).toBe("Powered by Margince");
+    expect(attribution?.textContent).toBe(en["shell.poweredBy"]);
     expect(document.querySelector(".railhead-attributed")).toBeTruthy();
-    expect(within(brand).queryByText("Powered by Margince")).toBeNull();
+    expect(within(brand).queryByText(en["shell.poweredBy"])).toBeNull();
     expect(brand.getAttribute("href")).toBe("/#/home");
   });
 

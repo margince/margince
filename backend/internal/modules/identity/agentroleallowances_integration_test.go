@@ -27,7 +27,7 @@ type storedPolicy struct{ e *revocationEnv }
 
 func (s storedPolicy) Policy(ctx context.Context) (agentvolume.Policy, error) {
 	var policy agentvolume.Policy
-	err := database.WithWorkspaceTx(ctx, s.e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.e.pool, func(tx pgx.Tx) error {
 		var err error
 		policy, err = AgentPolicyTx(ctx, tx, s.e.svc.config)
 		return err

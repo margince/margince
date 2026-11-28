@@ -73,7 +73,7 @@ func TestASensitiveThreadStaysHeldAndNamesWhy(t *testing.T) {
 func activityAudienceReason(t *testing.T, e *integration.Env, id ids.UUID) string {
 	t.Helper()
 	var reason string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(audience_reason, '') FROM activity WHERE id = $1`, id).Scan(&reason)
 	}); err != nil {
@@ -127,7 +127,7 @@ func runConfidentiality(t *testing.T, e *integration.Env, threadID ids.UUID, kin
 func threadStatus(t *testing.T, e *integration.Env, id ids.UUID) string {
 	t.Helper()
 	var status string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status FROM capture_thread_verdict WHERE id = $1`, id).Scan(&status)
 	}); err != nil {
@@ -139,7 +139,7 @@ func threadStatus(t *testing.T, e *integration.Env, id ids.UUID) string {
 func activityAudience(t *testing.T, e *integration.Env, id ids.UUID) string {
 	t.Helper()
 	var audience string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT audience FROM activity WHERE id = $1`, id).Scan(&audience)
 	}); err != nil {
@@ -156,7 +156,7 @@ func seedThreadQuestion(t *testing.T, e *integration.Env, threadKey string, acti
 	// The classified mailbox the question belongs to. A question is claimed
 	// only for a seat still asking to be classified, so a fixture without the
 	// connection describes a mailbox that never had one.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection
 			       (user_id, provider, status, credential_ref, mail_posture)
@@ -168,13 +168,13 @@ func seedThreadQuestion(t *testing.T, e *integration.Env, threadKey string, acti
 		t.Fatalf("seeding the classified mailbox the question belongs to: %v", err)
 	}
 	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return store.EnsureTx(context.Background(), tx, threadKey, e.Rep1, activityID, time.Now().Add(-time.Minute))
 	}); err != nil {
 		t.Fatalf("opening the thread question: %v", err)
 	}
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM capture_thread_verdict WHERE thread_key = $1`, threadKey).Scan(&id)
 	}); err != nil {
@@ -233,7 +233,7 @@ func (s *scriptedConfidentialityBrain) Complete(ctx context.Context, req model.R
 func seedHeldThreadMail(t *testing.T, e *integration.Env, threadKey, from, subject string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, counterparty_email, thread_key,
@@ -287,7 +287,7 @@ func TestOneSeatsVerdictDoesNotPublishAColleaguesHeldMessage(t *testing.T) {
 // addImportRowFor makes a second seat a contributor to one message's audience.
 func addImportRowFor(t *testing.T, e *integration.Env, activityID, user ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status)
 			VALUES ($1, $2, 'classified', 'pending')`, activityID, user)
@@ -301,7 +301,7 @@ func addImportRowFor(t *testing.T, e *integration.Env, activityID, user ids.UUID
 func importVerdictFor(t *testing.T, e *integration.Env, activityID, user ids.UUID) string {
 	t.Helper()
 	var status string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT coalesce(verdict_status, '') FROM capture_import
 			 WHERE activity_id = $1 AND user_id = $2`, activityID, user).Scan(&status)
@@ -345,7 +345,7 @@ func TestAHeldMailboxIsNeverAskedAndNeverOpened(t *testing.T) {
 // setImportPosture rewrites the posture a message was imported under.
 func setImportPosture(t *testing.T, e *integration.Env, activityID, user ids.UUID, posture string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_import SET posture_at_import = $3
 			 WHERE activity_id = $1 AND user_id = $2`, activityID, user, posture)
@@ -358,7 +358,7 @@ func setImportPosture(t *testing.T, e *integration.Env, activityID, user ids.UUI
 func countThreadQuestions(t *testing.T, e *integration.Env, threadKey string) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM capture_thread_verdict WHERE thread_key = $1`, threadKey).Scan(&n)
 	}); err != nil {
@@ -382,7 +382,7 @@ func TestAThreadWhoseMessageWasErasedRetiresRatherThanBeingJudgedOnNothing(t *te
 	threadID := seedThreadQuestion(t, e, "thread-erased", activityID)
 
 	// The erasure the retention path performs, which SET NULLs the pointer.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(),
 			`DELETE FROM activity WHERE id = $1`, activityID); err != nil {
 			return err
@@ -430,7 +430,7 @@ func TestAThreadPointedAtRestrictedMailIsNotJudgedOnAnEmptyPrompt(t *testing.T) 
 
 	// A hold needs the evidence that qualified it: the database refuses a
 	// restriction that records no basis, which is the point of the trigger.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_retention_evidence
 			       (activity_id, basis, qualified_at, decided_by_name, reason)
@@ -527,7 +527,7 @@ func TestAnOrdinaryVerdictOpensTheSiblingsTheClassifierDidNotRead(t *testing.T) 
 		t.Fatalf("thread status = %q, want pending: the unread sender must be asked about", got)
 	}
 	var pointer ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT first_activity_id FROM capture_thread_verdict WHERE id = $1`, threadID).Scan(&pointer)
 	}); err != nil {
@@ -545,7 +545,7 @@ func TestAnOrdinaryVerdictOpensTheSiblingsTheClassifierDidNotRead(t *testing.T) 
 	// The senders this verdict cleared are remembered, so the next message from
 	// one of them inherits instead of buying another model call.
 	var seen []string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT seen_addresses FROM capture_thread_verdict WHERE id = $1`, threadID).Scan(&seen)
 	}); err != nil {
@@ -623,7 +623,7 @@ func TestAnOutboundSiblingIsJudgedByItsOwnPartyNotOpenedOnATrade(t *testing.T) {
 	// its text is one nothing has judged.
 	ownReply := seedHeldThreadMail(t, e, "thread-outbound", customer, "Re: Nachbestellung")
 	toLawyer := seedHeldThreadMail(t, e, "thread-outbound", lawyer, "Aufhebungsvertrag")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET direction = 'outbound' WHERE id = ANY($1)`,
 			[]ids.UUID{ownReply, toLawyer})
@@ -665,7 +665,7 @@ func TestAThirdSenderCohortIsHeldRatherThanLeftUndecided(t *testing.T) {
 	// later tick would find it.
 	for range 2 {
 		runConfidentiality(t, e, threadID, confidentialityOrdinary, 0.95)
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(), `
 				UPDATE capture_thread_verdict
 				   SET next_attempt_at = now() - interval '1 minute',
@@ -717,7 +717,7 @@ func TestALegacyClearedThreadFinishesTheMessagesItLeftBehind(t *testing.T) {
 
 	// The state the old code left: the ledger settled, the judged message
 	// stamped, and the rest of the conversation never told.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			UPDATE capture_thread_verdict
 			   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
@@ -759,7 +759,7 @@ func TestFinishingSettledThreadsIsIdempotent(t *testing.T) {
 	judged := seedHeldThreadMail(t, e, "thread-twice", customer, "Nachbestellung")
 	stranded := seedHeldThreadMail(t, e, "thread-twice", customer, "Nachtrag")
 	threadID := seedThreadQuestion(t, e, "thread-twice", judged)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_thread_verdict
 			   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
@@ -811,7 +811,7 @@ func TestArchivedMessagesDoNotStarveTheSweep(t *testing.T) {
 	repairSibling := seedHeldThreadMail(t, e, "thread-repairable", customer, "Neu II")
 	repairThread := seedThreadQuestion(t, e, "thread-repairable", repairJudged)
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, id := range []ids.UUID{archivedThread, repairThread} {
 			if _, err := tx.Exec(context.Background(), `
 				UPDATE capture_thread_verdict
@@ -875,7 +875,7 @@ func TestAnOwnersSharedThreadIsNotReopenedByTheRepair(t *testing.T) {
 	fromLawyer := seedHeldThreadMail(t, e, "thread-owner-shared", lawyer, "Aufhebungsvertrag")
 	threadID := seedThreadQuestion(t, e, "thread-owner-shared", judged)
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_thread_verdict
 			   SET status = 'shared_by_owner', seen_addresses = ARRAY[$2::text],

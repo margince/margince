@@ -11,6 +11,7 @@ import { ACTIVITY_KINDS } from "../../design-system/recordtimeline";
 import { isConversationKind } from "../../design-system/timelineentry";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { company, company360 } from "../../testing/company.fixtures";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { stubWithSession } from "../../testing/story-utils";
@@ -79,7 +80,7 @@ describe("a company history the reader's role withholds", () => {
   it("says so on All rather than reporting a failed load", async () => {
     draw(withheld);
 
-    expect(await screen.findByText("Hidden for your role")).toBeTruthy();
+    expect(await screen.findByText(englishCopy["state.withheld"])).toBeTruthy();
     expect(screen.queryByText(/did not load/)).toBeNull();
   });
 
@@ -89,8 +90,10 @@ describe("a company history the reader's role withholds", () => {
 
     await user.click(await screen.findByRole("button", { name: "Threads" }));
 
-    expect(await screen.findByText("Hidden for your role")).toBeTruthy();
-    expect(screen.queryByText("No threads yet.")).toBeNull();
+    expect(await screen.findByText(englishCopy["state.withheld"])).toBeTruthy();
+    expect(
+      screen.queryByText(englishCopy["chronology.conversationsEmpty"]),
+    ).toBeNull();
     expect(reads).toEqual([]);
   });
 });
@@ -116,12 +119,14 @@ describe("a company history narrowed to nothing", () => {
     draw(company360);
 
     await user.type(
-      await screen.findByRole("searchbox", { name: "Search this timeline" }),
+      await screen.findByRole("searchbox", {
+        name: englishCopy["timeline.filters.search"],
+      }),
       "no such words{Enter}",
     );
 
     expect(
-      await screen.findByText("No activity matches these filters."),
+      await screen.findByText(englishCopy["chronology.filteredEmpty"]),
     ).toBeTruthy();
     expect(screen.queryByText(/No activity logged/)).toBeNull();
   });

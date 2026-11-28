@@ -63,7 +63,7 @@ func (e *CounterpartyVerdictEngine) widenClearedSender(ctx context.Context, tx p
 func (e *CounterpartyVerdictEngine) WidenClearedSendersWorkspace(ctx context.Context) error {
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
 		var senders []string
-		if err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 			var err error
 			senders, err = capture.ClearedSendersDueTx(wsCtx, tx, clearedSenderSweepSenders)
 			return err
@@ -76,7 +76,7 @@ func (e *CounterpartyVerdictEngine) WidenClearedSendersWorkspace(ctx context.Con
 				return nil
 			}
 			var moved int
-			if err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 				var err error
 				moved, err = capture.WidenClearedSenderAll(
 					wsCtx, tx, email, budget, activities.RecomputeAudienceTx)

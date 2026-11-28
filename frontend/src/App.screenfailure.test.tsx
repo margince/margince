@@ -3,6 +3,7 @@ import { act, cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Heading } from "./design-system/heading";
+import { en as englishCopy } from "./i18n/en";
 import {
   memoryStorage,
   renderApp,
@@ -79,7 +80,7 @@ describe("a screen that throws while it renders", () => {
 
     expect(failure.textContent).toContain(TITLE);
     expect(
-      screen.getByRole("navigation", { name: "Primary navigation" }),
+      screen.getByRole("navigation", { name: englishCopy["shell.railAria"] }),
     ).toBeTruthy();
     expect(document.querySelector("header.topbar")).not.toBeNull();
     expect(document.querySelector(".scroll")?.contains(failure)).toBe(true);
@@ -110,7 +111,7 @@ describe("a screen that throws while it renders", () => {
 
     await vi.waitFor(() => expect(screen.queryByText(TITLE)).toBeNull());
     expect(
-      screen.getByRole("navigation", { name: "Primary navigation" }),
+      screen.getByRole("navigation", { name: englishCopy["shell.railAria"] }),
     ).toBeTruthy();
   });
 

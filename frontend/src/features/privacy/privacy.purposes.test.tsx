@@ -424,7 +424,7 @@ describe("Registered purposes", () => {
     const table = await screen.findByRole("table", {
       name: en["privacy.purposesRegistry"],
     });
-    const cell = within(table).getByText(TRANSACTIONAL.label).parentElement;
+    const cell = within(table).getByText(TRANSACTIONAL.label).closest("td");
     expect(cell).toHaveTextContent(
       `${TRANSACTIONAL.label}${TRANSACTIONAL.key}`,
     );

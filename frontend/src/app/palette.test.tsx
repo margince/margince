@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { COMPANY_CONTEXT_ON } from "../features/settings/settingspages.fixtures";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { type GrantSpec, meFixture, READS_RECORDS } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { CREATE_ID, CREATE_SCREENS } from "./nav";
@@ -23,11 +24,7 @@ import {
   useBuiltinCommands,
 } from "./palette";
 
-// B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
-// acceptance. AC-shell-8 is no longer about this file: it covered the
-// record-scoped Ask composer, and now covers the claim that composer carried
-// about what the agent can reach — asserted on the panel that carries it, in
-// frontend/e2e/ac.spec.ts and agentrail.scope.test.tsx.
+// The palette searches visible records and offers their destinations.
 
 afterEach(() => {
   cleanup();
@@ -136,7 +133,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(rows[0].textContent).toContain("Brandt Automotive");
     expect(rows[1].textContent).toContain("See all results");
     // Asking is not among them, and is offered whatever was typed.
-    expect(screen.getByText("Ask your documents")).toBeTruthy();
+    expect(screen.getByText(en["corpusAsk.title"])).toBeTruthy();
   });
 
   it("Enter runs the selection; arrows move and clamp (AC-shell-5)", async () => {
@@ -164,7 +161,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
     await userEvent.type(screen.getByRole("combobox"), "zzz nothing matches");
-    await userEvent.click(screen.getByText("Ask your documents"));
+    await userEvent.click(screen.getByText(en["corpusAsk.title"]));
     // The screen the reader was on is still the screen they are on.
     // Two dials: presence opens it, the question rides beside it. An empty
     // dial does not survive parseParams, so "open with an empty box" needs a
@@ -359,11 +356,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
     expect(await screen.findByText(/Search failed/)).toBeTruthy();
     // The notice heads the list, so it names what still works, not where.
-    expect(
-      screen.getByText(
-        "Records could not be searched. Screens and actions still work.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(en["palette.searchFailed"])).toBeTruthy();
     // Not the empty state: the list is not empty, and saying so would be the
     // false claim this replaces.
     expect(screen.queryByText("No matches.")).toBeNull();
@@ -396,7 +389,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
     expect(await screen.findByText("No matches for “zzzzqqq”.")).toBeTruthy();
     expect(screen.queryByText(/See all results/)).toBeNull();
-    expect(screen.getByText("Ask your documents")).toBeTruthy();
+    expect(screen.getByText(en["corpusAsk.title"])).toBeTruthy();
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("");
   });
@@ -438,7 +431,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       [...container.querySelectorAll(".palette-group")].map(
         (heading) => heading.textContent,
       ),
-    ).toEqual(["Companies", "Ask Margince"]);
+    ).toEqual(["Companies", en["palette.askGroup"]]);
     // The heading says it once; the row repeats neither the kind nor "Record".
     expect(row.querySelector(".label")?.textContent).toBe("Brandt GmbH");
     expect(row.querySelector(".sub")).toBeNull();
@@ -482,7 +475,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       [...container.querySelectorAll(".palette-group")].map(
         (heading) => heading.textContent,
       ),
-    ).toEqual(["Companies", "Emails", "Ask Margince"]);
+    ).toEqual(["Companies", "Emails", en["palette.askGroup"]]);
     const rows = destinationRows().map((row) => row.textContent ?? "");
     expect(rows.findIndex((text) => text.includes("Acme GmbH"))).toBeLessThan(
       rows.findIndex((text) => text.includes("Acme renewal")),
@@ -815,6 +808,12 @@ describe("useBuiltinCommands", () => {
         if (url.endsWith("/company/context/capabilities")) {
           return jsonResponse(COMPANY_CONTEXT_ON);
         }
+        if (new URL(url, "https://app.test").pathname.endsWith("/search")) {
+          return jsonResponse({
+            data: [],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
         // The installation writer may open Configuration, so search reads it.
         if (url.endsWith("/installation/configuration")) {
           return jsonResponse([]);
@@ -838,7 +837,9 @@ describe("useBuiltinCommands", () => {
     // find it rather than concluding it was removed.
     await user.type(screen.getByRole("combobox"), "general");
     await waitFor(() => {
-      expect(destinationRows()[0].textContent).toContain("Company profile");
+      expect(destinationRows()[0].textContent).toContain(
+        en["roles.object.installation_settings"],
+      );
     });
   });
 
@@ -855,10 +856,12 @@ describe("useBuiltinCommands", () => {
     });
     const box = screen.getByRole("combobox");
     await user.type(box, "capture");
-    await screen.findByText("Mail capture");
+    await screen.findByText(en["notifications.class.capture.label"]);
     await user.clear(box);
     await user.type(box, "general");
-    expect(screen.queryByText("Company profile")).toBeNull();
+    expect(
+      screen.queryByText(en["roles.object.installation_settings"]),
+    ).toBeNull();
   });
 
   // Reading the company's own website is Company profile's job, so no seat is
@@ -869,7 +872,7 @@ describe("useBuiltinCommands", () => {
       const user = userEvent.setup();
       renderProbeWithCompany({ roles: [role], allow: INSTALLATION_WRITER });
       await user.type(screen.getByRole("combobox"), "company");
-      await screen.findByText("Company profile");
+      await screen.findByText(en["roles.object.installation_settings"]);
       expect(screen.queryByText("Read a company")).toBeNull();
     },
   );
@@ -878,10 +881,10 @@ describe("useBuiltinCommands", () => {
     const user = userEvent.setup();
     renderProbeWithCompany({ roles: ["admin"], allow: INSTALLATION_WRITER });
     await user.type(screen.getByRole("combobox"), "website");
-    await waitFor(() => {
-      expect(destinationRows()[0].textContent).toContain("Company profile");
+    const profile = await screen.findByRole("option", {
+      name: /Company profile/,
     });
-    await user.keyboard("{Enter}");
+    await user.click(profile);
     expect(window.location.hash).toBe("#/settings/company");
   });
 
@@ -892,10 +895,12 @@ describe("useBuiltinCommands", () => {
     renderProbeWithCompany({ roles: ["ops"], allow: INSTALLATION_WRITER });
     const box = screen.getByRole("combobox");
     await user.type(box, "company");
-    await screen.findByText("Company profile");
+    await screen.findByText(en["roles.object.installation_settings"]);
     await user.clear(box);
     await user.type(box, "website");
-    expect(screen.queryByText("Company profile")).toBeNull();
+    expect(
+      screen.queryByText(en["roles.object.installation_settings"]),
+    ).toBeNull();
   });
 
   // Elsewhere `C` lists these commands, so a list form with none is one that
@@ -956,7 +961,7 @@ describe("useBuiltinCommands", () => {
     // command, so matching on it proves the row carries the screen's own words.
     await user.type(screen.getByRole("combobox"), "views");
     const rows = destinationRows();
-    expect(rows[0].textContent).toContain("Filters and views");
+    expect(rows[0].textContent).toContain(en["filters.title"]);
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/filters");
   });
@@ -970,22 +975,16 @@ describe("useBuiltinCommands", () => {
   });
 
   // The scheduled queue is off the rail deliberately, so the rail-derived rows
-  // above cannot carry it and nothing else did: it was reachable only by typing
-  // the address, while a rep sat on a message they wanted back.
   it("reaches the scheduled queue, which no rail row names", async () => {
     const user = userEvent.setup();
     renderProbe();
     await user.type(screen.getByRole("combobox"), "scheduled");
     const rows = destinationRows();
-    expect(rows[0].textContent).toContain("Scheduled messages");
+    expect(rows[0].textContent).toContain(en["nav.scheduled"]);
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/scheduled");
   });
 
-  // The words a rep would actually type: they think of the CONTROL they used,
-  // not of the destination. The alias is that control's own label, so it is
-  // translated with it — English prose here would be words a German or
-  // Vietnamese reader would never type.
   it("finds it under the words the composer's control uses", async () => {
     const user = userEvent.setup();
     renderProbe();

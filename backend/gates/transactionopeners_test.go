@@ -28,10 +28,9 @@ import (
 const databasePackage = "internal/platform/database"
 
 // transactionOpener names the function in that package permitted to call
-// pool.Begin. Every seam the package publishes — WithWorkspaceTx, WithInfraTx,
-// DB.Tx, DB.TxIsolated — routes through it, which is what makes "a domain row
-// commits with its audit row and its outbox row" a property held in a single
-// place.
+// pool.Begin. Every seam the package publishes routes through it: WithTx,
+// WithInfraTx, DB.Tx and DB.TxIsolated. That makes "a domain row commits with
+// its audit row and its outbox row" a property held in a single place.
 //
 // runTx is NOT a second opener: it supplies the default options and calls this,
 // so the rollback discipline still lives in exactly one function. What made a
@@ -55,6 +54,7 @@ func TestTheDatabasePackageOpensATransactionInOneFunction(t *testing.T) {
 	}
 
 	nested := gatekit.Waive(map[string]string{
+		"txmemo.go: Begin":     "a savepoint on ownedTx.Tx; the wrapper retains the root commit owner and never begins on a pool",
 		"deferredtx.go: Begin": "a pseudo-nested savepoint on the read snapshot's own transaction, never a pool transaction. It sends the snapshot's deferred session statements first, so none of them lands inside the savepoint",
 	})
 	defer nested.AssertAllMatched(t)

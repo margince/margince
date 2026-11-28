@@ -31,7 +31,7 @@ func TestErasingAMailTakesItsQuoteFromTheFiledReminder(t *testing.T) {
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 	var address string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `SELECT email FROM app_user WHERE id=$1`, e.Rep1).Scan(&address); err != nil {
 			return err
 		}
@@ -78,7 +78,7 @@ func TestErasingAMailTakesItsQuoteFromTheFiledReminder(t *testing.T) {
 	}
 
 	eraser := compose.ComposedEraser(e.Pool, nil)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return eraser.PurgeContentDerivedFromNoiseTx(e.Admin(), tx, []ids.UUID{message})
 	}); err != nil {
 		t.Fatal(err)
@@ -91,7 +91,7 @@ func TestErasingAMailTakesItsQuoteFromTheFiledReminder(t *testing.T) {
 func countIn(t *testing.T, e *integration.Env, query string, args ...any) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting: %v", err)

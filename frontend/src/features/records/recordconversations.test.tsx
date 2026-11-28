@@ -8,6 +8,7 @@ import type {
   TimelineGroup,
 } from "../../design-system/timelineentry";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   CONVERSATION_FILTER_KINDS,
   ConversationList,
@@ -142,7 +143,9 @@ describe("whose move a conversation is waiting on", () => {
       ]),
     ]);
 
-    expect(badgesOf("Following up")).toContain("Awaiting their reply");
+    expect(badgesOf("Following up")).toContain(
+      englishCopy["email.move.waitingForThem"],
+    );
   });
 
   it("draws no move on a received invitation the server says needs nothing", () => {
@@ -206,7 +209,9 @@ describe("reading a conversation", () => {
     expect(await screen.findByText("message 1 of the thread")).toBeTruthy();
 
     await user.click(
-      screen.getByRole("button", { name: "Hide earlier messages" }),
+      screen.getByRole("button", {
+        name: englishCopy["timeline.group.hideEarlier"],
+      }),
     );
     expect(screen.queryByText("message 1 of the thread")).toBeNull();
     expect(screen.getByText("message 3 of the thread")).toBeTruthy();
@@ -277,7 +282,7 @@ describe("a withheld newest message", () => {
     expect(badges).not.toContain("Needs reply");
     // And not the other verdict either: a withheld row claims no move in
     // either direction, rather than quietly reporting the opposite one.
-    expect(badges).not.toContain("Awaiting their reply");
+    expect(badges).not.toContain(englishCopy["email.move.waitingForThem"]);
   });
 
   it("keeps the withheld member's words off the card, open as it is", () => {
@@ -305,7 +310,7 @@ describe("a withheld newest message", () => {
     // withheld member keeps its place in it: the sentence where its words
     // would be, and never the words — while the sibling's body still draws.
     expect(screen.getByText("Renewal terms")).toBeTruthy();
-    expect(screen.getByText("Content for participants only")).toBeTruthy();
+    expect(screen.getByText(englishCopy["timeline.withheld"])).toBeTruthy();
     expect(
       screen.queryByText("only participants may read this line"),
     ).toBeNull();
@@ -333,7 +338,7 @@ describe("a withheld newest message", () => {
     ]);
 
     // Once as the thread's subject, once per member.
-    expect(screen.getAllByText("Content for participants only")).toHaveLength(
+    expect(screen.getAllByText(englishCopy["timeline.withheld"])).toHaveLength(
       3,
     );
     expect(screen.queryByText("email")).toBeNull();
@@ -344,13 +349,17 @@ describe("a record with no conversations", () => {
   it("says so honestly rather than drawing an empty list", () => {
     draw([group("call-1", [entry("call", { id: "call-1" })])]);
 
-    expect(screen.getByText("No threads yet.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["chronology.conversationsEmpty"]),
+    ).toBeTruthy();
   });
 
   it("says so for a record with no chronology at all", () => {
     draw([]);
 
-    expect(screen.getByText("No threads yet.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["chronology.conversationsEmpty"]),
+    ).toBeTruthy();
   });
 });
 
@@ -388,6 +397,9 @@ describe("the kinds the cut can be narrowed by", () => {
 
   it("leaves an unnarrowed read alone", () => {
     expect(conversationFilters({})).toEqual({});
+    expect(
+      conversationFilters({ chat_provider: "slack", q: "renewal" }),
+    ).toEqual({ q: "renewal", chat_provider: undefined });
   });
 
   it("asks the server for every conversation kind until the reader picks one", () => {

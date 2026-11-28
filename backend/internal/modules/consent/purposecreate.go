@@ -17,13 +17,23 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// purposeCatalogLock serialises the label check and the insert of a purpose,
-// so two admins naming one label at once cannot both pass the check.
+// purposeCatalogLock serialises the label check and the write that names a
+// purpose, so two admins naming one label at once cannot both pass the check.
 const purposeCatalogLock = "consent.consent_purpose.create"
+
+// lockPurposeLabels holds purposeCatalogLock and then refuses a label that reads
+// like another listed purpose, except the one being renamed.
+func lockPurposeLabels(ctx context.Context, tx pgx.Tx, label string, except ids.PurposeID) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, purposeCatalogLock); err != nil {
+		return err
+	}
+	return refuseConfusableLabel(ctx, tx, label, except)
+}
 
 // CreatePurpose defines one purpose. A purpose is compliance configuration, so
 // its grant is consent_config: every outreach decision is judged against it.
@@ -47,10 +57,7 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 	}
 	var p Purpose
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, purposeCatalogLock); err != nil {
-			return err
-		}
-		if err := refuseConfusableLabel(ctx, tx, label); err != nil {
+		if err := lockPurposeLabels(ctx, tx, label, ids.PurposeID{}); err != nil {
 			return err
 		}
 		err := tx.QueryRow(ctx, `
@@ -60,10 +67,13 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 			RETURNING id, key, label, requires_double_opt_in, class, frequency, created_at`,
 			key, label, requiresDOI, frequency).
 			Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.Class, &p.Frequency, &p.CreatedAt)
-		if !errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return purposeKeyTaken(ctx, tx, key)
+		}
+		if err != nil {
 			return err
 		}
-		return purposeKeyTaken(ctx, tx, key)
+		return auditPurposeChange(ctx, tx, p.ID, "created", nil, map[string]any{"key": p.Key, "label": p.Label})
 	})
 	return p, err
 }
@@ -72,8 +82,8 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 // or key. A contact's consent and the pages a contact opens name a purpose by
 // its label alone. Two that read alike cannot be told apart there, and an
 // archived purpose shows on none of them.
-func refuseConfusableLabel(ctx context.Context, tx pgx.Tx, label string) error {
-	rows, err := tx.Query(ctx, `SELECT key, label FROM consent_purpose WHERE archived_at IS NULL`)
+func refuseConfusableLabel(ctx context.Context, tx pgx.Tx, label string, except ids.PurposeID) error {
+	rows, err := tx.Query(ctx, `SELECT key, label FROM consent_purpose WHERE archived_at IS NULL AND id <> $1`, except.UUID)
 	if err != nil {
 		return fmt.Errorf("consent: reading the listed purposes: %w", err)
 	}

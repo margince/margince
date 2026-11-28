@@ -30,18 +30,8 @@ import { ManageViewsButton } from "./savedviews.manage";
 import { listStateFrom, viewOpening } from "./savedviews.state";
 import { viewNameRefusal } from "./viewnamerefusal";
 
-// A saved view is the reader's own list state, by name: the search, the sort,
-// the filters, the archived toggle and the page size they were looking at.
-//
-// Pressing its tab restores four of those five. The SEARCH is stored and read
-// back but not written to the box, so a view naming one is a view whose tab
-// lights only while that search is actually typed: the tab is a claim about
-// what the list is showing, and it makes no claim it cannot keep.
-//
-// It is per-user and private (the server stamps owner_id from the caller and
-// writes shared_scope 'private'), so nothing here asks who may see it — the
-// answer is always "only you", and a picker that implied otherwise would be
-// promising a sharing model V1 does not have.
+// A saved view restores the list state except the search box.
+// Its tab matches only while the saved search is typed. The server enforces ownership.
 
 /**
  * The saved views of one resource, as view tabs the list can render beside its

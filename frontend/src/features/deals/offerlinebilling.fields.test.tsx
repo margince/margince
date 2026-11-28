@@ -5,6 +5,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   EMPTY_LINE_BILLING,
   type LineBilling,
@@ -41,7 +42,9 @@ async function pick(user: User, field: string, choice: string) {
 }
 
 function periodSelect() {
-  return screen.queryByRole("combobox", { name: "Billing period" });
+  return screen.queryByRole("combobox", {
+    name: englishCopy["product.billingInterval"],
+  });
 }
 
 describe("OfferLineBillingFields", () => {

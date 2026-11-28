@@ -34,7 +34,7 @@ func TestTwoWonDuplicatesMergedCountAsOneWin(t *testing.T) {
 	start, end := weekClock.Add(-time.Hour), weekClock.Add(time.Hour)
 	wins := func() int {
 		var n int
-		err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 			counts, err := countWeek(e.repCtx, tx, e.Rep1, start, end)
 			n = counts.DealsWon
 			return err

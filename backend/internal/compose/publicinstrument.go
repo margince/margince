@@ -58,7 +58,7 @@ func publicInstrument(exts []extension.Extension, perIP *ratelimit.Limiter) func
 				return
 			}
 			if !perIP.Allow(httpserver.ClientIP(r)) {
-				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+				httperr.Write(w, r, ratelimit.Refused(perIP))
 				return
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, extension.InstrumentEdgeMaxBody)

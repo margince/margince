@@ -41,7 +41,7 @@ func TestWritingOnTwoThreadsIsCountedByThreadNotByMessage(t *testing.T) {
 	}
 	for i, tc := range cases {
 		address := "two-threads-" + string(rune('a'+i)) + "@example.com"
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			for _, m := range tc.mail {
 				if _, err := tx.Exec(ctx, `INSERT INTO activity (kind, occurred_at, source, captured_by, direction,
 					counterparty_email, counterparty_outbound_attested, thread_key, restricted_at, archived_at, restricted_reason, restricted_until,

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { TRACED_RUNS } from "./automations.fixtures";
 import { RunRow } from "./automations.runrow";
@@ -39,7 +40,7 @@ export const EveryShape: Story = {
     await expect(
       canvas.getByText("Sent a notification about a deal"),
     ).toBeVisible();
-    const [details] = canvas.getAllByText("Technical details");
+    const [details] = canvas.getAllByText(englishCopy["auto.runs.technical"]);
     if (!details) throw new Error("the traced run drew no technical details");
     await user.click(details);
     await expect(

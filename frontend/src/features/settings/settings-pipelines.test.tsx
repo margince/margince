@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -280,7 +281,7 @@ describe("PipelinesCard: who is shown what", () => {
   it("shows create controls for an admin", async () => {
     server({});
     renderPage();
-    expect(await screen.findByText("New pipeline")).toBeTruthy();
+    expect(await screen.findByText(en["pipeline.new"])).toBeTruthy();
   });
 
   it("gives a reader the catalog and the ladder, and no grip or row verb", async () => {
@@ -368,8 +369,6 @@ describe("PipelinesCard: the catalog", () => {
 
   // The deal board, the stage-automation picker and the lead qualifier read
   // ["pipelines","all"] with no include_archived. If this page widened that
-  // entry instead of taking its own, a retirement would put the pipeline back
-  // in the places it was retired FROM.
   it("asks for archived rows on a request of its own, and lists them apart", async () => {
     const backend = server({});
     renderPage();
@@ -377,7 +376,6 @@ describe("PipelinesCard: the catalog", () => {
     expect(
       backend.calls.some((c) => c.url.includes("include_archived=true")),
     ).toBe(true);
-    // Retired pipelines hold no place in the order.
     expect(
       screen.queryByRole("button", { name: /^Move Retired line/ }),
     ).toBeNull();
@@ -405,8 +403,10 @@ describe("PipelinesCard: the catalog", () => {
     server({ soloInUse: true, onlyPipeline: true });
     renderPage();
     const sales = await screen.findByRole("region", { name: "Sales" });
-    expect(within(sales).getByText("New pipeline")).toBeTruthy();
-    expect(screen.queryByRole("region", { name: "All pipelines" })).toBeNull();
+    expect(within(sales).getByText(en["pipeline.new"])).toBeTruthy();
+    expect(
+      screen.queryByRole("region", { name: en["pipeline.catalog"] }),
+    ).toBeNull();
   });
 
   it("tells a reader of a lone pipeline that more are possible, just not by them", async () => {
@@ -419,8 +419,6 @@ describe("PipelinesCard: the catalog", () => {
     );
   });
 
-  // One pipeline in use has nothing to be ordered against: no grip, and no
-  // hint for a grip that is not there.
   it("draws no grip and no order hint while one pipeline is in use", async () => {
     server({ soloInUse: true });
     renderPage();
@@ -433,7 +431,7 @@ describe("PipelinesCard: the catalog", () => {
     const user = userEvent.setup();
     const backend = server({});
     renderPage();
-    await user.click(await screen.findByText("New pipeline"));
+    await user.click(await screen.findByText(en["pipeline.new"]));
     await user.type(screen.getByLabelText(/Name/), "Partnerships");
     await user.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() =>
@@ -454,8 +452,6 @@ describe("PipelinesCard: the catalog", () => {
 });
 
 describe("PipelinesCard: the ladder", () => {
-  // One table, the closing pair last. Each closing stage says what it means
-  // beside its name only where the name does not already say it.
   it("draws the closing pair locked at the end, naming an outcome the name hides", async () => {
     server({});
     renderPage();
@@ -470,8 +466,7 @@ describe("PipelinesCard: the ladder", () => {
     const won = screen.getByTestId("stage-s2");
     expect(within(won).getByRole("img", { name: "Stays last" })).toBeTruthy();
     expect(within(won).getByText("Won")).toBeTruthy();
-    expect(within(won).getByText("Ends the deal")).toBeTruthy();
-    // "Lost" already says it: no second "Lost" beside it.
+    expect(within(won).getByText(en["stage.endsDeal"])).toBeTruthy();
     expect(
       within(screen.getByTestId("stage-s3")).getAllByText("Lost"),
     ).toHaveLength(1);
@@ -497,8 +492,6 @@ describe("PipelinesCard: the ladder", () => {
     expect(within(qualify).queryByText("No criteria")).toBeNull();
   });
 
-  // The editor reads its stage's criteria only once a reader opens it: a
-  // ladder of ten stages is not ten reads on arrival.
   it("opens a stage's exit criteria in place, reading them only then", async () => {
     const user = userEvent.setup();
     const backend = server({});
@@ -511,7 +504,9 @@ describe("PipelinesCard: the ladder", () => {
     expect(criteriaReads()).toHaveLength(0);
     await user.click(toggle);
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    const add = await screen.findByRole("button", { name: "Add criterion" });
+    const add = await screen.findByRole("button", {
+      name: en["stage.criteria.add"],
+    });
     expect(
       document.getElementById(add.getAttribute("aria-describedby") ?? "")
         ?.textContent,
@@ -533,7 +528,6 @@ describe("PipelinesCard: the ladder", () => {
     });
     grip.focus();
     await user.keyboard("{ArrowUp}");
-    // Drawn before the server answers: the row does not snap back first.
     expect(openStageNames()).toEqual(["Proposal", "Qualify"]);
     await waitFor(() =>
       expect(backend.writes("PUT", "/pipelines/pl/stage-order")).toHaveLength(
@@ -565,7 +559,6 @@ describe("PipelinesCard: the ladder", () => {
     );
     const undo = backend.writes("PUT", "/pipelines/pl/stage-order")[1];
     expect(undo.body).toEqual({ stage_ids: ["s1", "s1b", "s2", "s3"] });
-    // The save moved the version; the way back is pinned to the new one.
     expect(undo.ifMatch).toBe("4");
   });
 
@@ -590,8 +583,6 @@ describe("PipelinesCard: the ladder", () => {
     );
   });
 
-  // The server puts a new open stage in front of the closing pair in the same
-  // write, so adding one is one request and never a second one to place it.
   it("adds a stage at the end of the ladder in one write", async () => {
     const user = userEvent.setup();
     const backend = server({});
@@ -646,7 +637,6 @@ describe("PipelinesCard: the ladder", () => {
     const [edit] = backend.writes("PATCH", "/stages/s1");
     expect(edit.ifMatch).toBe("5");
     expect(edit.body).toMatchObject({ name: "Qualified" });
-    // The "Forecast uses" line reads the chances again after the write.
     await waitFor(() =>
       expect(backend.writes("GET", "/forecast/stage-chances")).toHaveLength(2),
     );
@@ -696,7 +686,9 @@ describe("PipelinesCard: the ladder", () => {
       within(confirm).getByText(/leaves the pipeline/).textContent,
     ).toContain("Qualify");
     await user.click(
-      within(confirm).getByRole("button", { name: "Remove stage" }),
+      within(confirm).getByRole("button", {
+        name: en["stage.removeConfirm"],
+      }),
     );
     await waitFor(() =>
       expect(backend.writes("DELETE", "/stages/s1")).toHaveLength(1),
@@ -709,8 +701,6 @@ describe("PipelinesCard: the ladder", () => {
     );
   });
 
-  // A removal is refused on every live deal. A stage holding deals the reader
-  // can see is refused in the menu, before any dialog opens.
   it("refuses removal in the menu while the stage holds deals, and says how many", async () => {
     const user = userEvent.setup();
     server({ allow: { pipeline: ["read", "update", "delete"] }, dealCount: 2 });
@@ -723,8 +713,6 @@ describe("PipelinesCard: the ladder", () => {
     expect(screen.getByText("2 deals are in this stage")).toBeTruthy();
   });
 
-  // Without a deal grant the count is absent, not zero. Remove stays offered,
-  // and the open dialog shows the server's refusal naming the deals.
   it("shows the occupied-stage refusal and keeps the stage when the count is unknown", async () => {
     const user = userEvent.setup();
     server({
@@ -744,9 +732,13 @@ describe("PipelinesCard: the ladder", () => {
       await screen.findByRole("button", { name: "Actions for Qualify" }),
     );
     await user.click(screen.getByRole("button", { name: "Remove" }));
-    await user.click(screen.getByRole("button", { name: "Remove stage" }));
+    await user.click(
+      screen.getByRole("button", { name: en["stage.removeConfirm"] }),
+    );
     expect(await screen.findByText(/Acme rollout/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Remove stage" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: en["stage.removeConfirm"] }),
+    ).toBeTruthy();
   });
 
   it("adds a criterion from the row menu, with the stage's criteria open behind it", async () => {
@@ -756,9 +748,13 @@ describe("PipelinesCard: the ladder", () => {
     await user.click(
       await screen.findByRole("button", { name: "Actions for Qualify" }),
     );
-    await user.click(screen.getByRole("button", { name: "Add criterion" }));
+    await user.click(
+      screen.getByRole("button", { name: en["stage.criteria.add"] }),
+    );
     expect(
-      await screen.findByRole("dialog", { name: "Add criterion" }),
+      await screen.findByRole("dialog", {
+        name: en["stage.criteria.add"],
+      }),
     ).toBeTruthy();
     expect(
       screen
@@ -767,8 +763,6 @@ describe("PipelinesCard: the ladder", () => {
     ).toBe("true");
   });
 
-  // A stale version re-reads the ladder, so pressing the confirm again pins
-  // the version the server now holds.
   it("re-reads the ladder when a removal finds the stage changed, and retries on the new version", async () => {
     const user = userEvent.setup();
     const backend = server({
@@ -780,9 +774,13 @@ describe("PipelinesCard: the ladder", () => {
       await screen.findByRole("button", { name: "Actions for Qualify" }),
     );
     await user.click(screen.getByRole("button", { name: "Remove" }));
-    await user.click(screen.getByRole("button", { name: "Remove stage" }));
+    await user.click(
+      screen.getByRole("button", { name: en["stage.removeConfirm"] }),
+    );
     expect(await screen.findByText(/changed after you opened it/)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Remove stage" }));
+    await user.click(
+      screen.getByRole("button", { name: en["stage.removeConfirm"] }),
+    );
     await waitFor(() =>
       expect(backend.writes("DELETE", "/stages/s1")).toHaveLength(2),
     );
@@ -804,7 +802,9 @@ describe("PipelinesCard: the ladder", () => {
       await screen.findByRole("button", { name: "Actions for Qualify" }),
     );
     await user.click(screen.getByRole("button", { name: "Remove" }));
-    const confirm = screen.getByRole("button", { name: "Remove stage" });
+    const confirm = screen.getByRole("button", {
+      name: en["stage.removeConfirm"],
+    });
     await user.click(confirm);
     await waitFor(() =>
       expect(backend.writes("DELETE", "/stages/s1")).toHaveLength(1),
@@ -817,7 +817,6 @@ describe("PipelinesCard: the ladder", () => {
     expect(backend.writes("DELETE", "/stages/s1")).toHaveLength(1);
   });
 
-  // With no row left holding a menu, focus lands on the group, never on <body>.
   it("hands focus to the heading when a delete-only seat removes the last open stage", async () => {
     const user = userEvent.setup();
     server({ allow: { pipeline: ["read", "delete"] } });
@@ -827,7 +826,11 @@ describe("PipelinesCard: the ladder", () => {
         await screen.findByRole("button", { name: `Actions for ${name}` }),
       );
       await user.click(screen.getByRole("button", { name: "Remove" }));
-      await user.click(screen.getByRole("button", { name: "Remove stage" }));
+      await user.click(
+        screen.getByRole("button", {
+          name: en["stage.removeConfirm"],
+        }),
+      );
       await waitFor(() => expect(screen.queryByText(name)).toBeNull());
     }
     expect(screen.queryByRole("button", { name: /^Actions for / })).toBeNull();
@@ -849,7 +852,9 @@ describe("PipelinesCard: the ladder", () => {
       await screen.findByRole("button", { name: "Actions for Qualify" }),
     );
     await user.click(screen.getByRole("button", { name: "Remove" }));
-    await user.click(screen.getByRole("button", { name: "Remove stage" }));
+    await user.click(
+      screen.getByRole("button", { name: en["stage.removeConfirm"] }),
+    );
     await waitFor(() =>
       expect(screen.queryByRole("table", { name: "Stages" })).toBeNull(),
     );
@@ -858,8 +863,6 @@ describe("PipelinesCard: the ladder", () => {
     );
   });
 
-  // The criteria are read apart from the pipelines, so a reorder leaves an
-  // open editor alone.
   it("does not re-read an open stage's criteria when the ladder is reordered", async () => {
     const user = userEvent.setup();
     const backend = server({});
@@ -895,15 +898,14 @@ describe("PipelinesCard: the ladder", () => {
       await screen.findByRole("button", { name: "Actions for Closed won" }),
     );
     expect(screen.getByRole("button", { name: "Edit stage" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Add criterion" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["stage.criteria.add"] }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
   });
 });
 
 describe("PipelinesCard: the pipeline's own verbs", () => {
-  // The default's Retire stays VISIBLE and disabled, with the reason in the
-  // row's description: it names a remedy this same page offers, and set beside
-  // the button it took the whole row and crushed the description to a letter.
   it("disables retire on the default pipeline and says why under the row", async () => {
     server({ allow: { pipeline: ["read", "update", "delete"] } });
     renderPage();
@@ -962,7 +964,9 @@ describe("PipelinesCard: the pipeline's own verbs", () => {
       await screen.findByRole("button", { name: /^Enterprise/ }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Make default" }),
+      await screen.findByRole("button", {
+        name: en["pipeline.makeDefault"],
+      }),
     );
     await waitFor(() =>
       expect(backend.writes("PATCH", "/pipelines/pl-live")).toHaveLength(1),

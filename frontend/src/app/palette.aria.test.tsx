@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { steppedClock } from "../testing/steppedclock";
@@ -61,7 +62,9 @@ describe("the command palette for a screen reader", () => {
     const user = steppedClock();
     hits([]);
     renderPalette();
-    const input = screen.getByRole("combobox", { name: "Command palette" });
+    const input = screen.getByRole("combobox", {
+      name: englishCopy["palette.aria"],
+    });
     await user.type(input, "deal");
     await screen.findByRole("option", { name: /^Deal settings/ });
 

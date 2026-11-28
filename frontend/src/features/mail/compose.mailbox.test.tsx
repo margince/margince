@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { draftButton } from "../../testing/composedraft.testkit";
 import { allowedPreview } from "../../testing/sendpermission.testkit";
 import { findThreadChoice } from "./compose.testkit";
@@ -394,7 +395,7 @@ describe("whose mailbox the composer is answering from", () => {
         deal_owner_user_id: null,
       });
       expect(
-        await screen.findByText("You are not on this thread."),
+        await screen.findByText(englishCopy["compose.notOnThread"]),
       ).toBeTruthy();
       expect(screen.queryByText(/owns this deal/)).toBeNull();
     });
@@ -406,7 +407,7 @@ describe("whose mailbox the composer is answering from", () => {
         deal_owner_user_id: "u-former",
       });
       expect(
-        await screen.findByText("You are not on this thread."),
+        await screen.findByText(englishCopy["compose.notOnThread"]),
       ).toBeTruthy();
       expect(screen.queryByText(/owns this deal|u-former/)).toBeNull();
     });
@@ -418,7 +419,7 @@ describe("whose mailbox the composer is answering from", () => {
         deal_owner_user_id: "u-charlotte",
       });
       expect(
-        await screen.findByText("You are not on this thread"),
+        await screen.findByText(englishCopy["compose.notOnThreadTitle"]),
       ).toBeTruthy();
       expect(screen.getByText("Charlotte Weber owns this deal.")).toBeTruthy();
       expect(screen.queryByText(/mailbox/)).toBeNull();

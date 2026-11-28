@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -48,30 +49,67 @@ func HTTPClient(allowPrivate bool) *http.Client {
 // LiveChats opens a session as the connected Dispact bot. The vault is read
 // when a session opens, because the API learns it from a later option.
 type LiveChats struct {
-	DB    *database.DB
-	Vault func() keyvault.Vault
-	HTTP  dispact.HTTPDoer
+	TeamThreads *chatlinks.Store
+	App         BotApp
+	Now         func() time.Time
+	DB          *database.DB
+	Vault       func() keyvault.Vault
+	HTTP        dispact.HTTPDoer
 }
 
 // Open implements chatlinks.Chats.
 func (c LiveChats) Open(ctx context.Context) (chatlinks.Session, error) {
+	return c.OpenProvider(ctx, chatlinks.ProviderDispact)
+}
+
+// OpenProvider opens the selected installation instead of guessing another provider.
+func (c LiveChats) OpenProvider(ctx context.Context, provider string) (chatlinks.Session, error) {
 	vault := c.Vault()
 	if vault == nil {
 		return chatlinks.Session{}, chatlinks.ErrBotNotConnected
 	}
 	registry := capture.NewRegistry(c.DB, nil, nil, vault)
-	bot, err := registry.LiveBot(ctx, chatlinks.ProviderDispact)
+	bot, err := registry.LiveBot(ctx, provider)
 	if errors.Is(err, capture.ErrNoConnection) {
 		return chatlinks.Session{}, chatlinks.ErrBotNotConnected
 	}
 	if err != nil {
 		return chatlinks.Session{}, err
 	}
+	var chat chatlinks.Chat
+	switch provider {
+	case chatlinks.ProviderDispact:
+		client := dispact.New(c.HTTP, bot.Address, bot.Token)
+		identity, err := client.Me(ctx)
+		if err != nil {
+			return chatlinks.Session{}, err
+		}
+		if identity.TeamID != bot.TeamID {
+			return chatlinks.Session{}, chatwire.ErrTokenRejected
+		}
+		chat = client
+		if dispact.CanonicalAvailable(identity) {
+			chat = dispact.NewCanonical(client)
+		}
+	case chatlinks.ProviderSlack:
+		chat, err = c.openSlack(ctx, registry)
+		if err != nil {
+			return chatlinks.Session{}, err
+		}
+	case chatlinks.ProviderTeams:
+		chat, bot.TeamID, err = c.openTeams(ctx, bot)
+		if err != nil {
+			return chatlinks.Session{}, err
+		}
+	default:
+		return chatlinks.Session{}, chatlinks.ErrBotNotConnected
+	}
 	return chatlinks.Session{
+		Provider:     provider,
 		ConnectionID: bot.ConnectionID,
 		TeamID:       bot.TeamID,
 		Address:      bot.Address,
-		Chat:         dispact.New(c.HTTP, bot.Address, bot.Token),
+		Chat:         chat,
 	}, nil
 }
 
@@ -126,7 +164,9 @@ func (c BotCheck) Confirm(ctx context.Context, address, token string) (capture.C
 
 // Wire builds the chat links store and the session opener over db, with the
 // flush scheduled through enqueuer.
-func Wire(db *database.DB, vault func() keyvault.Vault, enqueuer Enqueuer, allowPrivate bool) (*chatlinks.Store, LiveChats) {
-	chats := LiveChats{DB: db, Vault: vault, HTTP: HTTPClient(allowPrivate)}
-	return chatlinks.NewStore(db, chats, enqueuer, Viewers), chats
+func Wire(db *database.DB, vault func() keyvault.Vault, enqueuer Enqueuer, allowPrivate bool) (*chatlinks.Store, *LiveChats) {
+	chats := &LiveChats{DB: db, Vault: vault, HTTP: HTTPClient(allowPrivate)}
+	store := chatlinks.NewStore(db, chats, enqueuer, Viewers).WithVault(vault)
+	chats.TeamThreads = store
+	return store, chats
 }

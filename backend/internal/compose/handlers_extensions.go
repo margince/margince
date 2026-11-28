@@ -105,7 +105,7 @@ func (h extensionsHandlers) setupMissing(ctx context.Context, e extension.Extens
 	}
 	stored := map[string]bool{}
 	if len(keys) > 0 {
-		if err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(ctx, h.pool, func(tx pgx.Tx) (err error) {
 			stored, err = extsecrets.WorkspaceKeysStored(ctx, tx, string(e.Name), keys)
 			return err
 		}); err != nil {

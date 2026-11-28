@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -34,10 +35,12 @@ const pullPages = 5
 
 // Puller judges the talk of one bot connection's linked channels.
 type Puller struct {
-	Pool       *pgxpool.Pool
-	Store      *chatlinks.Store
-	Chats      chatlinks.Chats
-	Activities *activities.Store
+	Reconfirm       ReconfirmationWriter
+	NotificationURL string
+	Pool            *pgxpool.Pool
+	Store           *chatlinks.Store
+	Chats           chatlinks.Chats
+	Activities      *activities.Store
 	// Contacts resolves a chat author's address to a contact, so a restricted or
 	// erased subject's talk is left out of the summary.
 	Contacts *contacts.Store
@@ -55,7 +58,13 @@ type Puller struct {
 // read here because its notice may never arrive.
 func (p *Puller) Pull(ctx context.Context, connectionID ids.UUID) error {
 	ctx = principal.WithActor(ctx, chatLinksPrincipal)
-	session, err := p.Chats.Open(ctx)
+	if p.NotificationURL != "" {
+		if err := p.retireChannelWatches(ctx, connectionID); err != nil {
+			p.Log.WarnContext(ctx, "channel notification retirement deferred", "connection_id", connectionID, "error", err)
+		}
+	}
+
+	session, links, err := p.pullSession(ctx, connectionID)
 	if errors.Is(err, chatlinks.ErrBotNotConnected) {
 		return nil
 	}
@@ -65,14 +74,17 @@ func (p *Puller) Pull(ctx context.Context, connectionID ids.UUID) error {
 	if session.ConnectionID != connectionID {
 		return nil
 	}
-	links, err := p.Store.PullLinks(ctx, connectionID)
-	if err != nil {
-		return err
-	}
+
 	for _, link := range links {
-		_, err := chatlinks.LiveChannel(ctx, session.Chat, link.ChannelSlug)
+		if watchErr := p.maintainChannelWatch(ctx, session, link); watchErr != nil {
+			p.Log.WarnContext(ctx, "channel notification maintenance deferred; polling continues", "link_id", link.ID, "error", watchErr)
+		}
+		_, err := chatlinks.LinkedChannel(ctx, session.Chat, link)
+		reader, native := session.Chat.(chatwire.RootReader)
 		switch {
 		case err != nil:
+		case native:
+			err = p.pullNativeLink(ctx, session, link, reader)
 		case link.BackfillRequested:
 			err = p.backfill(ctx, session, link)
 		default:
@@ -88,6 +100,25 @@ func (p *Puller) Pull(ctx context.Context, connectionID ids.UUID) error {
 		}
 	}
 	return p.unreadBackfill(ctx, connectionID, links)
+}
+
+func (p *Puller) pullSession(ctx context.Context, connection ids.UUID) (chatlinks.Session, []chatlinks.Link, error) {
+	var session chatlinks.Session
+	if _, native := p.Chats.(chatlinks.ProviderChats); !native {
+		var err error
+		session, err = p.Chats.Open(ctx)
+		if err != nil {
+			return session, nil, err
+		}
+	}
+	links, err := p.Store.PullLinks(ctx, connection)
+	if err != nil || len(links) == 0 {
+		return session, links, err
+	}
+	if _, native := p.Chats.(chatlinks.ProviderChats); native {
+		session, err = chatlinks.OpenProvider(ctx, p.Chats, links[0].Provider)
+	}
+	return session, links, err
 }
 
 // errPullAgain asks the worker to run the pull once more soon.
@@ -121,7 +152,7 @@ var errModelDeferred = errors.New("chat pull: the model deferred the call")
 // before the link was made is never judged here: only a backfill asked for
 // at link time reads it.
 func (p *Puller) pullLink(ctx context.Context, session chatlinks.Session, link chatlinks.Link) error {
-	read, err := readHistory(ctx, session.Chat, link, pullPages, func(m dispact.Message) bool {
+	read, err := readHistory(ctx, session.Chat, link, pullPages, func(m chatwire.Message) bool {
 		return judged(m) && postedSinceLink(m, link)
 	})
 	if err != nil {
@@ -153,8 +184,8 @@ func (p *Puller) pullLink(ctx context.Context, session chatlinks.Session, link c
 
 // postedSinceLink says whether m was posted once the link existed. Talk from
 // before it reaches a record only through the backfill asked for at link time.
-func postedSinceLink(m dispact.Message, link chatlinks.Link) bool {
-	return !m.PostedAt.Before(link.CreatedAt)
+func postedSinceLink(m chatwire.Message, link chatlinks.Link) bool {
+	return !m.PostedAt.Before(readWindowStart(link, link.CreatedAt))
 }
 
 // cutByPageCap reopens the last episode of a read that stopped at the page
@@ -202,7 +233,7 @@ func (p *Puller) judge(ctx context.Context, session chatlinks.Session, link chat
 	}
 	said := talkOf(ep.key(link.ChannelSlug), ep.url(session.Address, link.ChannelSlug), ep.messages)
 	_, err = fileNote(principal.WithCorrelationID(ctx, ids.NewV7()),
-		filing{pool: p.Pool, store: p.Store, acts: p.Activities, link: link}, said, reply)
+		filing{reconfirm: p.Reconfirm, pool: p.Pool, store: p.Store, acts: p.Activities, link: link}, said, reply)
 	if errors.Is(err, errSummaryKeyTaken) {
 		p.Log.WarnContext(ctx, "chat episode passed over", "link", link.ID.String(), "first_seq", ep.firstSeq(), "reason", "key_taken")
 		return nil
@@ -217,6 +248,8 @@ func (p *Puller) answerFailure(ctx context.Context, link chatlinks.Link, err err
 	var limited *connector.RateLimitedError
 	var bare *dispact.StatusError
 	switch {
+	case errors.Is(err, chatlinks.ErrChannelIdentityNeedsReview):
+		return p.Store.MarkIdentityNeedsReview(ctx, link.ID)
 	case errors.As(err, &bare):
 		// A bare status may come from a proxy in front of the chat, and a paused
 		// link is never read again. Only the chat's own answer pauses a link.
@@ -244,13 +277,13 @@ func (p *Puller) answerFailure(ctx context.Context, link chatlinks.Link, err err
 // historyRead is what one pull read of a channel: the messages kept, oldest
 // first, and the highest seq seen, kept or not.
 type historyRead struct {
-	kept    []dispact.Message
+	kept    []chatwire.Message
 	highest int64
 	ended   bool
 }
 
 // readHistory reads up to pages pages after the link's cursor.
-func readHistory(ctx context.Context, chat chatlinks.Chat, link chatlinks.Link, pages int, keep func(dispact.Message) bool) (historyRead, error) {
+func readHistory(ctx context.Context, chat chatlinks.Chat, link chatlinks.Link, pages int, keep func(chatwire.Message) bool) (historyRead, error) {
 	out := historyRead{highest: seqOf(link.HistoryCursor)}
 	after := out.highest
 	for range pages {
@@ -278,4 +311,11 @@ func seqOf(cursor *int64) int64 {
 		return 0
 	}
 	return *cursor
+}
+
+func readWindowStart(link chatlinks.Link, since time.Time) time.Time {
+	if link.ReadSince != nil && link.ReadSince.After(since) {
+		return *link.ReadSince
+	}
+	return since
 }

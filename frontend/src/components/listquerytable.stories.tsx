@@ -8,6 +8,7 @@ import {
   type BoardRecord,
   PipelineBoard,
 } from "../design-system/pipelineboard";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   meRoute,
@@ -105,7 +106,9 @@ export const SearchAnsweredOffScreen: Story = {
       "fraunhofer",
     );
     await expect(
-      await canvas.findByRole("button", { name: "Go to column" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["board.showMatches"],
+      }),
     ).toBeTruthy();
     await expect(canvas.getByText("2 results in Closed Won")).toBeTruthy();
     const board = canvasElement.querySelector(".board");

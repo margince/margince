@@ -212,7 +212,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     await user.click(await screen.findByTestId("lead-qualify"));
     // A lead with no captured engagement is qualified by the rep's own
     // judgement — said as a sentence, not picked from a technical list.
-    expect(await screen.findByText("Reason: qualified by you.")).toBeTruthy();
+    expect(
+      await screen.findByText(en["lead.qualify.reasonHuman"]),
+    ).toBeTruthy();
     expect(screen.queryByLabelText("Promotion trigger")).toBeNull();
   });
 
@@ -238,7 +240,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     await user.click(await screen.findByTestId("lead-qualify"));
     expect(await screen.findByText(/Reason: the lead replied on/)).toBeTruthy();
     await user.click(
-      screen.getByRole("radio", { name: "Qualify without a deal" }),
+      screen.getByRole("radio", { name: en["lead.qualify.withoutDeal"] }),
     );
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
@@ -269,7 +271,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
     await user.click(await screen.findByTestId("lead-qualify"));
     await user.type(
-      screen.getByLabelText("Evidence note (optional)"),
+      screen.getByLabelText(en["lead.evidenceNote"]),
       "Booked via calendly",
     );
     await user.click(
@@ -355,7 +357,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
     await user.click(await screen.findByTestId("lead-qualify"));
     await user.click(
-      await screen.findByRole("radio", { name: "Open a new deal" }),
+      await screen.findByRole("radio", { name: en["lead.qualify.newDeal"] }),
     );
     await user.type(
       await screen.findByTestId("lead-qualify-deal-name"),
@@ -363,7 +365,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     );
     await user.type(screen.getByLabelText("Amount (EUR)"), "1200");
     await user.click(
-      screen.getByRole("button", { name: "Qualify and open deal" }),
+      screen.getByRole("button", { name: en["lead.qualify.confirmWithDeal"] }),
     );
     await waitFor(() => expect(promoteBody).toBeTruthy());
     expect(promoteBody).toMatchObject({
@@ -708,7 +710,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // A rare verb, so it waits in the head's More menu.
     await openLeadActions(user);
     await user.click(
-      await screen.findByRole("button", { name: "Reverse qualification" }),
+      await screen.findByRole("button", { name: en["lead.demote"] }),
     );
     const confirm = () =>
       screen.getByRole("button", { name: "Reverse" }) as HTMLButtonElement;
@@ -748,9 +750,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    expect(
-      await screen.findByText("Qualified. This lead is read-only."),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["lead.terminalPromoted"])).toBeTruthy();
     expect(screen.queryByText(/Disqualified — this lead/)).toBeNull();
   });
 
@@ -814,9 +814,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    expect(
-      await screen.findByText("Qualified. This lead is read-only."),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["lead.terminalPromoted"])).toBeTruthy();
     // The outcome line never claims a result it could not read.
     expect(
       screen.queryByText(en["lead.promotedMerged"], { exact: false }),

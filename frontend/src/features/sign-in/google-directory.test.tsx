@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { GoogleDirectoryPanel } from "./google-directory";
 
 afterEach(() => {
@@ -69,12 +70,12 @@ describe("the Google group lookup panel", () => {
   it("says members get nothing from the map while no credential is stored", async () => {
     mount({ configured: false });
     expect(
-      await screen.findByText(
-        "Not connected. Members who sign in with Google get no roles from the map.",
-      ),
+      await screen.findByText(englishCopy["googleDirectory.state.none"]),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Remove connection" }),
+      screen.queryByRole("button", {
+        name: englishCopy["googleDirectory.remove"],
+      }),
     ).toBeNull();
   });
 
@@ -92,7 +93,9 @@ describe("the Google group lookup panel", () => {
       screen.getByText(/Nobody loses a role they already hold\./),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Remove connection" }),
+      screen.getByRole("button", {
+        name: englishCopy["googleDirectory.remove"],
+      }),
     ).toBeTruthy();
   });
 
@@ -100,17 +103,25 @@ describe("the Google group lookup panel", () => {
     const user = userEvent.setup();
     const { writes } = mount({ configured: false });
     await screen.findByText(/Not connected\./);
-    const save = screen.getByRole("button", { name: "Check and store" });
+    const save = screen.getByRole("button", {
+      name: englishCopy["googleDirectory.save"],
+    });
     expect(
       save.hasAttribute("disabled") ||
         save.getAttribute("aria-disabled") === "true",
     ).toBe(true);
 
-    await user.click(screen.getByLabelText("Service-account key (JSON)"));
+    await user.click(
+      screen.getByLabelText(englishCopy["serviceAccountKey.label"]),
+    );
     await user.paste(KEY_FILE);
-    await user.click(screen.getByLabelText("Google admin the key acts for"));
+    await user.click(
+      screen.getByLabelText(englishCopy["googleDirectory.admin"]),
+    );
     await user.paste("admin@example.test");
-    await user.click(screen.getByRole("button", { name: "Check and store" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["googleDirectory.save"] }),
+    );
 
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toEqual({
@@ -137,11 +148,17 @@ describe("the Google group lookup panel", () => {
       ),
     );
     await screen.findByText(/Not connected\./);
-    await user.click(screen.getByLabelText("Service-account key (JSON)"));
+    await user.click(
+      screen.getByLabelText(englishCopy["serviceAccountKey.label"]),
+    );
     await user.paste(KEY_FILE);
-    await user.click(screen.getByLabelText("Google admin the key acts for"));
+    await user.click(
+      screen.getByLabelText(englishCopy["googleDirectory.admin"]),
+    );
     await user.paste("admin@example.test");
-    await user.click(screen.getByRole("button", { name: "Check and store" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["googleDirectory.save"] }),
+    );
 
     expect(
       await screen.findByText(/Google refused the delegation\./),
@@ -149,7 +166,7 @@ describe("the Google group lookup panel", () => {
     expect(
       (
         screen.getByLabelText(
-          "Service-account key (JSON)",
+          englishCopy["serviceAccountKey.label"],
         ) as HTMLTextAreaElement
       ).value,
     ).toBe(KEY_FILE);
@@ -159,7 +176,9 @@ describe("the Google group lookup panel", () => {
     const user = userEvent.setup();
     const { writes } = mount({ configured: true });
     await user.click(
-      await screen.findByRole("button", { name: "Remove connection" }),
+      await screen.findByRole("button", {
+        name: englishCopy["googleDirectory.remove"],
+      }),
     );
     await waitFor(() =>
       expect(writes).toEqual([{ method: "DELETE", body: null }]),
@@ -180,10 +199,14 @@ describe("the Google group lookup panel", () => {
       await screen.findByText(/Connected\. The last lookup worked/),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Check and store" }),
+      screen.queryByRole("button", {
+        name: englishCopy["googleDirectory.save"],
+      }),
     ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Remove connection" }),
+      screen.queryByRole("button", {
+        name: englishCopy["googleDirectory.remove"],
+      }),
     ).toBeNull();
   });
 });

@@ -35,10 +35,9 @@ func TestASweepWithNoUsableGraceIsRefusedRatherThanFailingEveryRunningRun(t *tes
 			if err == nil {
 				t.Fatalf("a grace of %s was accepted; every executing run in the workspace would be failed", tc.grace)
 			}
-			// The error has to be the GUARD's. A store with no pool fails for a
-			// second reason — WithWorkspaceTx refuses an unbound context — so
-			// asserting only that something went wrong would pass with the guard
-			// deleted, which is the one thing this test exists to catch.
+			// The error has to be the guard's. It has to arrive before the store
+			// opens a transaction, where a store with no pool would panic.
+			// Asserting the message catches a deleted guard.
 			if !strings.Contains(err.Error(), "grace") {
 				t.Errorf("a grace of %s was refused by something other than the grace check: %v", tc.grace, err)
 			}

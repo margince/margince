@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/tagsuggest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -148,7 +149,7 @@ func TestTagSuggestCaseRefusesAnExpectationNoReplyCanMeet(t *testing.T) {
 }
 
 func TestTagSuggestCaseRefusesABatchThePassCouldNeverSend(t *testing.T) {
-	long := strings.Repeat("x", tagSuggestBodyLimit+1)
+	long := strings.Repeat("x", tagsuggest.BodyReadLimit+1)
 	for name, fixture := range map[string]tagSuggestFixture{
 		"no tag":       {Items: []tagSuggestFixtureItem{{Kind: "note", Body: "x"}}},
 		"a long body":  {Tags: []tagSuggestFixtureTag{{Key: "k"}}, Items: []tagSuggestFixtureItem{{Kind: "note", Body: long}}},

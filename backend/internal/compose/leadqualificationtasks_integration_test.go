@@ -158,7 +158,7 @@ func TestQualificationAndTextRepairsRollBackTheirWritesAndRejectInvalidCursors(t
 			if n := l.e.WsCount(t, `SELECT count(*) FROM event_outbox`); n != events {
 				t.Fatal("activity event escaped rollback")
 			}
-			if err := database.WithWorkspaceTx(ctx, l.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, l.e.Pool, func(tx pgx.Tx) error {
 				_, err := original(ctx, tx, datatask.BatchIn{Limit: 1, Cursor: []byte(`"invalid"`)})
 				return err
 			}); err == nil {

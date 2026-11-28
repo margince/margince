@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   AGENT_CLIENT_SCOPES,
   agentClientList,
@@ -43,7 +44,9 @@ type User = ReturnType<typeof userEvent.setup>;
 
 async function openDialog(user: User) {
   await user.click(
-    await screen.findByRole("button", { name: "Register a client" }),
+    await screen.findByRole("button", {
+      name: englishCopy["agentClients.register.open"],
+    }),
   );
   return screen.findByRole("dialog");
 }
@@ -89,9 +92,13 @@ describe("Register a client", () => {
       redirect: GEMINI_REDIRECT,
     });
     await user.click(
-      within(dialog).getByRole("button", { name: "Register client" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["agentClients.register.submit"],
+      }),
     );
-    expect(await screen.findByText("Client registered")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["agentClients.result.title"]),
+    ).toBeTruthy();
     expect(
       calls.find((call) => call.key === "POST /installation/agent-clients")
         ?.body,
@@ -102,22 +109,28 @@ describe("Register a client", () => {
     const value = (name: string) =>
       screen.getByRole("textbox", { name }).textContent;
     expect(value("Client ID")).toBe(GEMINI_CLIENT.client_id);
-    expect(value("Client secret")).toBe(SECRET);
-    expect(value("Authorization URL")).toBe(
+    expect(value(englishCopy["agentClients.value.secret"])).toBe(SECRET);
+    expect(value(englishCopy["agentClients.value.authorize"])).toBe(
       "https://crm.acme.test/oauth/authorize",
     );
-    expect(value("Token URL, also for refresh")).toBe(
+    expect(value(englishCopy["agentClients.value.token"])).toBe(
       "https://crm.acme.test/oauth/token",
     );
     expect(value("Scopes")).toBe("read draft write send enrich offline_access");
-    expect(value("MCP server URL")).toBe(MCP_URL);
-    expect(screen.getByText("Copy the secret now")).toBeTruthy();
-    expect(screen.getByText("In Gemini Enterprise")).toBeTruthy();
+    expect(value(englishCopy["agentClients.value.mcpUrl"])).toBe(MCP_URL);
+    expect(
+      screen.getByText(englishCopy["agentClients.result.secretOnceTitle"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["agentClients.gemini.title"]),
+    ).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Done" }));
     await waitFor(() => expect(screen.queryByText(SECRET)).toBeNull());
     const again = await openDialog(user);
-    expect(within(again).getByText("Register a client")).toBeTruthy();
+    expect(
+      within(again).getByText(englishCopy["agentClients.register.open"]),
+    ).toBeTruthy();
     expect(
       (within(again).getByRole("textbox", { name: /Name/ }) as HTMLInputElement)
         .value,
@@ -137,12 +150,16 @@ describe("Register a client", () => {
       redirect: "https://tool.example/cb",
     });
     await user.click(
-      within(dialog).getByRole("button", { name: "Register client" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["agentClients.register.submit"],
+      }),
     );
     const message = await within(dialog).findByText(
-      "Use https, or http on localhost or 127.0.0.1, with no fragment.",
+      englishCopy["agentClients.register.redirectInvalid"],
     );
-    expect(message.closest(".field")?.textContent).toContain("Redirect URIs");
+    expect(message.closest(".field")?.textContent).toContain(
+      englishCopy["agentClients.register.redirects"],
+    );
     expect(
       within(dialog)
         .getByRole("combobox", { name: /Redirect URIs/ })
@@ -152,7 +169,7 @@ describe("Register a client", () => {
     await user.type(within(dialog).getByRole("textbox", { name: /Name/ }), "s");
     expect(
       within(dialog).queryByText(
-        "Use https, or http on localhost or 127.0.0.1, with no fragment.",
+        englishCopy["agentClients.register.redirectInvalid"],
       ),
     ).toBeNull();
     expect(
@@ -178,7 +195,9 @@ describe("Register a client", () => {
       redirect: GEMINI_REDIRECT,
     });
     await user.click(
-      within(dialog).getByRole("button", { name: "Register client" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["agentClients.register.submit"],
+      }),
     );
     const form = dialog.querySelector("form");
     if (form === null) {
@@ -196,7 +215,9 @@ describe("Register a client", () => {
         201,
       ),
     );
-    expect(await screen.findByText("Client registered")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["agentClients.result.title"]),
+    ).toBeTruthy();
   });
 
   it("puts a refused name on the name field", async () => {
@@ -209,10 +230,14 @@ describe("Register a client", () => {
       redirect: GEMINI_REDIRECT,
     });
     await user.click(
-      within(dialog).getByRole("button", { name: "Register client" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["agentClients.register.submit"],
+      }),
     );
     expect(
-      await within(dialog).findByText("Use a name of 1 to 120 characters."),
+      await within(dialog).findByText(
+        englishCopy["agentClients.register.nameInvalid"],
+      ),
     ).toBeTruthy();
   });
 
@@ -228,10 +253,14 @@ describe("Register a client", () => {
       redirect: GEMINI_REDIRECT,
     });
     await user.click(
-      within(dialog).getByRole("button", { name: "Register client" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["agentClients.register.submit"],
+      }),
     );
     expect(await within(dialog).findByRole("alert")).toBeTruthy();
-    expect(screen.queryByText("Client registered")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["agentClients.result.title"]),
+    ).toBeNull();
   });
 
   it("refuses to send until the name and a redirect URI are given, and says which", async () => {
@@ -240,9 +269,13 @@ describe("Register a client", () => {
     renderWithClient(<AgentClientsCard />);
     const dialog = await openDialog(user);
     const form = within(dialog);
-    expect(form.getByText("Give the client a name.")).toBeTruthy();
+    expect(
+      form.getByText(englishCopy["agentClients.register.needName"]),
+    ).toBeTruthy();
     await user.type(form.getByRole("textbox", { name: /Name/ }), "Tool");
-    expect(form.getByText("Add at least one redirect URI.")).toBeTruthy();
+    expect(
+      form.getByText(englishCopy["agentClients.register.needRedirect"]),
+    ).toBeTruthy();
     await user.click(form.getByRole("button", { name: /Register client/ }));
     expect(calls.some((call) => call.key.startsWith("POST"))).toBe(false);
     await user.type(
@@ -250,7 +283,9 @@ describe("Register a client", () => {
       `${GEMINI_REDIRECT}{Enter}`,
     );
     await user.click(form.getByRole("button", { name: /Register client/ }));
-    expect(await screen.findByText("Client registered")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["agentClients.result.title"]),
+    ).toBeTruthy();
   });
 
   it("keeps the callbacks closed after an address is added, until the reader types", async () => {
@@ -284,19 +319,19 @@ describe("Register a client", () => {
     expect((field as HTMLInputElement).value).toBe("ftp://x/cb");
     expect(field.getAttribute("aria-invalid")).toBe("true");
     expect(
-      form.getByText(
-        "Use https, or http on localhost or 127.0.0.1, with no fragment.",
-      ),
+      form.getByText(englishCopy["agentClients.register.redirectInvalid"]),
     ).toBeTruthy();
     expect(
-      form.getByText("Fix or remove the marked redirect URI."),
+      form.getByText(englishCopy["agentClients.register.fixRedirect"]),
     ).toBeTruthy();
     await user.click(form.getByRole("button", { name: /Register client/ }));
     expect(calls.some((call) => call.key.startsWith("POST"))).toBe(false);
 
     await user.clear(field);
     await user.click(form.getByRole("button", { name: /Register client/ }));
-    expect(await screen.findByText("Client registered")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["agentClients.result.title"]),
+    ).toBeTruthy();
   });
 
   it("keeps the secret open on Escape, until Done", async () => {
@@ -306,11 +341,17 @@ describe("Register a client", () => {
     const dialog = await openDialog(user);
     await fill(user, dialog, { name: "Tool", redirect: GEMINI_REDIRECT });
     await user.click(
-      within(dialog).getByRole("button", { name: "Register client" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["agentClients.register.submit"],
+      }),
     );
-    await screen.findByText("Client registered");
+    await screen.findByText(englishCopy["agentClients.result.title"]);
     await user.keyboard("{Escape}");
-    expect(screen.getByRole("textbox", { name: "Client secret" })).toBeTruthy();
+    expect(
+      screen.getByRole("textbox", {
+        name: englishCopy["agentClients.value.secret"],
+      }),
+    ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Done" }));
     await waitFor(() => expect(screen.queryByText(SECRET)).toBeNull());
   });
@@ -327,7 +368,9 @@ describe("Register a client", () => {
       form.requestSubmit();
       form.requestSubmit();
     });
-    expect(await screen.findByText("Client registered")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["agentClients.result.title"]),
+    ).toBeTruthy();
     expect(calls.filter((call) => call.key.startsWith("POST"))).toHaveLength(1);
   });
 
@@ -377,14 +420,22 @@ describe("Register a client", () => {
       redirect: GEMINI_REDIRECT,
     });
     await user.click(
-      within(dialog).getByRole("button", { name: "Register client" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["agentClients.register.submit"],
+      }),
     );
     expect(
-      await screen.findByText("AI tools cannot connect to Margince yet."),
+      await screen.findByText(englishCopy["agents.connectorOff"]),
     ).toBeTruthy();
-    expect(screen.getByRole("textbox", { name: "Client secret" })).toBeTruthy();
     expect(
-      screen.queryByRole("textbox", { name: "Authorization URL" }),
+      screen.getByRole("textbox", {
+        name: englishCopy["agentClients.value.secret"],
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("textbox", {
+        name: englishCopy["agentClients.value.authorize"],
+      }),
     ).toBeNull();
   });
 
@@ -398,9 +449,11 @@ describe("Register a client", () => {
       redirect: GEMINI_REDIRECT,
     });
     await user.click(
-      within(dialog).getByRole("button", { name: "Register client" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["agentClients.register.submit"],
+      }),
     );
-    await screen.findByText("Client registered");
+    await screen.findByText(englishCopy["agentClients.result.title"]);
     const writeText = vi.fn(async () => undefined);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,

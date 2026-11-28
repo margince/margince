@@ -59,7 +59,7 @@ func TestTheGroupPreLockHoldsEveryPendingMemberAtOnce(t *testing.T) {
 	released := make(chan struct{})
 	done := make(chan error, 1)
 	go func() {
-		done <- database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		done <- database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 			if err := e.svc.LockPendingGroupInTx(ctx, tx, company, kindSiteLead); err != nil {
 				return err
 			}
@@ -113,7 +113,7 @@ func TestAMultiKindActLocksEveryKindItStages(t *testing.T) {
 	held, released := make(chan struct{}), make(chan struct{})
 	done := make(chan error, 1)
 	go func() {
-		done <- database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		done <- database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 			if err := e.svc.LockPendingGroupInTx(ctx, tx, company, kindDeepRead, kindSiteLead); err != nil {
 				return err
 			}

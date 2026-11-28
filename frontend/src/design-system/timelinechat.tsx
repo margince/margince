@@ -5,26 +5,40 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useViewerZone } from "../lib/viewerzone";
 import { Badge } from "./atoms";
-import { OffsiteLink } from "./offsitelink";
+import { ChatSourceLink } from "./chatsourcelink";
+import { ProviderMark, providerBrandName } from "./provider-mark";
 import type { TimelineEntry } from "./timelineentry";
 
-type ChatRow = Pick<TimelineEntry, "chatEpisode" | "withheld">;
-
-// The chat a summary note came from. Dispact is the one chat a channel links
-// to today.
-const CHAT_PROVIDER = "Dispact";
+type ChatRow = Pick<
+  TimelineEntry,
+  "id" | "chatEpisode" | "chatUpdatedAt" | "withheld"
+>;
 
 // ChatSummaryFlag marks a note the AI wrote from a chat channel's talk.
-export function ChatSummaryFlag({ entry }: Readonly<{ entry: ChatRow }>) {
+export function ChatSummaryFlag({
+  entry,
+}: Readonly<{ entry: Omit<ChatRow, "id"> }>) {
   const t = useT();
   if (!entry.chatEpisode || entry.withheld) {
     return null;
   }
   return (
     <>
+      {entry.chatEpisode.source_changed && (
+        <Badge tone="warning">{t("timeline.chatSummary.sourceChanged")}</Badge>
+      )}
       <Badge tone="ai">{t("timeline.chatSummary.badge")}</Badge>
-      <Badge>
-        {t("timeline.chatSummary.from", { provider: CHAT_PROVIDER })}
+      <Badge
+        mark={
+          <ProviderMark providerKey={entry.chatEpisode.provider ?? "dispact"} />
+        }
+      >
+        {t("timeline.chatSummary.from", {
+          provider:
+            providerBrandName(entry.chatEpisode.provider ?? "dispact") ??
+            entry.chatEpisode.provider ??
+            "Dispact",
+        })}
       </Badge>
     </>
   );
@@ -43,13 +57,27 @@ export function ChatEpisodeLine({ entry }: Readonly<{ entry: ChatRow }>) {
   }
   return (
     <span className="tl-meta">
+      {episode.channel_name && <span>{episode.channel_name} · </span>}
       {plural("timeline.chatSummary.meta", episode.message_count, {
         count: formatNumber(episode.message_count, locale),
         ended: formatDateTime(episode.ended_at, locale, zone),
       })}{" "}
-      <OffsiteLink href={episode.url}>
-        {t("timeline.chatSummary.open", { provider: CHAT_PROVIDER })}
-      </OffsiteLink>
+      {entry.chatUpdatedAt && (
+        <span>
+          {t("timeline.chatSummary.updated", {
+            at: formatDateTime(entry.chatUpdatedAt, locale, zone),
+          })}{" "}
+          ·{" "}
+        </span>
+      )}
+      <ChatSourceLink
+        activityId={entry.id}
+        provider={
+          providerBrandName(episode.provider ?? "dispact") ??
+          episode.provider ??
+          "Dispact"
+        }
+      />
     </span>
   );
 }

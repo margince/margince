@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { healthScope } from "../../lib/healthscopekey";
 import { meFixture } from "../../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
@@ -96,7 +97,9 @@ it.each([undefined, "project-1"])(
     );
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Acquisition source" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["deal.acquisitionSource"],
+      }),
       "Referral",
     );
     await pickOption(
@@ -106,7 +109,9 @@ it.each([undefined, "project-1"])(
     );
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Partner attribution" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["deal.partnerAttribution"],
+      }),
       "Influenced an existing deal (no commission)",
     );
     await user.click(screen.getByRole("button", { name: "Create" }));

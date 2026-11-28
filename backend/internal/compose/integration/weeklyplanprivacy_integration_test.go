@@ -300,7 +300,7 @@ func TestTheAnonymizeSweepRedactsACommitmentNamingTheSubject(t *testing.T) {
 	// Read under the owner connection rather than through the store: the contact
 	// row is archived by now, and the point is what the TABLE holds.
 	var label, linkType string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT label, coalesce(linked_record_type, '') FROM weekly_plan_commitment WHERE id = $1`,
 			commitment.ID).Scan(&label, &linkType)

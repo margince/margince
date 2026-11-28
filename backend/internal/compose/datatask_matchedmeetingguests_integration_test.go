@@ -197,7 +197,7 @@ func settleRoster(t *testing.T, e *integration.Env, meeting, seat ids.UUID, comp
 	t.Helper()
 	ctx := calendarOwnerCtx(e, seat)
 	var settled capture.LaterGuests
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		settled, err = capture.SettleMeetingRosterTx(ctx, ctx, tx, ids.From[ids.ActivityKind](meeting),
 			capture.MeetingRoster{Seat: seat, Parties: connector.Parties{Participants: parties}, Complete: complete, Current: true}, nil)
@@ -299,7 +299,7 @@ func TestAStoredOriginalCannotRetireOrReverseACurrentGuest(t *testing.T) {
 	accepted.Response = connector.ResponseAccepted
 	settleRoster(t, e, meeting, e.Rep1, true, guest(rep1Address), accepted)
 	ctx := calendarOwnerCtx(e, e.Rep1)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		old := guest("buyer@client.test")
 		old.Response = connector.ResponseDeclined
 		settled, err := capture.SettleMeetingRosterTx(ctx, ctx, tx, ids.From[ids.ActivityKind](meeting), capture.MeetingRoster{Seat: e.Rep1, Complete: true, Parties: connector.Parties{Participants: []connector.MessageParticipant{old}}}, nil)

@@ -39,7 +39,7 @@ func seedProjectErasureFixture(t *testing.T, e *Env) projectErasureFixture {
 	t.Helper()
 	company := e.SeedCompany(t, "Acme GmbH", nil)
 	f := projectErasureFixture{contact: ids.NewV7(), email: ids.NewV7(), project: ids.NewV7()}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact (id, full_name, first_name, source, captured_by)
@@ -85,7 +85,7 @@ type heldState struct {
 func readHeldState(t *testing.T, e *Env, activity ids.UUID) heldState {
 	t.Helper()
 	var got heldState
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT restricted_at::text, subject, body FROM activity WHERE id = $1`,
 			activity).Scan(&got.restrictedAt, &got.subject, &got.body)
@@ -143,7 +143,7 @@ func TestErasureStampsAPreStampProjectLinkAndHoldsIt(t *testing.T) {
 	}
 
 	var basis *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT max(basis) FROM activity_retention_evidence WHERE activity_id = $1`,
 			f.email).Scan(&basis)
@@ -222,7 +222,7 @@ func TestANoteFiledUnderAProjectIsStampedAndStillErased(t *testing.T) {
 	}
 
 	var class *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT retention_class FROM activity WHERE id = $1`, note).Scan(&class)
 	}); err != nil {
@@ -267,7 +267,7 @@ func TestDeletingAProjectTakesItsActivityLinksWithIt(t *testing.T) {
 	// orphan count below is satisfied by having nothing to count, so a relink
 	// that silently wrote no link would read as a passing cascade.
 	var linked int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity_link WHERE activity_id = $1 AND entity_type = 'project'`,
 			f.email).Scan(&linked)
@@ -281,7 +281,7 @@ func TestDeletingAProjectTakesItsActivityLinksWithIt(t *testing.T) {
 	e.WsExec(t, `DELETE FROM project WHERE id = $1`, f.project)
 
 	var orphans int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM activity_link l
 			 WHERE l.entity_type = 'project'
@@ -296,7 +296,7 @@ func TestDeletingAProjectTakesItsActivityLinksWithIt(t *testing.T) {
 	// The evidence, by contrast, MUST survive: its project_id is ON DELETE SET
 	// NULL and the frozen name is what answers after the record is gone.
 	var name *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT max(project_name) FROM activity_retention_evidence WHERE activity_id = $1`,
 			f.email).Scan(&name)

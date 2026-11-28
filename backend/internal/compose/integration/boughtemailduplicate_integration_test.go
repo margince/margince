@@ -87,7 +87,7 @@ func holdBoughtCreate(t *testing.T, e *Env, store *contacts.Store, email string,
 	t.Helper()
 	ready, finished := make(chan int, 1), make(chan error, 1)
 	go func() {
-		finished <- database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		finished <- database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var pid int
 			if err := tx.QueryRow(e.Admin(), `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
 				return err
@@ -177,7 +177,7 @@ func TestABoughtAddressAndACreateOfItNeverDeadlock(t *testing.T) {
 	waitForBoughtWaiters(t, e, pid, 1)
 	bought := make(chan error, 1)
 	go func() {
-		bought <- database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		bought <- database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			if err := contacts.WriteProviderClaims(e.Admin(), tx, run, subject.String(), "surfe", claims,
 				time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)); err != nil {
 				return err

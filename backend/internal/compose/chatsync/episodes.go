@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
-	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 )
 
 // Quiet is how long a channel must be silent before its last stretch of talk
@@ -23,7 +23,7 @@ const Quiet = 30 * time.Minute
 // between them, all on one day. Thread replies are talk like any other, so a
 // thread answered within the quiet window stays in its episode.
 type episode struct {
-	messages []dispact.Message
+	messages []chatwire.Message
 	closed   bool
 }
 
@@ -52,14 +52,14 @@ var notices = map[string]bool{
 
 // judged reports whether a message is talk a note may summarise: not a bot's
 // own post and not one of the chat's notices.
-func judged(m dispact.Message) bool {
-	return !m.IsBot && !notices[m.Subtype]
+func judged(m chatwire.Message) bool {
+	return !m.Deleted && !m.IsBot && !notices[m.Subtype]
 }
 
 // groupEpisodes cuts messages, oldest first, into episodes. An episode is
 // closed once a later message starts the next one, its last message is Quiet
 // old, or its day has ended in loc. Only the last episode can be open.
-func groupEpisodes(messages []dispact.Message, now time.Time, loc *time.Location) []episode {
+func groupEpisodes(messages []chatwire.Message, now time.Time, loc *time.Location) []episode {
 	var out []episode
 	for _, m := range messages {
 		if n := len(out); n > 0 && continues(out[n-1], m, loc) {
@@ -69,7 +69,7 @@ func groupEpisodes(messages []dispact.Message, now time.Time, loc *time.Location
 		if n := len(out); n > 0 {
 			out[n-1].closed = true
 		}
-		out = append(out, episode{messages: []dispact.Message{m}})
+		out = append(out, episode{messages: []chatwire.Message{m}})
 	}
 	if n := len(out); n > 0 {
 		last := out[n-1]
@@ -81,7 +81,7 @@ func groupEpisodes(messages []dispact.Message, now time.Time, loc *time.Location
 
 // continues reports whether m belongs to the episode e: posted within Quiet
 // of e's last message, on e's day.
-func continues(e episode, m dispact.Message, loc *time.Location) bool {
+func continues(e episode, m chatwire.Message, loc *time.Location) bool {
 	last := e.messages[len(e.messages)-1].PostedAt
 	return m.PostedAt.Sub(last) < Quiet && sameDay(e.messages[0].PostedAt, m.PostedAt, loc)
 }

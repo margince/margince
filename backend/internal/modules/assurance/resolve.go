@@ -107,7 +107,7 @@ func (s *Store) Resolve(ctx context.Context, exceptionID ids.UUID, in Resolution
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		return s.resolveIn(ctx, tx, exceptionID, in, actor.UserID, settled)
 	})
 }

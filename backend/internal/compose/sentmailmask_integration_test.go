@@ -36,7 +36,7 @@ func TestASentMailKeepsOneMaskedRowThroughItsEcho(t *testing.T) {
 	root := "masked-opening@counterparty.test"
 	captureThreadMail(t, e, e.Rep1, threadMail(address, root, "Tue, 01 Sep 2026 10:00:00 +0000", ""))
 	var anchor ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT activity_id FROM activity_identity WHERE identity_kind = 'mail' AND identity_key = $1`, root).Scan(&anchor)
 	}); err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestASentMailKeepsOneMaskedRowThroughItsEcho(t *testing.T) {
 
 	stored := func() (messageID, subject, body string) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `SELECT source_id, subject, body FROM activity WHERE id = $1`, sent.ActivityID).Scan(&messageID, &subject, &body)
 		}); err != nil {
 			t.Fatal(err)
@@ -140,7 +140,7 @@ func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
 	rendered.Subject += " Passwort: " + secret
 	rendered.Body += "\nPasswort: " + secret
 	var deliveredSubject, deliveredBody, storedSubject, storedBody string
-	if err := database.WithWorkspaceTx(l.ctx, l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.ctx, l.e.Pool, func(tx pgx.Tx) error {
 		delivery, err := NewControllerMailQueue(l.e.Pool, inserter, "").QueueConfirmationTx(l.ctx, tx, consent.ConfirmationSend{
 			ContactID: ids.From[ids.ContactKind](l.contact), Recipient: "subject@example.test", Category: category,
 			LinkID: link, LinkRef: "sealed-ref", ExpiresAt: expires,

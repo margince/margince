@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { ImportDropzone } from "./import.files";
 import {
   formatFixture,
@@ -34,7 +35,7 @@ describe("the files step", () => {
     });
     render(<ImportWizardPage />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["PK"], "pipedrive-export.zip"),
     );
     expect(await screen.findByDisplayValue("pipedrive-export")).toBeVisible();
@@ -58,7 +59,9 @@ describe("the files step", () => {
       "POST /imports/sources": () => jsonResponse(zipProfile),
     });
     render(<ImportWizardPage />);
-    const zone = await screen.findByLabelText("Upload your data");
+    const zone = await screen.findByLabelText(
+      englishCopy["import.hub.uploadLabel"],
+    );
     await user.upload(zone, new File(["PK"], "crm.zip"));
     await screen.findByDisplayValue("pipedrive-export");
     expect(sent.find((s) => s.path === "POST /imports/sources")?.body).toEqual({
@@ -70,7 +73,7 @@ describe("the files step", () => {
     const again = stubRoutes();
     render(<ImportWizardPage />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["display_name\n"], "Companies.csv"),
     );
     await waitFor(() =>
@@ -85,7 +88,7 @@ describe("the files step", () => {
     stubRoutes({ "POST /imports/sources": () => jsonResponse(zipProfile) });
     render(<ImportWizardPage />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["PK"], "x.zip"),
     );
     expect(
@@ -106,7 +109,9 @@ describe("the files step", () => {
         }),
     });
     render(<ImportWizardPage />);
-    const zone = await screen.findByLabelText("Upload your data");
+    const zone = await screen.findByLabelText(
+      englishCopy["import.hub.uploadLabel"],
+    );
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
     await user.upload(zone, new File(["PK"], "crm (1).zip"));
     expect(await screen.findByDisplayValue("crm")).toBeVisible();
@@ -117,7 +122,7 @@ describe("the files step", () => {
     stubRoutes({ "POST /imports/sources": () => jsonResponse(zipProfile) });
     render(<ImportWizardPage />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["PK"], "x.zip"),
     );
     for (const file of ["companies.csv", "contacts.csv"]) {
@@ -126,11 +131,13 @@ describe("the files step", () => {
           name: `Record type for ${file}`,
         }),
       );
-      await user.click(screen.getByRole("option", { name: "Skip this file" }));
+      await user.click(
+        screen.getByRole("option", { name: englishCopy["import.files.skip"] }),
+      );
     }
     expect(screen.getByRole("button", { name: /Next/ })).toBeDisabled();
     expect(
-      screen.getByText("Choose a record type for at least one file."),
+      screen.getByText(englishCopy["import.files.noneTyped"]),
     ).toBeVisible();
   });
 });
@@ -141,7 +148,7 @@ describe("the files step of a single CSV", () => {
     stubRoutes({ "POST /imports/sources": () => jsonResponse(answer) });
     render(<ImportWizardPage />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["Email\n"], "leads.csv"),
     );
     await screen.findByLabelText("Source name");
@@ -190,9 +197,12 @@ describe("a CSV-only drop zone", () => {
 
   function drop(onPick: (file: File) => void, file: File) {
     render(<ImportDropzone csvOnly onPick={onPick} />);
-    fireEvent.drop(screen.getByLabelText("Upload your data"), {
-      dataTransfer: { files: [file] },
-    });
+    fireEvent.drop(
+      screen.getByLabelText(englishCopy["import.hub.uploadLabel"]),
+      {
+        dataTransfer: { files: [file] },
+      },
+    );
   }
 
   it("refuses a dropped ZIP with a note and passes nothing on", () => {

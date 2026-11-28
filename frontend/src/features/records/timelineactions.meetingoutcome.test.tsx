@@ -9,6 +9,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -85,7 +86,11 @@ it("offers a meeting the server says awaits an outcome the same choice as the la
   await user.click(await screen.findByRole("option", { name: "No-show" }));
   await user.click(within(dialog).getByRole("button", { name: "Log" }));
 
-  expect(await screen.findByText("Meeting outcome recorded")).toBeTruthy();
+  expect(
+    await screen.findByText(
+      englishCopy["worklist.verb.meetingOutcomeRecorded"],
+    ),
+  ).toBeTruthy();
   expect(patched).toHaveLength(1);
   expect(patched[0]).toMatchObject({ meeting_status: "no_show" });
 });

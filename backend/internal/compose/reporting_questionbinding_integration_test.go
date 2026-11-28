@@ -102,7 +102,7 @@ func (b *boundBook) admin() context.Context { return b.seat(b.e.AdminUser, nil) 
 func (b *boundBook) save(ctx context.Context, t *testing.T, q analyticsquery.Query) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(ctx, b.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, b.e.Pool, func(tx pgx.Tx) error {
 		answer, err := RunAnalyticsQuery(ctx, tx, q, analyticsquery.Floor(1))
 		if err != nil {
 			return err
@@ -280,7 +280,7 @@ func TestACardKeepsItsBindingByReferenceAndRefusesAForeignOne(t *testing.T) {
 		t.Fatalf("reading the draft: %+v %v", draft, err)
 	}
 	var card reporting.QuestionCard
-	if err := database.WithWorkspaceTx(b.rep3(), b.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(b.rep3(), b.e.Pool, func(tx pgx.Tx) error {
 		card, _, err = b.service.QuestionCardIn(b.rep3(), tx, ids.UUID(report.Id), draft.DraftRevision, "bound")
 		return err
 	}); err != nil || card.Bound == nil {

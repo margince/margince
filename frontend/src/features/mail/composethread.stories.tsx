@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -127,7 +128,7 @@ export const DraftedBesideThread: StoryObj = {
     await userEvent.click(
       await dialog.findByRole("button", { name: "Draft reply" }),
     );
-    await dialog.findByText("AI-assisted draft");
+    await dialog.findByText(englishCopy["compose.aiDisclosureTitle"]);
     const editor = dialog.getByRole("textbox", { name: "Body" });
     editor.scrollIntoView({ block: "nearest" });
     const body = editor.getBoundingClientRect();
@@ -155,7 +156,7 @@ export const DraftedBesideThread: StoryObj = {
     const sending = [
       send,
       dialog
-        .getByRole("button", { name: "Other ways to send" })
+        .getByRole("button", { name: englishCopy["compose.sendOptions"] })
         .getBoundingClientRect(),
     ];
     for (const control of [...marks, ...sending]) {

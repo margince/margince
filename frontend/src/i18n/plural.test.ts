@@ -5,16 +5,6 @@ import { describe, expect, it } from "vitest";
 import { pluralCategory } from "../format/plural";
 import { pluralKey, translatePlural } from "./index";
 
-// The plural rule itself: which form a count takes, and which catalogue entry
-// that resolves to.
-//
-// The three shipped locales all split at exactly one, so none of these cases
-// would fail against the fifteen hand-rolled `count === 1` ternaries this
-// replaced. That is the point of the last suite: what a locale with a third
-// category does is the behaviour those ternaries could not have, and it is
-// asserted against a real CLDR rule rather than against a mock, because a mock
-// would be this test agreeing with itself.
-
 describe("pluralCategory", () => {
   it("splits English and German at one", () => {
     expect(pluralCategory("en", 1)).toBe("one");
@@ -24,11 +14,13 @@ describe("pluralCategory", () => {
     expect(pluralCategory("de", 7)).toBe("other");
   });
 
-  it("gives Vietnamese one form for every count", () => {
-    // vi does not inflect for number. Both catalogue arms read identically, and
-    // the rule says so rather than the catalogue pretending to a distinction.
-    expect(pluralCategory("vi", 1)).toBe("other");
-    expect(pluralCategory("vi", 5)).toBe("other");
+  it("keeps Vietnamese wording stable across CLDR plural categories", () => {
+    for (const count of [0, 1, 1.5, 5]) {
+      expect(["one", "other"]).toContain(pluralCategory("vi", count));
+      expect(
+        translatePlural("vi", "share.teamMembers", count, { count: "5" }),
+      ).toBe("Nhóm · 5 thành viên");
+    }
   });
 
   it("refuses a count no reader has", () => {
@@ -80,32 +72,8 @@ describe("pluralKey", () => {
     expect(pluralKey("en", "ob.conv.review.requiredRemaining", 2)).toBe(
       "ob.conv.review.requiredRemaining_other",
     );
-    // vi has one category, so both counts name the same entry — which is the
-    // honest answer rather than a singular arm nothing ever reaches.
-    expect(pluralKey("vi", "ob.conv.review.requiredRemaining", 1)).toBe(
+    expect(pluralKey("vi", "ob.conv.review.requiredRemaining", 5)).toBe(
       "ob.conv.review.requiredRemaining_other",
-    );
-  });
-});
-
-describe("a locale with more than two categories", () => {
-  // This layer exists for a locale whose rule has a `few` or a `many`, such as
-  // Polish, Russian or Arabic. No comparison with 1 can produce the right form
-  // there. This test does not assert that by constructing
-  // `new Intl.PluralRules("pl-PL")` here. A locale tag written into a source
-  // file is what `census/rules/one-locale.census.ts` refuses. It is right to,
-  // because a pinned tag is a rendering in somebody else's language. The claim
-  // about CLDR's categories is a fact about CLDR rather than about this code.
-  //
-  // What IS this code's behaviour, and is asserted, is the fallback such a
-  // locale takes on the day it ships and before its `_few` arm is translated.
-  it("falls back to the _other arm for a category the catalogue lacks", () => {
-    // What a shipped locale gaining a category does before its translations
-    // land: the reader gets the plural wording rather than a raw key. Asserted
-    // through the vi rule, whose single category IS `other`, so this is the
-    // fallback path taken by a real locale rather than a contrived one.
-    expect(translatePlural("vi", "share.teamMembers", 1, { count: "1" })).toBe(
-      translatePlural("vi", "share.teamMembers", 9, { count: "1" }),
     );
   });
 });

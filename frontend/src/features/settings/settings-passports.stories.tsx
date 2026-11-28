@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { busyUsage } from "../../testing/agentallowances.fixtures";
 import {
   installFetchStub,
@@ -185,7 +186,9 @@ export const NewPassportWithAreas: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "New passport" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["settings.mintOpen"],
+      }),
     );
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(

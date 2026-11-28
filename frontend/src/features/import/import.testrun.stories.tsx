@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { isRecord } from "../../lib/problembody";
 import { formatFixture } from "../../testing/import.fixtures";
 import {
@@ -160,7 +161,7 @@ function page(address: string, current: object = RUN, report: object = REPORT) {
 async function runTest(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await userEvent.upload(
-    await canvas.findByLabelText("Upload your data"),
+    await canvas.findByLabelText(englishCopy["import.hub.uploadLabel"]),
     // The file the screen's own testkit uploads, so this play drives the
     // wizard the way its unit tests do.
     new File(["Email\nada@x.test\n"], "leads.csv"),
@@ -174,7 +175,9 @@ async function runTest(canvasElement: HTMLElement) {
 
 async function stage({ canvasElement }: { canvasElement: HTMLElement }) {
   const canvas = await runTest(canvasElement);
-  await canvas.findByRole("link", { name: "problems.csv" });
+  await canvas.findByRole("link", {
+    name: englishCopy["import.result.problemsFile"],
+  });
 }
 
 const NO_HEADER = "The file has no header row.";

@@ -56,8 +56,7 @@ export const ASYNC_UTIL_TIMEOUT_MS = 2_782;
 
 /**
  * The largest budget any test spends waiting, among the tests that run under
- * this ceiling: seven default waiters in sequence, in `import.test.tsx`,
- * `company360.test.tsx` and `ai-provider-sheet.test.tsx`. The two `clickRefresh`
+ * this ceiling: eight default waiters in sequence in `dealproject.test.tsx`. The two `clickRefresh`
  * cases in `company-context.test.tsx` spend more and are exempted by name in
  * scripts/test-budget.test.ts.
  *
@@ -75,7 +74,7 @@ export const ASYNC_UTIL_TIMEOUT_MS = 2_782;
  * ceiling that test actually runs under, so a suite cannot quietly join this one
  * while spending like the other.
  */
-export const MAX_DEFAULT_WAITER_BUDGET_MS = ASYNC_UTIL_TIMEOUT_MS * 7;
+export const MAX_DEFAULT_WAITER_BUDGET_MS = ASYNC_UTIL_TIMEOUT_MS * 8;
 
 /**
  * The slowest single test measured, in milliseconds: census `dialogrows`, 5,624 ms

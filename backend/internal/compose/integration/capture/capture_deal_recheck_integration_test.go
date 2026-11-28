@@ -41,7 +41,7 @@ func unrecheckedLink(t *testing.T, env captureEnv, sourceID string, deal ids.UUI
 		},
 	})
 	connector = principal.WithCorrelationID(connector, ids.NewV7())
-	if err := database.WithWorkspaceTx(connector, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(connector, e.Pool, func(tx pgx.Tx) error {
 		_, _, err := compose.ActivityDealFiler{}.FileOnDealIfUnfiled(connector, tx, mail, deal, nil, "")
 		return err
 	}); err != nil {
@@ -63,7 +63,7 @@ func recheck(t *testing.T, r repairer, mail ids.ActivityID) {
 func rechecking(t *testing.T, r repairer, asOf time.Time) []ids.UUID {
 	t.Helper()
 	var found []ids.UUID
-	if err := database.WithWorkspaceTx(r.system, r.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(r.system, r.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		found, err = r.repair.RecheckCandidatesTx(r.system, tx, asOf, ids.Nil, maxUUID, 100)
 		return err
@@ -125,7 +125,7 @@ func TestTheClassifierNeverChangesAColleaguesMark(t *testing.T) {
 	wantMark(t, e, "rc6@acme.example", deal, "relevant/human")
 
 	var changed bool
-	if err := database.WithWorkspaceTx(r.system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(r.system, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		changed, err = compose.ActivityDealFiler{}.MarkDealLink(r.system, tx, mail, deal, "unrelated", nil)
 		return err

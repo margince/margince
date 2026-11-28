@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { toggleOptions } from "../../design-system/select-testing";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { openFilterValues } from "../../testing/listquery.testkit";
 import { openView, openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
@@ -136,7 +137,7 @@ describe("PartnerTab — not yet a partner", () => {
     const user = userEvent.setup();
     render(<PartnerTab companyId="o-1" />);
     const picker = await screen.findByRole("combobox", {
-      name: "Relationship stage",
+      name: englishCopy["partner.stage"],
     });
     await waitFor(() => expect(picker.textContent).toContain("Scouting"));
     await user.click(picker);
@@ -146,7 +147,7 @@ describe("PartnerTab — not yet a partner", () => {
         .getAttribute("aria-disabled"),
     ).toBe("true");
     expect(
-      screen.getByText("Activate the partner before choosing an Active stage."),
+      screen.getByText(englishCopy["partner.stageNeedsActivation"]),
     ).toBeTruthy();
   });
 
@@ -169,7 +170,7 @@ describe("PartnerTab — not yet a partner", () => {
     render(<PartnerTab companyId="o-1" />);
 
     await waitFor(() =>
-      expect(screen.getByText("Not a partner yet")).toBeTruthy(),
+      expect(screen.getByText(englishCopy["partner.none"])).toBeTruthy(),
     );
     const create = screen.getByRole("button", { name: "Create" });
     await user.click(create);
@@ -205,7 +206,7 @@ describe("PartnerTab — not yet a partner", () => {
       /share the partner earns on each won deal they sourced/,
     );
     expect(
-      screen.getByLabelText("Served segments"),
+      screen.getByLabelText(englishCopy["partner.servedSegments"]),
     ).toHaveAccessibleDescription(/for example mid-size manufacturers/);
   });
 });
@@ -327,9 +328,13 @@ describe("PartnerTab — existing partner", () => {
     expect(screen.getByText("Live")).toBeTruthy();
     await user.click(screen.getByTestId("edit-partner"));
 
-    expect(screen.getByRole("dialog", { name: "Edit partner" })).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", { name: englishCopy["partner.edit"] }),
+    ).toBeTruthy();
     expect(screen.queryByLabelText("Next step")).toBeNull();
-    const segments = await screen.findByLabelText("Served segments");
+    const segments = await screen.findByLabelText(
+      englishCopy["partner.servedSegments"],
+    );
     await user.clear(segments);
     await user.type(segments, "fintech");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -429,7 +434,9 @@ describe("PartnerTab — existing partner", () => {
     expect(
       later.compareDocumentPosition(undated) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(screen.queryByText("Already done")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["bulk.reason.no_change_done"]),
+    ).toBeNull();
     const asked = new URL(urls.find((u) => u.includes("/activities")) ?? "");
     expect(asked.searchParams.get("entity_type")).toBe("company");
     expect(asked.searchParams.get("entity_id")).toBe("o-1");
@@ -502,7 +509,9 @@ describe("PartnerTab — existing partner", () => {
     render(<PartnerTab companyId="o-1" />);
 
     await user.click(await screen.findByTestId("edit-partner"));
-    await user.click(await screen.findByLabelText("Relationship stage"));
+    await user.click(
+      await screen.findByLabelText(englishCopy["partner.stage"]),
+    );
     const listbox = await screen.findByRole("listbox");
     expect(
       within(listbox)
@@ -527,8 +536,10 @@ describe("PartnerTab — the margin tier", () => {
 
     render(<PartnerTab companyId="o-1" />);
 
-    expect(await screen.findByText("Active collaboration (20%)")).toBeTruthy();
-    expect(screen.queryByLabelText("Masked value")).toBeNull();
+    expect(
+      await screen.findByText(englishCopy["partner.marginTier.tier2"]),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText(englishCopy["rbac.masked"])).toBeNull();
   });
 
   it("reads a withheld tier as withheld, never as a partner with no tier", async () => {
@@ -541,7 +552,7 @@ describe("PartnerTab — the margin tier", () => {
     render(<PartnerTab companyId="o-1" />);
 
     expect(await screen.findByText("Margin tier")).toBeTruthy();
-    expect(screen.getByLabelText("Masked value")).toBeTruthy();
+    expect(screen.getByLabelText(englishCopy["rbac.masked"])).toBeTruthy();
   });
 
   it("omits the row for a partner who agreed no tier", async () => {
@@ -551,7 +562,7 @@ describe("PartnerTab — the margin tier", () => {
 
     await screen.findByText("Renew certification");
     expect(screen.queryByText("Margin tier")).toBeNull();
-    expect(screen.queryByLabelText("Masked value")).toBeNull();
+    expect(screen.queryByLabelText(englishCopy["rbac.masked"])).toBeNull();
   });
 });
 
@@ -601,7 +612,9 @@ describe("PartnersScreen", () => {
     expect(screen.queryByPlaceholderText("Search")).toBeNull();
     const panel = await openView(user);
     expect(
-      within(panel).queryByRole("button", { name: "Show archived" }),
+      within(panel).queryByRole("button", {
+        name: englishCopy["list.showArchived"],
+      }),
     ).toBeNull();
     const menu = await openViewStep(user, "Filters");
     for (const name of [
@@ -612,7 +625,9 @@ describe("PartnersScreen", () => {
       expect(within(menu).getByRole("button", { name })).toBeTruthy();
     }
     expect(
-      within(menu).getByRole("button", { name: "Certification status" }),
+      within(menu).getByRole("button", {
+        name: englishCopy["partner.certStatus"],
+      }),
     ).toBeTruthy();
   });
 
@@ -637,7 +652,9 @@ describe("PartnersScreen", () => {
       await screen.findByRole("columnheader", { name: "Margin tier" }),
     ).toBeTruthy();
     await waitFor(() => expect(screen.getByText("o-2")).toBeTruthy());
-    expect(screen.getAllByLabelText("Masked value")).toHaveLength(1);
+    expect(screen.getAllByLabelText(englishCopy["rbac.masked"])).toHaveLength(
+      1,
+    );
   });
 
   it("says how to add a partner when there is none", async () => {
@@ -753,13 +770,15 @@ it("ends only the partner program with its displayed version", async () => {
   const user = userEvent.setup();
   render(<PartnerTab companyId="o-1" />);
   await user.click(
-    await screen.findByRole("button", { name: "End partner program" }),
+    await screen.findByRole("button", {
+      name: englishCopy["partner.endProgram"],
+    }),
   );
   await user.click(
     within(screen.getByRole("dialog")).getByRole("button", {
-      name: "End partner program",
+      name: englishCopy["partner.endProgram"],
     }),
   );
-  await screen.findByText("Not a partner yet");
+  await screen.findByText(englishCopy["partner.none"]);
   expect(writes).toEqual([{ path: "/v1/companies/o-1/partner", version: "3" }]);
 });

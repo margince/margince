@@ -89,10 +89,9 @@ describe("the test run", () => {
     await renderAtTestRun(user);
     expect(await screen.findByText("Companies")).toBeVisible();
     expect(screen.getByText("Broken link")).toBeVisible();
-    expect(screen.getByRole("link", { name: "problems.csv" })).toHaveAttribute(
-      "href",
-      `/v1/imports/${run.id}/problems.csv?lang=en`,
-    );
+    expect(
+      screen.getByRole("link", { name: en["import.result.problemsFile"] }),
+    ).toHaveAttribute("href", `/v1/imports/${run.id}/problems.csv?lang=en`);
     await user.click(screen.getByRole("checkbox", { name: /anyway/ }));
     await waitFor(() =>
       expect(sent.map((s) => s.path)).toContain(
@@ -138,7 +137,9 @@ describe("the test run", () => {
         jsonResponse({ ...run, status: "cancelled" }),
     });
     await renderAtTestRun(user);
-    expect(await screen.findByText("Nothing to import")).toBeVisible();
+    expect(
+      await screen.findByText(en["import.test.nothing.title"]),
+    ).toBeVisible();
     expect(
       screen.queryByRole("button", { name: /^Import (\d|anyway)/ }),
     ).toBeNull();
@@ -166,10 +167,10 @@ describe("the test run", () => {
       [`GET /imports/${run.id}`]: () => jsonResponse(run),
     });
     await renderAtTestRun(user);
-    expect(await screen.findByText("Nothing to import")).toBeVisible();
     expect(
-      screen.getByText("The file has a header and no rows."),
+      await screen.findByText(en["import.test.nothing.title"]),
     ).toBeVisible();
+    expect(screen.getByText(en["import.test.nothing.empty"])).toBeVisible();
     expect(screen.queryByText(/already in the CRM/)).toBeNull();
     expect(screen.queryByRole("button", { name: /^Import \d/ })).toBeNull();
     expect(screen.getByRole("button", { name: "Done" })).toBeEnabled();
@@ -188,7 +189,9 @@ describe("the test run", () => {
       [`GET /imports/${run.id}`]: () => jsonResponse(run),
     });
     await renderAtTestRun(user);
-    expect(await screen.findByText("Nothing to import")).toBeVisible();
+    expect(
+      await screen.findByText(en["import.test.nothing.title"]),
+    ).toBeVisible();
   });
 
   it("offers no Import 0 rows while only broken-link rows remain, and imports them once the box is ticked", async () => {
@@ -217,11 +220,15 @@ describe("the test run", () => {
       },
     });
     await renderAtTestRun(user);
-    expect(await screen.findByText("Nothing to import")).toBeVisible();
+    expect(
+      await screen.findByText(en["import.test.nothing.title"]),
+    ).toBeVisible();
     expect(screen.queryByRole("button", { name: "Import 0 rows" })).toBeNull();
     await user.click(screen.getByRole("checkbox", { name: /anyway/ }));
     expect(
-      await screen.findByRole("button", { name: "Import 1 row anyway" }),
+      await screen.findByRole("button", {
+        name: en["import.test.importAnyway_one"],
+      }),
     ).toBeEnabled();
   });
 
@@ -253,7 +260,7 @@ describe("the test run", () => {
         [REPORT]: () => jsonResponse(bundleReportFixture),
       });
       await renderAtTestRun(user);
-      expect(await screen.findByText("Testing your file…")).toBeVisible();
+      expect(await screen.findByText(en["import.test.testing"])).toBeVisible();
       expect(screen.queryByRole("button", { name: /Import \d/ })).toBeNull();
       expect(sent.map((s) => s.path)).not.toContain(
         `GET /imports/${run.id}/report`,
@@ -263,7 +270,7 @@ describe("the test run", () => {
       expect(
         await screen.findByRole("button", { name: "Import 4 rows" }),
       ).toBeVisible();
-      expect(screen.queryByText("Testing your file…")).toBeNull();
+      expect(screen.queryByText(en["import.test.testing"])).toBeNull();
     } finally {
       vi.useRealTimers();
     }
@@ -284,13 +291,13 @@ describe("the test run", () => {
           ),
       });
       await renderAtTestRun(user);
-      expect(await screen.findByText("Testing your file…")).toBeVisible();
+      expect(await screen.findByText(en["import.test.testing"])).toBeVisible();
       refused = true;
       await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       expect(await screen.findByText(reason)).toBeVisible();
-      expect(screen.getByText("Test run stopped")).toBeVisible();
-      expect(screen.queryByText("Test run did not start")).toBeNull();
-      expect(screen.queryByText("Testing your file…")).toBeNull();
+      expect(screen.getByText(en["import.map.testStopped"])).toBeVisible();
+      expect(screen.queryByText(en["import.map.stageFailed"])).toBeNull();
+      expect(screen.queryByText(en["import.test.testing"])).toBeNull();
       expect(screen.getByRole("button", { name: "Run test" })).toBeEnabled();
     } finally {
       vi.useRealTimers();
@@ -314,7 +321,7 @@ describe("the test run", () => {
       await screen.findByRole("button", { name: "Run test" }),
     ).toBeEnabled();
     expect(sent.map((s) => s.path)).toContain(`POST /imports/${run.id}/cancel`);
-    expect(screen.queryByText("Testing your file…")).toBeNull();
+    expect(screen.queryByText(en["import.test.testing"])).toBeNull();
   });
 
   it("a refused stop says to press Stop test again, and the button is there", async () => {
@@ -327,9 +334,7 @@ describe("the test run", () => {
     });
     await renderAtTestRun(user);
     await user.click(await screen.findByRole("button", { name: "Stop test" }));
-    expect(
-      await screen.findByText("The test did not stop. Press Stop test again."),
-    ).toBeVisible();
+    expect(await screen.findByText(en["import.test.stopFailed"])).toBeVisible();
     expect(screen.getByRole("button", { name: "Stop test" })).toBeEnabled();
   });
 
@@ -339,7 +344,7 @@ describe("the test run", () => {
         jsonResponse({ ...run, status: "validating" }),
     });
     renderAtImport(run.id);
-    expect(await screen.findByText("Testing your file…")).toBeVisible();
+    expect(await screen.findByText(en["import.test.testing"])).toBeVisible();
     expect(screen.getByRole("status")).toHaveAttribute("aria-busy", "true");
   });
 
@@ -377,7 +382,7 @@ describe("the test run", () => {
     });
     await renderAtTestRun(user);
     await user.click(await screen.findByRole("checkbox", { name: /anyway/ }));
-    expect(await screen.findByText("Test run did not start")).toBeVisible();
+    expect(await screen.findByText(en["import.map.stageFailed"])).toBeVisible();
     expect(screen.getByRole("alert")).toHaveTextContent(refusal);
     expect(screen.queryByText(stored)).toBeNull();
     expect(screen.getByRole("button", { name: "Run test" })).toBeEnabled();
@@ -394,7 +399,7 @@ describe("the test run", () => {
     });
     await renderAtTestRun(user);
     expect(await screen.findByText(stored)).toBeVisible();
-    expect(screen.getByText("Test run stopped")).toBeVisible();
+    expect(screen.getByText(en["import.map.testStopped"])).toBeVisible();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -421,7 +426,7 @@ describe("the test run", () => {
     await user.click(
       await screen.findByRole("button", { name: "Import 3 rows" }),
     );
-    expect(await screen.findByText("Import did not run")).toBeVisible();
+    expect(await screen.findByText(en["import.commitFailed"])).toBeVisible();
     const approve = sent.findIndex(
       (s) => s.path === `POST /imports/${run.id}/approve`,
     );
@@ -505,14 +510,10 @@ describe("the test run", () => {
         ),
     });
     await renderAtTestRun(user);
-    expect(
-      await screen.findByText(
-        "Another import of this source name is still writing. Wait for it to finish, then try again.",
-      ),
-    ).toBeVisible();
+    expect(await screen.findByText(en["import.sourceBusy"])).toBeVisible();
     expect(screen.getByText(en["import.sourceBusyDraft"])).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "Open that import" }),
+      screen.getByRole("link", { name: en["import.sourceBusyOpen"] }),
     ).toHaveAttribute("href", expect.stringContaining("run=019ff-other"));
   });
 
@@ -521,7 +522,7 @@ describe("the test run", () => {
     stubRoutes({ [REPORT]: () => jsonResponse(bundleReportFixture) });
     await renderAtTestRun(user);
     const strip = await screen.findByRole("region", {
-      name: "Rows per record type",
+      name: en["import.test.counts"],
     });
     expect(strip).toHaveTextContent(
       /Companies2.*1 new · 1 update · 0 same.*Contacts2.*2 new · 0 update · 0 same/,
@@ -537,7 +538,7 @@ describe("the test run", () => {
     stubRoutes({ [REPORT]: () => jsonResponse(bundleReportFixture) });
     await renderAtTestRun(user);
     const strip = await screen.findByRole("region", {
-      name: "Rows per record type",
+      name: en["import.test.counts"],
     });
     expect(strip.parentElement).toHaveClass("import__counts");
     const importCss = readFileSync("src/features/import/import.css", "utf8");
@@ -549,11 +550,13 @@ describe("the test run", () => {
     stubRoutes({ [REPORT]: () => jsonResponse(bundleReportFixture) });
     await renderAtTestRun(user);
     expect(
-      await screen.findByText("1 row has invalid values and will be skipped"),
+      await screen.findByText(en["import.test.invalid_one"]),
     ).toBeVisible();
     const row = screen.getByRole("row", { name: /Gold/ });
     expect(within(row).getByText("Row 3 · Tier")).toBeVisible();
-    expect(within(row).getByText("Invalid value")).toBeVisible();
+    expect(
+      within(row).getByText(en["import.problem.invalid_value"]),
+    ).toBeVisible();
   });
 
   it("counts a row with two invalid cells once and lists both cells", async () => {
@@ -575,7 +578,7 @@ describe("the test run", () => {
     stubRoutes({ [REPORT]: () => jsonResponse(twoFaults) });
     await renderAtTestRun(user);
     expect(
-      await screen.findByText("1 row has invalid values and will be skipped"),
+      await screen.findByText(en["import.test.invalid_one"]),
     ).toBeVisible();
     expect(
       within(screen.getByRole("row", { name: /Gold/ })).getByText(
@@ -619,7 +622,7 @@ describe("the test run", () => {
     const user = userEvent.setup();
     stubRoutes({ [REPORT]: () => jsonResponse(bundleReportFixture) });
     await renderAtTestRun(user);
-    await screen.findByText("1 row has invalid values and will be skipped");
+    await screen.findByText(en["import.test.invalid_one"]);
     expect(screen.queryByText(/closed history/)).not.toBeInTheDocument();
   });
 
@@ -682,7 +685,7 @@ describe("the test run", () => {
       </UnsavedGuard>,
     );
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(en["import.hub.uploadLabel"]),
       new File(["Email\nada@x.test\n"], "leads.csv"),
     );
     await screen.findByRole("button", { name: /Next: map/ });
@@ -706,9 +709,11 @@ describe("the test run", () => {
     stubRoutes();
     await renderAtTestRun(user);
     await user.click(
-      await screen.findByRole("button", { name: "Fix and re-upload" }),
+      await screen.findByRole("button", { name: en["import.test.reupload"] }),
     );
-    expect(await screen.findByLabelText("Upload your data")).toBeVisible();
+    expect(
+      await screen.findByLabelText(en["import.hub.uploadLabel"]),
+    ).toBeVisible();
     expect(globalThis.location.hash).not.toContain("run=");
   });
 
@@ -725,6 +730,6 @@ describe("the test run", () => {
     await user.click(
       await screen.findByRole("button", { name: "Import 3 rows" }),
     );
-    expect(await screen.findByText("Import did not run")).toBeVisible();
+    expect(await screen.findByText(en["import.commitFailed"])).toBeVisible();
   });
 });

@@ -7,6 +7,7 @@ import { expect, screen, waitFor } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { paragraphsFrom } from "../../design-system/richtext";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -56,7 +57,9 @@ function Correction({
 const opensCorrection = async () => {
   await waitFor(() => expect(screen.getByRole("dialog")).toBeVisible());
   expect(
-    screen.getByRole("button", { name: "Save correction" }),
+    screen.getByRole("button", {
+      name: englishCopy["directSend.correctionSave"],
+    }),
   ).toBeDisabled();
 };
 

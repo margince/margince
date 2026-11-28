@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -116,7 +117,7 @@ export const RevokingASeat: Story = {
   render: card(rooms([room()])),
   play: async () => {
     await userEvent.click(
-      await screen.findByRole("button", { name: "Revoke access" }),
+      await screen.findByRole("button", { name: englishCopy["access.revoke"] }),
     );
     const dialog = within(await screen.findByRole("dialog"));
     await dialog.findByText(EMAIL, { exact: false });

@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
 
@@ -124,7 +125,7 @@ describe("the licence pill leads to the seats settings page", () => {
     const { opened } = await openPanel("rejected");
     await waitFor(() => {
       const pill = opened.querySelector("a.arwarning");
-      expect(pill?.textContent).toBe("License refused");
+      expect(pill?.textContent).toBe(englishCopy["shell.license.refused"]);
       expect(pill?.getAttribute("href")).toBe("/#/settings/seats");
     });
   });
@@ -144,14 +145,14 @@ describe("the licence stays out of the orb and its line", () => {
     ]);
     await waitFor(() =>
       expect(opened.querySelector("a.arwarning")?.textContent).toBe(
-        "License refused",
+        englishCopy["shell.license.refused"],
       ),
     );
     await waitFor(
       () => {
         expect(coreState(container)).toBe("working");
         expect(container.querySelector(".arline")?.textContent).toBe(
-          "Preparing Morning brief…",
+          englishCopy["agent.activity.morningBrief.running"],
         );
       },
       { timeout: 3000 },
@@ -164,7 +165,7 @@ describe("the licence stays out of the orb and its line", () => {
     const { opened, container } = await openPanel("rejected");
     await waitFor(() =>
       expect(opened.querySelector("a.arwarning")?.textContent).toBe(
-        "License refused",
+        englishCopy["shell.license.refused"],
       ),
     );
     expect(coreState(container)).toBe("idle");

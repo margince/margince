@@ -43,7 +43,7 @@ func TestAnExplicitRequestOpensADealPrefilledFromTheMail(t *testing.T) {
 	}
 	deal := e.openedDeal(e.Admin(), t, acme)
 	var base string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
 		base, err = identity.BaseCurrencyAppliedTx(e.Admin(), tx)
 		return err
 	}); err != nil {
@@ -203,7 +203,7 @@ func TestOneProtectedSignalWithholdsTheTimelineTitles(t *testing.T) {
 		var fill deals.DealPrefill
 		//nolint:unparam // the shape is the clock dealscout.Prefill takes; this fixed day never fails
 		today := func(context.Context, pgx.Tx, time.Time) (time.Time, error) { return storekit.AsDate(e.now), nil }
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
 			fill, err = dealscout.Prefill(e.now, today)(e.Admin(), tx, evidence)
 			return err
 		}); err != nil {

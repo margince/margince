@@ -84,7 +84,7 @@ func TestTheColdStartParksBothMarksAndTheConfirmationBindsEachToItsSlot(t *testi
 	}
 	// The badge's provenance is filed under its own field name, by the read.
 	var capturedBy string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT captured_by FROM field_provenance
 			WHERE object_type = 'company' AND object_id = $1 AND field_name = 'logo_icon'
 			ORDER BY captured_at DESC, id DESC LIMIT 1`, company.CompanyID).Scan(&capturedBy)
@@ -125,7 +125,7 @@ func TestTheConfirmationKeepsTheBadgeAContactChoseAndStillLandsTheLockup(t *test
 	if err != nil {
 		t.Fatalf("describe the company by hand: %v", err)
 	}
-	uploaded := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), companyLogoKind,
+	uploaded := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), contacts.LogoKeyKind,
 		saved.CompanyID.String()+"/uploaded-badge")
 	chosen := logoFixture(t, 64, 64)
 	if err := blob.Put(context.Background(), uploaded, bytes.NewReader(chosen),

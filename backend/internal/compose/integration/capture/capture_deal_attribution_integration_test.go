@@ -69,7 +69,7 @@ func newDealWorld(t *testing.T, e *integration.SearchEnv) dealWorld {
 	})
 	// Employment and stakeholders are edges. The rule reads them with the
 	// capturing seat's own edge grant, as a rep's role has it.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE role
 			   SET permissions = jsonb_set(permissions, '{objects,relationship}', '{"read":true}')
 			 WHERE key = 'capture_rep'`)
@@ -158,7 +158,7 @@ func shareMailbox(t *testing.T, env captureEnv) {
 func lastActivity(t *testing.T, e *integration.SearchEnv, deal ids.UUID) *time.Time {
 	t.Helper()
 	var last *time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT last_activity_at FROM deal WHERE id = $1`, deal).Scan(&last)
 	}); err != nil {
 		t.Fatalf("reading the deal's last activity: %v", err)
@@ -196,7 +196,7 @@ func mailFrom(from, msgID, refs, subject string, cc ...string) []byte {
 func dealsOf(t *testing.T, e *integration.SearchEnv, sourceID string) []ids.UUID {
 	t.Helper()
 	var found []ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT l.deal_id FROM activity a
 			  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'deal'
@@ -216,7 +216,7 @@ func dealsOf(t *testing.T, e *integration.SearchEnv, sourceID string) []ids.UUID
 func activityOf(t *testing.T, e *integration.SearchEnv, sourceID string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_id = $1`, sourceID).Scan(&id)
 	}); err != nil {
 		t.Fatalf("reading the activity of %s: %v", sourceID, err)
@@ -229,7 +229,7 @@ func activityOf(t *testing.T, e *integration.SearchEnv, sourceID string) ids.UUI
 func whichDealQuestions(t *testing.T, e *integration.SearchEnv) (int, []ids.UUID) {
 	t.Helper()
 	var holders []ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT for_user FROM activity_link_suggestion WHERE unit IS NULL
 			 GROUP BY activity_id, for_user ORDER BY activity_id`)
@@ -483,7 +483,7 @@ func TestCaptureAsksNoColleagueTheSenderNamed(t *testing.T) {
 	// rule stands between the named address and the question.
 	shareMailbox(t, env)
 	// The named colleague is a working seat who could hold the task.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `INSERT INTO role_assignment (role_id, user_id)
 			SELECT id, $1 FROM role WHERE key = 'capture_rep'`, e.Rep3)
 		return err
@@ -613,7 +613,7 @@ func (r repairer) operatorPreview(body string) *httptest.ResponseRecorder {
 // runErr is run for a goroutine, which may not fail the test itself.
 func (r repairer) runErr() (int, error) {
 	var out datatask.BatchOut
-	err := database.WithWorkspaceTx(r.system, r.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(r.system, r.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = r.repair.BatchTx(r.system, tx, datatask.BatchIn{Limit: 50, RunID: ids.NewV7()})
 		return err
@@ -624,7 +624,7 @@ func (r repairer) runErr() (int, error) {
 func (r repairer) run(t *testing.T) int {
 	t.Helper()
 	var out datatask.BatchOut
-	if err := database.WithWorkspaceTx(r.system, r.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(r.system, r.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = r.repair.BatchTx(r.system, tx, datatask.BatchIn{Limit: 50, RunID: ids.NewV7()})
 		return err
@@ -818,7 +818,7 @@ func TestFilingOneMailAnswersTheDealQuestionForItsConversation(t *testing.T) {
 	}
 	// The promise watches the answered deal and not the other one.
 	for deal, want := range map[ids.UUID]int{reporting: 1, operations: 0} {
-		if err := database.WithWorkspaceTx(w.ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(w.ctx, e.Pool, func(tx pgx.Tx) error {
 			rows, _, err := w.contacts.OpenTheirCommitmentsForDeal(w.ctx, tx, deal, 20)
 			if err == nil && (len(rows) != want || (want == 1 && rows[0].ID != ids.UUID(promise.Id))) {
 				t.Errorf("deal %s watches %d promises, want %d", deal, len(rows), want)

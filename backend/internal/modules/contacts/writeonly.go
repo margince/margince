@@ -68,6 +68,17 @@ func (s *Store) ApplyCompanyUpdate(ctx context.Context, id ids.CompanyID, in Upd
 	})
 }
 
+// SetCustomFieldsTx is ApplyCompanyUpdate for custom field values alone, on the
+// caller's transaction. Grant, row scope, catalog check, audit and event are
+// the ordinary edit's.
+func (s *Store) SetCustomFieldsTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID, values map[string]any, active CustomColumns) error {
+	if err := auth.Require(ctx, companyEntity, principal.ActionUpdate); err != nil {
+		return err
+	}
+	_, err := s.writeCompanyInTx(ctx, tx, id, UpdateCompanyInput{CustomFields: values}, active.cols)
+	return err
+}
+
 // ApplyLeadUpdate is UpdateLead for a caller that does not read the lead back,
 // so it costs no read for the caller.
 func (s *Store) ApplyLeadUpdate(ctx context.Context, id ids.LeadID, in UpdateLeadInput) error {

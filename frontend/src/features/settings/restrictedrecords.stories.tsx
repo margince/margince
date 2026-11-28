@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -90,7 +91,7 @@ export const PinDialog: Story = {
     await openHeld(context);
     await userEvent.click(
       await within(context.canvasElement).findByRole("button", {
-        name: "Pin a record",
+        name: englishCopy["restricted.pin.action"],
       }),
     );
     const dialog = within(await screen.findByRole("dialog"));

@@ -225,14 +225,13 @@ func scopedArchiveAgent(t *testing.T, e *integration.Env) context.Context {
 
 // pendingApprovals counts the staged rows.
 //
-// Bound through WithWorkspaceTx: Env.Pool is the workspace-bound app role, so an
-// unbound count resolves the policy against a NULL workspace and answers zero
-// for every row that exists — an absence-assertion that passes whether or not
-// anything was staged, which is the one thing this test may not do.
+// Counts through WithTx so the read runs in the same transaction seam as the
+// code under test. An absence assertion that passes whether or not anything was
+// staged proves nothing, and this test may not do that.
 func pendingApprovals(as context.Context, t *testing.T, e *integration.Env) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(as, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(as, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(as, `SELECT count(*) FROM approval WHERE status = 'pending'`).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting the staged approvals: %v", err)

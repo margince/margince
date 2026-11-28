@@ -181,7 +181,9 @@ describe("a waiting row on the queue", () => {
     if (!rowEl) {
       throw new Error("the queue drew no row at all");
     }
-    expect(rowEl.textContent).toContain("Customer waiting");
+    expect(rowEl.textContent).toContain(
+      en["worklist.category.customer_waiting"],
+    );
   });
 
   // Suppressing the title line when a summary is present is only safe because

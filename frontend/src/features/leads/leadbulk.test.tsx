@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import type { BulkAction, BulkOutcome } from "./leadbulk";
 import { LeadBulkBar } from "./leadbulk";
 
@@ -210,12 +211,16 @@ describe("LeadBulkBar — disqualify", () => {
 
     // Nothing is refused before the reader has tried: the bar stays one row.
     const verb = disqualifyButton();
-    expect(screen.queryByText("Choose a reason first.")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["lead.disqualify.reasonRequired"]),
+    ).toBeNull();
 
     await user.click(verb);
     // The sentence is attached to the control, not merely near it, so a
     // screen reader on the button hears what to answer.
-    const sentence = await screen.findByText("Choose a reason first.");
+    const sentence = await screen.findByText(
+      englishCopy["lead.disqualify.reasonRequired"],
+    );
     expect(verb.getAttribute("aria-describedby")).toContain(sentence.id);
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(deletions).toEqual([]);
@@ -449,12 +454,16 @@ describe("LeadBulkBar — confirm and busy state", () => {
 
   it("warns Large change on Disqualify above ten leads", async () => {
     const dialog = await openDisqualifyConfirm(11);
-    expect(within(dialog).getByText("Large change")).toBeTruthy();
+    expect(
+      within(dialog).getByText(englishCopy["bulk.largeTitle"]),
+    ).toBeTruthy();
   });
 
   it("shows no Large change warning on Disqualify at ten leads", async () => {
     const dialog = await openDisqualifyConfirm(10);
-    expect(within(dialog).queryByText("Large change")).toBeNull();
+    expect(
+      within(dialog).queryByText(englishCopy["bulk.largeTitle"]),
+    ).toBeNull();
   });
 
   it("asks before assigning, warns above ten and sends nothing on Cancel", async () => {
@@ -491,7 +500,9 @@ describe("LeadBulkBar — confirm and busy state", () => {
     expect(
       within(dialog).getByText("Assign 11 leads to Lena F.?"),
     ).toBeTruthy();
-    expect(within(dialog).getByText("Large change")).toBeTruthy();
+    expect(
+      within(dialog).getByText(englishCopy["bulk.largeTitle"]),
+    ).toBeTruthy();
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(sent).toEqual([]);
   });

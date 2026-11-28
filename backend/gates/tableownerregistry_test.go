@@ -369,8 +369,16 @@ var tableOwners = map[string]string{
 	"channel_connection": "internal/modules/capture",
 	// A deal's or project's chat channel, and the ledger of what was posted
 	// there.
-	"chat_link":      "internal/modules/chatlinks",
-	"chat_post_item": "internal/modules/chatlinks",
+	"chat_member_grant":      "internal/modules/chatlinks",
+	"chat_team_installation": "internal/modules/chatlinks",
+	"chat_channel_watch":     "internal/modules/chatlinks",
+	"chat_team_thread":       "internal/modules/chatlinks",
+	"chat_bot_delivery":      "internal/modules/chatlinks",
+	"chat_root":              "internal/modules/chatlinks",
+	"chat_send_attempt":      "internal/modules/chatlinks",
+	"chat_member_room":       "internal/modules/chatlinks",
+	"chat_link":              "internal/modules/chatlinks",
+	"chat_post_item":         "internal/modules/chatlinks",
 	// The installation-settings table (ADR-0090/A135). Owned by the platform
 	// mechanism rather than by any module, which is the point: a setting's
 	// MEANING belongs to the module that declares its entry, but no module

@@ -88,7 +88,7 @@ describe("Polish wording in Log activity", () => {
   it("offers no action over an empty note", async () => {
     const { polishAsks } = openForm("log");
     await screen.findByLabelText("Subject *");
-    expect(screen.queryByRole("button", { name: "Polish wording" })).toBeNull();
+    expect(screen.queryByRole("button", { name: en["log.polish"] })).toBeNull();
     expect(polishAsks()).toHaveLength(0);
   });
 

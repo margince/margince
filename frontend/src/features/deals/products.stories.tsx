@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   emptyPage,
@@ -104,7 +105,9 @@ export const List: Story = {
       canvas.queryByRole("navigation", { name: "Pages" }),
     ).toBeNull();
     await expect(
-      canvas.queryByRole("combobox", { name: "Rows per page" }),
+      canvas.queryByRole("combobox", {
+        name: englishCopy["table.rowsPerPage"],
+      }),
     ).toBeNull();
   },
 };
@@ -117,7 +120,7 @@ export const ShortWithArchivedSwitch: Story = {
     await canvas.findByRole("row", { name: /Support Plan/ });
     await waitFor(() => {
       const tools = canvas
-        .getByRole("button", { name: "Show archived" })
+        .getByRole("button", { name: englishCopy["list.showArchived"] })
         .closest<HTMLElement>(".lt-tools");
       expect(tools && getComputedStyle(tools).paddingTop).toBe("0px");
     });
@@ -132,7 +135,7 @@ export const RowMenu: Story = {
       await canvas.findByRole("button", { name: "Actions for Support Plan" }),
     );
     await within(document.body).findByRole("button", {
-      name: "Archive product",
+      name: englishCopy["product.archive"],
     });
   },
 };

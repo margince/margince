@@ -43,7 +43,7 @@ func TestTriageForwardedAliasesRemainSeparateOpenQuestions(t *testing.T) {
 		var reason, raw string
 		var bound bool
 		var proposals int
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			if err := tx.QueryRow(ctx, `SELECT pending_reason, evidence FROM company_domain_disposition WHERE domain = $1`, domain).Scan(&reason, &raw); err != nil {
 				return err
 			}

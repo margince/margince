@@ -34,7 +34,7 @@ func movingCalendarSink(e *integration.Env) *capture.Sink {
 func readMeetingStart(t *testing.T, e *integration.Env, id ids.UUID) time.Time {
 	t.Helper()
 	var start time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT occurred_at FROM activity WHERE id = $1`, id).Scan(&start)
 	}); err != nil {
@@ -89,7 +89,7 @@ func TestAMoveReachesOnlyAMeetingCapturedEarlier(t *testing.T) {
 		t.Fatalf("moving an event never captured: %v", err)
 	}
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity WHERE source_id = 'evt-never-captured'`).Scan(&n)
 	}); err != nil || n != 0 {
@@ -173,7 +173,7 @@ func TestACancellationPastTheStorableRangeRecordsNoScheduledStart(t *testing.T) 
 	}
 
 	var startless bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT scheduled_start IS NULL FROM activity_meeting_history
 			 WHERE activity_id = $1 AND status = 'canceled'`, id).Scan(&startless)
@@ -207,7 +207,7 @@ func TestAMeetingTooLongToStoreIsCapturedWithNoDuration(t *testing.T) {
 	}
 
 	var durationless bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT duration_seconds IS NULL FROM activity WHERE id = $1`, ref.ID).Scan(&durationless)
 	}); err != nil {
@@ -243,7 +243,7 @@ func TestACalendarMoveKeepsAnOutcomeOnlyWhereTheMeetingTookPlace(t *testing.T) {
 
 			var status string
 			var booked int
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(), `
 					SELECT a.meeting_status, (SELECT count(*) FROM activity_meeting_history h
 					        WHERE h.activity_id = a.id AND h.status = 'booked' AND h.scheduled_start = $2)

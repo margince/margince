@@ -110,7 +110,7 @@ describe("CompanyTaskTable: where each task stands on the 360's own day", () => 
   it("says the account has no open task rather than drawing an empty table", () => {
     renderTable([]);
 
-    expect(screen.getByText("No open tasks for this company.")).toBeTruthy();
+    expect(screen.getByText(en["co.next.empty"])).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
   });
 });

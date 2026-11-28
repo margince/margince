@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { CompanyZoneProvider } from "../../lib/companyzone";
 import {
   installFetchStub,
@@ -92,7 +93,7 @@ it("saves the full selected graph layout and context", async () => {
     screen.queryByRole("combobox", { name: "Metrics" }),
   ).not.toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "Customize report" }),
+    screen.getByRole("button", { name: englishCopy["reporting.customize"] }),
   ).toHaveAttribute("aria-expanded", "false");
   await user.click(screen.getByRole("button", { name: "Save report" }));
   await waitFor(() => expect(saved).toHaveBeenCalledOnce());
@@ -170,7 +171,9 @@ it("draws a saved layout's sections under their titles", async () => {
     await screen.findByRole("heading", { name: "Where deals stand" }),
   ).toBeInTheDocument();
   expect(
-    screen.queryByRole("heading", { name: "Sales won over time" }),
+    screen.queryByRole("heading", {
+      name: englishCopy["reporting.bookings_trend"],
+    }),
   ).not.toBeInTheDocument();
 });
 it("previews one chart before it is added, saving nothing", async () => {
@@ -192,14 +195,18 @@ it("previews one chart before it is added, saving nothing", async () => {
     </StoryProviders>,
   );
   await user.click(
-    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+    screen.getByText(englishCopy["reporting.blocks"], {
+      selector: ".disclosure-label",
+    }),
   );
   await user.click(
     await screen.findByRole("button", { name: "Remove Time in current stage" }),
   );
   await pickOption(
     user,
-    screen.getByRole("combobox", { name: "Chart to add" }),
+    screen.getByRole("combobox", {
+      name: englishCopy["reporting.chooseChart"],
+    }),
     "Time in current stage",
   );
   await user.click(screen.getByRole("button", { name: "Preview" }));
@@ -295,7 +302,9 @@ it("opens keyboard-selected evidence with its receipt and restores focus", async
       <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Sales won over time" });
+  await screen.findByRole("heading", {
+    name: englishCopy["reporting.bookings_trend"],
+  });
   // The chart body is lazy, so it can draw after the heading.
   const point = await waitFor(() => {
     const found = container.querySelector<HTMLButtonElement>(
@@ -380,7 +389,7 @@ it("does not request editions or schedules without their read grants", async () 
     ),
   ).toBe(false);
   expect(
-    screen.queryByRole("button", { name: "Save snapshot" }),
+    screen.queryByRole("button", { name: englishCopy["reporting.freeze"] }),
   ).not.toBeInTheDocument();
 });
 it("carries the date range across tabs and keeps the sales pipeline", async () => {
@@ -394,8 +403,13 @@ it("carries the date range across tabs and keeps the sales pipeline", async () =
   );
   const pipeline = await screen.findByRole("combobox", { name: "Pipeline" });
   expect(pipeline).toHaveTextContent("Sales");
-  await user.click(screen.getByRole("button", { name: "SDR outcomes" }));
-  await screen.findByRole("button", { name: "SDR outcomes", pressed: true });
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["reporting.sdr"] }),
+  );
+  await screen.findByRole("button", {
+    name: englishCopy["reporting.sdr"],
+    pressed: true,
+  });
   expect(
     screen.queryByRole("combobox", { name: "Pipeline" }),
   ).not.toBeInTheDocument();
@@ -410,7 +424,7 @@ it("carries the date range across tabs and keeps the sales pipeline", async () =
   ).toHaveTextContent("Sales");
   expect(
     screen.getByRole("combobox", { name: "Date range" }),
-  ).toHaveTextContent("Last completed month");
+  ).toHaveTextContent(englishCopy["reporting.last_month"]);
 });
 
 it("requires confirmation before archiving and explains the schedule effect", async () => {
@@ -426,27 +440,33 @@ it("requires confirmation before archiving and explains the schedule effect", as
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Report actions" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.actions"],
+    }),
   );
   await user.click(
-    await screen.findByRole("button", { name: "Archive report" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.archive"],
+    }),
   );
   const dialog = await screen.findByRole("dialog");
   expect(
-    within(dialog).getByText(
-      "Archive this report and pause its schedules? Saved snapshots remain available.",
-    ),
+    within(dialog).getByText(englishCopy["reporting.archiveConfirm"]),
   ).toBeVisible();
   expect(archive).not.toHaveBeenCalled();
   await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
   expect(archive).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "Report actions" }));
   await user.click(
-    await screen.findByRole("button", { name: "Archive report" }),
+    screen.getByRole("button", { name: englishCopy["reporting.actions"] }),
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.archive"],
+    }),
   );
   await user.click(
     within(await screen.findByRole("dialog")).getByRole("button", {
-      name: "Archive report",
+      name: englishCopy["reporting.archive"],
     }),
   );
   await waitFor(() => expect(archive).toHaveBeenCalledOnce());
@@ -467,7 +487,9 @@ it("restores the selected period and close window after reopening performance", 
   );
   await pickOption(
     user,
-    screen.getByRole("combobox", { name: "Expected close window" }),
+    screen.getByRole("combobox", {
+      name: englishCopy["reporting.closeWindow"],
+    }),
     "Fiscal quarter",
   );
   first.unmount();
@@ -478,10 +500,12 @@ it("restores the selected period and close window after reopening performance", 
   );
   expect(
     await screen.findByRole("combobox", { name: "Date range" }),
-  ).toHaveTextContent("Last completed month");
+  ).toHaveTextContent(englishCopy["reporting.last_month"]);
   expect(
-    screen.getByRole("combobox", { name: "Expected close window" }),
-  ).toHaveTextContent("Fiscal quarter");
+    screen.getByRole("combobox", {
+      name: englishCopy["reporting.closeWindow"],
+    }),
+  ).toHaveTextContent(englishCopy["reporting.fiscal_quarter"]);
 });
 
 it("derives the target period from the business period despite an old bookmark", async () => {
@@ -494,7 +518,9 @@ it("derives the target period from the business period despite an old bookmark",
       <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Sales won over time" });
+  await screen.findByRole("heading", {
+    name: englishCopy["reporting.bookings_trend"],
+  });
   const requests = fetch.mock.calls.flatMap(([input]) =>
     input instanceof Request && input.url.includes("/analytics/evaluate?")
       ? [new URL(input.url)]
@@ -527,5 +553,7 @@ it("labels a frozen pipeline drill-down with its historical state date", async (
   );
   // The drawer is lazy, so it may still be loading when no earlier case drew it.
   expect(await screen.findByText("10/01/2025, 13:00")).toBeVisible();
-  expect(screen.queryByText("Open pipeline today")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(englishCopy["reporting.currentPipeline"]),
+  ).not.toBeInTheDocument();
 });

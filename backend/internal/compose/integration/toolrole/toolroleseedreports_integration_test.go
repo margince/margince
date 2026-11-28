@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -66,14 +65,7 @@ func reportSeeders(s sweepSeed) map[string]func() string {
 		},
 		"forecast_snapshot": func() string { return ownForecastSnapshot(s) },
 		"import_run": s.alone(func() string {
-			profile, status := importjobtest.UploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
-			if status != http.StatusOK {
-				s.t.Fatalf("uploading the import's file → %d", status)
-			}
-			run, status := importjobtest.CreateRunWithMapping(s.t, s.e, "company", profile.SourceRef, map[string]string{"display_name": "display_name"})
-			if status != http.StatusAccepted && status != http.StatusCreated {
-				s.t.Fatalf("starting the import → %d", status)
-			}
+			run := s.testedContactImport()
 			return run.ID
 		}),
 		"corpus_document": func() string {

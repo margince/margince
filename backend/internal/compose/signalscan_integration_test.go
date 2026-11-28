@@ -43,7 +43,7 @@ func TestAGhostedSignalCountsCalendarDaysInTheInstallationZone(t *testing.T) {
 
 	ctx := principal.SystemActing(e.Admin(), signalScanActor)
 	var summary string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := WriteGhostedSignals(ctx, tx, now); err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ func TestAGhostedSignalCountsADayMailFromItsDate(t *testing.T) {
 
 	ctx := principal.SystemActing(e.Admin(), signalScanActor)
 	var summary string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := WriteGhostedSignals(ctx, tx, now); err != nil {
 			return err
 		}
@@ -132,7 +132,7 @@ func TestTheSignalCountsAQuietProjectInCalendarDays(t *testing.T) {
 
 	ctx := principal.SystemActing(e.Admin(), signalScanActor)
 	var summary string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := WriteProjectQuietSignals(ctx, tx, now); err != nil {
 			return err
 		}
@@ -178,7 +178,7 @@ func TestALaterScanKeepsOneGhostedSignalWhoseSummaryStillHolds(t *testing.T) {
 	ctx := principal.SystemActing(e.Admin(), signalScanActor)
 	want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).ghostedThread, ghostedThresholdDays)
 	for _, now := range []time.Time{wrote.AddDate(0, 0, 15), wrote.AddDate(0, 0, 25)} {
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			_, err := WriteGhostedSignals(ctx, tx, now)
 			return err
 		}); err != nil {

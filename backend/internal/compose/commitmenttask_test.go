@@ -34,6 +34,7 @@ func TestACommitmentEditReachesOnlyTheWordingAndTheDay(t *testing.T) {
 		{"clearing the day", func(p *CommitmentTaskProposal) { p.DueDate = "" }, false},
 		{"clearing the wording", func(p *CommitmentTaskProposal) { p.Summary = "  " }, true},
 		{"a day that is not a date", func(p *CommitmentTaskProposal) { p.DueDate = "Friday" }, true},
+		{"the reconfirmation policy", func(p *CommitmentTaskProposal) { p.ReconfirmSource = true }, true},
 		{"the locator", func(p *CommitmentTaskProposal) { p.Locator = "xyz" }, true},
 		{"the party", func(p *CommitmentTaskProposal) { p.Party = "Dana" }, true},
 		{"the promiser", func(p *CommitmentTaskProposal) { id := ids.NewV7(); p.PromiserSeatID = &id }, true},

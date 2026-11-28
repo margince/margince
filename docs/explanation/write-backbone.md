@@ -18,7 +18,7 @@ Read those first if you want the short version.
 HTTP request / agent run / bus consumer
         │  (middleware binds actor + workspace + correlation_id onto ctx)
         ▼
-  module Handler ──► Store.tx(ctx, fn)  ==  database.WithWorkspaceTx(ctx, pool, fn)
+  module Handler ──► Store.tx(ctx, fn)  ==  database.WithTx(ctx, pool, fn)
                           │  (refused before any SQL if no workspace is bound)
                           ▼
         ┌───────────────── ONE transaction ─────────────────┐
@@ -395,17 +395,17 @@ You do not have to track these; a fitness test fails your PR if you break one (s
 
 ## 8. The read side: one snapshot for a composed read
 
-`WithWorkspaceTx` gives a write one transaction for all its work. A read built from many statements has the mirror
+`WithTx` gives a write one transaction for all its work. A read built from many statements has the mirror
 problem. Without a shared snapshot, every store opens its own transaction and answers from its own
 point in time. A page built from 20 lanes would cost 20 transactions and answer from 20 points in
 time.
 
-`WithWorkspaceSnapshot` opens one `REPEATABLE READ` transaction (read-write; see below) and binds it
-to the context. Every `WithWorkspaceTx` below it **joins** that transaction and does not open its
+`WithSnapshot` opens one `REPEATABLE READ` transaction (read-write; see below) and binds it
+to the context. Every `WithTx` below it **joins** that transaction and does not open its
 own:
 
 ```go
-err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+err := database.WithSnapshot(ctx, pool, func(ctx context.Context) error {
     // every store called with this ctx reads from one snapshot
     return assemble(ctx)
 })
@@ -432,7 +432,7 @@ safe to skip", and the page fails two lanes later in some other place.
 The `attention` walk freeze is the worked case: it may fail by design, so it owns its transaction.
 It costs a second connection, so it should be used only when needed.
 
-**Both openers join.** `WithWorkspaceTx` works on the pool. `DB.transact` is the seam on the
+**Both openers join.** `WithTx` works on the pool. `DB.transact` is the seam on the
 handle, and most module stores use it. Each one checks for the snapshot of the current request.
 
 A join written in only one of them would leave most lanes opening their own transactions *and*
@@ -440,7 +440,7 @@ holding a second connection per request. `DB.transact` also skips its statement 
 `BoundStatement` is `SET LOCAL`, so a limit per handle would change the time limit of every later
 lane in someone else's snapshot without a word.
 
-**Stores do not need to know.** Nothing about a store changes: it calls `WithWorkspaceTx` or `db.Tx`
+**Stores do not need to know.** Nothing about a store changes: it calls `WithTx` or `db.Tx`
 as before, and the reader types a composed page uses stay the same.
 
 Held by `worklistsnapshot_integration_test.go`. It measures a composed page against a small route
@@ -473,7 +473,7 @@ in the same run. It fails when the count starts to grow with the number of lanes
 | | |
 |---|---|
 | Write shape (`Audit`, `AuditWithEvidence`, `Emit`, `Patch`) | `internal/platform/database/storekit/{storekit,patch}.go` |
-| Composed-read snapshot (`WithWorkspaceSnapshot`, `Detached`) | `internal/platform/database/database.go` |
+| Composed-read snapshot (`WithSnapshot`, `Detached`) | `internal/platform/database/database.go` |
 | Envelope + catalog (types, streams, versions, groups) | `internal/shared/kernel/events/{envelope,catalog,streams,groups}.go` |
 | The relay | `internal/platform/events/relay.go` |
 | Consumer subscriber + dedupe | `internal/platform/events/{subscriber,dedupe}.go` |

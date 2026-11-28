@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { AutomationPreview, AutomationRuns } from "./automationdetail";
 import { OutcomeBadge } from "./automations.runrow";
 
@@ -121,7 +122,9 @@ describe("AutomationRuns", () => {
     expect(screen.getByText("no activity 14d on deal BÄR Pharma")).toBeTruthy();
     expect(screen.getByText("deal:BÄR Pharma")).toBeTruthy();
     expect(screen.getByText("send failed")).toBeTruthy();
-    expect(screen.getByText("Needs approval")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["auto.runs.needsApproval"]),
+    ).toBeTruthy();
   });
 
   it("says why a run stopped from its reason code", async () => {
@@ -143,7 +146,9 @@ describe("AutomationRuns", () => {
     );
     render(<AutomationRuns automationId="au-1" />);
     expect(
-      await screen.findByText("the record it acts on no longer exists"),
+      await screen.findByText(
+        englishCopy["auto.runs.reasonCode.target_missing"],
+      ),
     ).toBeTruthy();
     expect(
       screen.queryByText("the target record could not be found"),
@@ -192,7 +197,9 @@ describe("AutomationRuns", () => {
     const user = userEvent.setup();
     await pickOption(user, screen.getByRole("combobox"), "Failed");
     await waitFor(() =>
-      expect(screen.getByText("No runs with this outcome.")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["auto.runs.emptyFiltered"]),
+      ).toBeTruthy(),
     );
     // A narrowing that found nothing keeps its dial, so it can be undone.
     expect(screen.getByRole("combobox").textContent).toContain("Failed");
@@ -226,9 +233,7 @@ describe("AutomationRuns", () => {
     );
     render(<AutomationRuns automationId="au-1" />);
     await waitFor(() =>
-      expect(
-        screen.getByText("This automation has not fired yet."),
-      ).toBeTruthy(),
+      expect(screen.getByText(englishCopy["auto.runs.empty"])).toBeTruthy(),
     );
     // Nothing to narrow yet: the empty history is its one line, no dial.
     expect(screen.queryByRole("combobox")).toBeNull();
@@ -285,11 +290,11 @@ describe("AutomationPreview", () => {
     );
     render(<AutomationPreview automationId="au-1" />);
     await waitFor(() => expect(screen.getByText("From now on")).toBeTruthy());
-    expect(screen.getByText("Historical preview unavailable")).toBeTruthy();
     expect(
-      screen.getByText(
-        "Turning this rule on handles new events. It does not process existing records.",
-      ),
+      screen.getByText(englishCopy["auto.preview.historyUnavailable"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["auto.preview.futureEventsOnly"]),
     ).toBeTruthy();
     expect(screen.queryByText(/Matches now:/)).toBeNull();
     expect(screen.queryByText(/Would fire:/)).toBeNull();
@@ -325,7 +330,7 @@ describe("AutomationPreview", () => {
     );
     render(<AutomationPreview automationId="au-1" />);
     await waitFor(() =>
-      expect(screen.getByText("Repeat each year")).toBeTruthy(),
+      expect(screen.getByText(englishCopy["auto.renewal.annual"])).toBeTruthy(),
     );
     expect(
       screen.getByText("2 visible records have no renewal date"),
@@ -333,7 +338,9 @@ describe("AutomationPreview", () => {
     const dates = screen.getByText(/^Remind on .* for the renewal on /);
     expect(dates.textContent).toMatch(/2026.*2027/);
     expect(screen.queryByRole("group", { name: "Window" })).toBeNull();
-    expect(screen.getByText("Trailing estimate unavailable")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["auto.preview.notComputable"]),
+    ).toBeTruthy();
   });
 
   it("posts window_days:30 on open and shows matches-now + would-fire", async () => {
@@ -398,7 +405,9 @@ describe("AutomationPreview", () => {
     );
     render(<AutomationPreview automationId="au-1" />);
     await waitFor(() =>
-      expect(screen.getByText("Trailing estimate unavailable")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["auto.preview.notComputable"]),
+      ).toBeTruthy(),
     );
     expect(screen.queryByText(/Would fire/)).toBeNull();
   });
@@ -519,9 +528,7 @@ describe("AutomationPreview", () => {
     render(<AutomationPreview automationId="au-1" />);
     await waitFor(() =>
       expect(
-        screen.getByText(
-          "Read-only preview. No records are changed and nothing is sent.",
-        ),
+        screen.getByText(englishCopy["auto.preview.explainer"]),
       ).toBeTruthy(),
     );
   });

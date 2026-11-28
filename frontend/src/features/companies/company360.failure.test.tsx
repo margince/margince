@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { AppErrorBoundary } from "../../app/errorboundary";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyScreen } from "./companies";
 
@@ -112,7 +113,7 @@ describe("the company record page when its 360 read fails", () => {
       // tell which company they were looking at.
       const heading = await screen.findByRole("heading", { level: 1 });
       expect(heading.textContent).toContain("Brandt Automotive GmbH");
-      expect(screen.queryByText("This view stopped working")).toBeNull();
+      expect(screen.queryByText(englishCopy["app.errorTitle"])).toBeNull();
     },
   );
 
@@ -126,7 +127,7 @@ describe("the company record page when its 360 read fails", () => {
 
     await screen.findByRole("heading", { level: 1 });
     const unavailable = await screen.findAllByText(
-      "Some data did not load, so this section may be incomplete.",
+      englishCopy["state.unavailable"],
     );
     expect(unavailable.length).toBeGreaterThan(0);
   });

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -84,7 +85,9 @@ const rendersTable: NonNullable<Story["play"]> = async ({ canvasElement }) => {
   await expect(canvas.getByText("Never")).toBeVisible();
   // The rule that drafts an email waits for approval, so it says so too.
   await expect(
-    within(canvas.getByTestId("automation-au-5")).getByText("Needs approval"),
+    within(canvas.getByTestId("automation-au-5")).getByText(
+      englishCopy["auto.tier.approval"],
+    ),
   ).toBeVisible();
 };
 
@@ -133,7 +136,7 @@ export const RunHistoryOpen: Story = {
     );
     const body = within(canvasElement.ownerDocument.body);
     await user.click(await body.findByRole("button", { name: "Runs" }));
-    await canvas.findByText("This automation has not fired yet.");
+    await canvas.findByText(englishCopy["auto.runs.empty"]);
     // The menu closes after the choice and the panel it opened takes focus.
     await expect(body.queryByRole("button", { name: "Runs" })).toBeNull();
     await expect(canvasElement.ownerDocument.activeElement).toBe(
@@ -178,7 +181,7 @@ export const PausedReason: Story = {
     const user = userEvent.setup();
     await user.click(
       await within(canvasElement).findByRole("button", {
-        name: "Paused · list archived",
+        name: englishCopy["auto.pausedShort.listArchived"],
       }),
     );
     await within(canvasElement.ownerDocument.body).findByText(

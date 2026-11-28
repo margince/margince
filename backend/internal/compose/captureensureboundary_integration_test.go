@@ -237,7 +237,7 @@ func judgeAsCustomers(t *testing.T, e *integration.Env, want int) {
 		t.Fatalf("claimed %d questions (err %v), want %d", len(due), err, want)
 	}
 	for _, question := range due {
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := ledger.Resolve(e.Admin(), tx, question, capture.PendingStatusReal, "fixture")
 			return err
 		}); err != nil {

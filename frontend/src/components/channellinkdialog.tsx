@@ -14,6 +14,7 @@ import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { labelFor } from "../lib/labelfor";
 import { blankRequired, problemMessageOf } from "../lib/problem";
+import { ChannelConversationPicker } from "./channelconversationpicker";
 
 type ChannelLinkState = components["schemas"]["ChannelLinkState"];
 type LinkChannelRequest = components["schemas"]["LinkChannelRequest"];
@@ -54,7 +55,13 @@ export function LinkExistingDialog({
   onClose,
   link,
   channels,
+  provider = "dispact",
+  recordType,
+  recordId,
 }: Readonly<{
+  provider?: components["schemas"]["MessengerProvider"];
+  recordType?: components["schemas"]["ChannelLinkRecordType"];
+  recordId?: string;
   open: boolean;
   onClose: () => void;
   link: UseMutationResult<ChannelLinkState, Error, LinkChannelRequest>;
@@ -66,6 +73,8 @@ export function LinkExistingDialog({
   const formId = useId();
   const [faults, faultsRoot] = useFieldFaults();
   const [channel, setChannel] = useState("");
+  const [root, Root] = useState("");
+  const [specific, Specific] = useState(false);
   const [summarize, setSummarize] = useState(true);
   const [verbosity, setVerbosity] = useState<Verbosity>(DEFAULT_VERBOSITY);
   const channelLabel = t("channelLink.channelField");
@@ -93,10 +102,13 @@ export function LinkExistingDialog({
           const blank = blankRequired(locale, {
             channel: [channelLabel, channel],
           });
-          if (faults.show(blank) || link.isPending) return;
+          if (faults.show(blank) || link.isPending || (specific && !root))
+            return;
           link.mutate(
             {
               mode: "existing",
+              provider,
+              ...(specific ? { root_id: root } : {}),
               channel: channel.trim(),
               verbosity,
               summarize_history: summarize,
@@ -117,6 +129,7 @@ export function LinkExistingDialog({
               value={channel}
               onChange={(next) => {
                 setChannel(next);
+                Root("");
                 faults.edited("channel");
               }}
               suggestions={(channels ?? []).map((offered) => ({
@@ -126,6 +139,29 @@ export function LinkExistingDialog({
             />
           )}
         </Field>
+        {provider !== "dispact" && recordType && recordId && (
+          <>
+            <Checkbox
+              label={t("channelLink.specificConversation")}
+              checked={specific}
+              onChange={(event) => {
+                Specific(event.target.checked);
+                Root("");
+              }}
+            />
+            {specific && channel && (
+              <ChannelConversationPicker
+                key={channel}
+                provider={provider}
+                recordType={recordType}
+                recordId={recordId}
+                channel={channel}
+                value={root}
+                onChange={Root}
+              />
+            )}
+          </>
+        )}
         <Field label={t("channelLink.verbosity")}>
           {(control) => (
             <Select
@@ -163,6 +199,7 @@ export function LinkExistingDialog({
           type="submit"
           form={formId}
           pending={link.isPending}
+          disabled={specific && !root}
           busyLabel={t("create.saving")}
         >
           {t("channelLink.linkCta")}

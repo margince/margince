@@ -77,7 +77,7 @@ func TestADealSeatLeavesTheCommitteeOnItsEndDay(t *testing.T) {
 
 	ctx := e.Admin()
 	var seated, covered []ids.UUID
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		seats, err := deals.StakeholderSeats(ctx, tx, []ids.UUID{deal.UUID})
 		if err != nil {
 			return err

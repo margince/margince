@@ -16,6 +16,7 @@ import { stubClipboard } from "../../design-system/clipboard-testing";
 import { formatDate, formatDateTime } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ForecastShareActions, ShareViewButton } from "./analytics.share";
 import { OPEN_SHARES_KEY } from "./analytics.sharelist";
@@ -127,7 +128,7 @@ describe("sharing a forecast view", () => {
     // Offered and then refused by the server is the shape to avoid: the reader
     // presses a choice, waits, and is told no.
     expect(
-      screen.getByText("No snapshot exists for this period yet."),
+      screen.getByText(englishCopy["analytics.share.snapshotUnavailable"]),
     ).toBeTruthy();
   });
 
@@ -147,9 +148,7 @@ describe("sharing a forecast view", () => {
     expect(link.textContent).toContain("tok-xyz");
     expect(screen.getByText(/link is shown only once/)).toBeTruthy();
     expect(
-      screen.getByText(
-        "If you leave without copying, the link cannot be shown again. It stays open until it expires, you close it under Shared links, or you lose forecast access.",
-      ),
+      screen.getByText(englishCopy["analytics.share.leaveWarning"]),
     ).toBeTruthy();
     expect(screen.queryByText(/discards the link/)).toBeNull();
   });
@@ -169,7 +168,7 @@ describe("sharing a forecast view", () => {
     await userEvent.keyboard("{Escape}");
 
     const guard = await screen.findByRole("dialog", {
-      name: "Discard unsaved changes?",
+      name: englishCopy["unsaved.title"],
     });
     expect(guard.textContent).toContain(
       "It stays open until it expires, you close it under Shared links, or you lose forecast access.",
@@ -392,7 +391,9 @@ describe("the links a reader has shared", () => {
       assertable: false,
     });
 
-    await screen.findByRole("button", { name: "Shared links" });
+    await screen.findByRole("button", {
+      name: englishCopy["analytics.share.listOpen"],
+    });
     expect(screen.queryByRole("button", { name: "Share view" })).toBeNull();
   });
 
@@ -405,7 +406,11 @@ describe("the links a reader has shared", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Share view" })).toBeNull(),
     );
-    expect(screen.queryByRole("button", { name: "Shared links" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["analytics.share.listOpen"],
+      }),
+    ).toBeNull();
     expect(calls).not.toContain("GET /forecast/shares");
   });
 
@@ -421,10 +426,12 @@ describe("the links a reader has shared", () => {
     mountActions();
 
     await user.click(
-      await screen.findByRole("button", { name: "Shared links" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.share.listOpen"],
+      }),
     );
     const drawer = await screen.findByRole("dialog", {
-      name: "Your shared links",
+      name: englishCopy["analytics.share.listTitle"],
     });
 
     const north = await within(drawer).findByText("Team North");
@@ -453,7 +460,9 @@ describe("the links a reader has shared", () => {
     mountActions();
 
     await user.click(
-      await screen.findByRole("button", { name: "Shared links" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.share.listOpen"],
+      }),
     );
 
     expect(await screen.findByText(/You have no open links/)).toBeTruthy();
@@ -475,7 +484,9 @@ describe("the links a reader has shared", () => {
     mountActions();
 
     await user.click(
-      await screen.findByRole("button", { name: "Shared links" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.share.listOpen"],
+      }),
     );
     const verb = await screen.findByRole("button", {
       name: "Close link",
@@ -491,7 +502,7 @@ describe("the links a reader has shared", () => {
     await user.click(verb);
     // Asked first: nothing is closed until the reader confirms.
     const confirm = await screen.findByRole("dialog", {
-      name: "Close this link?",
+      name: englishCopy["analytics.share.closeTitle"],
     });
     expect(calls).not.toContain("DELETE /forecast/shares/share-north");
     await user.click(
@@ -501,7 +512,9 @@ describe("the links a reader has shared", () => {
     await waitFor(() => expect(screen.queryByText("Team North")).toBeNull());
     expect(calls).toContain("DELETE /forecast/shares/share-north");
     expect(
-      screen.getByRole("dialog", { name: "Your shared links" }),
+      screen.getByRole("dialog", {
+        name: englishCopy["analytics.share.listTitle"],
+      }),
     ).toBeTruthy();
     expect(screen.getByText("Whole company")).toBeTruthy();
   });
@@ -529,11 +542,13 @@ describe("the links a reader has shared", () => {
     mountActions();
 
     await user.click(
-      await screen.findByRole("button", { name: "Shared links" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.share.listOpen"],
+      }),
     );
     await user.click(await screen.findByRole("button", { name: "Close link" }));
     const confirm = await screen.findByRole("dialog", {
-      name: "Close this link?",
+      name: englishCopy["analytics.share.closeTitle"],
     });
     await user.click(
       within(confirm).getByRole("button", { name: "Close link" }),
@@ -568,7 +583,9 @@ describe("the links a reader has shared", () => {
     mountActions(Number.POSITIVE_INFINITY);
 
     await user.click(
-      await screen.findByRole("button", { name: "Shared links" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.share.listOpen"],
+      }),
     );
     await screen.findByText(/You have no open links/);
     await user.keyboard("{Escape}");
@@ -577,7 +594,11 @@ describe("the links a reader has shared", () => {
     await user.click(screen.getByRole("button", { name: "Share view" }));
     await user.click(screen.getByRole("button", { name: "Create link" }));
     await user.click(await screen.findByRole("button", { name: "Done" }));
-    await user.click(screen.getByRole("button", { name: "Shared links" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["analytics.share.listOpen"],
+      }),
+    );
 
     expect(await screen.findByText("Whole company")).toBeTruthy();
     expect(
@@ -610,7 +631,11 @@ describe("the links a reader has shared", () => {
     client.setQueryData(OPEN_SHARES_KEY, [northLink, companyLink]);
     await user.click(screen.getByRole("button", { name: "Close link" }));
     await user.click(await screen.findByRole("button", { name: "Done" }));
-    await user.click(screen.getByRole("button", { name: "Shared links" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["analytics.share.listOpen"],
+      }),
+    );
 
     expect(await screen.findByText("Whole company")).toBeTruthy();
     await waitFor(() => expect(screen.queryByText("Team North")).toBeNull());
@@ -631,7 +656,9 @@ describe("the links a reader has shared", () => {
     mountActions();
 
     await user.click(
-      await screen.findByRole("button", { name: "Shared links" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.share.listOpen"],
+      }),
     );
 
     expect(await screen.findByText("Team North")).toBeTruthy();
@@ -654,7 +681,9 @@ describe("the links a reader has shared", () => {
     mountActions();
 
     await user.click(
-      await screen.findByRole("button", { name: "Shared links" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.share.listOpen"],
+      }),
     );
 
     expect(
@@ -675,13 +704,17 @@ describe("the links a reader has shared", () => {
     const user = userEvent.setup();
     mountActions();
     await user.click(
-      await screen.findByRole("button", { name: "Shared links" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.share.listOpen"],
+      }),
     );
     await screen.findByText("Team North");
     const rowVerb = screen.getByRole("button", { name: "Close link" });
 
     await user.click(rowVerb);
-    const confirm = screen.getByRole("dialog", { name: "Close this link?" });
+    const confirm = screen.getByRole("dialog", {
+      name: englishCopy["analytics.share.closeTitle"],
+    });
     await user.click(
       within(confirm).getByRole("button", { name: "Close link" }),
     );
@@ -738,7 +771,11 @@ async function closeOneOfThree(closed: OpenShare) {
   );
   const user = userEvent.setup();
   mountActions();
-  await user.click(await screen.findByRole("button", { name: "Shared links" }));
+  await user.click(
+    await screen.findByRole("button", {
+      name: englishCopy["analytics.share.listOpen"],
+    }),
+  );
   await screen.findByText("Whole company");
   const closeVerb = (population: string) =>
     screen.getByRole("button", {
@@ -746,13 +783,17 @@ async function closeOneOfThree(closed: OpenShare) {
       description: new RegExp(`${population}$`),
     });
   const confirmClose = async () => {
-    const confirm = screen.getByRole("dialog", { name: "Close this link?" });
+    const confirm = screen.getByRole("dialog", {
+      name: englishCopy["analytics.share.closeTitle"],
+    });
     await user.click(
       within(confirm).getByRole("button", { name: "Close link" }),
     );
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Close this link?" }),
+        screen.queryByRole("dialog", {
+          name: englishCopy["analytics.share.closeTitle"],
+        }),
       ).toBeNull(),
     );
   };

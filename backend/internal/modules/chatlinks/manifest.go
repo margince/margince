@@ -17,7 +17,7 @@ import (
 // The app manifest Dispact installs Margince from, as agreed with Dispact.
 const (
 	appName        = "Margince"
-	appDescription = "Links a deal or project to a channel: a card, short updates, and summaries of the talk filed on the record."
+	appDescription = "Links a company, deal or project to a channel: a card, short updates, and summaries of the talk filed on the record."
 	// eventsPath is the push receiver; the manifest names it before it serves.
 	eventsPath = "/v1/channel-events/dispact"
 	// appTokenTTL is Dispact's default session token lifetime; Margince opens
@@ -28,10 +28,10 @@ const (
 var (
 	appScopes = []string{
 		"chat:write:channel", "channel:create", "channel:members:write",
-		"users:read:email", "channel:history:read", "channel:files:read",
+		"users:read:email", "channel:members:read", "channel:history:read", "channel:files:read",
 	}
 	// appEventTypes are the notices the app subscribes to.
-	appEventTypes = []string{"message.created", "thread.replied", "message.updated", "channel.archived"}
+	appEventTypes = []string{"message.created", "thread.replied", "message.updated", "message.deleted", "channel.archived"}
 )
 
 // botConnectObject is the RBAC object that admits connecting a chat bot. The

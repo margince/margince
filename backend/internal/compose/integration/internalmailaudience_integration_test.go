@@ -85,7 +85,7 @@ func TestInternalMailHasNoWithheldRowAndSharesOnlyOneMessageWithNamedColleagues(
 	if _, err := e.Activities.SetAudience(participant, ids.From[ids.ActivityKind](id), activities.SetAudienceInput{Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "team", SubjectID: e.Team1}}}); !errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Fatalf("team share accepted: %v", err)
 	}
-	if err := database.WithWorkspaceTx(participant, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(participant, e.Pool, func(tx pgx.Tx) error {
 		return activities.RecomputeAudienceTx(participant, tx, ids.From[ids.ActivityKind](id))
 	}); err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestInternalMailHasNoWithheldRowAndSharesOnlyOneMessageWithNamedColleagues(
 		t.Fatal(err)
 	}
 	assertInternalMailReadable(colleague, t, e, id, false)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var evidence bool
 		if err := tx.QueryRow(e.Admin(), `SELECT `+auth.ActivityExternalEvidenceClause("a")+` FROM activity a WHERE a.id = $1`, id).Scan(&evidence); err != nil {
 			return err
@@ -109,7 +109,7 @@ func TestInternalMailHasNoWithheldRowAndSharesOnlyOneMessageWithNamedColleagues(
 		t.Fatal(err)
 	}
 	assertInternalMailReadable(participant, t, e, id, false)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		reader, err := auth.ActivityHasAReaderTx(e.Admin(), tx, id)
 		if err == nil && reader {
 			t.Error("departed participant kept a reader")
@@ -143,7 +143,7 @@ func seedRestrictedInternalMail(participant context.Context, t *testing.T, e *En
 	connector := principal.WithActor(participant, actor)
 	mailbox := ids.NewV7()
 	provenance := json.RawMessage(`{"connection_id":"` + mailbox.String() + `","owner_user_id":"` + actor.UserID.String() + `","provider":"imap","generation":1,"enrolled_at":"2026-01-01T00:00:00Z","enrolled_by":"human:admin","policy_since":"2026-01-01T00:00:00Z"}`)
-	if err := database.WithWorkspaceTx(connector, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(connector, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(connector, `INSERT INTO activity (id, kind, occurred_at, source, captured_by, audience, body)
    VALUES ($1, 'email', now(), 'imap', 'connector:imap', 'workspace', 'Internal account discussion')`, id); err != nil {
 			return err

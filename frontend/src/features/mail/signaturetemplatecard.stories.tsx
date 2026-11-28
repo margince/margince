@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent } from "storybook/test";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -65,9 +66,13 @@ export const Editable: Story = {
 export const EditedOnSaveBar: Story = {
   render: story({ installation_settings: ["read", "update"] }),
   play: async () => {
-    const box = await screen.findByRole("textbox", { name: "Template (HTML)" });
+    const box = await screen.findByRole("textbox", {
+      name: englishCopy["signatureTemplate.label"],
+    });
     await userEvent.type(box, " Gradion");
-    await expect(await screen.findByText("Unsaved changes")).toBeTruthy();
+    await expect(
+      await screen.findByText(englishCopy["saveBar.unsaved"]),
+    ).toBeTruthy();
   },
 };
 

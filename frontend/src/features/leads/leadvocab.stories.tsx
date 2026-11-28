@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -144,10 +145,10 @@ export const Reader: Story = {
     const canvas = within(canvasElement);
     await canvas.findByTestId("lead-first-response-target");
     await expect(
-      canvas.queryByText("Your role cannot change this setting."),
+      canvas.queryByText(englishCopy["leadHandling.readOnly"]),
     ).toBeNull();
     await expect(
-      canvas.queryByText("Your role can add entries but not change them"),
+      canvas.queryByText(englishCopy["leadSources.addOnlyTitle"]),
     ).toBeNull();
   },
 };
@@ -162,7 +163,7 @@ export const Adder: Story = {
       await canvas.findByTestId("lead-first-response-target"),
     ).toHaveAccessibleDescription(/Your role cannot change this setting\./);
     await expect(
-      canvas.getAllByText("Your role can add entries but not change them"),
+      canvas.getAllByText(englishCopy["leadSources.addOnlyTitle"]),
     ).toHaveLength(2);
   },
 };
@@ -246,9 +247,7 @@ export const DuplicateReason: Story = {
     const page = within(canvasElement.ownerDocument.body);
     const dialog = within(await page.findByRole("dialog"));
     await userEvent.type(dialog.getByLabelText("Reason"), "Bad timing{Enter}");
-    await dialog.findByText(
-      "A reason with this name already exists. Choose another name.",
-    );
+    await dialog.findByText(englishCopy["leadReasons.duplicate"]);
   },
 };
 

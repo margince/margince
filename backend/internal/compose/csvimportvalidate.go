@@ -97,6 +97,9 @@ func (h importHandlers) checkedTest(
 	if err != nil {
 		return nil, migration.RunMapping{}, err
 	}
+	if err := importwire.RefuseBeyondOwnImport(ctx, mapping); err != nil {
+		return nil, migration.RunMapping{}, err
+	}
 	source, _, err := bundleSourceFor(h.blobs, mapping, run.SourceRef, h.uploadLimit)
 	if err != nil {
 		return nil, migration.RunMapping{}, importwire.Problem(err)

@@ -43,6 +43,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -315,7 +316,7 @@ func readStoredRouting(ctx context.Context, pool *pgxpool.Pool) (ai.RoutingConfi
 // runs before this; taking the first here would be picking one of two answers
 // to a question that must not have two.
 func singletonWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, error) {
-	live, err := enumerateWorkspaces(ctx, pool)
+	live, err := database.LiveWorkspaces(ctx, pool)
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: resolving the installation's workspace: %w", err)
 	}

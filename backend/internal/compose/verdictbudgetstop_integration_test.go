@@ -153,7 +153,7 @@ func attemptsAndClaim(t *testing.T, e *integration.Env, table string, id ids.UUI
 	t.Helper()
 	var attempts int
 	var claimed bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			// The table is one of two compile-time literals above, never a
 			// value off a request.

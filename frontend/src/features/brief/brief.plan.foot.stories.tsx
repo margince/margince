@@ -6,6 +6,7 @@ import { expect, fn, within } from "storybook/test";
 import { StoryProviders } from "../../testing/story-utils";
 import { PlanFoot } from "./brief.plan.foot";
 import "./brief.plan.css";
+import { en as englishCopy } from "../../i18n/en";
 
 // The weekly plan's save bar: the Save that counts what is ticked, and the
 // refusal that stays after the week closed.
@@ -39,7 +40,9 @@ export const Staged: Story = {
     await expect(
       canvas.getByRole("button", { name: "Save 2 changes" }),
     ).toBeVisible();
-    await expect(canvas.queryByText("Some changes not saved")).toBeNull();
+    await expect(
+      canvas.queryByText(englishCopy["plan.refusedTitle"]),
+    ).toBeNull();
   },
 };
 
@@ -56,7 +59,9 @@ export const RefusedAfterClose: Story = {
   args: { editable: false, staged: 2, unsaved: 2 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("Some changes not saved")).toBeVisible();
+    await expect(
+      canvas.getByText(englishCopy["plan.refusedTitle"]),
+    ).toBeVisible();
     await expect(
       canvas.getByText(
         "2 commitments were not saved. They are still checked. Retry.",

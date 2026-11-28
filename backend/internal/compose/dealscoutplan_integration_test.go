@@ -86,7 +86,7 @@ func TestTheScoutReachesACitedActivityByItsPrimaryKey(t *testing.T) {
 	query, args := dealscout.EvidenceSQL(now.Add(-dealScoutWindow), now, dealScoutCompanyCap, true)
 
 	var raw []byte
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
 			return err

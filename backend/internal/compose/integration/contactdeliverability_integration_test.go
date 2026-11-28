@@ -63,7 +63,7 @@ func TestContact360NamesABouncedAddressAndWithholdsWithoutTheGrant(t *testing.T)
 	commsStore := comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB()))
 	sender := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 	var deliveryID ids.UUID
-	if err := database.WithWorkspaceTx(sender, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(sender, e.Pool, func(tx pgx.Tx) error {
 		var txErr error
 		deliveryID, txErr = commsStore.StageTx(sender, tx, comms.StageInput{
 			ActivityID: activityID, Provider: "gmail", MessageID: "dead@myco.test",
@@ -125,7 +125,7 @@ func TestContact360NamesABouncedAddressAndWithholdsWithoutTheGrant(t *testing.T)
 	// contact minting produces — and a third rep then creates their own
 	// contact carrying that address.
 	probeDelivery := ids.UUID{}
-	if err := database.WithWorkspaceTx(sender, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(sender, e.Pool, func(tx pgx.Tx) error {
 		var txErr error
 		probeDelivery, txErr = commsStore.StageTx(sender, tx, comms.StageInput{
 			ActivityID: activityID, Provider: "gmail", MessageID: "probe@myco.test",

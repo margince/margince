@@ -6,7 +6,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-93 columns · primary key `(id)` · referenced by 51 foreign keys
+93 columns · primary key `(id)` · referenced by 52 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -15,7 +15,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `ai_assisted` | `boolean`, default `false` | yes | Whether an AI model rewrote the subject or body before it was saved, so a reader sees the words as AI-assisted. |
 | `assignee_id` | `uuid` |  | Task only. |
 | `audience` | `text`, default `'workspace'::text` | yes | Who may read this activity's CONTENT once the row is discoverable at all. |
-| `audience_reason` | `text` |  | Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). |
+| `audience_reason` | `text` |  | Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the company turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of your company; no result opens it, the mailbox owner sharing the thread does), `manual` (a human said so). |
 | `body` | `text` |  |  |
 | `body_completeness` | `text`, default `'complete'::text` | yes | How much of a mail's text Margince could decode. |
 | `body_own_end` | `integer` |  |  |
@@ -833,7 +833,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_review_response
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -845,7 +845,6 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `outcome` | `text` | yes | One of `won`, `lost`. |
 | `questions` | `jsonb` | yes |  |
-| `revision` | `integer`, default `1` | yes |  |
 | `submission_id` | `uuid` | yes |  |
 | `template_key` | `text` | yes |  |
 | `template_version` | `integer` | yes |  |
@@ -867,7 +866,6 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_review_response_answers_shape`: `CHECK ((jsonb_typeof(answers) = 'object'))`
 - `activity_review_response_outcome_check`: `CHECK ((outcome = ANY (ARRAY['won', 'lost'])))`
 - `activity_review_response_questions_shape`: `CHECK (((jsonb_typeof(questions) = 'array') AND (jsonb_array_length(questions) > 0)))`
-- `activity_review_response_revision_check`: `CHECK ((revision >= 1))`
 
 **Indexes**
 
@@ -1442,6 +1440,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `consent_purpose_keys`: `BEFORE INSERT OR UPDATE OF payload FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('json', 'live', 'payload')`
 - `scheduled_send_scheduled_by_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.scheduled_by IS NOT NULL) AND (new.status = ANY (ARRAY['scheduled', 'held', 'sending'])))) EXECUTE FUNCTION refuse_retired_member_work('scheduled_by')`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "held_reason": 2000, "origin_kind": 20000, "scheduled_tz": 20000, "agent_actor_id": 20000, "principal_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_actor_id":20000,"held_reason":2000,"origin_kind":20000,"principal_kind":20000,"scheduled_tz":20000,"status":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "held_reason": 2000, "origin_kind": 20000, "scheduled_tz": 20000, "agent_actor_id": 20000, "principal_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_actor_id":20000,"held_reason":2000,"origin_kind":20000,"principal_kind":20000,"scheduled_tz":20000,"status":20000}')`

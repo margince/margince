@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -86,7 +87,9 @@ it.each([undefined, current, { ...current, kind: "request_review" }])(
   async (basis) => {
     show(basis);
     expect(
-      await screen.findByRole("button", { name: "Open the message" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.standing.next.openMessage"],
+      }),
     ).toBeVisible();
     expect(screen.queryByText("200 days")).not.toBeInTheDocument();
   },

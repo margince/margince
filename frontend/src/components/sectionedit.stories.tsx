@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "../design-system/atoms";
+import { en as englishCopy } from "../i18n/en";
 import { StoryProviders } from "../testing/story-utils";
 import type { CreateField } from "./create";
 import type { RailEdit } from "./railfield";
@@ -148,7 +149,7 @@ export const FlowAsksFirst: Story = {
     await user.type(dialog.getByRole("textbox", { name: "Job title" }), "s");
     await user.click(dialog.getByRole("button", { name: "Change Owner" }));
     const question = await screen.findByRole("dialog", {
-      name: "Discard unsaved changes?",
+      name: englishCopy["unsaved.title"],
     });
     await waitFor(() => expect(question).toBeVisible());
   },

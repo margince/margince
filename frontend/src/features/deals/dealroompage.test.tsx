@@ -17,6 +17,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { DealRoomPage } from "./dealroompage";
@@ -147,7 +148,7 @@ it("names the room, marks it live, and counts who is in it", async () => {
     screen.getByText("Last seen by a buyer: 24 Aug 2026"),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "← Back to deal" }),
+    screen.getByRole("button", { name: englishCopy["roompage.backToDeal"] }),
   ).toBeInTheDocument();
 });
 
@@ -202,13 +203,17 @@ it("ends access on the day picked from the calendar", async () => {
   await user.click(
     await screen.findByRole("button", { name: /^Set end date/ }),
   );
-  const box = await screen.findByRole("textbox", { name: "Access ends on" });
+  const box = await screen.findByRole("textbox", {
+    name: englishCopy["roompage.expiryLabel"],
+  });
   expect(box).toHaveValue("30/09/2026");
   await user.click(screen.getByRole("button", { name: /^Choose date/ }));
   await user.click(
     await screen.findByRole("button", { name: "Monday, 28 September 2026" }),
   );
-  const dialog = screen.getByRole("dialog", { name: "Set end date" });
+  const dialog = screen.getByRole("dialog", {
+    name: englishCopy["roompage.setExpiry"],
+  });
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
   await waitFor(() =>
@@ -220,26 +225,34 @@ it("asks an editor to replace an unavailable steward through the existing room e
   const user = userEvent.setup();
   stubApi({ ...ROOM, needs_steward: true }, []);
   render(<DealRoomPage dealId="deal-1" />);
-  expect(await screen.findByText("New contact needed")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["room.stewardNeeded.title"]),
+  ).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Manage room" }));
   const dialog = await screen.findByRole("dialog", { name: "Manage room" });
   expect(
-    within(dialog).getByRole("combobox", { name: "Your contact" }),
-  ).toHaveTextContent("No active contact");
+    within(dialog).getByRole("combobox", {
+      name: englishCopy["roomtab.manage.contactLabel"],
+    }),
+  ).toHaveTextContent(englishCopy["roomtab.manage.contactMissing"]);
 });
 
 it("keeps a staffed room free of a replacement prompt", async () => {
   stubApi({ ...ROOM, needs_steward: false }, []);
   render(<DealRoomPage dealId="deal-1" />);
   await screen.findByRole("heading", { name: ROOM.title });
-  expect(screen.queryByText("New contact needed")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(englishCopy["room.stewardNeeded.title"]),
+  ).not.toBeInTheDocument();
 });
 
 it("does not ask a reader without room edit access to replace the steward", async () => {
   stubApi({ ...ROOM, needs_steward: true }, [], false);
   render(<DealRoomPage dealId="deal-1" />);
   await screen.findByRole("heading", { name: ROOM.title });
-  expect(screen.queryByText("New contact needed")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(englishCopy["room.stewardNeeded.title"]),
+  ).not.toBeInTheDocument();
 });
 
 it("clears the replacement prompt after saving an active colleague", async () => {
@@ -287,7 +300,9 @@ it("clears the replacement prompt after saving an active colleague", async () =>
   await user.click(await screen.findByRole("button", { name: "Manage room" }));
   const dialog = await screen.findByRole("dialog", { name: "Manage room" });
   await user.click(
-    within(dialog).getByRole("combobox", { name: "Your contact" }),
+    within(dialog).getByRole("combobox", {
+      name: englishCopy["roomtab.manage.contactLabel"],
+    }),
   );
   expect(
     screen.queryByRole("option", { name: "AI Colleague" }),
@@ -298,7 +313,9 @@ it("clears the replacement prompt after saving an active colleague", async () =>
   room.version = 8;
   await client.invalidateQueries({ queryKey: ["deal-rooms", "deal-1"] });
   await user.click(
-    within(dialog).getByRole("button", { name: "Save changes" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["roomtab.manage.save"],
+    }),
   );
   await waitFor(() =>
     expect(
@@ -306,7 +323,9 @@ it("clears the replacement prompt after saving an active colleague", async () =>
     ).not.toBeInTheDocument(),
   );
   await waitFor(() =>
-    expect(screen.queryByText("New contact needed")).not.toBeInTheDocument(),
+    expect(
+      screen.queryByText(englishCopy["room.stewardNeeded.title"]),
+    ).not.toBeInTheDocument(),
   );
   expect(changes).toEqual([
     {
@@ -327,5 +346,7 @@ it.each<{ name: string; room: DealRoom }>([
   stubApi({ ...room, needs_steward: true }, []);
   render(<DealRoomPage dealId="deal-1" />);
   await screen.findByRole("heading", { name: ROOM.title });
-  expect(screen.queryByText("New contact needed")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(englishCopy["room.stewardNeeded.title"]),
+  ).not.toBeInTheDocument();
 });

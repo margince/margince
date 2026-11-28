@@ -73,7 +73,7 @@ func (w *briefGenerateWorker) morningWindow(ctx context.Context, now time.Time, 
 		return routineWindowFor(ctx, w.users, now, settings)
 	}
 	var local time.Time
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		_, clock, err := briefs.LocalDayAt(ctx, tx, dayrule.ActingUser(ctx), now)
 		local = clock
 		return err

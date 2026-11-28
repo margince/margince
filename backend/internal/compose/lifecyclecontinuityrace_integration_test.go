@@ -43,7 +43,7 @@ func TestAnUncommittedEngagementChangePreventsEndingTheAccount(t *testing.T) {
 			}()
 			ready, written := make(chan int32, 1), make(chan error, 1)
 			go func() {
-				err := database.WithWorkspaceSnapshot(e.Admin(), e.Pool, func(ctx context.Context) error {
+				err := database.WithSnapshot(e.Admin(), e.Pool, func(ctx context.Context) error {
 					if err := change(ctx); err != nil {
 						return err
 					}

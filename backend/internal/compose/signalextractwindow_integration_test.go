@@ -61,7 +61,7 @@ func TestTheWindowReadExcludesALimitedMessageOfItsOwnAccord(t *testing.T) {
 
 	var window []threadMessage
 	as := e.Admin()
-	if err := database.WithWorkspaceTx(as, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(as, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		window, err = threadMessages(as, tx, &thread)
 		return err

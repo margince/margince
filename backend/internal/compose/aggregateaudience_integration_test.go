@@ -181,7 +181,7 @@ func seedLinkedActivityAt(t *testing.T, e *integration.Env, contact ids.UUID,
 ) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, audience, occurred_at)
@@ -211,7 +211,7 @@ func seedLinkedActivityAt(t *testing.T, e *integration.Env, contact ids.UUID,
 func seedLinkedContact(t *testing.T, e *integration.Env, email string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, full_name, source, captured_by, visibility)
 			VALUES ($1, 'Test Contact', 'gmail', 'connector:gmail', 'workspace')`, id); err != nil {
@@ -229,7 +229,7 @@ func seedLinkedContact(t *testing.T, e *integration.Env, email string) ids.UUID 
 
 func holdActivity(t *testing.T, e *integration.Env, id ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET audience = 'participants' WHERE id = $1`, id)
 		return err
@@ -240,7 +240,7 @@ func holdActivity(t *testing.T, e *integration.Env, id ids.UUID) {
 
 func retireUnsure(t *testing.T, e *integration.Env, id ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_pending_counterparty SET status = 'unsure' WHERE id = $1`, id)
 		return err
@@ -264,7 +264,7 @@ func TestLastInboundNamesTheSenderNotEveryoneOnTheThread(t *testing.T) {
 
 	at := time.Now().Add(-time.Hour).Truncate(time.Microsecond)
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,

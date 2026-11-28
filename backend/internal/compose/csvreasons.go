@@ -11,6 +11,7 @@ import (
 	"errors"
 
 	"github.com/margince/margince/backend/internal/compose/importkeys"
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
@@ -40,9 +41,7 @@ var (
 )
 
 // skippedFor is the result of a row skipped for why.
-func skippedFor(why migration.Reason) migration.EnsureResult {
-	return migration.EnsureResult{Skipped: true, SkipReason: why.English(), SkipWhy: why}
-}
+var skippedFor = importrecords.SkippedFor
 
 // notLinkedFor is the result of an edge left unapplied for why.
 func notLinkedFor(why migration.Reason) migration.AssocResult {

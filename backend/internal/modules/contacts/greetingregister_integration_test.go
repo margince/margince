@@ -20,7 +20,7 @@ import (
 
 func (e *dedupeEnv) greetingAudit(ctx context.Context, t *testing.T, id ids.ContactID) (before, after *string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT before->>'greeting_register', after->>'greeting_register' FROM audit_log
 			 WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'update'

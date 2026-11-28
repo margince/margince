@@ -59,7 +59,7 @@ func TestRouteInEdgesRefusesWithoutTheContactGrant(t *testing.T) {
 		},
 		RowScope: principal.RowScopeTeam,
 	})
-	err := database.WithWorkspaceTx(noContacts, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(noContacts, e.Pool, func(tx pgx.Tx) error {
 		_, err := signals.RouteInEdges(noContacts, tx, company)
 		return err
 	})
@@ -71,7 +71,7 @@ func TestRouteInEdgesRefusesWithoutTheContactGrant(t *testing.T) {
 	// the gate refuses a missing grant rather than breaking the read.
 	granted := e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms)
 	var edges []signals.RouteInEdge
-	if err := database.WithWorkspaceTx(granted, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(granted, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		edges, err = signals.RouteInEdges(granted, tx, company)
 		return err

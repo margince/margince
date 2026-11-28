@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   emptyPage,
@@ -94,11 +95,11 @@ export const ReaderOfCompanies: Story = {
       await canvas.findByRole("button", { name: /^Change Referring partner/ }),
     );
     const dialog = await page.findByRole("dialog", {
-      name: "Referring partner",
+      name: englishCopy["deal.partnerCompany"],
     });
     await userEvent.click(
       await within(dialog).findByRole("combobox", {
-        name: "Referring partner",
+        name: englishCopy["deal.partnerCompany"],
       }),
     );
     await expect(

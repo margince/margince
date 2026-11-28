@@ -171,7 +171,7 @@ func TestTheCalendarDescriptionTaskRendersOnlyStoredHTML(t *testing.T) {
 	in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
 	for {
 		var out datatask.BatchOut
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = step.Batch(ctx, tx, in)
 			return err

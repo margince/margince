@@ -57,7 +57,7 @@ func newSharedGuests(t *testing.T) sharedGuests {
 		e.GrantRole(t, seat, "admin")
 	}
 	for _, seat := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3, e.AdminUser} {
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var address string
 			err := tx.QueryRow(context.Background(), `SELECT email FROM app_user WHERE id = $1`, seat).Scan(&address)
 			s.address[seat] = address

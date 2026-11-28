@@ -119,7 +119,7 @@ func TestAGhostedThreadReadsInTheReadersLanguage(t *testing.T) {
 	logMail(t, e, contact, "inbound", wrote.AddDate(0, 0, -5))
 	logMail(t, e, contact, "outbound", wrote)
 	scan := principal.SystemActing(e.Admin(), signalScanActor)
-	if err := database.WithWorkspaceTx(scan, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(scan, e.Pool, func(tx pgx.Tx) error {
 		_, err := WriteGhostedSignals(scan, tx, wrote.AddDate(0, 0, 15))
 		return err
 	}); err != nil {
@@ -153,7 +153,7 @@ func TestAQuietProjectReadsInTheReadersLanguage(t *testing.T) {
 	quietSince := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	e.WsExec(t, `UPDATE project SET created_at = $2 WHERE id = $1`, project, quietSince)
 	scan := principal.SystemActing(e.Admin(), signalScanActor)
-	if err := database.WithWorkspaceTx(scan, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(scan, e.Pool, func(tx pgx.Tx) error {
 		_, err := WriteProjectQuietSignals(scan, tx, quietSince.AddDate(0, 0, 45))
 		return err
 	}); err != nil {

@@ -134,7 +134,7 @@ func (w *FilteredExportWriter) write(ctx context.Context, engine storekit.Query,
 	}
 
 	var result FilteredExportResult
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		// The scope-forcing executor: the object RBAC gate + row-scope
 		// clause + the predicate, composed in one place, hard-capped.
 		matched, err := exportedIDs(ctx, tx, engine, src)

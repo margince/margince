@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../../api/schema";
 import { translate } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import {
   jsonResponse,
   StoryProviders,
@@ -137,7 +138,9 @@ async function expectFourColleagues(canvasElement: HTMLElement) {
   await ours.findByText("Kai Brandt");
   await expect(ours.getAllByRole("listitem")).toHaveLength(4);
   await expect(ours.getByText("Owner, Sales owner")).toBeVisible();
-  const carrier = ours.getByText("Handles most exchanges").closest("li");
+  const carrier = ours
+    .getByText(englishCopy["deal.committee.carriesContact"])
+    .closest("li");
   await expect(carrier).toHaveTextContent("Ana Lima");
 }
 
@@ -163,9 +166,13 @@ const aGap = view({
 // reader's words. The relationships story proves the form sends its key.
 async function fillTheGap(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
-  const gap = await canvas.findByText("Missing: an engaged champion");
+  const gap = await canvas.findByText(
+    englishCopy["deal.committee.missing.champion"],
+  );
   const verb = (
-    await canvas.findAllByRole("button", { name: "Add stakeholder" })
+    await canvas.findAllByRole("button", {
+      name: englishCopy["rel.addStakeholder"],
+    })
   ).find((button) => button.getAttribute("aria-describedby") === gap.id);
   await expect(verb).toBeDefined();
   if (verb) {

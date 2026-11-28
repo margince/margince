@@ -2,6 +2,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ProvenanceTag } from "./provenance";
 import {
   provenanceOf,
@@ -214,11 +215,11 @@ describe("what a tool is called on screen", () => {
     );
     cleanup();
     expect(tagText("agent:01a05500-0000-7000-8000-000000000001", "en")).toBe(
-      "Automated by an agent",
+      englishCopy["trust.agentUnnamed"],
     );
     cleanup();
     expect(tagText("agent:signal_scanner_v2", "en")).toBe(
-      "Automated by an agent",
+      englishCopy["trust.agentUnnamed"],
     );
   });
 
@@ -390,7 +391,7 @@ describe("withCreator", () => {
   });
 
   it("says the kind alone when no create row is known", () => {
-    expect(said(undefined)).toBe("Automated by an agent");
+    expect(said(undefined)).toBe(englishCopy["trust.agentUnnamed"]);
   });
 
   // A human's or a connector's create row says nothing about an agent tag.

@@ -111,7 +111,7 @@ func TestGmailConnectorSyncsAnActivity(t *testing.T) {
 
 	var activities int
 	var capturedBy, sourceID string
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity WHERE source_system = 'email'`).Scan(&activities); err != nil {
 			return err
@@ -137,7 +137,7 @@ func TestGmailConnectorSyncsAnActivity(t *testing.T) {
 
 	// The cursor advanced to the mailbox historyId anchored at first sync.
 	var cursor []byte
-	err = database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT sync_cursor FROM capture_connection WHERE id = $1`, connID).Scan(&cursor)
 	})
 	if err != nil {
@@ -167,7 +167,7 @@ func TestGmailConnectorSyncsAnActivity(t *testing.T) {
 		t.Fatalf("DueConnections right after a successful sync = %+v, want none (paced out)", due)
 	}
 	// Once the pacing clock passes, the same connection is due again.
-	err = database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_sync_state SET next_sync_at = now() - interval '1 second' WHERE connection_id = $1`, connID)
 		return err

@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "./i18n/en";
 import { renderApp, teardownApp } from "./testing/appharness";
 import { meFixture, READS_RECORDS } from "./testing/mefixture";
 
@@ -31,7 +32,7 @@ it.each([
   window.location.hash = hash;
   renderApp();
   expect(
-    await screen.findByText("Not available for your role."),
+    await screen.findByText(englishCopy["shell.unavailableForRole"]),
   ).toBeInTheDocument();
 });
 
@@ -47,7 +48,7 @@ it("says Deals is not available for a role without deal read, and loads nothing"
   window.location.hash = "#/deals";
   renderApp();
   expect(
-    await screen.findByText("Not available for your role."),
+    await screen.findByText(englishCopy["shell.unavailableForRole"]),
   ).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   const urls = fetched.mock.calls.map(([input]) =>

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import {
   AccountMenuFrame,
   openHelpFlyout,
@@ -18,11 +19,13 @@ const meta: Meta<typeof HelpSubmenu> = {
   play: async (context) => {
     await openHelpFlyout(context);
     const help = within(document.body).getByRole("menu", {
-      name: "Help and feedback",
+      name: englishCopy["shell.helpMenu"],
     });
     const items = within(help).getAllByRole("menuitem");
-    await expect(items.at(-2)).toHaveTextContent("Keyboard shortcuts");
-    await expect(items.at(-1)).toHaveTextContent("About Margince");
+    await expect(items.at(-2)).toHaveTextContent(
+      englishCopy["shell.help.shortcuts"],
+    );
+    await expect(items.at(-1)).toHaveTextContent(englishCopy["about.title"]);
     await expect(items.at(-1)).toHaveAttribute("aria-haspopup", "dialog");
   },
   render: () => {

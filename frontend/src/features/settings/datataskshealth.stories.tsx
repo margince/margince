@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -52,7 +53,9 @@ export const Running: Story = {
   render: report([runningDataTask]),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Not estimated")).toBeInTheDocument();
+    await expect(
+      await canvas.findByText(englishCopy["dataTasks.unknown"]),
+    ).toBeInTheDocument();
     await expect(
       canvas.getByRole("button", { name: "Pause" }),
     ).toBeInTheDocument();
@@ -67,7 +70,7 @@ export const Empty: Story = {
   render: report([]),
   play: async ({ canvasElement }) => {
     await expect(
-      await within(canvasElement).findByText("No data updates are registered."),
+      await within(canvasElement).findByText(englishCopy["dataTasks.empty"]),
     ).toBeInTheDocument();
   },
 };
@@ -106,9 +109,7 @@ export const FailedReport: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("alert")).toBeInTheDocument();
-    await expect(
-      canvas.queryByText("No data updates are registered."),
-    ).toBeNull();
+    await expect(canvas.queryByText(englishCopy["dataTasks.empty"])).toBeNull();
   },
 };
 
@@ -138,7 +139,7 @@ export const NewerServerState: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByText("Update the application to manage this state."),
+      await canvas.findByText(englishCopy["dataTasks.unknownState"]),
     ).toBeInTheDocument();
     await expect(canvas.getAllByRole("button", { name: "Pause" })).toHaveLength(
       1,

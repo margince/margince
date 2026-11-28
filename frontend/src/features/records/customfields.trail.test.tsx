@@ -136,7 +136,7 @@ describe("FieldChangeTrail", () => {
     const user = userEvent.setup();
     mount();
 
-    await user.click(await screen.findByText("Recent field changes"));
+    await user.click(await screen.findByText(en["cf.audit.title"]));
 
     const rows = await screen.findAllByRole("listitem");
     expect(rows.map((row) => within(row).getByText(/ · /).textContent)).toEqual(
@@ -144,10 +144,10 @@ describe("FieldChangeTrail", () => {
     );
     expect(within(rows[0] as HTMLElement).getByText("Archived")).toBeTruthy();
     expect(
-      within(rows[1] as HTMLElement).getByText("Hidden from create forms"),
+      within(rows[1] as HTMLElement).getByText(en["cf.audit.hiddenFromCreate"]),
     ).toBeTruthy();
     expect(
-      within(rows[2] as HTMLElement).getByText("Translations changed"),
+      within(rows[2] as HTMLElement).getByText(en["cf.audit.translations"]),
     ).toBeTruthy();
     expect(screen.queryByText("Updated")).toBeNull();
   });
@@ -159,7 +159,7 @@ describe("FieldChangeTrail", () => {
     const user = userEvent.setup();
     mount();
 
-    const summary = await screen.findByText("Recent field changes");
+    const summary = await screen.findByText(en["cf.audit.title"]);
     await vi.waitFor(() =>
       expect(
         fetch.mock.calls.some(([input]) =>
@@ -186,7 +186,7 @@ describe("FieldChangeTrail", () => {
     const user = userEvent.setup();
     mount();
 
-    await user.click(await screen.findByText("Recent field changes"));
+    await user.click(await screen.findByText(en["cf.audit.title"]));
     const retry = await screen.findByRole("button", {
       name: en["state.retry"],
     });
@@ -209,7 +209,7 @@ describe("FieldChangeTrail", () => {
     const user = userEvent.setup();
     mount();
 
-    await user.click(await screen.findByText("Recent field changes"));
+    await user.click(await screen.findByText(en["cf.audit.title"]));
     const rows = await screen.findAllByRole("listitem");
     expect(within(rows[1] as HTMLElement).getByText(/ · /).textContent).toBe(
       "Company · Budget",
@@ -224,7 +224,7 @@ describe("FieldChangeTrail", () => {
     const user = userEvent.setup();
     mount();
 
-    await user.click(await screen.findByText("Recent field changes"));
+    await user.click(await screen.findByText(en["cf.audit.title"]));
 
     expect(await screen.findByText(/Hidden for your role/i)).toBeTruthy();
     expect(catalogReads).toEqual([]);

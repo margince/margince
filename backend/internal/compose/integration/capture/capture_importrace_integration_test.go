@@ -77,7 +77,7 @@ func beginImport(t *testing.T, e *integration.SearchEnv, activityID, seat ids.UU
 	ctx := principal.WithCorrelationID(e.Admin(), ids.NewV7())
 	go func() {
 		defer close(r.finished)
-		r.err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		r.err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&r.pid)
 			if err == nil {
 				_, err = tx.Exec(ctx, `INSERT INTO capture_import (activity_id, user_id, posture_at_import)

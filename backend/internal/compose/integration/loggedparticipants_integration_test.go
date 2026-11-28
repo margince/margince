@@ -39,7 +39,7 @@ type loggedParty struct {
 func partiesOn(t *testing.T, e *integration.Env, activity ids.UUID) []loggedParty {
 	t.Helper()
 	var out []loggedParty
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT role, user_id, contact_id FROM activity_participant
 			 WHERE activity_id = $1

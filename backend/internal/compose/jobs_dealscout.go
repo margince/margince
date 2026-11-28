@@ -57,7 +57,7 @@ func scoutWorkspace(ctx context.Context, w *scoutWorker, actor string, workspace
 	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), actor)
 	if err := w.report(ctx, wsCtx, func() (scoutTally, error) {
 		var pass scoutTally
-		err := database.WithWorkspaceTx(wsCtx, w.pool, func(tx pgx.Tx) error {
+		err := database.WithTx(wsCtx, w.pool, func(tx pgx.Tx) error {
 			var err error
 			pass, err = w.run(wsCtx, tx, w.now())
 			return err

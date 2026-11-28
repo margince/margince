@@ -26,7 +26,7 @@ func (e *BriefEngine) SnoozedDeals(ctx context.Context, now time.Time) ([]ids.UU
 		return nil, err
 	}
 	var deals []ids.UUID
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var args []any
 		bind := func(value any) int { args = append(args, value); return len(args) }
 		userParam, nowParam := fmt.Sprintf("$%d", bind(user)), fmt.Sprintf("$%d", bind(now.UTC()))

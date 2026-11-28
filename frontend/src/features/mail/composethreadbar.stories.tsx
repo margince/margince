@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -160,7 +161,7 @@ export const OnlyWithheldReadSoFar: StoryObj = {
   render: withReadable(0),
   play: async () => {
     await expect(await threadBar()).toHaveTextContent(
-      "Earlier threads may exist",
+      englishCopy["compose.earlierThreadsMayExist"],
     );
   },
 };

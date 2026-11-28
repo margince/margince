@@ -99,7 +99,9 @@ it("revises a count target without rescaling it or changing its identity", async
     await screen.findByRole("cell", { name: /Meetings held/ })
   ).closest("tr");
   if (!row) throw new Error("Missing commitment row");
-  await user.click(within(row).getByRole("button", { name: "Revise target" }));
+  await user.click(
+    within(row).getByRole("button", { name: en["reporting.revise"] }),
+  );
   const dialog = within(await screen.findByRole("dialog"));
   expect(dialog.getByLabelText(/Year/)).toBeDisabled();
   // Meetings count every pipeline, so the editor offers none.
@@ -109,7 +111,9 @@ it("revises a count target without rescaling it or changing its identity", async
     target: { value: "45" },
   });
   await user.type(dialog.getByLabelText(/Reason/), "Additional capacity");
-  await user.click(dialog.getByRole("button", { name: "Revise target" }));
+  await user.click(
+    dialog.getByRole("button", { name: en["reporting.revise"] }),
+  );
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -143,7 +147,7 @@ it("keeps target authoring unavailable to a read seat", async () => {
     screen.queryByRole("button", { name: "Set target" }),
   ).not.toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Revise target" }),
+    screen.queryByRole("button", { name: en["reporting.revise"] }),
   ).not.toBeInTheDocument();
 });
 
@@ -173,14 +177,14 @@ it("publishes stage qualification and capture contexts with a reason and version
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Reporting setup" }),
+    await screen.findByRole("button", { name: en["reporting.framework"] }),
   );
   await user.click(await screen.findByRole("checkbox", { name: "Qualified" }));
   await user.click(screen.getByRole("checkbox", { name: "Proposal" }));
   await user.click(screen.getByRole("checkbox", { name: "Proposal" }));
   await pickOption(
     user,
-    screen.getByRole("combobox", { name: "Default view" }),
+    screen.getByRole("combobox", { name: en["reporting.template"] }),
     "SDR outcomes",
   );
   await user.click(screen.getByRole("button", { name: "Add capture" }));
@@ -188,7 +192,7 @@ it("publishes stage qualification and capture contexts with a reason and version
   await pickOption(user, pipelinePickers[pipelinePickers.length - 1], "Sales");
   // An empty reason is refused on the press, named on the field, and not sent.
   await user.click(
-    screen.getByRole("button", { name: "Save reporting settings" }),
+    screen.getByRole("button", { name: en["reporting.publish"] }),
   );
   expect(screen.getByLabelText(/Reason/)).toHaveAccessibleDescription(
     "This field is required.",
@@ -199,7 +203,7 @@ it("publishes stage qualification and capture contexts with a reason and version
     "Align qualification across markets",
   );
   await user.click(
-    screen.getByRole("button", { name: "Save reporting settings" }),
+    screen.getByRole("button", { name: en["reporting.publish"] }),
   );
   await waitFor(() =>
     expect(publish).toHaveBeenCalledWith(
@@ -223,12 +227,12 @@ it("does not expose framework publication to read-only readers", async () => {
       <ReportingDefinitions />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Metric definitions" });
+  await screen.findByRole("heading", { name: en["reporting.definitions"] });
   expect(
-    screen.queryByRole("button", { name: "Reporting setup" }),
+    screen.queryByRole("button", { name: en["reporting.framework"] }),
   ).not.toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Save reporting settings" }),
+    screen.queryByRole("button", { name: en["reporting.publish"] }),
   ).not.toBeInTheDocument();
 });
 
@@ -263,7 +267,9 @@ it("creates a month-end schedule pinned to the selected report revision", async 
   await user.clear(time);
   await user.type(time, "17:30");
   await user.tab();
-  await user.click(screen.getByRole("button", { name: "Activate schedule" }));
+  await user.click(
+    screen.getByRole("button", { name: en["reporting.activateSchedule"] }),
+  );
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith(
       {
@@ -305,7 +311,9 @@ it("resets an edited schedule's day when its cadence changes and can resume it",
   expect(screen.getByRole("combobox", { name: "Run day" })).toHaveTextContent(
     "Monday",
   );
-  await user.click(screen.getByRole("button", { name: "Activate schedule" }));
+  await user.click(
+    screen.getByRole("button", { name: en["reporting.activateSchedule"] }),
+  );
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith(
       {
@@ -375,13 +383,15 @@ it("waits for readiness before claiming retention setup is needed", async () => 
     </StoryProviders>,
   );
   await waitFor(() => expect(readiness).toHaveBeenCalledOnce());
-  const enabled = screen.getByRole("button", { name: "Activate schedule" });
+  const enabled = screen.getByRole("button", {
+    name: en["reporting.activateSchedule"],
+  });
   expect(enabled).toBeDisabled();
   expect(
     screen.queryByText(/Enable snapshot retention/),
   ).not.toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Retention settings" }),
+    screen.queryByRole("button", { name: en["reporting.retentionSettings"] }),
   ).not.toBeInTheDocument();
   await act(async () => {
     release();
@@ -413,7 +423,7 @@ it("offers only fiscal-quarter start months and submits the selected boundary", 
   const dialog = within(await screen.findByRole("dialog"));
   await pickOption(
     user,
-    dialog.getByRole("combobox", { name: "Target period" }),
+    dialog.getByRole("combobox", { name: en["reporting.targetBasis"] }),
     "Fiscal quarter",
   );
   await user.click(dialog.getByRole("combobox", { name: /Month starting/ }));
@@ -464,13 +474,19 @@ it("filters targets on the server and resets a paged result when status changes"
   await waitFor(() =>
     expect(targetQueries().at(-1)?.get("cursor")).toBe("next-page"),
   );
-  await user.click(screen.getByRole("button", { name: "Retired targets" }));
+  await user.click(
+    screen.getByRole("button", { name: en["reporting.retiredTargets"] }),
+  );
   await waitFor(() =>
     expect(targetQueries().at(-1)?.get("retired")).toBe("true"),
   );
   expect(targetQueries().at(-1)?.has("cursor")).toBe(false);
   await user.type(screen.getByLabelText("Year"), "2026");
-  await pickOption(user, screen.getByLabelText("Month starting"), "October");
+  await pickOption(
+    user,
+    screen.getByLabelText(en["reporting.periodMonth"]),
+    "October",
+  );
   await waitFor(() =>
     expect(targetQueries().at(-1)?.get("period_start")).toBe("2026-10-01"),
   );

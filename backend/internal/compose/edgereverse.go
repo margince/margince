@@ -141,7 +141,7 @@ func (s RestoreSeam) decideEdge(ctx context.Context, entityType string, id ids.U
 	}
 	var facts contacts.EdgeFacts
 	var answer Undoability
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := recordVersionUnmoved(ctx, tx, entityType, id, ifVersion); err != nil {
 			return err
 		}

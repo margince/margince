@@ -108,12 +108,12 @@ func TestCorrectionFailureNoticeUsesCurrentOperatorGrants(t *testing.T) {
 	p := datatask.Progress{TaskID: "core/100_example", Step: "first", RunID: ids.NewV7(), Version: 5}
 	write := dataTaskFailureNotice(e.Pool)
 	for range 2 {
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error { return write(ctx, tx, p) }); err != nil {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error { return write(ctx, tx, p) }); err != nil {
 			t.Fatal(err)
 		}
 	}
 	var count int
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT count(*) FROM notice WHERE kind='data_task_failed' AND recipient_user_id=@user`, pgx.NamedArgs{"user": e.AdminUser}).Scan(&count)
 	}); err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestCorrectionFailureNoticeUsesCurrentOperatorGrants(t *testing.T) {
 	if count != 1 {
 		t.Fatalf("operator notice count=%d", count)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT count(*) FROM notice WHERE kind='data_task_failed' AND recipient_user_id=@user`, pgx.NamedArgs{"user": e.Rep1}).Scan(&count)
 	}); err != nil {
 		t.Fatal(err)

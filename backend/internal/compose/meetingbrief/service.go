@@ -301,7 +301,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	var seats []ids.UUID
 	var zone *time.Location
 	var dates datenotation.Notation
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// The requested project is gated BEFORE the meeting is read, because
 		// the meeting read already narrows by it (the attendees' last-touch
 		// dates): a scope nobody checked must not shape a single row.

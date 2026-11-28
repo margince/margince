@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { StandingDims } from "./standingdims";
 
 afterEach(cleanup);
@@ -85,7 +86,7 @@ describe("Standing dimensions", () => {
     );
     expect(
       screen.getByRole("region", {
-        name: "Contacts here who have been in touch",
+        name: englishCopy["co.standing.peek.inTouch"],
       }),
     ).toBeInTheDocument();
   });

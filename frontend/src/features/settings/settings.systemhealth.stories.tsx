@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -58,7 +59,9 @@ export const AttentionDark: Story = {
   globals: { theme: "dark" },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).findByRole("heading", { name: "Attention needed" }),
+      within(canvasElement).findByRole("heading", {
+        name: englishCopy["health.attention"],
+      }),
     ).resolves.toBeVisible();
   },
 };
@@ -71,13 +74,15 @@ export const UnplacedChanges: Story = {
   render: story(informationReport),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const group = await canvas.findByRole("list", { name: "For information" });
+    const group = await canvas.findByRole("list", {
+      name: englishCopy["health.group.information"],
+    });
     await expect(
-      within(group).getByText("Changes Home leaves out"),
+      within(group).getByText(englishCopy["health.source.unplaced"]),
     ).toBeVisible();
     await expect(
       within(canvas.getByRole("list", { name: "Passing" })).queryByText(
-        "Changes Home leaves out",
+        englishCopy["health.source.unplaced"],
       ),
     ).toBeNull();
   },
@@ -144,7 +149,7 @@ export const PartialCapture: Story = {
     await canvas.findByRole("heading", { name: "All checks" });
     await expect(
       canvas.getByText(/Mail capture/, { selector: ".disclosure-label" }),
-    ).toHaveTextContent("No capture action needed in checked categories");
+    ).toHaveTextContent(englishCopy["health.code.capture_checked"]);
   },
 };
 
@@ -267,11 +272,15 @@ export const SenderDecisionJourney: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Review mailbox decisions" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["health.code.capture_owner_review"],
+      }),
     );
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: "Review my choices" }),
+      await body.findByRole("button", {
+        name: englishCopy["health.openMyReviews"],
+      }),
     );
     await waitFor(() =>
       expect(canvas.getByText("Add Alex Buyer to Contacts")).toBeVisible(),

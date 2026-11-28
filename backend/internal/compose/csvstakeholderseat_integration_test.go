@@ -23,7 +23,7 @@ func TestAContactAlreadySeatedOnADealIsNotSeatedAgainWhateverTheCallerCanListOf(
 	w := &csvWriters{pool: e.DB().Pool(), contacts: contacts.NewStore(e.DB())}
 	typed := map[string]any{dealTargetContactRef: contact.String()}
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		return w.seatStakeholder(ctx, tx, deal, typed, "crm:deal:D-1")
 	}); err != nil {
 		t.Fatalf("seating the contact: %v", err)

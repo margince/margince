@@ -73,7 +73,7 @@ func (s *Service) UndismissedAdvice(
 	if !auth.ReadGranted(ctx, "company") {
 		return nil, nil
 	}
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
@@ -109,7 +109,7 @@ func (s *Service) KeepUndismissed(
 		return nil, err
 	}
 	var kept []crmcontracts.Company360Suggestion
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}

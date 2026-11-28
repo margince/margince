@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { Panel } from "../../design-system/panel";
 import { SettingList } from "../../design-system/settingrow";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -142,7 +143,7 @@ export const RecoveryCodes: Story = {
     );
     await userEvent.click(page.getByRole("button", { name: "Turn on" }));
     await expect(
-      await page.findByRole("textbox", { name: "Recovery codes" }),
+      await page.findByRole("textbox", { name: englishCopy["mfa.codesLabel"] }),
     ).toBeVisible();
   },
 };
@@ -163,7 +164,7 @@ export const Remove: Story = {
       "000000",
     );
     await userEvent.click(
-      page.getByRole("button", { name: "Remove two-step sign-in" }),
+      page.getByRole("button", { name: englishCopy["mfa.removeConfirm"] }),
     );
     await page.findByText(/code was not accepted/i);
   },

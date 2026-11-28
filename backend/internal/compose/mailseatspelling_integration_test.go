@@ -22,7 +22,7 @@ import (
 func mailSeatIdentities(t *testing.T, e *integration.Env) map[string][]string {
 	t.Helper()
 	var out map[string][]string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = storekit.UnambiguousMailSeatIdentities(e.Admin(), tx)
 		return err
@@ -75,7 +75,7 @@ func TestTheRestoringReadCarriesBothSpellingsOfAUnicodeLogin(t *testing.T) {
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE app_user SET email = 'anna@bücher.example' WHERE id = $1`, e.Rep1)
 	var got map[string][]string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		got, err = storekit.MailSeatIdentities(e.Admin(), tx)
 		return err
@@ -93,7 +93,7 @@ func TestTheRestoringReadCarriesBothSpellingsOfAUnicodeLogin(t *testing.T) {
 func provedIdentities(t *testing.T, e *integration.Env) map[string][]string {
 	t.Helper()
 	var bound []any
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := storekit.ProvedMailSeatIdentitiesSQL(e.Admin(), tx, func(v any) int {
 			bound = append(bound, v)
 			return len(bound)

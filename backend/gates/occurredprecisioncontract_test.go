@@ -52,6 +52,9 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
+	"api/crm.yaml ChannelEndedSync.last_posted_at":                        "when the provider accepted the last outgoing card, a delivery instant rather than the source activity time",
+	"api/crm.yaml ChannelSyncHealth.coverage_at":                          "when source metadata discovery completed, an operational instant rather than a source message date",
+	"api/crm.yaml MessengerAttempt.retry_at":                              "earliest retry instant from provider backoff, never a source activity time",
 	"api/crm.yaml GoogleDirectoryStatus.last_checked_at":                  "when the newest Google directory check ran, a server instant and not an activity time",
 	"api/crm.yaml CustomerPayments.last_synced_at":                        "when the accounting import finished; always an instant, never an activity date",
 	"api/crm.yaml LicenseTrial.ends_at":                                   "when an unlicensed installation's trial ends, a server instant derived from the workspace's creation, not an activity time",

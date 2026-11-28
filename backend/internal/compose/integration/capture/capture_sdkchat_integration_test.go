@@ -93,7 +93,7 @@ func unitChat(
 func TestAUnitsChatMessageFollowsItsContactsSharingExactlyAsMailDoes(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE capture_connection SET mail_posture = 'classified' WHERE user_id = $1`, e.Rep1)
 		return err
 	}); err != nil {
@@ -105,7 +105,7 @@ func TestAUnitsChatMessageFollowsItsContactsSharingExactlyAsMailDoes(t *testing.
 	env.sync(t, email(counterparty, "Buyer", captureOwner, "sdk-1r@kunde.example", "sdk-1@kunde.example"))
 	mail := activityIDOf(t, e, "sdk-1@kunde.example")
 	var contactRaw ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT p.id FROM contact p JOIN contact_email pe ON pe.contact_id = p.id WHERE pe.email = $1`, counterparty).Scan(&contactRaw)
 	}); err != nil {
@@ -159,7 +159,7 @@ func TestAFileOnAUnitsMessageIsKeptOnceAndErasedWithItsContact(t *testing.T) {
 	env := newCaptureEnvWithBlob(t, captureNow, blob)
 	e := env.e
 	contact := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO contact (id, full_name, source, captured_by, owner_id) VALUES ($1, 'Erasure Subject', 'manual', 'human:x', $2)`, contact, e.Rep1)
 		return err
@@ -172,7 +172,7 @@ func TestAFileOnAUnitsMessageIsKeptOnceAndErasedWithItsContact(t *testing.T) {
 	count := func(query string, args ...any) int {
 		t.Helper()
 		var n int
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), query, args...).Scan(&n)
 		}); err != nil {
 			t.Fatalf("counting: %v", err)
@@ -216,7 +216,7 @@ func TestAFileOnAUnitsMessageIsKeptOnceAndErasedWithItsContact(t *testing.T) {
 func blobKeyOf(t *testing.T, e *integration.SearchEnv, activity ids.UUID) string {
 	t.Helper()
 	var key string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT storage_key FROM attachment WHERE activity_id = $1`, activity).Scan(&key)
 	}); err != nil {
 		t.Fatalf("reading the file's storage key: %v", err)
@@ -238,7 +238,7 @@ func erasureCtx(e *integration.SearchEnv) context.Context {
 func seedContactNamed(t *testing.T, e *integration.SearchEnv, name string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO contact (id, full_name, source, captured_by, owner_id) VALUES ($1, $2, 'manual', 'human:x', $3)`, id, name, e.Rep1)
 		return err
@@ -256,7 +256,7 @@ func TestAMessageFiledOnTwoSubjectsIsExportedForBothAndErasedWithTheLast(t *test
 	e := env.e
 	first, second := seedContactNamed(t, e, "First Subject"), seedContactNamed(t, e, "Second Subject")
 	chat := unitChat(t, e, nil, "two-1", first)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, chat, second)
 		return err
@@ -278,7 +278,7 @@ func TestAMessageFiledOnTwoSubjectsIsExportedForBothAndErasedWithTheLast(t *test
 	}
 	held := func() int {
 		var n int
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `SELECT count(*) FROM raw_capture WHERE source_id = 'two-1'`).Scan(&n)
 		}); err != nil {
 			t.Fatal(err)
@@ -310,7 +310,7 @@ func TestAnOriginalIsKeptForAnArchivedSecondSubject(t *testing.T) {
 	e := env.e
 	first, second := seedContactNamed(t, e, "First"), seedContactNamed(t, e, "Archived")
 	chat := unitChat(t, e, nil, "arch-1", first)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `UPDATE contact SET archived_at = now() WHERE id = $1`, second); err != nil {
 			return err
 		}
@@ -323,7 +323,7 @@ func TestAnOriginalIsKeptForAnArchivedSecondSubject(t *testing.T) {
 		t.Fatalf("erasing the first subject: %v", err)
 	}
 	var held int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM raw_capture WHERE source_id = 'arch-1'`).Scan(&held)
 	}); err != nil || held != 1 {
 		t.Fatalf("%d originals after erasing one of two subjects, the other archived (%v), want 1", held, err)

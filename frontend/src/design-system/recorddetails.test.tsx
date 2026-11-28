@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { RecordDetails } from "./recorddetails";
 
 afterEach(cleanup);
@@ -50,7 +51,11 @@ describe("Record details", () => {
     expect(
       screen.getByRole("heading", { name: "Registration" }),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Hide empty fields" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: englishCopy["record.details.hideEmpty"],
+      }),
+    );
     expect(screen.queryByText("VAT ID")).toBeNull();
   });
 

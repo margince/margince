@@ -12,14 +12,12 @@ package storekit
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // FieldStamp is one field's origin at capture/enrich time.
@@ -36,14 +34,6 @@ type FieldStamp struct {
 func StampFields(ctx context.Context, tx pgx.Tx, objectType string, objectID ids.UUID, source, capturedBy string, stamps []FieldStamp) error {
 	if len(stamps) == 0 {
 		return nil
-	}
-	// The value is dead — field_provenance carries no tenant since ADR-0091 §8
-	// phase D — but the CHECK is not: it refuses a caller that reached this
-	// write outside a workspace context at all, which is a wiring fault rather
-	// than a row problem and is worth naming here instead of surfacing as a
-	// constraint violation somewhere downstream.
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return errors.New("storekit: field provenance outside workspace context")
 	}
 	for _, s := range stamps {
 		if _, err := tx.Exec(ctx,

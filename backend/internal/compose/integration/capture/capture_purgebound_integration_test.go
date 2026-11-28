@@ -39,7 +39,7 @@ func boundSeat(e *integration.Env) context.Context {
 func boundMail(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, counterparty_email, audience)
@@ -61,7 +61,7 @@ func boundMail(t *testing.T, e *integration.Env) ids.UUID {
 func boundExists(t *testing.T, e *integration.Env, id ids.UUID) bool {
 	t.Helper()
 	var body string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(body, '') FROM activity WHERE id = $1`, id).Scan(&body)
 	})

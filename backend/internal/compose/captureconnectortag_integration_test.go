@@ -30,7 +30,7 @@ import (
 func seedTag(t *testing.T, e *integration.Env, name string, archived bool) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO tag (id, name, archived_at)
 			VALUES ($1, $2, CASE WHEN $3 THEN now() ELSE NULL END)`, id, name, archived)
@@ -48,7 +48,7 @@ func seedTag(t *testing.T, e *integration.Env, name string, archived bool) ids.U
 // probe is one seat per provider with DIFFERENT words, which needs both.
 func seedFilingConnection(t *testing.T, e *integration.Env, owner ids.UUID, provider string, tagID *ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (provider, user_id, status, context_tag_id)
 			VALUES ($1, $2, 'connected', $3)`, provider, owner, tagID)
@@ -70,7 +70,7 @@ func seedMailFrom(t *testing.T, e *integration.Env, provider string, seat ids.UU
 func seedMailStamped(t *testing.T, e *integration.Env, provider, capturedBy, from string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, raw, direction, source_system, source_id,
 			                      source, captured_by, counterparty_email)
@@ -89,7 +89,7 @@ func seedMailStamped(t *testing.T, e *integration.Env, provider, capturedBy, fro
 func seedOwnedDisposition(t *testing.T, e *integration.Env, owner ids.UUID, email, domain string, activityID ids.UUID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_pending_counterparty
 			  (id, email, domain, display_name, activity_id, owner_id, status, next_attempt_at)
@@ -107,7 +107,7 @@ func seedOwnedDisposition(t *testing.T, e *integration.Env, owner ids.UUID, emai
 func tagsOn(t *testing.T, e *integration.Env, email string) []string {
 	t.Helper()
 	var names []string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT t.name
 			  FROM taggable g
@@ -231,7 +231,7 @@ func TestAContactThatWasAlreadyHereIsNotFiledUnderTheConnectorsWord(t *testing.T
 	seedFilingConnection(t, e, e.Rep1, "gmail", &nord)
 
 	const address = "incumbent@nord.example"
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		contactID := ids.NewV7()
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, full_name, source, captured_by, visibility)

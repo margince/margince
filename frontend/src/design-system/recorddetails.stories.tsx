@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { Badge } from "./atoms";
 import { RecordDetails } from "./recorddetails";
 
@@ -213,7 +214,9 @@ export const EmptyFieldsShown: Story = {
     );
     await expect(await canvas.findByText("VAT ID")).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "Hide empty fields" }),
+      canvas.getByRole("button", {
+        name: englishCopy["record.details.hideEmpty"],
+      }),
     ).toHaveAttribute("aria-expanded", "true");
   },
 };

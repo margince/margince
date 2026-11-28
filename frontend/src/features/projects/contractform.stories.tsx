@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -310,7 +311,9 @@ export const SaveRefused: Story = {
     await expect(body.scrollHeight).toBeGreaterThan(body.clientHeight);
     body.scrollTop = 0;
     await userEvent.click(
-      await screen.findByRole("button", { name: "Save changes" }),
+      await screen.findByRole("button", {
+        name: englishCopy["contracts.form.saveEdit"],
+      }),
     );
     await expect(await screen.findByRole("alert")).toHaveTextContent(
       "This agreement changed while you were editing it.",

@@ -139,7 +139,7 @@ func Trace(ctx context.Context, pool *pgxpool.Pool, unit string, task ai.Task) e
 	if cid, ok := principal.CorrelationID(ctx); ok {
 		detail["correlation_id"] = cid.String()
 	}
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		_, err := storekit.LogSystem(ctx, tx, "extension_model_call", detail)
 		return err
 	})

@@ -33,7 +33,7 @@ func TestTheMailReaderQueueProbesEachThreadsScanRowByKey(t *testing.T) {
 	e := integration.Setup(t)
 	now := clocktest.Now(t)
 	var raw []byte
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
 			return err

@@ -27,11 +27,13 @@ type paymentFold struct {
 	totals    map[string]int64
 	customers map[paymentGroup]crmcontracts.CustomerPaymentCustomer
 	invoices  int
+	age       int
+	aged      *paymentFold
 }
 
 func newPaymentFold() *paymentFold {
 	return &paymentFold{
-		linked: map[ids.UUID]bool{}, companies: map[ids.UUID]bool{},
+		age: 365, linked: map[ids.UUID]bool{}, companies: map[ids.UUID]bool{},
 		totals: map[string]int64{}, customers: map[paymentGroup]crmcontracts.CustomerPaymentCustomer{},
 	}
 }
@@ -65,6 +67,13 @@ func (fold *paymentFold) add(invoice crmcontracts.CustomerPaymentInvoice) error 
 	fold.invoices++
 	company := ids.UUID(invoice.CompanyId)
 	fold.companies[company] = true
+	if fold.age > 0 && invoice.DaysOverdue > fold.age {
+		if fold.aged == nil {
+			fold.aged = newPaymentFold()
+			fold.aged.age = 0
+		}
+		return fold.aged.add(invoice)
+	}
 	key := paymentGroup{company, invoice.Currency}
 	group := fold.customers[key]
 	group.CompanyId, group.CompanyName, group.Currency = invoice.CompanyId, invoice.CompanyName, invoice.Currency
@@ -100,13 +109,27 @@ func (fold *paymentFold) fill(out *crmcontracts.CustomerPayments, connectionID i
 	sort.Slice(out.Customers, func(i, j int) bool {
 		a, b := out.Customers[i], out.Customers[j]
 		if a.OldestDays != b.OldestDays {
-			return a.OldestDays > b.OldestDays
+			return a.OldestDays < b.OldestDays
+		}
+		if a.Currency != b.Currency {
+			return a.Currency < b.Currency
+		}
+		if a.AmountMinor != b.AmountMinor {
+			return a.AmountMinor > b.AmountMinor
 		}
 		if a.CompanyId != b.CompanyId {
 			return a.CompanyId.String() < b.CompanyId.String()
 		}
 		return a.Currency < b.Currency
 	})
+	if fold.age > 0 {
+		out.LongOverdueDays = new(fold.age)
+		aged := crmcontracts.CustomerPayments{Totals: []crmcontracts.CustomerPaymentTotal{}, Customers: []crmcontracts.CustomerPaymentCustomer{}}
+		if fold.aged != nil {
+			fold.aged.fill(&aged, connectionID)
+		}
+		out.LongOverdue = &crmcontracts.CustomerPaymentAgedGroup{InvoiceCount: aged.InvoiceCount, Totals: aged.Totals, Customers: aged.Customers}
+	}
 	if len(out.Customers) > 3 {
 		out.Customers = out.Customers[:3]
 	}

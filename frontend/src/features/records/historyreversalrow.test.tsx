@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { RecordHistory } from "./historyentries";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -108,7 +109,7 @@ describe("a reversal and the change it reversed, as one row", () => {
     // The value the record moved to and back from is not drawn as a diff: the
     // pair came to nothing, so there is nothing to point an arrow at.
     expect(screen.queryByText("Head of Platform")).toBeNull();
-    expect(screen.getByText("Net: unchanged")).toBeTruthy();
+    expect(screen.getByText(englishCopy["history.reversal.net"])).toBeTruthy();
     expect(screen.getByText("Head of Ops")).toBeTruthy();
   });
 
@@ -122,7 +123,7 @@ describe("a reversal and the change it reversed, as one row", () => {
     const buttons = screen.getAllByRole("button");
     expect(buttons.map((button) => button.textContent)).toEqual([
       "Redo",
-      "Show both changes",
+      englishCopy["history.reversal.expand"],
     ]);
   });
 
@@ -203,7 +204,9 @@ describe("a reversal and the change it reversed, as one row", () => {
     expect(screen.getAllByRole("button", { name: /Redo/ })).toHaveLength(1);
     expect(within(reversal).queryByRole("button", { name: /Redo/ })).toBeNull();
     expect(screen.queryByText("Put back")).toBeNull();
-    expect(screen.getByText("This change was already undone.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["history.undo.alreadyUndone"]),
+    ).toBeTruthy();
   });
 });
 
@@ -228,8 +231,10 @@ describe("a pair that only partly went back", () => {
     expect(
       screen.queryByText("Sam Okafor’s change, undone by Tin Nguyen"),
     ).toBeNull();
-    expect(screen.queryByText("Net: unchanged")).toBeNull();
-    expect(screen.getByText("Still changed")).toBeTruthy();
+    expect(screen.queryByText(englishCopy["history.reversal.net"])).toBeNull();
+    expect(
+      screen.getByText(englishCopy["history.reversal.stillChanged"]),
+    ).toBeTruthy();
     // The field that did NOT go back, as the diff it still is.
     expect(screen.getByText("Source")).toBeTruthy();
     expect(screen.getByText("referral")).toBeTruthy();
@@ -262,7 +267,9 @@ describe("a reversal whose partner is not on the page", () => {
     vi.stubGlobal("fetch", servingOnePage([tinsReversal]));
     render(<RecordHistory kind="contact" id="p1" restore={restore} />);
 
-    expect(await screen.findByText("Undoes an earlier change")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["history.reversal.unpaired"]),
+    ).toBeTruthy();
     expect(screen.getByText("Tin Nguyen restored the record")).toBeTruthy();
     // Never a half-empty pair: nothing to disclose, and its own verb is redo.
     expect(
@@ -294,12 +301,16 @@ describe("redoing a change of several fields", () => {
     await user.click(await screen.findByRole("button", { name: /Redo/ }));
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Redo this change?")).toBeTruthy();
+    expect(
+      within(dialog).getByText(englishCopy["history.undo.redoConfirmTitle"]),
+    ).toBeTruthy();
     expect(
       within(dialog).getByText(
         "2 fields go back to their values before the undo:",
       ),
     ).toBeTruthy();
-    expect(within(dialog).queryByText("Undo this change?")).toBeNull();
+    expect(
+      within(dialog).queryByText(englishCopy["history.undo.confirmTitle"]),
+    ).toBeNull();
   });
 });

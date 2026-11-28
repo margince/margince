@@ -101,7 +101,7 @@ func TestEmploymentImportOneMatchResolvesAllRolesAtEmployer(t *testing.T) {
 	if *after.Items[0].RelationshipId == *after.Items[1].RelationshipId {
 		t.Fatal("different roles collapsed")
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := contacts.RevertProviderFills(e.Admin(), tx, "surfe", subject); err != nil {
 			return err
 		}
@@ -137,7 +137,7 @@ func TestEmploymentImportNewSnapshotWithdrawsOldCurrentAssertion(t *testing.T) {
 	if len(after.Items) != 2 {
 		t.Fatalf("lost history: %+v", after)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var status string
 		var primary bool
 		var end *time.Time

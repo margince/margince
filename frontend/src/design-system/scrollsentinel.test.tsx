@@ -7,6 +7,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ScrollSentinel, type ScrollSentinelProps } from "./scrollsentinel";
 
 // The browser's IntersectionObserver is the boundary: each test says when the
@@ -100,7 +101,9 @@ describe("ScrollSentinel", () => {
     const { onLoadMore } = sentinel({ loading: true });
     inView();
     expect(onLoadMore).not.toHaveBeenCalled();
-    expect(screen.getByText("Loading more…")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["scrollSentinel.loading"]),
+    ).toBeInTheDocument();
   });
 
   it("stops after a failure and retries the same continuation on request", async () => {
@@ -110,7 +113,9 @@ describe("ScrollSentinel", () => {
     update({ loading: false, failed: true });
     inView();
     expect(onLoadMore).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Could not load more.")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["scrollSentinel.failed"]),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(onLoadMore).toHaveBeenCalledTimes(2);
   });
@@ -124,7 +129,7 @@ describe("ScrollSentinel", () => {
     inView();
     expect(onLoadMore).toHaveBeenCalledTimes(1);
     expect(
-      screen.getByText("The list stopped moving forward. Retry to continue."),
+      screen.getByText(englishCopy["scrollSentinel.stalled"]),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });

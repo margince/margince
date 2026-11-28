@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { EmbedReindexBanner } from "./embedreindexbanner";
 
@@ -107,7 +108,9 @@ it('shows "Reindex needed" for an admin when the embed binding changed', async (
     reindex_needed: true,
     entities_pending: 42,
   });
-  expect(await screen.findByText("Reindex needed")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["reindexbanner.needed"]),
+  ).toBeTruthy();
 });
 
 it('shows "Reindex needed" for ops too', async () => {
@@ -117,7 +120,9 @@ it('shows "Reindex needed" for ops too', async () => {
     reindex_needed: true,
     entities_pending: 42,
   });
-  expect(await screen.findByText("Reindex needed")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["reindexbanner.needed"]),
+  ).toBeTruthy();
 });
 
 it("renders nothing without the read grant, even when the binding changed", async () => {
@@ -139,7 +144,7 @@ it("renders nothing without the read grant, even when the binding changed", asyn
       String(input).includes("/embeddings/reindex/identities"),
     ),
   ).toBe(false);
-  expect(screen.queryByText("Reindex needed")).toBeNull();
+  expect(screen.queryByText(englishCopy["reindexbanner.needed"])).toBeNull();
   expect(screen.queryByRole("status")).toBeNull();
 });
 
@@ -154,7 +159,7 @@ it("renders nothing for identity-matched drift, even with reindex_needed true an
     entities_pending: 42,
   });
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-  expect(screen.queryByText("Reindex needed")).toBeNull();
+  expect(screen.queryByText(englishCopy["reindexbanner.needed"])).toBeNull();
   expect(screen.queryByRole("status")).toBeNull();
 });
 
@@ -170,7 +175,9 @@ it("keeps showing during status=reembedding — a stuck marker must stay visible
     entities_pending: 42,
     status: "reembedding",
   });
-  expect(await screen.findByText("Reindex needed")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["reindexbanner.needed"]),
+  ).toBeTruthy();
 });
 
 it("renders nothing when the store is current", async () => {
@@ -181,7 +188,7 @@ it("renders nothing when the store is current", async () => {
     entities_pending: 0,
   });
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-  expect(screen.queryByText("Reindex needed")).toBeNull();
+  expect(screen.queryByText(englishCopy["reindexbanner.needed"])).toBeNull();
   expect(screen.queryByRole("status")).toBeNull();
 });
 
@@ -213,14 +220,16 @@ it("renders nothing while the identities probe is pending or errors", async () =
     </QueryClientProvider>,
   );
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-  expect(screen.queryByText("Reindex needed")).toBeNull();
+  expect(screen.queryByText(englishCopy["reindexbanner.needed"])).toBeNull();
 });
 
 it("asks for the identities on a bound lane and the read grant, and draws the mismatch", async () => {
   const { fetchMock } = mount(REINDEX_READER, MISMATCH, {
     settingsAvailability: { embedding_reindex: true },
   });
-  expect(await screen.findByText("Reindex needed")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["reindexbanner.needed"]),
+  ).toBeTruthy();
   expect(identityRequests(fetchMock)).toBe(1);
 });
 
@@ -230,7 +239,9 @@ it("never asks for the status read, which scans the backlog", async () => {
   const { fetchMock } = mount(REINDEX_READER, MISMATCH, {
     settingsAvailability: { embedding_reindex: true },
   });
-  expect(await screen.findByText("Reindex needed")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["reindexbanner.needed"]),
+  ).toBeTruthy();
   expect(requestsTo(fetchMock, "/embeddings/reindex/status")).toBe(0);
 });
 
@@ -239,7 +250,7 @@ it("asks nothing while /me has not answered", async () => {
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
   await act(async () => {});
   expect(identityRequests(fetchMock)).toBe(0);
-  expect(screen.queryByText("Reindex needed")).toBeNull();
+  expect(screen.queryByText(englishCopy["reindexbanner.needed"])).toBeNull();
 });
 
 // No embeddings model bound: the identities read answers 501 there, so a grant
@@ -250,7 +261,7 @@ it("asks nothing when the installation binds no embeddings model", async () => {
   });
   await settleMe(client);
   expect(identityRequests(fetchMock)).toBe(0);
-  expect(screen.queryByText("Reindex needed")).toBeNull();
+  expect(screen.queryByText(englishCopy["reindexbanner.needed"])).toBeNull();
 });
 
 // A /me older than the field says nothing about the lane, which is not a yes.
@@ -260,5 +271,5 @@ it("asks nothing when /me carries no settings availability at all", async () => 
   });
   await settleMe(client);
   expect(identityRequests(fetchMock)).toBe(0);
-  expect(screen.queryByText("Reindex needed")).toBeNull();
+  expect(screen.queryByText(englishCopy["reindexbanner.needed"])).toBeNull();
 });

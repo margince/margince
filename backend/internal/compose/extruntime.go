@@ -59,8 +59,12 @@ var extensionRuntimeDeps struct {
 // The core port needs no binding of its own. Its store and its read of the
 // record mode come from the pool at the call, so no role wires it half-way.
 type extensionRuntimeBinding struct {
-	pool  *pgxpool.Pool
-	vault keyvault.Vault
+	pool *pgxpool.Pool
+	// objectsWorkspace answers the id a unit's objects are stored under. Nil
+	// reads it from the installation through the pool; a fixture without a
+	// database sets it.
+	objectsWorkspace func(context.Context) (ids.WorkspaceID, error)
+	vault            keyvault.Vault
 	// captureSink is the ONE fully-guarded capture pipeline a unit's ingress
 	// lands through, bound separately by BindExtensionCapture.
 	//
@@ -167,6 +171,11 @@ type callRuntime struct {
 	// deliversNotices lets Notices().Send run with nobody behind it. Only a
 	// bus delivery sets it; see deliveryRuntimeFor.
 	deliversNotices bool
+	// actsAsSeat marks a delivery that runs as the unit's service member. Its
+	// callCtx carries that member's own principal, so Caller names it and a
+	// core verb is checked against it. Ingress, notices and models still read
+	// unattended, which keeps their rules for a run with no human caller.
+	actsAsSeat bool
 
 	// mu orders live: it is read and written under the same lock, so release
 	// and a handler-spawned goroutine cannot race the FLAG. It does not order
@@ -250,10 +259,9 @@ func (r *callRuntime) scoped(ctx context.Context) (context.Context, error) {
 	}
 	ws, ok := principal.WorkspaceID(r.callCtx)
 	if !ok {
-		// The same refusal WithWorkspaceTx would give, raised against the
-		// invocation rather than the handler's context — an unpinned
-		// invocation is a core wiring fault, and no ctx a handler builds
-		// should be able to supply the missing tenant.
+		// Raised against the invocation rather than the handler's context.
+		// An unpinned invocation is a core wiring fault, and no ctx a handler
+		// builds may supply the missing tenant.
 		return nil, database.ErrNoWorkspace
 	}
 	ctx = principal.WithWorkspaceID(ctx, ws)
@@ -330,7 +338,7 @@ func (r *callRuntime) Secrets() extension.Secrets {
 // holds.
 func (r *callRuntime) Caller() extension.Caller {
 	actor, ok := principal.Actor(r.callCtx)
-	if !ok || r.unattended {
+	if !ok || (r.unattended && !r.actsAsSeat) {
 		// No principal is the unauthenticated or unbound path, and the zero
 		// Caller is CallerSystem — the least authority, so a wiring gap reads
 		// as "nobody" rather than as a human whose id happens to be empty.
@@ -465,4 +473,11 @@ func BindExtensionObjectsFromConfig(ctx context.Context, settings *config.Config
 	}
 	BindExtensionObjects(store)
 	return nil
+}
+
+func (b extensionRuntimeBinding) storedWorkspace() func(context.Context) (ids.WorkspaceID, error) {
+	if b.objectsWorkspace != nil {
+		return b.objectsWorkspace
+	}
+	return extcapability.StoredWorkspace(b.pool)
 }

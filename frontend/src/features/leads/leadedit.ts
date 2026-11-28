@@ -6,6 +6,7 @@ import type { RailEdit } from "../../components/railfield";
 import { saveRecordEdit } from "../../components/recordedit";
 import { type FieldRecord, rawRecord } from "../../components/recordfieldtypes";
 import { useT } from "../../i18n";
+import { salutationOptions } from "../../lib/contactsalutation";
 import { useIndustryOptions } from "../../lib/industryoptions";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { originPickOptions, useLeadOrigins } from "../../lib/leadorigins";
@@ -32,6 +33,7 @@ export function useLeadEdit(
   const partners = useLeadPartnerOptions() ?? [];
   const industries = useIndustryOptions(lead.industry);
   const fields = leadEditFields({
+    salutations: salutationOptions(t),
     industries: [{ value: "", label: t("field.unset") }, ...industries],
     // "Not set" is a real choice: choosing it sends null and the lead scores neutral.
     origins: [

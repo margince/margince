@@ -162,7 +162,7 @@ func (s *Service) writeProposedSeats(
 	for _, candidate := range candidates {
 		named[candidate.ContactID] = candidate.FullName
 	}
-	err := database.WithWorkspaceTx(execCtx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(execCtx, s.pool, func(tx pgx.Tx) error {
 		// Re-read who holds a seat, INSIDE the writing transaction. The check
 		// before the prompt was a snapshot, and the model call takes seconds:
 		// a colleague who names a champion while it runs would otherwise be

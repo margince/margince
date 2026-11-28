@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { expect, within } from "storybook/test";
 import { Panel } from "../../design-system/panel";
 import { useLocale, useT } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { openAnalyticsSection } from "../../lib/analytics.address";
 import {
   beforeHistoryWeeklyNumbers,
@@ -237,7 +238,9 @@ export const ArchiveOfWeeks: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const earlier = await canvas.findByRole("button", { name: "Earlier week" });
+    const earlier = await canvas.findByRole("button", {
+      name: englishCopy["brief.report.earlier"],
+    });
     await expect(earlier).toBeEnabled();
     await expect(
       canvas.getByRole("button", { name: "Later week" }),

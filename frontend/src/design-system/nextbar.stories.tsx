@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { expectNextBarHoldsItsText } from "../testing/nextbarchecks";
 import { UNBROKEN_SUBJECT } from "../testing/unbrokentext";
 import { Button } from "./atoms";
@@ -161,7 +162,7 @@ export const NothingNext: Story = {
   args: {},
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText("Nothing is due next."),
+      within(canvasElement).getByText(englishCopy["standing.next.none"]),
     ).toBeVisible();
   },
 };
@@ -174,10 +175,10 @@ export const NoTaskRecorded: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText("No follow-up task recorded."),
+      within(canvasElement).getByText(englishCopy["standing.next.noTask"]),
     ).toBeVisible();
     await expect(
-      within(canvasElement).queryByText("Nothing is due next."),
+      within(canvasElement).queryByText(englishCopy["standing.next.none"]),
     ).toBeNull();
   },
 };

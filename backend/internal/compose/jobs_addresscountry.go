@@ -76,7 +76,7 @@ func newAddressCountryWorker(pool *pgxpool.Pool, geocoder geocode.Client, clock 
 // A lookup that does not complete ends the pass with its error; the record stays
 // unchecked, and the next pass asks again.
 func (w *addressCountryWorker) Work(ctx context.Context, _ *river.Job[AddressCountryCheckArgs]) error {
-	workspaces, err := enumerateWorkspaces(ctx, w.pool)
+	workspaces, err := database.LiveWorkspaces(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

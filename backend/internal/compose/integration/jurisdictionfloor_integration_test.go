@@ -62,7 +62,7 @@ func newFloorFixture(t *testing.T) floorFixture {
 
 func (f floorFixture) exec(t *testing.T, sql string, args ...any) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), sql, args...)
 		return err
 	}); err != nil {
@@ -108,7 +108,7 @@ func (f floorFixture) retentionPass(t *testing.T) {
 func (f floorFixture) erased(t *testing.T, id ids.UUID) bool {
 	t.Helper()
 	var body *string
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT body FROM activity WHERE id = $1`, id).Scan(&body)
 	}); err != nil {
 		t.Fatal(err)
@@ -119,7 +119,7 @@ func (f floorFixture) erased(t *testing.T, id ids.UUID) bool {
 func (f floorFixture) policy(t *testing.T) privacy.FloorPolicy {
 	t.Helper()
 	var policy privacy.FloorPolicy
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		policy, err = privacy.ResolveFloorPolicy(context.Background(), tx, identity.CountryOf)
 		return err
@@ -193,7 +193,7 @@ func TestAPinOnOldMailPinsToTheCarriedFloor(t *testing.T) {
 		t.Fatalf("PinToFloor: %v", err)
 	}
 	var until time.Time
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT restricted_until FROM activity WHERE id = $1`, old).Scan(&until)
 	}); err != nil {
 		t.Fatal(err)
@@ -229,7 +229,7 @@ func TestBootRefusesAStoredJurisdictionWithNoPack(t *testing.T) {
 	if err := compose.RequireCompiledInCountry(context.Background(), e.Pool); err != nil {
 		t.Fatalf("unset jurisdiction refused: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ('installation.country', '"zj"')`)
 		return err
 	}); err != nil {

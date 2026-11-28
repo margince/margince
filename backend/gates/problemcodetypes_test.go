@@ -8,6 +8,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/token"
 	"maps"
 	"slices"
 	"strings"
@@ -73,6 +74,9 @@ func (c *emittedCensus) identType(ident *ast.Ident, unit *goUnit) (ast.Expr, *go
 
 // valueType answers the type a value is built or returned as.
 func (c *emittedCensus) valueType(value ast.Expr, unit *goUnit) (ast.Expr, *goUnit, bool) {
+	if ranged, ok := value.(*ast.UnaryExpr); ok && ranged.Op == token.RANGE {
+		return c.rangeElementType(ranged.X, unit)
+	}
 	if ref, isRef := value.(*ast.UnaryExpr); isRef {
 		value = ref.X
 	}

@@ -76,7 +76,7 @@ func TestAnAgentApprovedRunWritesRowsAsTheAgent(t *testing.T) {
 		t.Fatalf("writing a contact as the rebuilt agent: %v", err)
 	}
 	var capturedBy string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT captured_by FROM contact WHERE id = $1`, created.Id).Scan(&capturedBy)
 	}); err != nil {
@@ -113,7 +113,7 @@ func TestASuspendedApproverFailsTheRunWithPermission(t *testing.T) {
 					t.Fatalf("the %s approver is refused before their seat changed: %v", run.Actor.Type, err)
 				}
 			}
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				_, err := tx.Exec(context.Background(), withdraw, e.Rep1)
 				return err
 			}); err != nil {
@@ -151,7 +151,7 @@ func TestAnAgentActsWithNoVerbItsPassportLacks(t *testing.T) {
 	e := Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	run := queuedRun(agentOf(t, e), 1)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE passport SET scopes = ARRAY['read'] WHERE id = $1`, e.AgentPassport)
 		return err
 	}); err != nil {

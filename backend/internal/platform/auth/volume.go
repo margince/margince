@@ -115,6 +115,11 @@ func (e *VolumeExceededError) RetryAfterSeconds() int {
 	return int(math.Ceil(e.Reading.ResetsIn.Seconds()))
 }
 
+// RateLimit exposes the known allowance and its remaining reset time.
+func (e *VolumeExceededError) RateLimit() (int, int) {
+	return e.Reading.Limit, max(1, e.RetryAfterSeconds())
+}
+
 // VolumeUnansweredError refuses an agent call because its count could not be
 // read. The meter fails closed, but no limit was reached, so the answer is a
 // short wait and never the end of the window.

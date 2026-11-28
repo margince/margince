@@ -12,6 +12,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { ImapConnectForm } from "./imap-connect-form";
 
@@ -270,7 +271,7 @@ describe("ImapConnectForm", () => {
     await user.type(host, "https://imap.example.com/path");
     await user.click(screen.getByRole("button", { name: "Connect" }));
     expect(
-      screen.getByText("Enter the server name only, such as imap.example.com."),
+      screen.getByText(englishCopy["connectors.imapHostName"]),
     ).toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });

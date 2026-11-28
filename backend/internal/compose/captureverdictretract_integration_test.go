@@ -229,7 +229,7 @@ func TestTheReconcileSweepRetractsContactsANoiseVerdictAlreadyCovered(t *testing
 func seedSettledRowFor(t *testing.T, e *integration.Env, email, status, kind string, owner ids.UUID) {
 	t.Helper()
 	activityID := seedCapturedMail(t, e, email, "already judged")
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_pending_counterparty
 			  (email, domain, activity_id, owner_id, status, kind, resolved_at)
@@ -248,7 +248,7 @@ func seedSettledRowFor(t *testing.T, e *integration.Env, email, status, kind str
 func seedMachineMadeContact(t *testing.T, e *integration.Env, email string, owner ids.UUID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, owner_id, full_name, source, captured_by, visibility)
 			VALUES ($1, $2, $3, 'capture_counterparty_verdict',
@@ -274,7 +274,7 @@ func seedMachineMadeContact(t *testing.T, e *integration.Env, email string, owne
 func seedCaptureOnlyContact(t *testing.T, e *integration.Env, email string, owner ids.UUID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, owner_id, full_name, source, captured_by, visibility)
 			VALUES ($1, $2, $3, 'gmail', 'connector:gmail', 'owner')`, id, owner, email); err != nil {
@@ -295,7 +295,7 @@ func seedCaptureOnlyContact(t *testing.T, e *integration.Env, email string, owne
 // SenderOverrideStore.Set writes, without the HTTP principal it requires.
 func seedSenderOverride(t *testing.T, e *integration.Env, user ids.UUID, address, decision string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_sender_override (user_id, address, decision)
 			VALUES ($1, $2, $3)`, user, address, decision)
@@ -316,7 +316,7 @@ func seedSettledNoiseRow(t *testing.T, e *integration.Env, email, kind string) {
 func seedSettledRow(t *testing.T, e *integration.Env, email, status, kind string) {
 	t.Helper()
 	activityID := seedCapturedMail(t, e, email, "already judged")
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_pending_counterparty
 			  (email, domain, activity_id, owner_id, status, kind, resolved_at)
@@ -334,7 +334,7 @@ func seedSettledRow(t *testing.T, e *integration.Env, email, status, kind string
 // ThreadHoldsItsCounterparty true of it afterwards.
 func seedSettledPersonalThread(t *testing.T, e *integration.Env, threadKey string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, kind, status, resolved_at)
 			VALUES ($1, $2, 'personal', 'held', now())`, threadKey, e.Rep1)

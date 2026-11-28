@@ -67,7 +67,7 @@ func TestARepeatedWorkingHoursSaveComparesUnderTheSeatLock(t *testing.T) {
 		t.Fatalf("the save that waited: %v", err)
 	}
 	var start int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT work_start_minute FROM app_user WHERE id = $1`, e.Rep1).Scan(&start)
 	}); err != nil {
 		t.Fatal(err)
@@ -97,7 +97,7 @@ func TestARepeatedDomainDecisionComparesUnderTheAdmissionLock(t *testing.T) {
 		t.Fatalf("the decision that waited: %v", err)
 	}
 	var stored string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT admission_reason FROM company_domain_disposition WHERE domain = $1`, domain).Scan(&stored)
 	}); err != nil {
 		t.Fatal(err)

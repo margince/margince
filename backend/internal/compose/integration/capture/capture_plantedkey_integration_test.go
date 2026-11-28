@@ -59,7 +59,7 @@ type mailRow struct {
 func capturedMailRows(t *testing.T, e *integration.SearchEnv) []mailRow {
 	t.Helper()
 	var out []mailRow
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT id, coalesce(source_id, ''), coalesce(subject, ''), captured_by
 			   FROM activity WHERE kind = 'email' ORDER BY id`)
@@ -225,7 +225,7 @@ func TestTheSeatsOwnRowNamesItsOwnProviderOriginal(t *testing.T) {
 func rawOriginalOf(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) ids.UUID {
 	t.Helper()
 	var raw *ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT raw_capture_id FROM activity WHERE id = $1`, activityID).Scan(&raw)
 	}); err != nil {

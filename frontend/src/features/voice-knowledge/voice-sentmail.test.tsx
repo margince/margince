@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { LearnFromSentMail, useSentMailLearning } from "./voice-sentmail";
 
 // Sent mail is read on the owner's press and at no other time, and the press
@@ -80,7 +81,9 @@ function renderRow(onChanged: () => void = () => undefined) {
 }
 
 const button = () =>
-  screen.getByRole("button", { name: "Learn from sent mail" });
+  screen.getByRole("button", {
+    name: englishCopy["settings.voice.sentMailButton"],
+  });
 
 afterEach(() => {
   cleanup();

@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { OpenSourceProvider } from "../lib/opensource";
 import { NoticeRow } from "./notificationrow";
 
@@ -32,7 +33,9 @@ it("opens the exact note flagged for manual review without settling the notice",
       </OpenSourceProvider>
     </LocaleProvider>,
   );
-  await user.click(screen.getByRole("button", { name: "Open original" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["tasks.openSource"] }),
+  );
   expect(open).toHaveBeenCalledWith("matching-note");
   expect(activate).toHaveBeenCalledOnce();
   expect(settle).not.toHaveBeenCalled();

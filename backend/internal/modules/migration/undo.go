@@ -178,6 +178,7 @@ func (s *RunStore) LockRunWrites(ctx context.Context, id RunID) (func(), error) 
 }
 
 func (s *RunStore) acquireRunWrites(ctx context.Context, id RunID) (func(), error) {
+	// pool-exempt: this connection holds a session-level advisory lock for the run and writes no domain row.
 	conn, err := s.db.Pool().Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("import run %s: acquiring the write lock connection: %w", id, err)
@@ -231,11 +232,13 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 		if err := lockSourceName(ctx, tx, id); err != nil {
 			return err
 		}
+		args := []any{id}
+		scope := ownRunScope(ctx, "own_seat", func(v any) int { args = append(args, v); return len(args) })
 		row := tx.QueryRow(ctx, `
 			SELECT id, connector, status, checkpoint, undo_report, report, source_name
 			  FROM import_run
-			 WHERE id = $1
-			 FOR UPDATE`, id)
+			 WHERE id = $1`+scope+`
+			 FOR UPDATE`, args...)
 		if err := row.Scan(&run.ID, &run.Connector, &run.Status, &run.Checkpoint,
 			&undoReportRaw, &reportRaw, &sourceName); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {

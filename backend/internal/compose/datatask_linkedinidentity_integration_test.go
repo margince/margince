@@ -37,7 +37,7 @@ func TestLinkedInIdentityTaskRollsBackAndRefusesAMalformedCursor(t *testing.T) {
 	e.WsExec(t, `UPDATE lead SET linkedin_url = 'https://de.linkedin.com/in/rollback' WHERE id = $1`, lead)
 	step := linkedInIdentityDataTask().Steps[0]
 	rollback := errors.New("roll back after normalization")
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		if err != nil {
 			return err
@@ -53,7 +53,7 @@ func TestLinkedInIdentityTaskRollsBackAndRefusesAMalformedCursor(t *testing.T) {
 	if got := e.WsScalar(t, `SELECT linkedin_url FROM lead WHERE id = $1`, lead); got != "https://de.linkedin.com/in/rollback" {
 		t.Errorf("rolled-back LinkedIn = %q", got)
 	}
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := step.Batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"not an id"`), Limit: 10})
 		return err
 	})
@@ -172,7 +172,7 @@ func TestLeadContactPairTaskRollsBackWithItsPromotion(t *testing.T) {
 		VALUES ($1, $2, 'work', true, 0, 'manual', 'human:test')`, contact, email)
 	step := leadContactPairsDataTask(e.Pool).Steps[0]
 	rollback := errors.New("roll back after promotion")
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		if err != nil {
 			return err

@@ -16,7 +16,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `description` | `text` |  |  |
 | `ended_at` | `date` |  |  |
 | `key` | `text` |  | The short handle a human writes in a subject line. |
-| `last_activity_at` | `timestamp with time zone` |  | The newest workspace-audience activity filed under the project, maintained from the timeline on link write. |
+| `last_activity_at` | `timestamp with time zone` |  | The newest company-audience activity filed under the project, maintained from the timeline on link write. |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `phase` | `text`, default `'initiative'::text` | yes | Read-only here: transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction. |
@@ -71,6 +71,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `home_read_fence_project_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `project_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `project_source_channel`: `BEFORE UPDATE FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) EXECUTE FUNCTION move_source_onto_its_channel()`
+- `source_change_is_remembered`: `AFTER UPDATE FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "name": 120, "phase": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "closed_reason": 2000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"closed_reason":2000,"description":20000,"key":20000,"name":120,"phase":20000,"source":20000,"source_system":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120, "phase": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "closed_reason": 2000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"closed_reason":2000,"description":20000,"key":20000,"name":120,"phase":20000,"source":20000,"source_system":20000}')`
 - `trg_project_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`

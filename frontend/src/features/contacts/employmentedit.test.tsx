@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { steppedClock } from "../../testing/steppedclock";
 import { EmploymentEdit } from "./employmentedit";
 
@@ -116,7 +117,9 @@ it("offers the current-employer box only for a role that is still held", () => {
   open(role);
 
   expect(
-    screen.getByRole("checkbox", { name: "This is their primary employer" }),
+    screen.getByRole("checkbox", {
+      name: englishCopy["contact.rail.isPrimaryEmployer"],
+    }),
   ).toHaveProperty("disabled", true);
 });
 
@@ -124,13 +127,19 @@ it("requires a current or former choice for an imported unknown link", async () 
   const user = steppedClock();
   const patches = sentPatches();
   const { onClose } = open({ ...role, employment_status: "unknown" });
-  const status = screen.getByRole("combobox", { name: "Employment status" });
+  const status = screen.getByRole("combobox", {
+    name: englishCopy["employment.statusLabel"],
+  });
   await user.click(screen.getByRole("button", { name: "Save" }));
   expect(screen.getByText("Employment status is required.")).toBeTruthy();
   expect(document.activeElement).toBe(status);
   expect(patches).toHaveLength(0);
   await user.click(status);
-  expect(screen.queryByRole("option", { name: "Status unknown" })).toBeNull();
+  expect(
+    screen.queryByRole("option", {
+      name: englishCopy["employment.status.unknown"],
+    }),
+  ).toBeNull();
   expect(screen.getAllByRole("option")).toHaveLength(2);
   await user.click(screen.getByRole("option", { name: "Current" }));
   await user.click(screen.getByRole("button", { name: "Save" }));

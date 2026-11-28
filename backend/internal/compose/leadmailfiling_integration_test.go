@@ -122,7 +122,7 @@ func (l *leadMailEnv) meetingWith(t *testing.T, subject string, attendees ...str
 		t.Fatalf("capturing the meeting: %v", err)
 	}
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_system = 'gcal' AND source_id = $1`, event.ID).Scan(&id)
 	}); err != nil {
 		t.Fatalf("reading the captured meeting: %v", err)
@@ -251,7 +251,7 @@ func (l *leadMailEnv) leadTimeline(ctx context.Context, t *testing.T, lead ids.L
 
 func (l *leadMailEnv) audienceOf(t *testing.T, activity ids.UUID) (audience, reason string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT audience, coalesce(audience_reason, '') FROM activity WHERE id = $1`, activity).Scan(&audience, &reason)
 	}); err != nil {
 		t.Fatalf("reading the audience: %v", err)

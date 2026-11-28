@@ -80,7 +80,7 @@ func TestWorkspaceConsumerMailListCorrectsTheBaselineBothWays(t *testing.T) {
 	}
 
 	// The matcher the capture path reads must obey both corrections.
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		matcher, err := capture.MatcherTx(ctx, tx)
 		if err != nil {
 			return err
@@ -106,7 +106,7 @@ func TestWorkspaceConsumerMailListCorrectsTheBaselineBothWays(t *testing.T) {
 	if err := store.Remove(ctx, added.ID); err != nil {
 		t.Fatalf("withdrawing what is already gone must be a no-op, got: %v", err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		matcher, err := capture.MatcherTx(ctx, tx)
 		if err != nil {
 			return err
@@ -196,7 +196,7 @@ func TestCarveOutOfASubdomainBaselineEntryRemovesOnlyThatEntry(t *testing.T) {
 	if stored.Domain != entry {
 		t.Errorf("stored carve-out = %q, want the baseline entry %q", stored.Domain, entry)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		matcher, err := capture.MatcherTx(ctx, tx)
 		if err != nil {
 			return err

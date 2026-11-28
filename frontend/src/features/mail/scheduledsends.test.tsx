@@ -225,7 +225,7 @@ it("puts what needs a contact first, and says why it stopped", async () => {
   mount([SENT, WAITING, HELD]);
   const headings = await screen.findAllByRole("heading", { level: 2 });
   expect(headings.map((heading) => heading.textContent)).toEqual([
-    "Held for your action",
+    en["sched.group.held"],
     "Scheduled",
   ]);
   // Settled messages stay on the page, behind one summary row with a count.
@@ -285,7 +285,6 @@ it.each([
           Response.json({
             id: reviewId,
             state: "needs_context",
-            kind: "single",
             reason_code: "consent_withdrawn",
             refusals: [],
             warning: { version: "override-v2", text: "The refusal stands." },
@@ -396,7 +395,7 @@ it("pins a move to the version the row was drawn from", async () => {
   await user.clear(time);
   await user.type(time, "08:30");
   await user.tab();
-  await user.click(screen.getByRole("button", { name: "Move message" }));
+  await user.click(screen.getByRole("button", { name: en["sched.moveSave"] }));
   const patch = calls.find((call) => call.method === "PATCH");
   expect(patch?.ifMatch).toBe("3");
   expect(patch?.body).toEqual({
@@ -431,7 +430,7 @@ it("refuses to move a message to nowhere", async () => {
   await user.tab();
   expect(
     screen
-      .getByRole("button", { name: "Move message" })
+      .getByRole("button", { name: en["sched.moveSave"] })
       .hasAttribute("disabled"),
   ).toBe(true);
   expect(calls.some((call) => call.method === "PATCH")).toBe(false);
@@ -445,14 +444,14 @@ it("refuses to move a message to a moment already past", async () => {
   await user.clear(day);
   await user.type(day, "02/09/2020");
   await user.tab();
-  const save = screen.getByRole("button", { name: "Move message" });
+  const save = screen.getByRole("button", { name: en["sched.moveSave"] });
   expect(
     save.hasAttribute("disabled") ||
       save.getAttribute("aria-disabled") === "true",
   ).toBe(true);
   await user.click(save);
   expect(calls.some((call) => call.method === "PATCH")).toBe(false);
-  expect(screen.getByText("Choose a time in the future.")).toBeTruthy();
+  expect(screen.getByText(en["compose.schedulePast"])).toBeTruthy();
 });
 
 it("asks before taking a message back, and sends nothing if the reader declines", async () => {
@@ -468,7 +467,9 @@ it("takes the message back on confirm", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
   await user.click(await screen.findByRole("button", { name: /Withdraw: / }));
-  await user.click(screen.getByRole("button", { name: "Withdraw message" }));
+  await user.click(
+    screen.getByRole("button", { name: en["sched.withdrawConfirm"] }),
+  );
   const cancel = calls.find((call) => call.method === "POST");
   expect(cancel?.path).toBe(`/v1/scheduled-sends/${WAITING.id}/cancel`);
 });
@@ -477,7 +478,7 @@ it("tells the reader to read the list again when the row is not the row on the s
   const user = userEvent.setup();
   mountRefusing([WAITING], "PATCH");
   await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
-  await user.click(screen.getByRole("button", { name: "Move message" }));
+  await user.click(screen.getByRole("button", { name: en["sched.moveSave"] }));
   expect(await screen.findByText(/List out of date/)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Reload" })).toBeTruthy();
   // The raw server detail is the one thing that must not reach the reader: it
@@ -521,18 +522,18 @@ it("says nothing is scheduled once, and offers the way to write one", async () =
   mount([], allowedPreview, [
     { id: "m1", provider: "gmail", status: "connected", can_backfill: true },
   ]);
-  expect(await screen.findByText("No messages scheduled.")).toBeTruthy();
-  const write = await screen.findByRole("link", { name: "Write a message" });
+  expect(await screen.findByText(en["sched.empty"])).toBeTruthy();
+  const write = await screen.findByRole("link", { name: en["sched.write"] });
   expect(write.getAttribute("href")).toMatch(/#\/contacts$/);
   // One heading for the empty page, not one per group.
   expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
-  expect(screen.getByText("Open a contact and choose Email.")).toBeTruthy();
+  expect(screen.getByText(en["sched.writeHow"])).toBeTruthy();
 });
 
 it("offers no way to write a message without a mailbox to send from", async () => {
   mount([]);
-  expect(await screen.findByText("No messages scheduled.")).toBeTruthy();
-  expect(screen.queryByRole("link", { name: "Write a message" })).toBeNull();
+  expect(await screen.findByText(en["sched.empty"])).toBeTruthy();
+  expect(screen.queryByRole("link", { name: en["sched.write"] })).toBeNull();
 });
 
 // The queue says WHOSE decision stopped a message, in the composer's words.

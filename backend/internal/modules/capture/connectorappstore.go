@@ -33,6 +33,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const (
+	secretRefKey = "ref"
+)
+
 // ConnectorAppStore reads and writes the installation's connector OAuth apps.
 type ConnectorAppStore struct {
 	settings *settings.Store
@@ -178,7 +182,11 @@ func (s *ConnectorAppStore) Credentials(ctx context.Context, p AppProvider) (Con
 	// The unsealed secret rides back in the ref field, which is where the caller
 	// looks for it: nothing downstream re-reads a ref it was handed, and a second
 	// struct differing in one field's MEANING is how a ref reaches a vendor.
-	return ConnectorApp{ClientID: app.ClientID, ClientSecretRef: string(secret), Tenant: app.Tenant}, true, nil
+	resolved, err := resolveAppSecret(app, secret)
+	if err != nil {
+		return ConnectorApp{}, false, err
+	}
+	return resolved, true, nil
 }
 
 // Set stores one provider's app, sealing the secret and replacing whatever was
@@ -188,6 +196,11 @@ func (s *ConnectorAppStore) Credentials(ctx context.Context, p AppProvider) (Con
 // after the move commits, so no window exists in which the recorded ref names
 // nothing. A failure part-way leaves the previous app serving.
 func (s *ConnectorAppStore) Set(ctx context.Context, p AppProvider, clientID, clientSecret, tenant string) error {
+	return s.SetWithSigningSecret(ctx, p, clientID, clientSecret, tenant, "")
+}
+
+// SetWithSigningSecret seals event-verification material with the OAuth credential.
+func (s *ConnectorAppStore) SetWithSigningSecret(ctx context.Context, p AppProvider, clientID, clientSecret, tenant, signingSecret string) error {
 	if err := auth.Require(ctx, captureSettingsObject, principal.ActionUpdate); err != nil {
 		return err
 	}
@@ -210,11 +223,15 @@ func (s *ConnectorAppStore) Set(ctx context.Context, p AppProvider, clientID, cl
 	if err != nil {
 		return err
 	}
-	ref, err := s.vault.Put(ctx, ws, []byte(clientSecret))
+	sealed, err := appSecretPayload(p, clientSecret, signingSecret)
+	if err != nil {
+		return err
+	}
+	ref, err := s.vault.Put(ctx, ws, sealed)
 	if err != nil {
 		return fmt.Errorf("capture: sealing the %s client secret: %w", k.name, err)
 	}
-	next := ConnectorApp{ClientID: clientID, ClientSecretRef: string(ref), Tenant: tenant}
+	next := ConnectorApp{ClientID: clientID, ClientSecretRef: string(ref), Tenant: tenant, SigningSecretSet: signingSecret != ""}
 	previous, err := s.swap(ctx, ws, k, next, string(ref))
 	if err != nil {
 		return err

@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   defaultAgentAllowances,
   roleAllowance,
@@ -99,7 +100,9 @@ describe("AgentAllowancesCard", () => {
     expect(readout).toHaveTextContent("200");
     expect(readout).toHaveTextContent("Sends");
     expect(readout).toHaveTextContent("20");
-    expect(readout).toHaveTextContent("Calls in total");
+    expect(readout).toHaveTextContent(
+      englishCopy["agentAllowances.calls.label"],
+    );
     expect(readout).toHaveTextContent("1,000");
     expect(readout).not.toHaveTextContent("Records read");
     expect(screen.queryByRole("textbox")).toBeNull();
@@ -458,15 +461,17 @@ describe("AgentAllowancesCard by role", () => {
 
     const admin = await screen.findByTestId("role-allowance-admin");
     expect(admin).toHaveTextContent("20,000");
-    expect(admin).toHaveTextContent("Admin preset");
+    expect(admin).toHaveTextContent(englishCopy["agentAllowances.diff.preset"]);
     expect(admin).toHaveTextContent("Built-in");
     const custom = screen.getByTestId("role-allowance-custom_field_research");
     expect(custom).toHaveTextContent("Field research");
     expect(custom).toHaveTextContent("5,000");
-    expect(custom).toHaveTextContent("Set for this role");
+    expect(custom).toHaveTextContent(
+      englishCopy["agentAllowances.roles.source.role"],
+    );
     expect(custom).not.toHaveTextContent("Built-in");
     expect(screen.getByTestId("role-allowance-rep")).toHaveTextContent(
-      "Installation",
+      englishCopy["installationSettings.companyTitle"],
     );
     expect(
       screen.getByText(translate("en", "agentAllowances.state.changed")),

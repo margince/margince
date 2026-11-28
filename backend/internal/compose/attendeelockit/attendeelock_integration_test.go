@@ -103,7 +103,7 @@ func (f *meetingFixture) whileABuyerJoins(judge func() error) {
 	commit := func() { released.Do(func() { close(release) }) }
 	defer commit()
 	go func() {
-		written <- database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+		written <- database.WithTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
 			defer close(inserted)
 			buyer := []connector.MessageParticipant{{Email: "ines@customer.test", Role: connector.ParticipantRoleAttendee}}
 			if err := capture.StampFurtherParticipants(f.Admin(), tx, ids.From[ids.ActivityKind](f.meeting), "meeting", "", true, buyer); err != nil {
@@ -141,7 +141,7 @@ func TestTheEvidenceWriterWaitsForAnAttendeeJoiningTheMeeting(t *testing.T) {
 	f := newMeetingFixture(t)
 	var facts deals.ActivityAuthorship
 	f.whileABuyerJoins(func() error {
-		return database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+		return database.WithTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
 			var err error
 			facts, err = deals.ReadActivityAuthorship(f.Admin(), tx, f.meeting, f.own)
 			return err

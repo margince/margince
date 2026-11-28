@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { translate } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import {
   jsonResponse,
   StoryProviders,
@@ -166,7 +167,7 @@ export const AddingForAMissingSeat: Story = {
   },
   play: async ({ canvasElement }) => {
     const verb = await within(canvasElement).findByRole("button", {
-      name: "Add stakeholder",
+      name: englishCopy["rel.addStakeholder"],
     });
     await expect(verb).toHaveAccessibleDescription(
       "Missing: an engaged champion",
@@ -333,7 +334,7 @@ export const ClosedDealSearch: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Add to a deal",
+        name: englishCopy["rel.seatOnDeal"],
       }),
     );
     const dialog = await screen.findByRole("dialog");

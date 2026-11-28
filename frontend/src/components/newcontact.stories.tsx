@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import {
   emptyPage,
   installFetchStub,
@@ -70,9 +71,7 @@ async function typeWorkEmail(context: Canvas) {
     "dana.buyer@nordlicht-logistik.de",
   );
   await expect(
-    await body.findByText(
-      "Matched to an existing company by the work email domain.",
-    ),
+    await body.findByText(englishCopy["create.companyPrefilled"]),
   ).toBeVisible();
 }
 
@@ -144,7 +143,7 @@ export const NameOnly: Story = {
     const body = within(document.body);
     await user.type(await body.findByLabelText("Full name *"), "Dana Buyer");
     await expect(
-      body.getByText("Add at least one email, phone or LinkedIn URL."),
+      body.getByText(englishCopy["create.contactChannelRequired"]),
     ).toBeVisible();
     await user.click(body.getByRole("button", { name: "Create" }));
     await expect(document.activeElement).toHaveAttribute(

@@ -128,7 +128,7 @@ export const AdminConfirm: Story = {
       }),
     );
     await userEvent.click(
-      canvas.getByRole("button", { name: "Save group roles" }),
+      canvas.getByRole("button", { name: en["groupRoles.save"] }),
     );
     await within(canvasElement.ownerDocument.body).findByRole("dialog");
   },

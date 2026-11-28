@@ -7,10 +7,11 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -60,7 +61,7 @@ func (h Handlers) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.mfaPerIP.Allow(httpserver.ClientIP(r)) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		httperr.Write(w, r, ratelimit.Refused(h.mfaPerIP))
 		return
 	}
 	var req crmcontracts.MfaLoginRequest
@@ -84,7 +85,7 @@ func (h Handlers) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
 	// Allow counts the attempt before it runs: a peek here with the failure
 	// recorded afterwards would let a concurrent burst all pass the check.
 	if !h.mfaAttempts.Allow(userID.String()) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		httperr.Write(w, r, ratelimit.Refused(h.mfaAttempts))
 		return
 	}
 	id, token, err := h.svc.CompleteMFAChallenge(withUserAgent(r.Context(), r.UserAgent()), userID, challenge, req.Code)

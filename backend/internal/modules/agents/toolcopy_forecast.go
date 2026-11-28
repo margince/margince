@@ -79,7 +79,7 @@ var forecastMovementCopy = toolCopy{
 }
 
 var forecastInputChecksCopy = toolCopy{
-	Purpose: "Answer whether the forecast's inputs are sound enough to quote: a verdict, and " +
+	Purpose: "Answer whether the forecast's inputs are sound enough to quote: a result, and " +
 		"how much of the pipeline last night's check reached.",
 	Limits: "A forecast is only as good as its inputs, and the failures are mundane: a close " +
 		"date that went by, an amount that disagrees with the offer that was sent, a deal " +
@@ -90,7 +90,7 @@ var forecastInputChecksCopy = toolCopy{
 	Instead: "This is the VERDICT. list_input_checks is the findings themselves, one row per " +
 		"problem, when the question is what to go and fix. data_coverage is the third " +
 		"question and the one this cannot answer: whether the CONNECTORS were readable at " +
-		"all, which is what makes a clean verdict trustworthy rather than merely clean.",
+		"all, which is what makes a clean result trustworthy rather than merely clean.",
 	Retain: "Read `readiness` before quoting any forecast figure. `sources` says why: each " +
 		"carries the state the run reached, and only a `checked` source has a date. An absent " +
 		"or unread source means the run could not confirm anything from it, which is different " +
@@ -113,7 +113,7 @@ var listInputChecksCopy = toolCopy{
 }
 
 var dataCoverageCopy = toolCopy{
-	Purpose: "Answer how much of what is going on this workspace can actually SEE: which " +
+	Purpose: "Answer how much of what is going on this company can actually SEE: which " +
 		"connectors the nightly check could read, and how far back each reaches.",
 	Limits: "Needs the data_coverage grant, which operators hold and sellers do not: a " +
 		"refusal here is a seat boundary, not a missing run. Only a `checked` source carries a " +

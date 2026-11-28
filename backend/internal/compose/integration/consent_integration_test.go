@@ -766,7 +766,7 @@ func TestADeadAddressRefusesTheNextSend(t *testing.T) {
 	reporter = principal.WithActor(reporter, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",
 	})
-	if err := database.WithWorkspaceTx(reporter, c.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reporter, c.Pool, func(tx pgx.Tx) error {
 		return consent.RecordHardBounceTx(reporter, tx, consent.HardBounceFact{
 			Address: "subject@consent.test", DeliveryID: ids.NewV7(),
 		})

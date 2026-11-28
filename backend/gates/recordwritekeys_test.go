@@ -51,6 +51,9 @@ var customFieldRequestTypes = map[string]reflect.Type{
 // freeFormBodies are open bodies that write no record directly: the fields are
 // a stranger's, read by name and kept as text. Each says what bounds it.
 var freeFormBodies = gatekit.Waive(map[string]string{
+	"(inline body of POST /channel-events/slack)":       "Slack owns the signed envelope; the raw-body signature check precedes bounded event parsing and canonical source reads",
+	"(inline body of POST /channel-events/teams/bot)":   "Bot Framework owns the envelope; bearer issuer and audience checks precede bounded event parsing and canonical source reads",
+	"(inline body of POST /channel-events/teams/graph)": "Graph owns the envelope; per-subscription clientState checks precede bounded metadata parsing and canonical source reads",
 	"WebFormFields": "a website form's own fields, read into lead fields by name; the rest become note text, bounded in count and length by webforms",
 })
 

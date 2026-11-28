@@ -73,7 +73,7 @@ func (w *csvWriters) predictDealCreate(ctx context.Context, row migration.Row, t
 	if made.Deal.StageID.IsZero() {
 		return predictUnwritable, migration.Why(migration.ReasonStageUnnamed), nil
 	}
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		_, err := w.deals.RefuseImportBirth(ctx, tx, made.Deal, terminal, w.cols.deals)
 		return err
 	})

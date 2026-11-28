@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -130,7 +131,7 @@ export const Empty: Story = {
   ),
   play: async (context) => {
     await openDrawer(context);
-    await screen.findByText("Nothing here yet.");
+    await screen.findByText(englishCopy["common.empty"]);
   },
 };
 

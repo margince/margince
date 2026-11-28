@@ -40,7 +40,7 @@ func TestEdgeWritersDoNotDeadlockWithEachOtherOrTheRebuild(t *testing.T) {
 		contacts = append(contacts, c)
 		a := v.interaction(t, v.e.Rep1, c, now.AddDate(0, 0, -i), "inbound", "from")
 		if i > 0 {
-			if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 				if _, err := tx.Exec(ctx, `
 					INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'to')`,
 					a, v.e.Rep2); err != nil {
@@ -74,7 +74,7 @@ func TestEdgeWritersDoNotDeadlockWithEachOtherOrTheRebuild(t *testing.T) {
 			return gen.HandleBatch(ctx, append(activityEvents(), envelopeFor(v.e.WS, "contact.updated", "contact", contacts[0].UUID)))
 		},
 		func(int) error {
-			return database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+			return database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 				return search.RebuildEdges(v.e.Admin(), tx)
 			})
 		},

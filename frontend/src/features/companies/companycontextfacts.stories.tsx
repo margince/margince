@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { CompanyFactsCard } from "./companycontextfacts";
 
@@ -100,7 +101,7 @@ export const GroupOpen: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByText("Identity and legal details"),
+      await canvas.findByText(englishCopy["settings.companyIdentity"]),
     );
     await expect(
       await canvas.findByRole("button", { name: "Edit Company history" }),

@@ -52,7 +52,7 @@ func (o *owedEnv) handLogged(t *testing.T, contact ids.UUID, direction crmcontra
 func (o *owedEnv) contactWriting(t *testing.T, address string) ids.UUID {
 	t.Helper()
 	var contact ids.UUID
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT contact_id FROM contact_email WHERE email = $1 AND archived_at IS NULL`, address).Scan(&contact)
 	}); err != nil {

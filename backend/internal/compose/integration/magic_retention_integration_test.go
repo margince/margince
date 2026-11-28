@@ -30,7 +30,7 @@ func TestRetentionIsOnTheReceiptAsACountWithoutNamingTheRecords(t *testing.T) {
 	e := Setup(t)
 	ctx := context.Background()
 	since := time.Now().Add(-time.Hour)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for range 3 {
 			lead := ids.NewV7()
 			if _, err := tx.Exec(ctx, `INSERT INTO lead (id, full_name, status, source, captured_by)

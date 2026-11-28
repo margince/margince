@@ -23,10 +23,10 @@ package gates
 // first. That is the published contract, the front door, an agent's brief and
 // a comment shipped into the database catalog.
 //
-// It bans the CLAIM, not the word. Three spellings stay legal because they
-// name something real: the `// rls-exempt:` waiver marker that
-// scripts/check-rls-store-path.sh reads, the BYPASSRLS/NOBYPASSRLS role
-// attributes (a live cluster property AssertRuntimeRole still refuses), and
+// It bans the claim, not the word. Three spellings stay legal because they
+// name something real. One is the `// pool-exempt:` waiver marker that
+// scripts/check-rls-store-path.sh reads. One is the BYPASSRLS/NOBYPASSRLS role
+// attributes, a live cluster property AssertRuntimeRole still refuses. One is
 // prose that names the retirement itself.
 
 import (
@@ -86,7 +86,7 @@ func TestTheRLSClaimPatternCatchesTheSpellingsThisTreeGrew(t *testing.T) {
 		}
 	}
 	mustNotMatch := []string{
-		"\t// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped",
+		"\t// pool-exempt: fleet enumeration — the workspace table is not workspace-scoped",
 		"// the fixture owner role holds neither rolsuper nor rolbypassrls",
 		"// margince_owner is NOSUPERUSER NOBYPASSRLS in db-bootstrap.sql",
 		"// core 0217 (ADR-0091) retired every tenant-isolation policy",
@@ -196,7 +196,7 @@ func deniesTheControl(line string) bool {
 		"no rls", "no row-level security", "no row level security",
 		"rls=false", "not workspace-scoped", "carries neither",
 		"assumed force rls", "does not apply to a superuser",
-		"nobypassrls", "rolbypassrls", "rls-exempt", "rls store-path", "rls-store-path",
+		"nobypassrls", "rolbypassrls", "pool-exempt", "rls store-path", "rls-store-path",
 	} {
 		if strings.Contains(lowered, denial) {
 			return true

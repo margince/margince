@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CalendarDays, LogIn, Mail } from "lucide-react";
+import { CalendarDays, LogIn, Mail, MessagesSquare } from "lucide-react";
 import { useId, useState } from "react";
 import {
   OAuthAppDrawer,
@@ -37,6 +37,11 @@ type AppSource = ReturnType<typeof vendorAppState>["origin"];
 // The row's own words per vendor, as literal keys for the reason vendorCopy
 // spells its own that way.
 const rowCopy = {
+  slack: {
+    for: "oauthApp.slack.for",
+    setUp: "oauthApp.slack.setUp",
+    unlockMail: "oauthApp.unlock.slack",
+  },
   google: {
     for: "oauthApp.google.for",
     setUp: "oauthApp.google.setUp",
@@ -112,11 +117,11 @@ export function OAuthAppsCard() {
           </p>
         )}
         <ProviderList>
-          <AppRow
+          <OAuthProviderRow
             provider="google"
             refusedBy={canManage ? undefined : reasonId}
           />
-          <AppRow
+          <OAuthProviderRow
             provider="microsoft"
             refusedBy={canManage ? undefined : reasonId}
           />
@@ -143,22 +148,26 @@ function AppFacts({
     <>
       {tenant && <span>{t("oauthApp.directoryLine", { tenant })}</span>}
       <span>{t("oauthApp.unlocks")}</span>
-      <Chip icon={Mail} dense>
+      <Chip icon={provider === "slack" ? MessagesSquare : Mail} dense>
         {t(rowCopy[provider].unlockMail)}
       </Chip>
-      <Chip icon={CalendarDays} dense>
-        {t("oauthApp.unlock.calendar")}
-      </Chip>
-      <Chip icon={LogIn} dense>
-        {t("oauthApp.unlock.signIn")}
-      </Chip>
+      {provider !== "slack" && (
+        <>
+          <Chip icon={CalendarDays} dense>
+            {t("oauthApp.unlock.calendar")}
+          </Chip>
+          <Chip icon={LogIn} dense>
+            {t("oauthApp.unlock.signIn")}
+          </Chip>
+        </>
+      )}
     </>
   );
 }
 
 type Opened = "setup" | "redirects" | "remove" | null;
 
-function AppRow({
+export function OAuthProviderRow({
   provider,
   refusedBy,
 }: Readonly<{ provider: Vendor; refusedBy: string | undefined }>) {

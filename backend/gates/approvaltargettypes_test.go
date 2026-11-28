@@ -164,6 +164,8 @@ func sqlSelectedKinds(t *testing.T, file, constName string) []string {
 // noticeSiteWaivers are the notice target sites that hold a value the scan cannot
 // read, with where the value comes from.
 var noticeSiteWaivers = gatekit.Waive(map[string]string{
+	"internal/compose/webforms.go: target.EntityType":                  "the intake record returned by Land, which is a contact or lead",
+	"internal/compose/webforms.go: string(target.Type)":                "the intake record returned by Land, which is a contact or lead",
 	"internal/compose/approvalnotify.go: staged.TargetEntityType":      "an approval's own target type, which the approval staging refuses unless targettype.Type holds it",
 	"internal/compose/dealownernotify.go: request.TargetType":          "an approval's own target type, which the approval staging refuses unless targettype.Type holds it",
 	"internal/compose/editaccess/effect.go: ask.RecordType":            "the record type of an edit-access request, one of the contract's five record types, all of them in targettype.Type",

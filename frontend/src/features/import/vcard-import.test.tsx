@@ -103,17 +103,16 @@ describe("VCardImport", () => {
   // A link, so it opens in a new tab and folds into the narrow header menu as one.
   it("opens the import as a page of its own under contacts", () => {
     render(<VCardImportAction />);
-    expect(screen.getByRole("link", { name: "Import vCards" })).toHaveAttribute(
-      "href",
-      "/#/contacts/import",
-    );
+    expect(
+      screen.getByRole("link", { name: en["vcardImport.action"] }),
+    ).toHaveAttribute("href", "/#/contacts/import");
   });
 
   // The top bar's Back leads to the contact list, so the page draws no second one.
   it("opens on its title with no way back of its own", () => {
     render(<VCardImportPage />);
     const title = screen.getByRole("heading", { level: 1 });
-    expect(title).toHaveTextContent("Import business cards");
+    expect(title).toHaveTextContent(en["vcardImport.title"]);
     // The link that opened the page is gone, so the title holds focus.
     expect(title).toHaveFocus();
     expect(screen.queryByRole("link", { name: /back/i })).toBeNull();
@@ -143,7 +142,7 @@ describe("VCardImport", () => {
       render(<VCardImportPage />);
       await upload(user);
 
-      await screen.findByText("The file contains no cards.");
+      await screen.findByText(en["vcardImport.noCards"]);
       const [url] = importCall(fetchSpy);
       expect(url).toBe("/v1/contacts/vcard-import?company_id=co-acme");
     });
@@ -206,13 +205,11 @@ describe("VCardImport", () => {
     expect(screen.getByTestId("unsaved")).toHaveTextContent("clean");
 
     await upload(user);
-    expect(await screen.findByText("Reading cards…")).toBeVisible();
+    expect(await screen.findByText(en["vcardImport.working"])).toBeVisible();
     expect(screen.getByTestId("unsaved")).toHaveTextContent("dirty");
 
     answer(jsonResponse({ results: [] }));
-    expect(
-      await screen.findByText("The file contains no cards."),
-    ).toBeVisible();
+    expect(await screen.findByText(en["vcardImport.noCards"])).toBeVisible();
     expect(screen.getByTestId("unsaved")).toHaveTextContent("clean");
   });
 
@@ -238,7 +235,9 @@ describe("VCardImport", () => {
     render(<VCardImportPage />);
     await upload(user);
     await user.click(
-      await screen.findByRole("button", { name: "Convert the lead" }),
+      await screen.findByRole("button", {
+        name: en["contact.leadHeld.convert"],
+      }),
     );
     expect(window.location.hash).toBe("#/leads/lead-7?action=qualify");
   });
@@ -279,7 +278,9 @@ describe("VCardImport", () => {
     expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
     // The card written nowhere is the one a reader must act on, so it says so
     // rather than sitting silently under a success message.
-    expect(screen.getByText("Possible duplicate")).toBeInTheDocument();
+    expect(
+      screen.getByText(en["vcardImport.outcome.needsReview"]),
+    ).toBeInTheDocument();
     // A skipped card names its reason, or nobody can tell who is missing.
     expect(
       screen.getByText("the card carried no usable name"),
@@ -307,7 +308,9 @@ describe("VCardImport", () => {
     expect(await screen.findByTestId("vcard-import-staged")).toHaveTextContent(
       "2 cards wait for your answer in the Worklist.",
     );
-    await user.click(screen.getByRole("button", { name: "Open the Worklist" }));
+    await user.click(
+      screen.getByRole("button", { name: en["vcardImport.staged.open"] }),
+    );
     expect(window.location.hash).toBe("#/worklist");
   });
 
@@ -371,13 +374,13 @@ describe("VCardImport", () => {
     expect(row("+49301234567")).toHaveTextContent("Imported");
     expect(row("VP Finance")).toHaveTextContent("Job title");
     expect(row("VP Finance")).toHaveTextContent(
-      "Replaced, old value can be restored",
+      en["vcardImport.field.replaced"],
     );
     expect(row("Hauptstr. 1")).toHaveTextContent("Address");
-    expect(row("Hauptstr. 1")).toHaveTextContent("Record value kept");
+    expect(row("Hauptstr. 1")).toHaveTextContent(en["vcardImport.field.kept"]);
     // What the card left out is one muted group, named field by field.
     const absent = screen.getByTestId("vcard-import-absent");
-    expect(absent).toHaveTextContent("Not in the card");
+    expect(absent).toHaveTextContent(en["vcardImport.field.notInCard"]);
     expect(within(absent).getByText("Mobile")).toBeInTheDocument();
     expect(within(absent).getByText("Website")).toBeInTheDocument();
   });
@@ -441,7 +444,7 @@ describe("VCardImport", () => {
     expect(screen.queryByRole("button", { name: "Next vCard" })).toBeNull();
     const field = screen.getByTestId("vcard-import-file");
     expect(field).not.toHaveTextContent("cards.vcf");
-    expect(field).toHaveTextContent("Select file or photo");
+    expect(field).toHaveTextContent(en["vcardImport.choose"]);
     expect(field.querySelector("input[type=file]")).toHaveFocus();
   });
 
@@ -468,15 +471,13 @@ describe("VCardImport", () => {
     );
     const { client } = render(<VCardImportPage />);
     await upload(user);
-    expect(
-      await screen.findByText("The file contains no cards."),
-    ).toBeVisible();
+    expect(await screen.findByText(en["vcardImport.noCards"])).toBeVisible();
 
     act(() => {
       client.setQueryData(["me"], meFixture({ allow: { contact: ["read"] } }));
     });
     expect(await screen.findByText(en["record.roleReadsOnly"])).toBeVisible();
-    expect(screen.getByText("The file contains no cards.")).toBeVisible();
+    expect(screen.getByText(en["vcardImport.noCards"])).toBeVisible();
   });
 
   // Reached by its address, a seat that may not add contacts sees why and no
@@ -505,9 +506,7 @@ describe("VCardImport", () => {
     render(<VCardImportPage />);
     await upload(user);
 
-    expect(
-      await screen.findByText("The file contains no cards."),
-    ).toBeVisible();
+    expect(await screen.findByText(en["vcardImport.noCards"])).toBeVisible();
     const [url, init] = importCall(fetchSpy);
     expect(url).toBe("/v1/contacts/vcard-import");
     expect(init.method).toBe("POST");
@@ -587,7 +586,9 @@ describe("VCardImport", () => {
       new File(["jpeg"], "cards.jpg", { type: "image/jpeg" }),
     );
 
-    expect(await screen.findByText("Waiting for approval")).toBeVisible();
+    expect(
+      await screen.findByText(en["vcardImport.outcome.proposed"]),
+    ).toBeVisible();
     expect(importCall(fetchSpy)[0]).toBe("/v1/contacts/card-photos");
   });
 

@@ -3,6 +3,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Heading } from "../../design-system/heading";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   meetingRow,
   readingsDay,
@@ -58,8 +59,8 @@ describe("BriefGlance — the greeting follows the reader's own hour", () => {
   // The hour is known before the name is. Greeting nobody until /me answers
   // would move the heading under the reader a moment after they read it.
   it("greets the hour with no name at all while the session is in flight", () => {
-    expect(greetingAt(9, null)).toBe("Good morning");
-    expect(greetingAt(2, null)).toBe("Working late");
+    expect(greetingAt(9, null)).toBe(englishCopy["brief.glance.morningAnon"]);
+    expect(greetingAt(2, null)).toBe(englishCopy["brief.glance.nightAnon"]);
   });
 
   it("draws no line for a reading it was not given", () => {
@@ -80,7 +81,7 @@ describe("BriefGlance — the greeting follows the reader's own hour", () => {
     // by the section that owns it — the deck, the readings strip, the rail's
     // panels — so an unread queue leaves the header saying only the greeting.
     expect(screen.queryByTestId("glance-sentence")).toBeNull();
-    expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+    expect(screen.queryByText(englishCopy["brief.deck.empty"])).toBeNull();
     expect(screen.queryByText("Your day at a glance.")).toBeNull();
   });
 });
@@ -125,7 +126,7 @@ describe("BriefGlance — the greeting stands over the reader's name", () => {
       const head = headOf("en", firstName);
       expect(head).toEqual({
         lead: "",
-        name: "Good afternoon",
+        name: englishCopy["brief.glance.afternoonAnon"],
       });
       cleanup();
     }

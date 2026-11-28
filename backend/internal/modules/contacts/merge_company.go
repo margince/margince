@@ -108,6 +108,11 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if s.companyReferenceCarrier != nil {
+		if err := s.companyReferenceCarrier(ctx, tx, sourceID.UUID, targetID.UUID); err != nil {
+			return crmcontracts.Company{}, err
+		}
+	}
 	targetIsPartner, err := relinkCompanyAssociations(ctx, tx, sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Company{}, err

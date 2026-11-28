@@ -16,7 +16,6 @@ type CommunicationReview = components["schemas"]["CommunicationReview"];
 const REVIEW: CommunicationReview = {
   id: "r-1",
   state: "needs_context",
-  kind: "single",
   reason_code: "marketing_objection",
   assessment_revision: "rev-1",
   refusals: [

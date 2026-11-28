@@ -58,7 +58,7 @@ func seedClosedDeal(
 func forecastHistory(t *testing.T, e *Env, at time.Time) forecasting.ConversionHistory {
 	t.Helper()
 	var out forecasting.ConversionHistory
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		period, base, err := compose.ForecastPeriodAt(
 			e.Admin(), tx, forecasting.PeriodQuarter, at)
 		if err != nil {

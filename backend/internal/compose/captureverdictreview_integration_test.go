@@ -126,7 +126,7 @@ func TestEditingTheCapturedMessageDoesNotCancelItsWaitingReview(t *testing.T) {
 // trigger, so the row bumps the way any writer would bump it.
 func editCapturedSubject(t *testing.T, e *integration.Env, activityID ids.UUID, subject string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET subject = $2 WHERE id = $1`, activityID, subject)
 		return err
@@ -139,7 +139,7 @@ func editCapturedSubject(t *testing.T, e *integration.Env, activityID ids.UUID, 
 func activityVersion(t *testing.T, e *integration.Env, activityID ids.UUID) int64 {
 	t.Helper()
 	var v int64
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT version FROM activity WHERE id = $1`, activityID).Scan(&v)
 	})
@@ -153,7 +153,7 @@ func activityVersion(t *testing.T, e *integration.Env, activityID ids.UUID) int6
 // judgement leaves it in, without spending two scripted model calls to get there.
 func retireToUnsure(t *testing.T, e *integration.Env, id ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET status = 'unsure', resolved_at = now(), next_attempt_at = NULL
@@ -168,7 +168,7 @@ func retireToUnsure(t *testing.T, e *integration.Env, id ids.UUID) {
 func stagedProposalID(t *testing.T, e *integration.Env, dispositionID ids.UUID) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT proposal_id FROM capture_pending_counterparty WHERE id = $1`, dispositionID).Scan(&id)
 	})
@@ -249,7 +249,7 @@ func TestADeclinedReviewClosesTheDispositionInsteadOfReasking(t *testing.T) {
 // spendAttempts drives a row to the attempt bound without running the model.
 func spendAttempts(t *testing.T, e *integration.Env, id ids.UUID, attempts int) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_pending_counterparty SET attempts = $2 WHERE id = $1`, id, attempts)
 		return err
@@ -286,7 +286,7 @@ func TestAnUnansweredReviewAgesOutAndTakesItsOfferWithIt(t *testing.T) {
 	}
 
 	// Now close the window by backdating when the row became `unsure`.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET resolved_at = now() - interval '31 days' WHERE id = $1`, dispositionID)
@@ -336,7 +336,7 @@ func TestAgeingOutLosesToAHumanWhoDecidedFirst(t *testing.T) {
 		t.Fatalf("staging reviews: %v", err)
 	}
 	approvalID := stagedProposalID(t, e, dispositionID)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET resolved_at = now() - interval '31 days' WHERE id = $1`, dispositionID)
@@ -394,7 +394,7 @@ func TestASenderQuestionWhoseMailboxOwnerLeftIsStagedForNobody(t *testing.T) {
 
 func assertSenderReviewCount(t *testing.T, e *integration.Env, owner ids.UUID, want int) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		owners, err := capturehealth.OwnerReviews(e.Admin(), tx)
 		if err != nil {
 			return err

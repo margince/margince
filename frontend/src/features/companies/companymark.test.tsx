@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { CompanyMark } from "./companymark";
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];
@@ -108,10 +109,14 @@ it("draws each mark in its own slot and offers the verbs that fit it", async () 
   ).toBe(LOGO);
   await openEdit(user, "Wide logo");
   expect(
-    screen.getByRole("button", { name: "Upload wide logo" }),
+    screen.getByRole("button", {
+      name: englishCopy["settings.companyMarkUploadWide"],
+    }),
   ).toBeVisible();
   expect(
-    screen.getByRole("button", { name: "Remove wide logo" }),
+    screen.getByRole("button", {
+      name: englishCopy["settings.companyMarkRemoveWide"],
+    }),
   ).toBeVisible();
   await user.keyboard("{Escape}");
 
@@ -120,10 +125,14 @@ it("draws each mark in its own slot and offers the verbs that fit it", async () 
   expect(icon.getByText("AG")).toBeTruthy();
   await openEdit(user, "Square icon");
   expect(
-    screen.getByRole("button", { name: "Upload square icon" }),
+    screen.getByRole("button", {
+      name: englishCopy["settings.companyMarkUploadIcon"],
+    }),
   ).toBeVisible();
   expect(
-    screen.queryByRole("button", { name: "Remove square icon" }),
+    screen.queryByRole("button", {
+      name: englishCopy["settings.companyMarkRemoveIcon"],
+    }),
   ).toBeNull();
 });
 
@@ -138,7 +147,9 @@ it("draws both marks when the company wears both", async () => {
   ).toBe(ICON);
   await openEdit(user, "Square icon");
   expect(
-    screen.getByRole("button", { name: "Remove square icon" }),
+    screen.getByRole("button", {
+      name: englishCopy["settings.companyMarkRemoveIcon"],
+    }),
   ).toBeVisible();
 });
 
@@ -185,18 +196,24 @@ it.each([
 it("opens the Edit menu from the keyboard and closes back onto its pill", async () => {
   const user = userEvent.setup();
   mark(WITH_MARK);
-  const pill = screen.getByRole("button", { name: "Edit wide logo" });
+  const pill = screen.getByRole("button", {
+    name: englishCopy["settings.companyMarkEditWide"],
+  });
   pill.focus();
 
   await user.keyboard("{ArrowDown}");
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Upload wide logo" }),
+      screen.getByRole("button", {
+        name: englishCopy["settings.companyMarkUploadWide"],
+      }),
     ).toHaveFocus(),
   );
   await user.keyboard("{ArrowDown}");
   expect(
-    screen.getByRole("button", { name: "Remove wide logo" }),
+    screen.getByRole("button", {
+      name: englishCopy["settings.companyMarkRemoveWide"],
+    }),
   ).toHaveFocus();
   await user.keyboard("{Escape}");
 
@@ -317,9 +334,13 @@ it("names the refused slot and describes only that slot's control", async () => 
   );
 
   const alert = await screen.findByRole("alert");
-  expect(within(alert).getByText("Square icon not uploaded")).toBeTruthy();
   expect(
-    within(alert).getByText("Use a PNG, JPEG, GIF, WebP, ICO or SVG file."),
+    within(alert).getByText(
+      englishCopy["settings.companyMarkUploadFailedIcon"],
+    ),
+  ).toBeTruthy();
+  expect(
+    within(alert).getByText(englishCopy["settings.companyMarkUnsupported"]),
   ).toBeTruthy();
   const described = slot("Square icon")
     .getByLabelText("Square icon")
@@ -351,8 +372,14 @@ it("says what to do when the file is over the upload limit", async () => {
   );
 
   const alert = await screen.findByRole("alert");
-  expect(within(alert).getByText("Wide logo not uploaded")).toBeTruthy();
-  expect(within(alert).getByText("Use a smaller file.")).toBeTruthy();
+  expect(
+    within(alert).getByText(
+      englishCopy["settings.companyMarkUploadFailedWide"],
+    ),
+  ).toBeTruthy();
+  expect(
+    within(alert).getByText(englishCopy["settings.companyMarkTooLarge"]),
+  ).toBeTruthy();
   expect(within(alert).queryByText(/exceeds/)).toBeNull();
 });
 
@@ -375,7 +402,10 @@ it("draws the refusals below the tiles, wide first, never inside a slot", async 
   expect(alerts).toHaveLength(2);
   expect(
     alerts.map((alert) => alert.querySelector(".callout-title")?.textContent),
-  ).toEqual(["Wide logo not uploaded", "Square icon not uploaded"]);
+  ).toEqual([
+    englishCopy["settings.companyMarkUploadFailedWide"],
+    englishCopy["settings.companyMarkUploadFailedIcon"],
+  ]);
   for (const alert of alerts) {
     expect(alert.closest(".image-slot")).toBeNull();
   }
@@ -409,9 +439,17 @@ it("shows the server's refusal of a removal beside the control", async () => {
   mark(WITH_MARK);
 
   await openEdit(user, "Wide logo");
-  await user.click(screen.getByRole("button", { name: "Remove wide logo" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["settings.companyMarkRemoveWide"],
+    }),
+  );
 
-  expect(await screen.findByText("Wide logo not removed")).toBeTruthy();
+  expect(
+    await screen.findByText(
+      englishCopy["settings.companyMarkRemoveFailedWide"],
+    ),
+  ).toBeTruthy();
   expect(await screen.findByText(/met a concurrent write/)).toBeTruthy();
 });
 
@@ -433,9 +471,7 @@ it("tells the admin to outline the text when an SVG draws its words as text", as
 
   const alert = await screen.findByRole("alert");
   expect(
-    within(alert).getByText(
-      "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
-    ),
+    within(alert).getByText(englishCopy["settings.companyMarkSvgText"]),
   ).toBeTruthy();
   expect(within(alert).queryByText(/cannot render/)).toBeNull();
 });
@@ -458,7 +494,7 @@ it("names the pixel bound when a logo has more pixels than the server reads", as
 
   const alert = await screen.findByRole("alert");
   expect(
-    within(alert).getByText("Use a picture of up to 8 megapixels."),
+    within(alert).getByText(englishCopy["settings.companyMarkTooManyPixels"]),
   ).toBeTruthy();
   expect(within(alert).queryByText(/8388608/)).toBeNull();
 });
@@ -481,8 +517,6 @@ it("tells the admin to export a PNG when an SVG has parts that cannot be drawn",
 
   const alert = await screen.findByRole("alert");
   expect(
-    within(alert).getByText(
-      "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
-    ),
+    within(alert).getByText(englishCopy["settings.companyMarkSvgNotDrawable"]),
   ).toBeTruthy();
 });

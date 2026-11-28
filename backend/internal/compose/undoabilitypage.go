@@ -56,7 +56,7 @@ func (p UndoabilityPage) ForRecord(ctx context.Context, entityType string, entit
 	if len(auditIDs) == 0 {
 		return answers, nil
 	}
-	err := database.WithWorkspaceTx(ctx, p.seam.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.seam.pool, func(tx pgx.Tx) error {
 		shared, err := p.recordFacts(ctx, tx, entityType, entityID)
 		if err != nil {
 			return err

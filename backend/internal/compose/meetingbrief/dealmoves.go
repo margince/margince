@@ -19,9 +19,8 @@ package meetingbrief
 // refusing, so a rep without it gets a brief missing that line and a sentence
 // saying so, rather than no brief.
 //
-// The reads run inside the caller's workspace transaction, which is what binds
-// the tenant predicate here (database.WithWorkspaceTx); the deal id itself is
-// resolved by the gated meeting read above, never taken from a request.
+// The reads run inside the caller's transaction (database.WithTx). The deal id
+// itself is resolved by the gated meeting read above, never taken from a request.
 
 import (
 	"context"

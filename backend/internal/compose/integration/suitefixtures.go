@@ -175,7 +175,7 @@ func RegisterEntityLawPack(code jurisdiction.Code) {
 // The transcript-erase and contact-anonymize rows are not shipped defaults.
 func SeedRetentionPolicies(t *testing.T, e *Env) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO retention_policy (object_type, category, retain_days, action)
 			SELECT v.o, v.c, v.d, v.a
@@ -203,7 +203,7 @@ func SeedRetentionPolicies(t *testing.T, e *Env) {
 // and before the pass in a test about what retention does to an old record.
 func SettleIntoInstall(t *testing.T, e *Env) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, stmt := range []string{
 			`UPDATE lead SET entered_at = created_at WHERE created_at < entered_at`,
 			`UPDATE contact SET entered_at = created_at WHERE created_at < entered_at`,

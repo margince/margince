@@ -77,7 +77,7 @@ func TestSettingTheHistoryBaselineAuditsBothSides(t *testing.T) {
 		t.Fatalf("setting the baseline: %v", err)
 	}
 	var before, after, actor *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT before->>'history_baseline_date', after->>'history_baseline_date', actor_id
 			  FROM audit_log

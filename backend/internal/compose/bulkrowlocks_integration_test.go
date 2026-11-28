@@ -57,7 +57,7 @@ func TestBulkUndoHoldsEveryContactBeforeTakingIdentityLocks(t *testing.T) {
 		_, err := engine.Undo(ctx, ids.UUID(archived.BatchId), "")
 		bulkDone <- err
 	}()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		waitForBackendBlockedBy(t, tx, holder, bulkDone)
 		return nil
 	}); err != nil {

@@ -28,7 +28,7 @@ func TestAReplyFromATechnicalAddressNamesNoContact(t *testing.T) {
 			VALUES ($1, $2, true, 'manual', 'human:test')`, id, address)
 		return id, err
 	}
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := seed(tx, "4711@bcc.hubspot.com"); err != nil {
 			return err
 		}

@@ -45,7 +45,7 @@ func TestTheCompanyPageFollowsThePublishedThreadingThreshold(t *testing.T) {
 		t.Fatalf("at the default threshold of one, %d active contacts read single-threaded %v, want 2 and false",
 			*got.ActiveContacts, *got.SingleThreaded)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `INSERT INTO reporting_framework_revision (revision, definition, effective_at, created_by)
 			VALUES (1, '{"template":"sales","qualification":[],"capture_contexts":[],"reason":"test","account_coverage":{"max_engaged_seats":2}}', now(), $1)`, e.AdminUser)
 		if err != nil {

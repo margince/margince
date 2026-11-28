@@ -9,7 +9,7 @@ package agents
 
 var previewImportCopy = toolCopy{
 	Purpose: "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each " +
-		"column is, and this checks every row against the workspace and reports what importing " +
+		"column is, and this checks every row against the company and reports what importing " +
 		"it would do.",
 	Limits: "Writes nothing. `object` is company, contact, lead, deal or activity. Use `contact` for a file " +
 		"the business already knows (a migration off another CRM, a corrected export coming back). " +
@@ -43,7 +43,7 @@ var readImportReportCopy = toolCopy{
 var describeImportFormatCopy = toolCopy{
 	Purpose: "The files an import takes: their order, each file's columns with what goes in them, " +
 		"and the rules that key a row and link files.",
-	Limits: "Includes this workspace's custom fields. Writes nothing.",
+	Limits: "Includes this company's custom fields. Writes nothing.",
 }
 
 // A commit writes the file, and taking it back asks the user first. That, and
@@ -56,7 +56,7 @@ var describeImportFormatCopy = toolCopy{
 // and refuseUncommittableRun enforces that: a run reaches it only by producing a
 // report, so requiring the state is requiring the report.
 var commitImportCopy = toolCopy{
-	Purpose: "Write a checked import into the workspace. The dry run is the check; this starts the " +
+	Purpose: "Write a checked import into the company. The dry run is the check; this starts the " +
 		"write and answers at once with the run running.",
 	Limits: "Only from awaiting_approval, the state a run reaches by producing a dry-run report, " +
 		"so there is always a report first, or from a failed commit, which resumes at the row it " +

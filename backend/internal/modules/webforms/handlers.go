@@ -90,7 +90,8 @@ func (h Handlers) CreateWebForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in := CreateInput{
-		Name: req.Name, Sender: string(req.Sender), SenderSecret: req.SenderSecret, LeadOrigin: req.LeadOrigin,
+		NotifyOwner: req.NotifyOwner != nil && *req.NotifyOwner,
+		Name:        req.Name, Sender: string(req.Sender), SenderSecret: req.SenderSecret, LeadOrigin: req.LeadOrigin,
 		OwnerID: uuidOf(req.OwnerId), ProductID: uuidOf(req.ProductId), ConsentPolicyVersion: req.ConsentPolicyVersion,
 		ConsentWording: req.ConsentWording, PrivacyNotice: req.PrivacyNotice, PrivacyNoticeURL: req.PrivacyNoticeUrl,
 		RedirectURL: req.RedirectUrl, SuccessMessage: req.SuccessMessage,
@@ -138,7 +139,8 @@ func (h Handlers) UpdateWebForm(w http.ResponseWriter, r *http.Request, id crmco
 		return
 	}
 	in := UpdateInput{
-		Name: req.Name, AllowedOrigins: req.AllowedOrigins, SenderSecret: req.SenderSecret,
+		NotifyOwner: req.NotifyOwner,
+		Name:        req.Name, AllowedOrigins: req.AllowedOrigins, SenderSecret: req.SenderSecret,
 		LeadOrigin: req.LeadOrigin, OwnerID: uuidOf(req.OwnerId), ProductID: uuidOf(req.ProductId), FieldMap: req.FieldMap,
 		ConsentRequired: req.ConsentRequired, ConsentPolicyVersion: req.ConsentPolicyVersion,
 		ConsentWording: req.ConsentWording, PrivacyNotice: req.PrivacyNotice, PrivacyNoticeURL: req.PrivacyNoticeUrl,

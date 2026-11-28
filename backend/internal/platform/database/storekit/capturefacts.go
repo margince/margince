@@ -32,6 +32,7 @@ const CaptureFactsMemo = "capture.facts:"
 
 const (
 	captureFactsWritten = "capture.facts-written"
+	captureFactsDirty   = "capture.facts-dirty"
 	captureFactsHeld    = "capture.facts-held"
 	captureFactsVersion = "capture.facts-version"
 )
@@ -47,6 +48,9 @@ const captureFactsLock = `hashtext('margince:capture-facts')::bigint`
 // gates/capturefactwriters_test.go finds every such writer.
 func CaptureFactsChanged(ctx context.Context, tx pgx.Tx) error {
 	database.Forget(tx, CaptureFactsMemo)
+	owner := database.CommitOwner(tx)
+	database.Forget(owner, CaptureFactsMemo)
+	database.Mark(owner, captureFactsDirty)
 	if !database.Mark(tx, captureFactsWritten) {
 		return nil
 	}
@@ -155,6 +159,11 @@ func RememberCaptureFact[T any](ctx context.Context, tx pgx.Tx, key string, read
 		// commit while the copy is in use, so the facts are read.
 		run, ok := ctx.Value(captureFactsRunKey{}).(*captureFactsRun)
 		version, held := heldCaptureFactsVersion(tx)
+		if !held {
+			// A savepoint inherits a lock the root took before it opened. Its
+			// reads remain separate; the run's versioned facts are still protected.
+			version, held = heldCaptureFactsVersion(database.CommitOwner(tx))
+		}
 		if !ok || !held || wroteCaptureFacts(tx) {
 			return read()
 		}
@@ -175,5 +184,5 @@ func RememberCaptureFact[T any](ctx context.Context, tx pgx.Tx, key string, read
 }
 
 func wroteCaptureFacts(tx pgx.Tx) bool {
-	return database.Marked(tx, captureFactsWritten)
+	return database.Marked(tx, captureFactsWritten) || database.Marked(database.CommitOwner(tx), captureFactsDirty)
 }

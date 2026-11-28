@@ -6,6 +6,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../../design-system/select-testing";
+import { en as englishCopy } from "../../../i18n/en";
 import { renderWithQueryClient } from "../../../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../../../testing/story-utils";
 import type { DealCommercial } from "./deallinestotal";
@@ -92,8 +93,12 @@ describe("a deal priced from its lines", () => {
     show(BANANAS);
     expect(await screen.findByText("Bananas")).toBeTruthy();
     expect(screen.getByText("Net value: €200.00, without tax")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Edit products" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Set products" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: englishCopy["deal.lines.edit"] }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["deal.products.edit"] }),
+    ).toBeNull();
   });
 
   it("says what is still missing beside the part already known", async () => {
@@ -113,7 +118,7 @@ describe("a deal priced from its lines", () => {
   it("shows no figure to a reader the amount is masked from", async () => {
     show({ ...BANANAS, money_withheld: true, committed_net_minor: null });
     expect(
-      await screen.findByText("Your role does not show this deal’s value."),
+      await screen.findByText(englishCopy["deal.lines.withheld"]),
     ).toBeTruthy();
   });
 
@@ -122,7 +127,9 @@ describe("a deal priced from its lines", () => {
     show(ESTIMATE, posted);
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Price from products" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.lines.start"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(
@@ -138,7 +145,9 @@ describe("a deal priced from its lines", () => {
       "2",
     );
     await user.click(
-      within(dialog).getByRole("button", { name: "Save products" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["deal.products.save"],
+      }),
     );
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({
@@ -155,7 +164,9 @@ describe("a deal priced from its lines", () => {
     show(ESTIMATE, posted);
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Price from products" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.lines.start"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     const custom = within(dialog).getByRole<HTMLInputElement>("textbox", {
@@ -200,11 +211,15 @@ describe("a deal priced from its lines", () => {
     });
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Price from products" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.lines.start"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.type(
-      within(dialog).getByRole("searchbox", { name: "Add a product" }),
+      within(dialog).getByRole("searchbox", {
+        name: englishCopy["deal.products.add"],
+      }),
       "Ban",
     );
     await user.click(
@@ -216,12 +231,14 @@ describe("a deal priced from its lines", () => {
     await user.clear(description);
     await user.type(description, "Ripe bananas");
     const price = within(dialog).getByRole("textbox", {
-      name: "Selling price",
+      name: englishCopy["deal.lines.price"],
     });
     await user.clear(price);
     await user.type(price, "1.80");
     await user.click(
-      within(dialog).getByRole("button", { name: "Save products" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["deal.products.save"],
+      }),
     );
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({
@@ -258,21 +275,29 @@ describe("a deal priced from its lines", () => {
     });
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Price from products" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.lines.start"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.type(
-      within(dialog).getByRole("searchbox", { name: "Add a product" }),
+      within(dialog).getByRole("searchbox", {
+        name: englishCopy["deal.products.add"],
+      }),
       "Ban",
     );
     await user.click(
       await within(dialog).findByRole("button", { name: /Bananas/ }),
     );
     expect(
-      within(dialog).getByRole("textbox", { name: "Selling price" }),
+      within(dialog).getByRole("textbox", {
+        name: englishCopy["deal.lines.price"],
+      }),
     ).toHaveProperty("value", "2.00");
     await user.click(
-      within(dialog).getByRole("button", { name: "Save products" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["deal.products.save"],
+      }),
     );
     await waitFor(() => expect(posted).toHaveLength(1));
     // Sent as shown, so a rate card change before the save is not taken.
@@ -314,26 +339,34 @@ describe("a deal priced from its lines", () => {
     );
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Price from products" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.lines.start"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     const currency = within(dialog).getByRole("combobox", { name: "Currency" });
     await pickOption(user, currency, "EUR");
     await user.type(
-      within(dialog).getByRole("searchbox", { name: "Add a product" }),
+      within(dialog).getByRole("searchbox", {
+        name: englishCopy["deal.products.add"],
+      }),
       "Ban",
     );
     await user.click(
       await within(dialog).findByRole("button", { name: /Bananas/ }),
     );
     const price = () =>
-      within(dialog).getByRole("textbox", { name: "Selling price" });
+      within(dialog).getByRole("textbox", {
+        name: englishCopy["deal.lines.price"],
+      });
     expect(price()).toHaveProperty("value", "2.00");
 
     await pickOption(user, currency, "USD");
     expect(price()).toHaveProperty("value", "");
     // Saved with no price, the line would take a euro rate card price.
-    const save = within(dialog).getByRole("button", { name: "Save products" });
+    const save = within(dialog).getByRole("button", {
+      name: englishCopy["deal.products.save"],
+    });
     expect(save).toHaveProperty("disabled", true);
     expect(
       within(dialog).getByText(
@@ -352,7 +385,9 @@ describe("a deal priced from its lines", () => {
     show(ESTIMATE, posted);
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Price from products" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.lines.start"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.type(
@@ -369,11 +404,13 @@ describe("a deal priced from its lines", () => {
       "10",
     );
     await user.click(
-      within(dialog).getByRole("button", { name: "Save products" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["deal.products.save"],
+      }),
     );
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({
-      description: "Installation",
+      description: englishCopy["agentAllowances.roles.source.installation"],
       tax_rate: 19,
       discount_pct: 10,
     });
@@ -405,7 +442,9 @@ describe("a deal priced from its lines", () => {
     );
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Edit products" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.lines.edit"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     const tax = within(dialog).getByRole("textbox", { name: "Tax %" });
@@ -413,7 +452,9 @@ describe("a deal priced from its lines", () => {
     await user.clear(tax);
     await user.type(tax, "19");
     await user.click(
-      within(dialog).getByRole("button", { name: "Save products" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["deal.products.save"],
+      }),
     );
     await waitFor(() => expect(patched).toHaveLength(1));
     expect(patched[0]).toEqual({ tax_rate: 19, expected_revision: 1 });
@@ -450,11 +491,15 @@ describe("a deal priced from its lines", () => {
     });
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Price from products" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.lines.start"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.type(
-      within(dialog).getByRole("searchbox", { name: "Add a product" }),
+      within(dialog).getByRole("searchbox", {
+        name: englishCopy["deal.products.add"],
+      }),
       "Wid",
     );
     expect(
@@ -493,7 +538,9 @@ describe("a deal priced from its lines", () => {
     );
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Edit products" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.lines.edit"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     const quantity = within(dialog).getByRole("textbox", {
@@ -507,7 +554,9 @@ describe("a deal priced from its lines", () => {
     );
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
     await user.click(
-      within(dialog).getByRole("button", { name: "Save products" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["deal.products.save"],
+      }),
     );
     expect(
       await within(dialog).findByText(/1 of 2 changes were saved/),

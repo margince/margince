@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { rowHref } from "../../lib/worklistcopy";
 import {
   installFetchStub,
@@ -130,7 +131,9 @@ it("reads an unnamed source and explains a current denial without exposing its i
     </StoryProviders>,
   );
   await user.click(screen.getByRole("button", { name: "Review next step" }));
-  expect(await screen.findByText("Activity content is withheld")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["activity.detail.withheldReason"]),
+  ).toBeTruthy();
   expect(screen.queryByText("private-evidence")).toBeNull();
 });
 
