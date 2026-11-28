@@ -9,4 +9,6 @@
 # one fast runner result cannot remove a waiver from a package that still
 # varies enough to pass its ceiling on another run.
 305 github.com/margince/margince/backend/gates
-180 github.com/margince/margince/backend/internal/compose
+# The unit leg runs compose with -coverpkg=./... coverage, which its ceiling was
+# not set under. Its four instrumented green runs took 147-189 s.
+230 github.com/margince/margince/backend/internal/compose
