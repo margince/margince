@@ -66,7 +66,19 @@ var candidatePath = regexp.MustCompile(`"([A-Za-z0-9_.][A-Za-z0-9_./*-]*(?:/[A-Z
 // ../../config/presets.
 var leadingJoinLiterals = regexp.MustCompile(`filepath\.Join\(((?:\s*"[^"\\]+"\s*,?)+)`)
 
+// rootJoinLiterals is a filepath.Join that starts from a helper naming the
+// repository root: `filepath.Join(integration.RepositoryRoot(t), "docs", …)`.
+var rootJoinLiterals = regexp.MustCompile(`filepath\.Join\(\s*(?:\w+\.)?(?:RepositoryRoot|repoRoot)\(t\)\s*,((?:\s*"[^"\\]+"\s*,?)+)`)
+
 var quoted = regexp.MustCompile(`"([^"\\]+)"`)
+
+func quotedParts(args string) []string {
+	var parts []string
+	for _, part := range quoted.FindAllStringSubmatch(args, -1) {
+		parts = append(parts, part[1])
+	}
+	return parts
+}
 
 // integrationReads resolves the paths an integration-tagged file names relative
 // to its own directory, the one `go test` runs it in, and keeps those outside
@@ -77,11 +89,12 @@ func integrationReads(file, body string) []string {
 		named = append(named, match[1])
 	}
 	for _, match := range leadingJoinLiterals.FindAllStringSubmatch(body, -1) {
-		var parts []string
-		for _, part := range quoted.FindAllStringSubmatch(match[1], -1) {
-			parts = append(parts, part[1])
-		}
-		named = append(named, path.Join(parts...))
+		named = append(named, path.Join(quotedParts(match[1])...))
+	}
+	// Spelled from the file's own directory, so it resolves as the others do.
+	upToRoot := strings.Repeat("../", strings.Count(path.Dir(file), "/")+1)
+	for _, match := range rootJoinLiterals.FindAllStringSubmatch(body, -1) {
+		named = append(named, upToRoot+path.Join(quotedParts(match[1])...))
 	}
 	var reads []string
 	for _, name := range named {
@@ -164,6 +177,8 @@ func TestIntegrationReadsResolvesEachSpelling(t *testing.T) {
 		{`const dir = "../../../docs/reference/mcp-tool-roles"`, []string{"docs/reference/mcp-tool-roles"}},
 		{`os.ReadFile("../../api/crm.yaml")`, nil},
 		{`filepath.Join(dir, "config", "token")`, nil},
+		{`filepath.Join(integration.RepositoryRoot(t), "docs", "reference", "mcp-tool-roles")`, []string{"docs/reference/mcp-tool-roles"}},
+		{`filepath.Join(RepositoryRoot(t), "backend", "api")`, nil},
 		{`"../../../no/such/path.txt"`, nil},
 	}
 	for _, c := range cases {
