@@ -193,31 +193,28 @@ func awaitRows(t *testing.T, pool *pgxpool.Pool, kind string, want int) int {
 	}
 }
 
-// TestDispatcherEnqueuesOneChildPerWorkspace: enablement is DIRECTORY PRESENCE
-// and therefore global, so the fan-out is over ALL live workspaces — there is
-// no per-tenant switch for the tick to consult, and a fan-out that reached only
-// some of them would be enablement by accident.
-func TestDispatcherEnqueuesOneChildPerWorkspace(t *testing.T) {
+// TestDispatcherEnqueuesOneChildForTheInstallation: enablement is directory
+// presence and therefore global, so the tick has no per-tenant switch to
+// consult. An installation holds one company, so the dispatcher queues exactly
+// one child, and that child's args name no workspace.
+func TestDispatcherEnqueuesOneChildForTheInstallation(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
-	live := seedWorkspaces(t, e, 2)
 
 	decl := testJobDecl()
 	composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
 	startRunner(t, e.Pool)
 
-	if got := awaitRows(t, e.Pool, decl.ChildKind(), len(live)); got != len(live) {
-		t.Fatalf("child rows: got %d, want exactly one per live workspace (%d)", got, len(live))
+	if got := awaitRows(t, e.Pool, decl.ChildKind(), 1); got != 1 {
+		t.Fatalf("child rows: got %d, want exactly one for the installation", got)
 	}
-	// And each row is a DIFFERENT workspace: three rows that all named one
-	// tenant would satisfy the count and none of the fan-out.
-	var distinct int
+	var withKey int
 	if err := e.Pool.QueryRow(context.Background(),
-		`SELECT count(DISTINCT args ->> 'workspace_id') FROM river_job WHERE kind = $1`, decl.ChildKind()).Scan(&distinct); err != nil {
-		t.Fatalf("counting distinct workspaces: %v", err)
+		`SELECT count(*) FROM river_job WHERE kind = $1 AND args ? 'workspace_id'`, decl.ChildKind()).Scan(&withKey); err != nil {
+		t.Fatalf("counting rows that name a workspace: %v", err)
 	}
-	if distinct != len(live) {
-		t.Fatalf("distinct workspaces in the fan-out: got %d, want %d", distinct, len(live))
+	if withKey != 0 {
+		t.Fatalf("%d child row(s) name a workspace; the tick is the installation's", withKey)
 	}
 }
 
@@ -528,8 +525,8 @@ func TestOverlappingTicksAreBounded(t *testing.T) {
 		t.Fatalf("dispatcher rows after two ticks: got %d, want 1 — an in-flight pass must suppress the next", got)
 	}
 
-	// And a second CHILD for one workspace while its pass is in flight, which
-	// is the same window plus ByArgs.
+	// And a second child while the first is in flight, which is the same
+	// window plus ByArgs.
 	child := extJobWorkspaceArgs{JobKind: decl.ChildKind()}
 	for range 2 {
 		if err := inserter.Enqueue(ctx, child, workspaceSweepOpts(decl.ChildKind())); err != nil {
@@ -537,16 +534,7 @@ func TestOverlappingTicksAreBounded(t *testing.T) {
 		}
 	}
 	if got := countJobRows(t, e.Pool, decl.ChildKind()); got != 1 {
-		t.Fatalf("child rows for one workspace after two enqueues: got %d, want 1", got)
-	}
-	// A DIFFERENT workspace is not suppressed — the window bounds overlap, it
-	// does not bound the fan-out.
-	other := extJobWorkspaceArgs{JobKind: decl.ChildKind()}
-	if err := inserter.Enqueue(ctx, other, workspaceSweepOpts(decl.ChildKind())); err != nil {
-		t.Fatalf("enqueueing a second workspace's child: %v", err)
-	}
-	if got := countJobRows(t, e.Pool, decl.ChildKind()); got != 2 {
-		t.Fatalf("child rows across two workspaces: got %d, want 2", got)
+		t.Fatalf("child rows after two enqueues: got %d, want 1", got)
 	}
 }
 

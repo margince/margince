@@ -441,23 +441,15 @@ func TestSweepIgnoresASupersededFailure(t *testing.T) {
 	}
 }
 
-// TestSweepOmitsADispatchersOwnRow — a dispatcher carries no workspace, so
-// it is not one workspace's share of anything. Counting it would add a
-// phantom tenant to every sweep it tagged.
+// TestSweepOmitsADispatchersOwnRow: a dispatcher's own row enqueues and does no
+// work, so counting it would add a phantom pass beside the children it queued.
 //
-// gmail_sync is seeded alongside the made-up kind deliberately: a fixture
-// kind can never appear in the standalone-fleet-kind set regardless of
-// whether that set is derived correctly, so it alone would keep passing
-// even if the new predicate started routing every dispatcher's own row into
-// the per-kind arm. gmail_sync is a REAL declared dispatcher (FanOutTo:
-// "capture_sync") and is the case that would actually catch that mistake.
+// gmail_sync is a real declared dispatcher (FanOutTo: "capture_sync"). A made-up
+// kind can never be in the dispatcher set, so only a real one would catch the
+// exclusion being dropped.
 func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
-	seedJob(ctx, t, pool, seed{
-		Kind: "the_dispatcher", State: "completed",
-		Tags: []string{jobs.SweepTag},
-	})
 	seedJob(ctx, t, pool, seed{
 		Kind: "gmail_sync", State: "completed",
 		Tags: []string{jobs.SweepTag},
@@ -467,11 +459,8 @@ func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Stats: %v", err)
 	}
-	if _, ok := sweepFor(snap, "the_dispatcher"); ok {
-		t.Error("an untenanted row was counted as a workspace's share of a fleet pass")
-	}
 	if _, ok := sweepFor(snap, "gmail_sync"); ok {
-		t.Error("a real dispatcher's own row was counted — its children (capture_sync) carry the per-workspace signal, not its own row")
+		t.Error("a real dispatcher's own row was counted; its children (capture_sync) carry the signal")
 	}
 }
 
