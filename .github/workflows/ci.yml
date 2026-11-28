@@ -141,6 +141,14 @@ jobs:
       # On the merge queue: a run of the entry's pull request already passed the
       # integration lane on this exact tree, so the lane is skipped.
       integration_proven: ${{ steps.proven.outputs.proven == 'true' }}
+      # backend_db && full_lane && !integration_proven, spelled from the steps
+      # because an output cannot read another. The integration lane runs on it,
+      # and the unit legs instrument on it, since Sonar merges their pods with
+      # the lane's (scripts/merge-go-coverage.sh); the two cannot disagree.
+      integration_runs: >-
+        ${{ (steps.filter.outputs.backend_db == 'true' || github.event_name == 'merge_group')
+        && (github.event_name != 'pull_request' || github.base_ref != 'develop')
+        && steps.proven.outputs.proven != 'true' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -461,27 +469,32 @@ jobs:
     permissions:
       contents: read
     # The uncached root fitness packages were most of the test leg, so they get
-    # a runner, and so does SOLO_TEST_PKGS. Every leg runs the build; only the
-    # unit leg runs the gates that read the tree the same way on each
-    # (CHECK_TREE_GATES).
+    # a runner, and so does SOLO_TEST_PKGS. Only the gates leg runs the build and
+    # the gates that read the tree the same way on each (CHECK_TREE_GATES): its
+    # tests are the shortest, so the serial tree gates fit there. The other legs
+    # compile what their tests import.
     # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
+    # `unit-cover` marks the legs that run test-cached and test-solo, whose
+    # coverage pods scripts/merge-go-coverage.sh requires by part name.
     strategy:
       fail-fast: false
       matrix:
         include:
           - part: unit
             legs: test-cached test-extensions
-            tree-gates: "on"
+            tree-gates: "off"
             census-minimum: "100"
+            unit-cover: "on"
           - part: gates
             legs: test-uncached
-            tree-gates: "off"
+            tree-gates: "on"
           # SOLO_TEST_PKGS in backend/Makefile: a package whose time beside the
           # rest was the runner's load, not its own.
           - part: solo
             legs: test-solo
             tree-gates: "off"
             census-minimum: "1"
+            unit-cover: "on"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -517,7 +530,7 @@ jobs:
       # In the image pnpm is on PATH, so the contract drift gate regenerates
       # the frontend's types and needs its packages; on the runner it skips.
       - name: Frontend packages for the contract drift gate
-        if: matrix.part == 'unit' && needs.ci-image.outputs.pinned-image != ''
+        if: matrix.tree-gates == 'on' && needs.ci-image.outputs.pinned-image != ''
         working-directory: frontend
         timeout-minutes: 5
         run: pnpm install --frozen-lockfile --ignore-scripts
@@ -550,6 +563,10 @@ jobs:
           # The gates leg has this runner to itself, so collection need not
           # hold the package to the limit a laptop running every leg wants.
           GATES_GOMEMLIMIT: 6GiB
+          # The unit coverage the integration lane used to run as a job of its
+          # own, from the run that decides the verdict. Empty when no lane runs,
+          # since then nothing merges the pods.
+          UNIT_COVERDIR: ${{ matrix.unit-cover == 'on' && needs.changes.outputs.integration_runs == 'true' && format('{0}/unit-covdata', runner.temp) || '' }}
         # pipefail, because the default shell lacks it and tee would turn a red
         # gate green.
         # TEST_LEGS only: backend-lint runs the static legs on its own runner,
@@ -601,6 +618,15 @@ jobs:
           name: go-coverage-extensions
           path: backend/coverage-extensions.out
           if-no-files-found: error
+      # For the sonarcloud job, which merges them with the integration shards'.
+      - name: Upload the unit coverage pods
+        if: ${{ matrix.unit-cover == 'on' && needs.changes.outputs.integration_runs == 'true' }}
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: unit-covdata-${{ matrix.part }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/unit-covdata
+          if-no-files-found: error
+          retention-days: 1
       # Judged in the `ci` job over every leg's log: a waiver for a package
       # this leg never ran is stale only if the other leg never ran it either.
       - name: Upload the test log for the budget
@@ -828,28 +854,29 @@ jobs:
         run: make check-host-ports
 
   # The real-Postgres lane. Its jobs live in
-  # .github/workflows/_lane-integration.yml — the shard matrix, the unit-coverage
-  # pass and the fan-in that reconciles them — because that cluster was a third of
-  # this file and none of it is edited when the merge gate changes.
+  # .github/workflows/_lane-integration.yml — the build, the shard matrix and the
+  # fan-in that reconciles them — because that cluster was a third of this file
+  # and none of it is edited when the merge gate changes.
   #
   # The lane itself carries no conditional: this call site owns the decision,
   # which is what makes `needs.integration.result == 'skipped'` mean "the caller
   # skipped the whole lane" rather than "something inside it quietly did not run".
   #
   # backend_db, not backend: this is the many-Postgres lane, and the two paths
-  # that differ (the agent rulebooks) cannot change what it proves. The whole
-  # cluster moves together now — previously the unit-coverage pass hung off the
-  # wider `backend` scope, so a rulebook-only change ran it and then discarded its
-  # pods, because the fan-in that consumes them had skipped.
+  # that differ (the agent rulebooks) cannot change what it proves. The unit
+  # legs of deterministic-gates write coverage pods on the same condition
+  # (`integration_runs`), so a rulebook-only change instruments nothing.
   #
   # Runs in parallel with the Go gate, not behind it: gating the longest lane on
   # the build gate serialized the two slowest jobs and dominated PR wall-clock.
+  #
+  # `integration_runs` decides. It implies `backend_db`, which stays because the
+  # gates that judge a lane's scope read it from this condition.
   integration:
     needs: [changes]
     if: >-
       needs.changes.outputs.backend_db == 'true'
-      && needs.changes.outputs.full_lane == 'true'
-      && needs.changes.outputs.integration_proven != 'true'
+      && needs.changes.outputs.integration_runs == 'true'
       && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     # The most a job of the lane may ask for: the shards read the run's jobs to
     # learn whether a re-run builds the binaries again.
@@ -1068,12 +1095,32 @@ jobs:
       # the scan still posts. The paths match sonar-project.properties
       # (backend/coverage.out, backend/coverage-extensions.out,
       # frontend/coverage/lcov.info).
-      - name: Download Go coverage
+      #
+      # The Go profile is merged here from binary pods: the integration shards'
+      # and the unit legs' of deterministic-gates. This is the first job that
+      # needs both, since a job of the integration lane cannot wait for one of
+      # this workflow's. A green lane implies the unit legs ran instrumented
+      # (`integration_runs`), so a missing pod set fails the merge.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: ${{ env.SONAR_TOKEN != '' && needs.integration.result == 'success' }}
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: Download the integration shards' coverage pods
         if: ${{ env.SONAR_TOKEN != '' && needs.integration.result == 'success' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: go-coverage
-          path: backend
+          pattern: integration-shard-*
+          path: ${{ runner.temp }}/go-coverage
+      - name: Download the unit legs' coverage pods
+        if: ${{ env.SONAR_TOKEN != '' && needs.integration.result == 'success' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: unit-covdata-*
+          path: ${{ runner.temp }}/go-coverage
+      - name: Merge Go coverage
+        if: ${{ env.SONAR_TOKEN != '' && needs.integration.result == 'success' }}
+        run: ./scripts/merge-go-coverage.sh "$RUNNER_TEMP/go-coverage" backend/coverage.out
       - name: Download extension coverage
         if: ${{ env.SONAR_TOKEN != '' && needs.deterministic-gates.result == 'success' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -1548,8 +1595,8 @@ jobs:
   #
   # WHAT THE needs: LIST DELIBERATELY OMITS:
   #   fe-quality/-unit/-bundle   — absorbed by the `frontend` fan-in.
-  #   integration-shards,
-  #   integration-unit-coverage  — absorbed by the `integration` fan-in, which
+  #   integration-build,
+  #   integration-shards         — absorbed by the `integration` fan-in, which
   #                                already asserts on their results.
   #   sonarcloud                 — advisory, for merge speed during heavy
   #                                development. Listing it here would make it
