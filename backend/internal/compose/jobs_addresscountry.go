@@ -100,9 +100,7 @@ type addressCountryPass struct {
 
 func (p *addressCountryPass) checkWorkspace(ctx context.Context, ws ids.UUID) error {
 	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, ws), "system:address-country-check")
-	store := contacts.NewStore(database.Bind(p.worker.pool, func(context.Context) (ids.WorkspaceID, error) {
-		return ids.From[ids.WorkspaceKind](ws), nil
-	})).SetClock(p.worker.clock)
+	store := contacts.NewStore(database.New(p.worker.pool)).SetClock(p.worker.clock)
 	for _, record := range contacts.CountryCheckedRecords {
 		due, err := store.ListAddressCountryChecksDue(wsCtx, record, addressCountryRowsPerRead)
 		if err != nil {

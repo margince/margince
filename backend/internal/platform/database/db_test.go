@@ -21,7 +21,7 @@ import (
 func TestAResolverThatCannotAnswerStopsTheTransaction(t *testing.T) {
 	t.Parallel()
 	refused := errors.New("more than one active workspace")
-	db := Bind(nil, func(context.Context) (ids.WorkspaceID, error) { return ids.WorkspaceID{}, refused })
+	db := &DB{workspace: func(context.Context) (ids.WorkspaceID, error) { return ids.WorkspaceID{}, refused }}
 
 	err := db.Tx(context.Background(), func(pgx.Tx) error {
 		t.Fatal("the transaction body ran with no workspace resolved")
@@ -74,5 +74,14 @@ func TestBindToPinsTheWorkspaceItIsGiven(t *testing.T) {
 	}
 	if got != ws {
 		t.Errorf("pinned workspace = %s, want %s", got, ws)
+	}
+}
+
+// A handle that spans every workspace names none, so a caller that asks which
+// one fails the way an un-injected handle does.
+func TestAHandleAcrossWorkspacesNamesNoWorkspace(t *testing.T) {
+	t.Parallel()
+	if _, err := NewAcrossWorkspaces(nil).Workspace(context.Background()); !errors.Is(err, ErrNoWorkspace) {
+		t.Fatalf("Workspace on an across-workspaces handle = %v, want ErrNoWorkspace", err)
 	}
 }

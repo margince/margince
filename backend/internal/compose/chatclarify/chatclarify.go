@@ -56,6 +56,6 @@ func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
 }
 
 func (s Sweep) asker(workspace ids.UUID) *capture.ChatAsker {
-	db := database.BindTo(s.Pool, ids.From[ids.WorkspaceKind](workspace))
+	db := database.NewAcrossWorkspaces(s.Pool)
 	return &capture.ChatAsker{DB: db, Members: chatmembers.New(s.Pool), Senders: s.Senders(db), Now: s.Now, Log: s.Log}
 }

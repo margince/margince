@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -88,7 +87,7 @@ func TestACompanyClockDropsAnEmployeeWhoseDepartureDayArrivedWithoutAWrite(t *te
 	a := newAccount(t)
 	a.endYesterday(t, nil)
 	ctx := principal.SystemActing(a.e.Admin(), "system:clock-refold-test")
-	db := database.Bind(a.e.Pool, identity.NewService(a.e.Pool).InstallationWorkspace)
+	db := database.New(a.e.Pool)
 	now := clocktest.Now(t)
 
 	if n, err := RefoldEnded(ctx, db, now.Add(-time.Hour), now); err != nil || n != 0 {

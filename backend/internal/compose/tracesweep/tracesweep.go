@@ -42,12 +42,11 @@ const actorID = "system:capture-trace-sweep"
 
 // Workspace sweeps one tenant. The system principal is bound here and assigned,
 // because a queue carries no principal. No member decides whether an expired
-// diagnostic trace goes. The handle is bound to the job's workspace, not to the
-// installation's. The installation resolver fails once a database holds two
-// live tenants, and the sweep would then delete nothing.
+// diagnostic trace goes. The handle needs no live workspace, because the sweep
+// must still delete the traces of an archived one.
 func Workspace(ctx context.Context, pool *pgxpool.Pool, workspace ids.UUID, window time.Duration, purge Destroyer) error {
 	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), actorID)
-	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](workspace))
+	db := database.NewAcrossWorkspaces(pool)
 	if _, err := capture.NewTraceStore(db).SweepOlderThan(wsCtx, window); err != nil {
 		return err
 	}

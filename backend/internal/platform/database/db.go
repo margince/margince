@@ -6,6 +6,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -14,22 +15,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// DB is a pool that knows which workspace it binds — the installation's, the
-// only one there is (ADR-0061/A107).
+// DB is a pool that resolves the installation's one workspace itself. A caller
+// never passes or binds one.
 //
-// It exists to take that binding off the request context. The singleton is
-// resolved once, so no request path, job or fixture has to put it there first.
-// No table carries workspace_id and no policy reads one. What Tx checks below is
-// only that a caller reached the installation's one workspace at all. It does
-// not check that SQL is scoped by it.
+// No table carries workspace_id and no policy reads one, so a transaction is not
+// scoped by it. What Tx checks is that the installation has a company at all:
+// a handle on a host that has not bootstrapped refuses before any SQL runs.
+// A handle from NewAcrossWorkspaces skips that check, for the privacy passes
+// that must still reach an archived company's rows when no company is live.
 //
-// The workspace arrives as a resolver rather than a value because bootstrap
-// has not necessarily happened when the server is assembled — the worker polls
-// until the API bootstraps. identity's resolver caches its first success, so
-// "resolved once" is a property of that resolver, not of a package-level
-// variable this type would otherwise have to own.
+// The resolution caches its first success, so a process looks the company up
+// once per handle. A failure is never cached, because the worker polls until
+// the API bootstraps.
 type DB struct {
-	pool      *pgxpool.Pool
+	pool *pgxpool.Pool
+	// workspace is nil on a handle from NewAcrossWorkspaces.
 	workspace func(context.Context) (ids.WorkspaceID, error)
 	// budget bounds every statement this handle's transactions run, and is zero
 	// on a handle nobody bounded — see Bounded.
@@ -74,15 +74,35 @@ func (d *DB) Budget() time.Duration {
 	return d.budget
 }
 
-// Bind returns a handle that resolves its workspace through resolve.
-func Bind(pool *pgxpool.Pool, resolve func(context.Context) (ids.WorkspaceID, error)) *DB {
-	return &DB{pool: pool, workspace: resolve}
+// New returns a handle that resolves the installation's workspace through the
+// database.
+func New(pool *pgxpool.Pool) *DB {
+	var cached atomic.Pointer[ids.WorkspaceID]
+	return &DB{pool: pool, workspace: func(ctx context.Context) (ids.WorkspaceID, error) {
+		if ws := cached.Load(); ws != nil {
+			return *ws, nil
+		}
+		live, err := InstallationWorkspace(ctx, pool)
+		if err != nil {
+			return ids.WorkspaceID{}, err
+		}
+		ws := ids.From[ids.WorkspaceKind](live)
+		cached.Store(&ws)
+		return ws, nil
+	}}
 }
 
-// BindTo returns a handle pinned to one workspace, for the callers that
-// already hold it: bootstrap, which is creating the installation the resolver
-// would look for, and the cross-tenant suites, which seed a second workspace
-// precisely to prove one cannot read the other.
+// NewAcrossWorkspaces returns a handle whose transactions need no live
+// workspace. A privacy cleanup uses it: archiving a company does not un-store
+// its data, so the retention floor still binds there. Workspace answers
+// ErrNoWorkspace on this handle.
+func NewAcrossWorkspaces(pool *pgxpool.Pool) *DB {
+	return &DB{pool: pool}
+}
+
+// BindTo returns a handle pinned to one workspace. Test setup uses it for a
+// suite that seeds a second workspace on purpose; the gate
+// TestNoProductionCodePinsAWorkspace keeps production code on New.
 func BindTo(pool *pgxpool.Pool, ws ids.WorkspaceID) *DB {
 	return &DB{pool: pool, workspace: func(context.Context) (ids.WorkspaceID, error) { return ws, nil }}
 }
@@ -102,6 +122,9 @@ func (d *DB) Workspace(ctx context.Context) (ids.WorkspaceID, error) {
 		return ids.WorkspaceID{}, fmt.Errorf("%w: no database handle was injected; "+
 			"construct this store through compose, which binds the installation's pool",
 			ErrNoWorkspace)
+	}
+	if d.workspace == nil {
+		return ids.WorkspaceID{}, fmt.Errorf("%w: this handle spans every workspace and names none", ErrNoWorkspace)
 	}
 	return d.workspace(ctx)
 }
@@ -169,8 +192,10 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 	// keys on the workspace, but a handle that cannot name the installation's
 	// one workspace has not been reached through a bootstrapped install, and
 	// that is a fault the caller must see before any SQL runs.
-	if _, err := d.workspace(ctx); err != nil {
-		return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
+	if d.workspace != nil {
+		if _, err := d.workspace(ctx); err != nil {
+			return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
+		}
 	}
 	// The ambient snapshot, joined here for the reason WithTx joins it. Most
 	// stores reach this seam. A join spelled only in WithTx would leave a
@@ -194,26 +219,6 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 		}
 	}
 	return runTxWith(ctx, d.pool, opts, fn)
-}
-
-// ForWorkspace is this handle re-bound to another workspace, for the fleet
-// passes that enumerate every tenant and must read each one in its own bound
-// transaction.
-//
-// It is deliberately narrow: a pass qualifies only when it is driven by the
-// workspace ENUMERATION itself, never by a request. The single-installation
-// collapse (ADR-0091) retires these — with one workspace there is nothing to
-// enumerate — so a new caller here is a sign the work belongs on the job
-// fan-out, which hands each pass the tenant it runs for.
-func (d *DB) ForWorkspace(ws ids.WorkspaceID) *DB {
-	// The budget rides along: a pass that re-binds a bounded handle to another
-	// tenant is running the same statements against the same tables, and a
-	// ceiling that fell off at the re-bind would be one nobody could see was
-	// missing.
-	pinned := BindTo(d.pool, ws)
-	pinned.budget = d.budget
-	pinned.admitted = d.admitted
-	return pinned
 }
 
 // WithReadAdmission opts expensive reads into the pool's shared allowance.

@@ -66,7 +66,7 @@ func setupPlan(t *testing.T) *planEnv {
 	// installation's workspace resolver. A raw pool would skip the workspace
 	// GUC every tenant query runs under.
 	svc := identity.NewService(e.Pool)
-	db := database.Bind(e.Pool, svc.InstallationWorkspace)
+	db := database.New(e.Pool)
 	return &planEnv{
 		Env:     e,
 		store:   weeklyplan.NewStore(db, weekly.WeekStartOf, teammates{svc: svc}),

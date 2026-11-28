@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -69,7 +68,7 @@ func SharedMailboxRegistry(t *testing.T, pool *pgxpool.Pool, provider string) *c
 	if err != nil {
 		t.Fatalf("building the local vault: %v", err)
 	}
-	registry := capture.NewRegistry(database.Bind(pool, identity.NewService(pool).InstallationWorkspace), nil, nil, vault)
+	registry := capture.NewRegistry(database.New(pool), nil, nil, vault)
 	registry.Register(unsyncedMailbox{name: provider})
 	return registry
 }

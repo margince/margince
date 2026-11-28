@@ -49,9 +49,7 @@ func TestAPersonalConnectionIsNoSharedMailboxToAnyEndpoint(t *testing.T) {
 func TestAConnectThatCannotOpenItsTransactionLeavesNoSealedCredential(t *testing.T) {
 	s := newSharedMailboxSuite(t)
 	e := s.e
-	unbound := database.Bind(e.Pool, func(context.Context) (ids.WorkspaceID, error) {
-		return ids.WorkspaceID{}, errors.New("no installation workspace")
-	})
+	var unbound *database.DB
 	registry := capture.NewRegistry(unbound, nil, nil, s.vault)
 	registry.Register(&deliveringMailbox{name: "imap", address: salesMailbox})
 	_, err := registry.ConnectShared(withReadScope(s.admin()), capture.SharedConnect{

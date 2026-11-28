@@ -13,7 +13,6 @@ package identity
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -37,12 +36,12 @@ import (
 // retries until the API has bootstrapped; the MCP binary exits with this
 // as an operator error — pre-bootstrap no human exists who could have
 // granted a passport.
-var ErrNotBootstrapped = errors.New("identity: installation not bootstrapped — no active company exists")
+var ErrNotBootstrapped = database.ErrNotBootstrapped
 
 // ErrMultipleWorkspaces means the database violates the
 // single-company invariant. Never auto-resolved — an operator
 // explicitly retains one company and archives the rest (ADR-0061 §3).
-var ErrMultipleWorkspaces = errors.New("identity: more than one active workspace — the single-company invariant requires an operator-led migration")
+var ErrMultipleWorkspaces = database.ErrManyLiveWorkspaces
 
 // installationLockKey serializes bootstrap across concurrently starting
 // processes (pg_advisory_xact_lock). The value is arbitrary but fixed —
@@ -141,25 +140,11 @@ func (s *Service) InstallationWorkspace(ctx context.Context) (ids.WorkspaceID, e
 	if cached := s.installation.Load(); cached != nil {
 		return *cached, nil
 	}
-	var wsID ids.WorkspaceID
-	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
-		existing, err := activeWorkspaces(ctx, tx)
-		if err != nil {
-			return err
-		}
-		switch len(existing) {
-		case 0:
-			return ErrNotBootstrapped
-		case 1:
-			wsID = existing[0]
-			return nil
-		default:
-			return ErrMultipleWorkspaces
-		}
-	})
+	live, err := database.InstallationWorkspace(ctx, s.db.Pool())
 	if err != nil {
 		return ids.WorkspaceID{}, err
 	}
+	wsID := ids.From[ids.WorkspaceKind](live)
 	s.installation.Store(&wsID)
 	return wsID, nil
 }

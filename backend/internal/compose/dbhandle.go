@@ -10,7 +10,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
@@ -19,17 +18,11 @@ import (
 // (ADR-0091 §9 step 3): the handle a store uses instead of asking every caller
 // to have put a workspace in ctx first.
 //
-// The resolution is identity's, because identity is the workspace authority —
-// it is the module that refuses to serve when a second one exists (ADR-0061
-// §3). Its resolver caches the first success, so the lookup happens once per
-// process without this layer owning a variable that would make it a global.
-//
-// One Service per handle, deliberately: the cache lives on the Service, and
-// sharing one across the api and the worker would make a bootstrap race in one
-// role visible as a stale answer in the other.
+// The handle resolves the company itself (database.New) and keeps the first
+// answer, so the lookup happens once per handle. A second handle never sees a
+// stale answer from the first.
 func InstallationDB(pool *pgxpool.Pool) *database.DB {
-	svc := identity.NewService(pool)
-	return database.Bind(pool, svc.InstallationWorkspace)
+	return database.New(pool)
 }
 
 // ProjectsStore builds this module's store over the installation's workspace,

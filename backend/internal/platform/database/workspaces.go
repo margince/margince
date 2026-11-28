@@ -15,8 +15,28 @@ import (
 )
 
 // ErrManyLiveWorkspaces means the database holds more than one live company,
-// which an installation never does.
-var ErrManyLiveWorkspaces = errors.New("database: more than one live workspace; an installation holds one company")
+// which an installation never does. An operator keeps one company and archives
+// the rest; nothing resolves the choice automatically.
+var ErrManyLiveWorkspaces = errors.New("database: more than one active workspace; the single-company invariant requires an operator-led migration")
+
+// ErrNotBootstrapped means the database holds no live company. The API
+// refuses to serve until it has bootstrapped one, and the worker retries until
+// then.
+var ErrNotBootstrapped = errors.New("database: installation not bootstrapped; no active company exists")
+
+// InstallationWorkspace is LiveWorkspace for the caller that needs a company
+// to exist: no live row is ErrNotBootstrapped. It is the one lookup behind
+// every handle's Workspace.
+func InstallationWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, error) {
+	ws, ok, err := LiveWorkspace(ctx, pool)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	if !ok {
+		return ids.UUID{}, ErrNotBootstrapped
+	}
+	return ws, nil
+}
 
 // LiveWorkspace returns the installation's one live workspace, or ok=false
 // when no company exists yet. It is the single read a pass over the

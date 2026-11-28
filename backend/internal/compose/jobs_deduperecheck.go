@@ -38,7 +38,7 @@ func (w *dedupeRecheckWorker) Work(ctx context.Context, _ *river.Job[DedupeReche
 // recheckWorkspace closes before it scans, so a pair closed tonight is not
 // filed again by the same run.
 func (w *dedupeRecheckWorker) recheckWorkspace(ctx context.Context, workspace ids.UUID) error {
-	store := contacts.NewStore(database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace))).
+	store := contacts.NewStore(database.New(w.pool)).
 		WithConsumerMail(capture.MatcherTx)
 	actor := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "dedupe_recheck")
 	if err := w.retractUnsupportedPhones(actor); err != nil {

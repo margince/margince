@@ -167,7 +167,7 @@ func (s *Store) installationPending(ctx context.Context, currentIdentity string)
 	}
 	// Any workspace answers for the installation, because the query names none;
 	// the binding exists only so the read has a store handle to run through.
-	return s.forWorkspace(workspaces[0]).workspacePending(
+	return s.passStore().workspacePending(
 		systemWorkspaceContext(ctx, workspaces[0].UUID), currentIdentity)
 }
 
@@ -196,7 +196,7 @@ func (s *Store) pendingStats(ctx context.Context, currentIdentity string) (map[i
 		// A store bound to THIS tenant: the workspace a read is scoped to is
 		// the handle's, so counting every workspace through the enumerating
 		// store would report the same tenant's total under every id.
-		count, length, err := s.forWorkspace(wsID).workspacePending(wsCtx, currentIdentity)
+		count, length, err := s.passStore().workspacePending(wsCtx, currentIdentity)
 		if err != nil {
 			return nil, nil, err
 		}

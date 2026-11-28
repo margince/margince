@@ -97,15 +97,14 @@ func (s *Store) bounded(budget time.Duration) *Store {
 	}
 }
 
-// forWorkspace is this store re-bound to one tenant of the fleet enumeration.
-// Only the index-maintenance passes that walk every workspace use it; a
-// request-path caller already holds the handle for the tenant it serves.
-func (s *Store) forWorkspace(ws ids.WorkspaceID) *Store {
+// passStore is this store for the index-maintenance passes: same handle, no
+// caller identity.
+func (s *Store) passStore() *Store {
 	// carriedBy is deliberately NOT carried across: these passes rebuild the
 	// index and answer nobody, so there is no caller whose row scope a count
 	// would be taken under. A lane that starts serving hits from here owes
 	// itself the counter, and would otherwise report every tag as uncounted.
-	return &Store{db: s.db.ForWorkspace(ws)}
+	return &Store{db: s.db}
 }
 
 // Hit carries an authorized lexical result. Identifier tiers precede text

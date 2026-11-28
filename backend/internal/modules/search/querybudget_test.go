@@ -66,7 +66,7 @@ func TestAnAbandonedAnswerIsNeverReportedAsComplete(t *testing.T) {
 // have given every unrelated caller of that store this executor's ceiling.
 func TestTheExecutorBoundsItsOwnStoreAndNotTheCallersOne(t *testing.T) {
 	t.Parallel()
-	handle := database.Bind(nil, func(context.Context) (ids.WorkspaceID, error) { return ids.WorkspaceID{}, nil })
+	handle := database.BindTo(nil, ids.WorkspaceID{})
 	store := NewStore(handle)
 
 	e := NewQueryExecutorWithBudget(store, nil, nil, time.Millisecond)

@@ -111,9 +111,7 @@ type Service struct {
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
-	svc := &Service{now: time.Now}
-	svc.db = database.Bind(pool, svc.InstallationWorkspace)
-	return svc
+	return &Service{db: database.New(pool), now: time.Now}
 }
 
 // NewServiceFor is NewService over a handle whose workspace is already decided.

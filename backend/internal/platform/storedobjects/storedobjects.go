@@ -28,9 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 const storageKeyArg = "key"
@@ -102,12 +100,7 @@ func (l *Ledger) Record(ctx context.Context, kind Kind, key string) error {
 	if !declared(kind) {
 		return fmt.Errorf("record a provisional object: %q is not a declared kind", kind)
 	}
-	// Bound to the workspace from the CONTEXT rather than from whatever this ledger
-	// was constructed against, and to the same one the key's own prefix carries. The
-	// capture path reaches this from an installation-wide handle, where a
-	// ledger-bound resolve has no single workspace to find.
-	ws := ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx))
-	return l.db.ForWorkspace(ws).Tx(ctx, func(tx pgx.Tx) error {
+	return l.db.Tx(ctx, func(tx pgx.Tx) error {
 		return RecordTx(ctx, tx, kind, key)
 	})
 }
