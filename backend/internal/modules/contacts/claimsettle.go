@@ -95,7 +95,7 @@ func lockWritableClaim(ctx context.Context, tx pgx.Tx, claimID ids.UUID) (ids.UU
 	// second overwrites the first — 204 to both callers, and the loser's
 	// audit row claims it moved a claim that was already settled. The
 	// conflict below only refuses a settlement it can SEE.
-	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.NoArchiveColumn); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
 		return ids.UUID{}, "", err
 	}
 	var contactID, activityID ids.UUID
@@ -129,7 +129,7 @@ func lockWritableClaim(ctx context.Context, tx pgx.Tx, claimID ids.UUID) (ids.UU
 // image after.
 func writeClaimStatus(ctx context.Context, tx pgx.Tx, claimID, contactID ids.UUID, current, to string, extra map[string]any) error {
 	if _, err := tx.Exec(ctx, `
-		UPDATE conversation_claim SET status = $2 WHERE id = $1`,
+		UPDATE conversation_claim SET status = $2 WHERE id = $1 AND archived_at IS NULL`,
 		claimID, to); err != nil {
 		return fmt.Errorf("settle the claim: %w", err)
 	}
@@ -179,7 +179,7 @@ func WithdrawClaimsTx(ctx context.Context, tx pgx.Tx, claimIDs []ids.UUID) error
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM conversation_claim
-		 WHERE id = ANY($1) AND status = $2 AND task_activity_id IS NULL
+		 WHERE id = ANY($1) AND status = $2 AND task_activity_id IS NULL AND archived_at IS NULL
 		 ORDER BY id`, claimIDs, claimStatusOpen)
 	if err != nil {
 		return fmt.Errorf("read the claims to withdraw: %w", err)

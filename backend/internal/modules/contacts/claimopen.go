@@ -26,7 +26,7 @@ func (s *Store) ClaimsStillOpenTx(ctx context.Context, tx pgx.Tx, claimIDs []ids
 	}
 	var open int
 	if err := tx.QueryRow(ctx, `SELECT count(*) FROM conversation_claim
-		 WHERE id = ANY($1) AND status = $2`, claimIDs, claimStatusOpen).Scan(&open); err != nil {
+		 WHERE id = ANY($1) AND archived_at IS NULL AND status = $2`, claimIDs, claimStatusOpen).Scan(&open); err != nil {
 		return false, fmt.Errorf("read whether the promises are still open: %w", err)
 	}
 	return open == len(claimIDs), nil

@@ -85,7 +85,7 @@ func (s *Store) ReadClaimSettlementTx(ctx context.Context, tx pgx.Tx, claimID, s
 		  FROM conversation_claim c
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		  JOIN audit_log a ON a.id = $%d AND a.after->>'%s' = c.id::text
-		 WHERE c.id = $%d AND (%s)
+		 WHERE c.id = $%d AND c.archived_at IS NULL AND (%s)
 		   FOR UPDATE OF c`, auditPos, claimIDKey, claimPos, scope), args...).Scan(&out.TaskID, &out.Status, &out.At, &out.SourceID, &out.Locator)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -133,7 +133,7 @@ func claimsSettledTx(ctx context.Context, tx pgx.Tx, where string, args []any) (
 	}
 	var settled bool
 	err := tx.QueryRow(ctx, `SELECT NOT EXISTS (SELECT 1 FROM conversation_claim
- WHERE `+where+` AND status = 'open')`, args...).Scan(&settled)
+ WHERE `+where+` AND status = 'open' AND archived_at IS NULL)`, args...).Scan(&settled)
 	if err != nil {
 		return false, fmt.Errorf("read whether recipient obligations are settled: %w", err)
 	}

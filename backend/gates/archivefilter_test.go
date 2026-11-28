@@ -32,6 +32,10 @@ type archiveFilteredCall struct{ table, filter int }
 
 const storekitDir = "internal/platform/database/storekit"
 
+// storekitArchiveFilters are the ArchivedFilter values a call can name. Any
+// other selector is a value this gate cannot read.
+var storekitArchiveFilters = map[string]bool{"LiveOnly": true, "IncludeArchived": true, "NoArchiveColumn": true}
+
 // storekitWriterFloor is the vacuity floor on the derived writers: storekit
 // had nine when this gate was written.
 const storekitWriterFloor = 8
@@ -162,7 +166,8 @@ func archiveFilterUses(
 		filter := "LiveOnly"
 		if at.filter >= 0 {
 			filter = ""
-			if selector, ok := call.Args[at.filter].(*ast.SelectorExpr); ok {
+			selector, ok := call.Args[at.filter].(*ast.SelectorExpr)
+			if ok && storekitArchiveFilters[selector.Sel.Name] {
 				filter = selector.Sel.Name
 			}
 		}
@@ -182,6 +187,8 @@ var archiveFilterForwarders = gatekit.Waive(map[string]string{
 		"IncludeArchived, and activity carries archived_at.",
 	"internal/modules/contacts/bulkchange.go:LockRowReading": "holdForBulk is handed contact, company or lead, " +
 		"and each carries archived_at.",
+	"internal/modules/contacts/company_evidence_write.go:LockRow": "writeEvidence locks a company evidence " +
+		"sidecar, and every evidenceWrite passes NoArchiveColumn, which the sidecars answer.",
 	"internal/modules/contacts/claim.go:ClaimOwnership": "claimableTables admits contact, company and lead, " +
 		"and each carries archived_at.",
 	"internal/modules/contacts/leadcontactlock.go:LockRow": "the table is contact, and each caller passes " +

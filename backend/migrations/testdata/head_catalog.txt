@@ -5320,6 +5320,7 @@ public.contract_account_ix CREATE INDEX contract_account_ix ON public.contract U
 public.contract_deal_ix CREATE INDEX contract_deal_ix ON public.contract USING btree (deal_id) WHERE ((deal_id IS NOT NULL) AND (archived_at IS NULL))
 public.contract_pkey CREATE UNIQUE INDEX contract_pkey ON public.contract USING btree (id)
 public.conversation_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.conversation_claim.archived_at timestamp with time zone gen=- def=-
 public.conversation_claim.body text NOT NULL gen=- def=-
 public.conversation_claim.captured_by text NOT NULL gen=- def=-
 public.conversation_claim.contact_id uuid NOT NULL gen=- def=-
@@ -5351,10 +5352,10 @@ public.conversation_claim.text_bound_update CREATE TRIGGER text_bound_update AFT
 public.conversation_claim.trg_conversation_claim_updated CREATE TRIGGER trg_conversation_claim_updated BEFORE UPDATE ON public.conversation_claim FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.conversation_claim.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.conversation_claim.version bigint NOT NULL gen=- def=1
-public.conversation_claim_contact_ix CREATE INDEX conversation_claim_contact_ix ON public.conversation_claim USING btree (contact_id, kind)
-public.conversation_claim_evidence_ux CREATE UNIQUE INDEX conversation_claim_evidence_ux ON public.conversation_claim USING btree (contact_id, source_activity_id, evidence_fingerprint)
+public.conversation_claim_contact_ix CREATE INDEX conversation_claim_contact_ix ON public.conversation_claim USING btree (contact_id, kind) WHERE (archived_at IS NULL)
+public.conversation_claim_evidence_ux CREATE UNIQUE INDEX conversation_claim_evidence_ux ON public.conversation_claim USING btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL)
 public.conversation_claim_pkey CREATE UNIQUE INDEX conversation_claim_pkey ON public.conversation_claim USING btree (id)
-public.conversation_claim_task_ix CREATE INDEX conversation_claim_task_ix ON public.conversation_claim USING btree (task_activity_id) WHERE (task_activity_id IS NOT NULL)
+public.conversation_claim_task_ix CREATE INDEX conversation_claim_task_ix ON public.conversation_claim USING btree (task_activity_id) WHERE ((task_activity_id IS NOT NULL) AND (archived_at IS NULL))
 public.copy_activity_domain_evidence() secdef=false cfg=- acl=- 
 BEGIN
  UPDATE activity_participant SET domain_evidence_parent_version = NEW.domain_evidence_version
@@ -7233,6 +7234,7 @@ public.idx_contact_social_linkedin_profile CREATE INDEX idx_contact_social_linke
 public.idx_contact_strength_unfolded CREATE INDEX idx_contact_strength_unfolded ON public.contact USING btree (id) WHERE ((NOT strength_folded) AND (archived_at IS NULL))
 public.idx_contact_unkeyed_address_hashes CREATE INDEX idx_contact_unkeyed_address_hashes ON public.contact USING btree (id) WHERE ((anonymized_address_hashes IS NOT NULL) AND (anonymized_address_key_id IS NULL))
 public.idx_contact_updated_keyset CREATE INDEX idx_contact_updated_keyset ON public.contact USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_conversation_claim_contact CREATE INDEX idx_conversation_claim_contact ON public.conversation_claim USING btree (contact_id)
 public.idx_conversation_claim_source_activity CREATE INDEX idx_conversation_claim_source_activity ON public.conversation_claim USING btree (source_activity_id)
 public.idx_custom_field_object CREATE INDEX idx_custom_field_object ON public.custom_field USING btree (object, status)
 public.idx_deal_acquisition_source CREATE INDEX idx_deal_acquisition_source ON public.deal USING btree (acquisition_source) WHERE ((archived_at IS NULL) AND (acquisition_source IS NOT NULL))

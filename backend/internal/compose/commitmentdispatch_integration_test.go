@@ -79,7 +79,8 @@ func TestADismissedCustomerPromiseIsNotFiledAgain(t *testing.T) {
 	}
 
 	e.read(t, cannedBrain{reply: attributedReply(t, "Frédéric de Gombert", "contact:"+contact.Id.String(), 0.9)})
-	got := e.wsString(t, `SELECT count(*)::text || ' ' || string_agg(status, ',') FROM conversation_claim`)
+	got := e.wsString(t, `SELECT count(*)::text || ' ' || string_agg(status, ',') FROM conversation_claim
+		WHERE archived_at IS NULL`)
 	if got != "1 dismissed" {
 		t.Errorf("after a second reading the claims read %q, want the one dismissed claim", got)
 	}

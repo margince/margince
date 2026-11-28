@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 367 |
-| Columns | 4497 |
+| Columns | 4494 |
 | Foreign keys | 648 |
 | Owning areas | 40 |
 
@@ -326,9 +326,9 @@ erDiagram
 | [`field_provenance`](contacts.md#field_provenance) | contacts | 24 | 0 |
 | [`finance_connection`](finance.md#finance_connection) | finance | 10 | 4 |
 | [`finance_customer_link`](finance.md#finance_customer_link) | finance | 9 | 2 |
-| [`finance_external_customer`](finance.md#finance_external_customer) | finance | 11 | 1 |
-| [`finance_invoice`](finance.md#finance_invoice) | finance | 29 | 4 |
-| [`finance_payment`](finance.md#finance_payment) | finance | 17 | 0 |
+| [`finance_external_customer`](finance.md#finance_external_customer) | finance | 10 | 1 |
+| [`finance_invoice`](finance.md#finance_invoice) | finance | 28 | 4 |
+| [`finance_payment`](finance.md#finance_payment) | finance | 16 | 0 |
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 12 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |
 | [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 32 | 0 |

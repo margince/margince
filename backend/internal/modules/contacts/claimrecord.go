@@ -129,7 +129,8 @@ func recordClaimInTx(
 			(contact_id, kind, body, source_activity_id, source_quote,
 			 due_at, evidence_fingerprint, source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		ON CONFLICT (contact_id, source_activity_id, evidence_fingerprint) DO NOTHING
+		ON CONFLICT (contact_id, source_activity_id, evidence_fingerprint)
+		   WHERE archived_at IS NULL DO NOTHING
 		RETURNING id`,
 		in.ContactID, in.Kind, in.Body,
 		in.ActivityID, in.Quote, in.DueAt,
@@ -197,7 +198,7 @@ func filedClaim(
 		       corrected_at, task_activity_id
 		  FROM conversation_claim
 		 WHERE contact_id = $1 AND source_activity_id = $2 AND evidence_fingerprint = $3
-		   FOR UPDATE`,
+		   AND archived_at IS NULL FOR UPDATE`,
 		in.ContactID, in.ActivityID, fingerprint).Scan(&id, &claim.Kind, &claim.Body,
 		&activityID, &claim.SourceQuote, &claim.Status, &claim.DueAt,
 		&claim.CorrectedAt, &taskID)
@@ -237,7 +238,7 @@ func (s *Store) SetClaimTaskTx(ctx context.Context, tx pgx.Tx, claimID, taskID i
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, taskID); err != nil {
 		return err
 	}
-	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.NoArchiveColumn); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
 		return err
 	}
 	var contactID ids.UUID

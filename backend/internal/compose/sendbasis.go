@@ -268,7 +268,7 @@ func itemDependencies(ctx context.Context, tx pgx.Tx, claims []ids.UUID, source 
 	slices.SortFunc(claims, compareUUID)
 	claims = slices.Compact(claims)
 	for _, claim := range claims {
-		row, ok, err := currentRow(ctx, tx, "conversation_claim", claim, `status = 'open'`)
+		row, ok, err := currentRow(ctx, tx, "conversation_claim", claim, `status = 'open' AND archived_at IS NULL`)
 		if err != nil || !ok {
 			return nil, false, err
 		}

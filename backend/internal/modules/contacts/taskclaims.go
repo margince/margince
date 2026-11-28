@@ -88,7 +88,7 @@ func taskClaimsStatement(ctx context.Context, named []ids.UUID, identity string)
 	}
 	return fmt.Sprintf(`
  WITH task_claims AS MATERIALIZED (
-   SELECT c.* FROM conversation_claim c WHERE %s = ANY($%d)),
+   SELECT c.* FROM conversation_claim c WHERE %s = ANY($%d) AND c.archived_at IS NULL),
  readable_claim_activity AS MATERIALIZED (%s)
  SELECT c.id, c.contact_id, c.source_activity_id, c.task_activity_id, pr.full_name, c.status, c.evidence_fingerprint
  FROM task_claims c

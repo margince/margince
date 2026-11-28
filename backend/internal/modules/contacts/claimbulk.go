@@ -42,7 +42,7 @@ func (s *Store) LockClaimForBulkTx(ctx context.Context, tx pgx.Tx, id ids.UUID) 
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return BulkClaim{}, err
 	}
-	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", id, storekit.NoArchiveColumn); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", id, storekit.LiveOnly); err != nil {
 		return BulkClaim{}, err
 	}
 	var claim BulkClaim
@@ -134,7 +134,7 @@ func VisibleClaims(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UU
 		SELECT c.id FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE c.id = ANY($%d) AND (%s) AND (%s)`,
+		 WHERE c.id = ANY($%d) AND c.archived_at IS NULL AND (%s) AND (%s)`,
 		idsPos, activityScope, contactScope), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read which claims the caller may see: %w", err)
