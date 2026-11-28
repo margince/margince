@@ -4,10 +4,10 @@
 package aicert_test
 
 // docs/reference/open-vs-closed-models.md sets the open-weight model setups
-// beside the closed ones, with Gemini as the standard: how many features each
-// carries, and what one run of each feature costs. It is rendered from the
-// certification payload, the committed records and the price sheet, so no
-// figure on it is typed by hand.
+// beside the closed ones, with Gemini as the standard.
+// It shows how many features each carries and what one run of each costs.
+// It is rendered from the certification payload, the records and the price
+// sheet, so no figure on it is typed by hand.
 
 import (
 	"bytes"
@@ -36,9 +36,8 @@ const (
 const openVsClosedDescribes = "backend/internal/compose/aicert/openvsclosedpage_test.go " +
 	"backend/internal/compose/aicert/records backend/internal/modules/ai/pricing.go config/presets"
 
-// openVsClosedSetup is one setup the page compares. Weights says what a
-// reader may do with the model, by setup: the file is the key, so a renamed
-// preset fails loudly instead of dropping off the page.
+// openVsClosedSetup is one setup the page compares, keyed by its preset file.
+// A renamed preset then fails loudly instead of dropping off the page.
 type openVsClosedSetup struct{ file, weights string }
 
 var openVsClosedSetups = []openVsClosedSetup{
@@ -130,9 +129,9 @@ func TestTheOpenVsClosedPageIsPublished(t *testing.T) {
 	}
 }
 
-// costedTotal sums the cost of one run of every feature the setup prices, and
-// counts the features it could not price, so a total never reads as complete
-// when it is not.
+// costedTotal sums the cost of one run of every feature the setup prices.
+// It also counts the features it could not price, so a total never reads as
+// complete when it is not.
 func costedTotal(rows map[string]openVsClosedRow) (total int64, costed, all int) {
 	for _, r := range rows {
 		all++
