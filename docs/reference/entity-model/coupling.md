@@ -12,7 +12,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 |---|--:|--:|--:|--:|--:|
 | [activities](activities.md) | 33 | 424 | 32 | 41 | 20 |
 | [agents](agents.md) | 3 | 28 | 0 | 5 | 1 |
-| [ai](ai.md) | 12 | 191 | 0 | 3 | 0 |
+| [ai](ai.md) | 12 | 188 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 24 | 0 | 2 | 0 |
 | [approvals](approvals.md) | 3 | 51 | 6 | 8 | 2 |
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
@@ -28,13 +28,13 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [contacts](contacts.md) | 50 | 720 | 76 | 38 | 14 |
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
-| [customfields](customfields.md) | 1 | 20 | 0 | 1 | 0 |
+| [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 93 | 0 | 8 | 1 |
 | [deals](deals.md) | 26 | 379 | 26 | 18 | 2 |
 | [finance](finance.md) | 5 | 73 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 87 | 1 | 2 | 0 |
 | [identity](identity.md) | 22 | 217 | 157 | 7 | 5 |
-| [initiatives](initiatives.md) | 5 | 40 | 0 | 2 | 1 |
+| [initiatives](initiatives.md) | 5 | 39 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 59 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
 | [knowledge](knowledge.md) | 3 | 38 | 0 | 0 | 0 |

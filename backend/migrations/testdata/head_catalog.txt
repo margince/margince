@@ -5371,7 +5371,6 @@ public.currency_minor_digits.digits smallint NOT NULL gen=- def=-
 public.currency_minor_digits_pkey CREATE UNIQUE INDEX currency_minor_digits_pkey ON public.currency_minor_digits USING btree (currency)
 public.custom_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.custom_field.activity_kinds text[] gen=- def=-
-public.custom_field.archived_at timestamp with time zone gen=- def=-
 public.custom_field.column_name text NOT NULL gen=- def=-
 public.custom_field.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.custom_field.created_by uuid NOT NULL gen=- def=-
@@ -10546,7 +10545,6 @@ public.sales_goal_plan_revision.text_bound_insert CREATE TRIGGER text_bound_inse
 public.sales_goal_plan_revision.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sales_goal_plan_revision FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "origin": 20000, "reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"origin":20000,"reason":2000}')
 public.sales_goal_plan_revision_pkey CREATE UNIQUE INDEX sales_goal_plan_revision_pkey ON public.sales_goal_plan_revision USING btree (plan_id, revision)
 public.sales_initiative acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.sales_initiative.archived_at timestamp with time zone gen=- def=-
 public.sales_initiative.captured_by text NOT NULL gen=- def=-
 public.sales_initiative.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.sales_initiative.deadline date NOT NULL gen=- def=-
@@ -10561,7 +10559,7 @@ public.sales_initiative.objective_metric text NOT NULL gen=- def=-
 public.sales_initiative.owner_id uuid NOT NULL gen=- def=-
 public.sales_initiative.sales_initiative_live_has_launch CHECK (((status = 'draft'::text) OR (launch_at IS NOT NULL)))
 public.sales_initiative.sales_initiative_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT
-public.sales_initiative.sales_initiative_owner_id_retirement_guard CREATE TRIGGER sales_initiative_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.sales_initiative FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
+public.sales_initiative.sales_initiative_owner_id_retirement_guard CREATE TRIGGER sales_initiative_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.sales_initiative FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.sales_initiative.sales_initiative_pkey PRIMARY KEY (id)
 public.sales_initiative.sales_initiative_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'live'::text, 'ended'::text])))
 public.sales_initiative.sales_initiative_target_value_check CHECK (((target_value IS NULL) OR (target_value > 0)))
@@ -10631,7 +10629,7 @@ public.sales_initiative_revision.sales_initiative_revision_pkey PRIMARY KEY (ini
 public.sales_initiative_revision.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sales_initiative_revision FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"reason":2000}')
 public.sales_initiative_revision.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sales_initiative_revision FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"reason":2000}')
 public.sales_initiative_revision_pkey CREATE UNIQUE INDEX sales_initiative_revision_pkey ON public.sales_initiative_revision USING btree (initiative_id, revision)
-public.sales_initiative_status_idx CREATE INDEX sales_initiative_status_idx ON public.sales_initiative USING btree (status) WHERE (archived_at IS NULL)
+public.sales_initiative_status_idx CREATE INDEX sales_initiative_status_idx ON public.sales_initiative USING btree (status)
 public.sales_target acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sales_target.created_at timestamp with time zone NOT NULL gen=- def=-
 public.sales_target.id uuid NOT NULL gen=- def=uuidv7()
@@ -12459,7 +12457,6 @@ public.vault_secret.text_bound_update CREATE TRIGGER text_bound_update AFTER UPD
 public.vault_secret.vault_secret_pkey PRIMARY KEY (ref)
 public.vault_secret_pkey CREATE UNIQUE INDEX vault_secret_pkey ON public.vault_secret USING btree (ref)
 public.voice_build acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.voice_build.archived_at timestamp with time zone gen=- def=-
 public.voice_build.attempt integer NOT NULL gen=- def=1
 public.voice_build.attempt_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_build.candidate_action text NOT NULL gen=- def='none'::text
@@ -12496,10 +12493,10 @@ public.voice_build.voice_build_status_check CHECK ((status = ANY (ARRAY['queued'
 public.voice_build.voice_build_status_code_check CHECK ((status_code = ANY (ARRAY['budget_deferred'::text, 'model_unavailable'::text, 'invalid_output'::text, 'quality_regression'::text, 'material_drift'::text, 'internal'::text])))
 public.voice_build.voice_build_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.voice_build.voice_profile_id uuid NOT NULL gen=- def=-
-public.voice_build_deferred_due CREATE INDEX voice_build_deferred_due ON public.voice_build USING btree (next_attempt_at, id) WHERE ((status = 'deferred'::text) AND (archived_at IS NULL))
+public.voice_build_deferred_due CREATE INDEX voice_build_deferred_due ON public.voice_build USING btree (next_attempt_at, id) WHERE (status = 'deferred'::text)
 public.voice_build_one_active CREATE UNIQUE INDEX voice_build_one_active ON public.voice_build USING btree (voice_profile_id) WHERE (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text]))
 public.voice_build_pkey CREATE UNIQUE INDEX voice_build_pkey ON public.voice_build USING btree (id)
-public.voice_build_poll CREATE INDEX voice_build_poll ON public.voice_build USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.voice_build_poll CREATE INDEX voice_build_poll ON public.voice_build USING btree (voice_profile_id, created_at DESC, id DESC)
 public.voice_build_profile_version_ix CREATE INDEX voice_build_profile_version_ix ON public.voice_build USING btree (voice_profile_id, result_version)
 public.voice_build_requester_fk CREATE INDEX voice_build_requester_fk ON public.voice_build USING btree (requested_by) WHERE (requested_by IS NOT NULL)
 public.voice_corpus_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -12602,7 +12599,6 @@ public.voice_profile.voice_profile_version_js_safe CHECK (((version >= '-9007199
 public.voice_profile.voice_profile_version_nonnegative CHECK ((profile_version >= 0))
 public.voice_profile_delta acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.voice_profile_delta.activation_outcome text NOT NULL gen=- def=-
-public.voice_profile_delta.archived_at timestamp with time zone gen=- def=-
 public.voice_profile_delta.classification text NOT NULL gen=- def=-
 public.voice_profile_delta.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_profile_delta.delta_json jsonb NOT NULL gen=- def=-
@@ -12623,7 +12619,7 @@ public.voice_profile_delta.voice_profile_delta_to_fkey FOREIGN KEY (voice_profil
 public.voice_profile_delta.voice_profile_delta_to_version_check CHECK ((to_version >= 1))
 public.voice_profile_delta.voice_profile_id uuid NOT NULL gen=- def=-
 public.voice_profile_delta_from_version_ix CREATE INDEX voice_profile_delta_from_version_ix ON public.voice_profile_delta USING btree (voice_profile_id, from_version)
-public.voice_profile_delta_history CREATE INDEX voice_profile_delta_history ON public.voice_profile_delta USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.voice_profile_delta_history CREATE INDEX voice_profile_delta_history ON public.voice_profile_delta USING btree (voice_profile_id, created_at DESC, id DESC)
 public.voice_profile_delta_pkey CREATE UNIQUE INDEX voice_profile_delta_pkey ON public.voice_profile_delta USING btree (id)
 public.voice_profile_owner_fk CREATE INDEX voice_profile_owner_fk ON public.voice_profile USING btree (owner_id) WHERE (owner_id IS NOT NULL)
 public.voice_profile_pkey CREATE UNIQUE INDEX voice_profile_pkey ON public.voice_profile USING btree (id)
@@ -12631,7 +12627,6 @@ public.voice_profile_team_fk CREATE INDEX voice_profile_team_fk ON public.voice_
 public.voice_profile_version acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.voice_profile_version.activated_at timestamp with time zone gen=- def=-
 public.voice_profile_version.activation_policy_version text NOT NULL gen=- def=-
-public.voice_profile_version.archived_at timestamp with time zone gen=- def=-
 public.voice_profile_version.builder_version text NOT NULL gen=- def=-
 public.voice_profile_version.captured_by text NOT NULL gen=- def=-
 public.voice_profile_version.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -12665,7 +12660,7 @@ public.voice_profile_version.voice_profile_version_reason_check CHECK ((reason =
 public.voice_profile_version.voice_profile_version_source_count_check CHECK ((source_count >= 0))
 public.voice_profile_version.voice_profile_version_status_check CHECK ((status = ANY (ARRAY['candidate'::text, 'active'::text, 'superseded'::text, 'rejected'::text])))
 public.voice_profile_version.voice_profile_version_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.voice_profile_version_history CREATE INDEX voice_profile_version_history ON public.voice_profile_version USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.voice_profile_version_history CREATE INDEX voice_profile_version_history ON public.voice_profile_version USING btree (voice_profile_id, created_at DESC, id DESC)
 public.voice_profile_version_one_active CREATE UNIQUE INDEX voice_profile_version_one_active ON public.voice_profile_version USING btree (voice_profile_id) WHERE (status = 'active'::text)
 public.voice_profile_version_pkey CREATE UNIQUE INDEX voice_profile_version_pkey ON public.voice_profile_version USING btree (id)
 public.voice_profile_version_predecessor_ix CREATE INDEX voice_profile_version_predecessor_ix ON public.voice_profile_version USING btree (voice_profile_id, predecessor_version)

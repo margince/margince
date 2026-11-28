@@ -258,7 +258,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 ## voice_build
 
-21 columns · primary key `(id)` · referenced by 0 foreign keys
+20 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -279,7 +279,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `status_code` | `text` |  | One of `budget_deferred`, `model_unavailable`, `invalid_output`, `quality_regression`, `material_drift`, `internal`. |
 | `status_detail` | `text` |  | Safe operator guidance; never provider payload, prompt, SQL, or stack data. |
 | `voice_profile_id` | `uuid` | yes | Points at `voice_profile.id`. |
-| `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -307,10 +306,10 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 **Indexes**
 
-- `voice_build_deferred_due`: `btree (next_attempt_at, id) WHERE ((status = 'deferred') AND (archived_at IS NULL))`
+- `voice_build_deferred_due`: `btree (next_attempt_at, id) WHERE (status = 'deferred')`
 - `voice_build_one_active`: `unique, btree (voice_profile_id) WHERE (status = ANY (ARRAY['queued', 'deferred', 'running']))`
 - `voice_build_pkey`: `unique, btree (id)`
-- `voice_build_poll`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
+- `voice_build_poll`: `btree (voice_profile_id, created_at DESC, id DESC)`
 - `voice_build_profile_version_ix`: `btree (voice_profile_id, result_version)`
 - `voice_build_requester_fk`: `btree (requested_by) WHERE (requested_by IS NOT NULL)`
 
@@ -482,7 +481,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 ## voice_profile_delta
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -493,7 +492,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `from_version` | `integer` |  |  |
 | `to_version` | `integer` | yes |  |
 | `voice_profile_id` | `uuid` | yes | Points at `voice_profile.id`. |
-| `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
@@ -517,7 +515,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 - `uq_voice_profile_delta_version`: `unique, btree (voice_profile_id, to_version)`
 - `voice_profile_delta_from_version_ix`: `btree (voice_profile_id, from_version)`
-- `voice_profile_delta_history`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
+- `voice_profile_delta_history`: `btree (voice_profile_id, created_at DESC, id DESC)`
 - `voice_profile_delta_pkey`: `unique, btree (id)`
 
 **Triggers**
@@ -527,7 +525,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 ## voice_profile_version
 
-24 columns · primary key `(id)` · referenced by 5 foreign keys
+23 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -549,7 +547,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `status` | `text` | yes | One of `candidate`, `active`, `superseded`, `rejected`. |
 | `voice_profile_id` | `uuid` | yes | Points at `voice_profile.id`. |
 | `voice_profile_md` | `text` | yes |  |
-| `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
@@ -576,7 +573,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Indexes**
 
 - `uq_voice_profile_version_number`: `unique, btree (voice_profile_id, profile_version)`
-- `voice_profile_version_history`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
+- `voice_profile_version_history`: `btree (voice_profile_id, created_at DESC, id DESC)`
 - `voice_profile_version_one_active`: `unique, btree (voice_profile_id) WHERE (status = 'active')`
 - `voice_profile_version_pkey`: `unique, btree (id)`
 - `voice_profile_version_predecessor_ix`: `btree (voice_profile_id, predecessor_version)`

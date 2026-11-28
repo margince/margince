@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 367 |
-| Columns | 4494 |
+| Columns | 4489 |
 | Foreign keys | 648 |
 | Owning areas | 40 |
 
@@ -281,7 +281,7 @@ erDiagram
 | [`contract`](contracts.md#contract) | contracts | 29 | 3 |
 | [`conversation_claim`](contacts.md#conversation_claim) | contacts | 20 | 0 |
 | [`currency_minor_digits`](platform.md#currency_minor_digits) | platform | 2 | 0 |
-| [`custom_field`](customfields.md#custom_field) | customfields | 20 | 0 |
+| [`custom_field`](customfields.md#custom_field) | customfields | 19 | 0 |
 | [`data_subject_request`](consent.md#data_subject_request) | consent | 17 | 1 |
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
 | [`data_task_run`](platform.md#data_task_run) | platform | 23 | 0 |
@@ -435,7 +435,7 @@ erDiagram
 | [`runner_job`](agents.md#runner_job) | agents | 7 | 0 |
 | [`sales_goal_plan`](reporting.md#sales_goal_plan) | reporting | 10 | 1 |
 | [`sales_goal_plan_revision`](reporting.md#sales_goal_plan_revision) | reporting | 10 | 0 |
-| [`sales_initiative`](initiatives.md#sales_initiative) | initiatives | 17 | 4 |
+| [`sales_initiative`](initiatives.md#sales_initiative) | initiatives | 16 | 4 |
 | [`sales_initiative_baseline`](initiatives.md#sales_initiative_baseline) | initiatives | 2 | 0 |
 | [`sales_initiative_enrolment`](initiatives.md#sales_initiative_enrolment) | initiatives | 9 | 0 |
 | [`sales_initiative_member`](initiatives.md#sales_initiative_member) | initiatives | 6 | 0 |
@@ -483,12 +483,12 @@ erDiagram
 | [`user_mfa`](identity.md#user_mfa) | identity | 5 | 1 |
 | [`user_record_view`](compose.md#user_record_view) | compose | 8 | 0 |
 | [`vault_secret`](platform.md#vault_secret) | platform | 3 | 0 |
-| [`voice_build`](ai.md#voice_build) | ai | 21 | 0 |
+| [`voice_build`](ai.md#voice_build) | ai | 20 | 0 |
 | [`voice_corpus_source`](ai.md#voice_corpus_source) | ai | 23 | 0 |
 | [`voice_learning_signal`](ai.md#voice_learning_signal) | ai | 15 | 0 |
 | [`voice_profile`](ai.md#voice_profile) | ai | 17 | 5 |
-| [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 10 | 0 |
-| [`voice_profile_version`](ai.md#voice_profile_version) | ai | 24 | 5 |
+| [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 9 | 0 |
+| [`voice_profile_version`](ai.md#voice_profile_version) | ai | 23 | 5 |
 | [`web_form`](webforms.md#web_form) | webforms | 26 | 1 |
 | [`web_form_last_post`](webforms.md#web_form_last_post) | webforms | 2 | 0 |
 | [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 19 | 0 |

@@ -868,8 +868,8 @@ func TestVoiceBuildOnAnUnconfiguredInstallationNamesTheSetting(t *testing.T) {
 	}
 }
 
-// A build that stops running mid-run ends the worker at the next stage. It
-// asks the model nothing more and writes nothing over the row that stopped it.
+// A build another worker reclaims mid-run ends this worker at the next stage.
+// It asks the model nothing more and writes nothing over the reclaimed row.
 func TestAVoiceBuildThatStopsRunningEndsItsWorker(t *testing.T) {
 	quote := "A quote for a build that is stopped."
 	env, build := seedVoiceBuild(t, quote, 6)
@@ -879,7 +879,7 @@ func TestAVoiceBuildThatStopsRunningEndsItsWorker(t *testing.T) {
 		calls++
 		if !stopped {
 			stopped = true
-			env.e.WsExec(t, `UPDATE voice_build SET archived_at = now() WHERE id = $1`, build.ID)
+			env.e.WsExec(t, `UPDATE voice_build SET started_at = started_at + interval '1 second' WHERE id = $1`, build.ID)
 		}
 		return scripted.Complete(ctx, req)
 	}), slog.New(slog.DiscardHandler))

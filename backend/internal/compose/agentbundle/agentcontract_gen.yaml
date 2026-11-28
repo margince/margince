@@ -52022,8 +52022,9 @@ components:
         archived_at:
           type: [string, 'null']
           format: date-time
+          deprecated: true
           description: >-
-            Base envelope field; stays null even when `status=retired`, because retiring is a status flip rather than an archive.
+            Never set; always null. A field is retired through `status`, never archived. Kept so existing clients keep compiling.
         version: {$ref: '#/components/schemas/RowVersion'}
         records_changed:
           type: integer
@@ -55915,7 +55916,7 @@ components:
         started_at: {type: [string, 'null'], format: date-time}
         completed_at: {type: [string, 'null'], format: date-time}
         updated_at: {type: string, format: date-time}
-        archived_at: {type: [string, 'null'], format: date-time}
+        archived_at: {type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.'}
     VoiceReviewReason:
       type: object
       required: [code, text, values]
@@ -56008,7 +56009,7 @@ components:
         version: {type: integer, minimum: 1, description: Row concurrency version; distinct from the immutable artifact's profile_version.}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
-        archived_at: {type: [string, 'null'], format: date-time}
+        archived_at: {type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.'}
         activated_at: {type: [string, 'null'], format: date-time}
     VoiceProfileDelta:
       type: object
@@ -56047,7 +56048,7 @@ components:
         register_rules_removed: {type: integer, minimum: 0}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
-        archived_at: {type: [string, 'null'], format: date-time}
+        archived_at: {type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.'}
     VoiceLearningTransformation:
       type: object
       required: [key, observation_count, description]

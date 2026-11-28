@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 )
 
-const deferredVoiceBuilds = "status = 'deferred' AND status_code = 'budget_deferred' AND next_attempt_at IS NOT NULL AND archived_at IS NULL"
+const deferredVoiceBuilds = "status = 'deferred' AND status_code = 'budget_deferred' AND next_attempt_at IS NOT NULL"
 
 // BudgetDeferredVoiceBuilds shares the status/recovery predicate for saved
 // builds a budget raise would resume; a build waiting on the provider is not
@@ -46,7 +46,7 @@ func (s *VoiceStore) ResumeBudgetBuilds(ctx context.Context, enqueue func(contex
 			return err
 		}
 		args := []any{row.ID}
-		query := fmt.Sprintf(`UPDATE voice_build SET next_attempt_at=now(),version=version+1,updated_at=now() WHERE archived_at IS NULL AND id=$%d RETURNING `+voiceBuildColumns, len(args))
+		query := fmt.Sprintf(`UPDATE voice_build SET next_attempt_at=now(),version=version+1,updated_at=now() WHERE id=$%d RETURNING `+voiceBuildColumns, len(args))
 		updated, err := scanVoiceBuild(tx.QueryRow(ctx, query, args...))
 		if err != nil {
 			return err

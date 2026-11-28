@@ -163,7 +163,7 @@ var memberReferences = map[string]memberReference{
 	"role_assignment.user_id":                  {disposition: referenceRetain},
 	"sales_goal_plan.owner_id":                 {disposition: referenceRetain},
 	"sales_goal_plan_revision.created_by":      {disposition: referenceRetain},
-	"sales_initiative.owner_id":                {disposition: referenceResolve, live: memberLiveRows, remedy: "reports"},
+	"sales_initiative.owner_id":                {disposition: referenceResolve, live: jsonTrue, remedy: "reports"},
 	"sales_target_revision.created_by":         {disposition: referenceRetain},
 	"saved_view.owner_id":                      {disposition: referenceRetain, live: memberLiveRows},
 	"scheduled_send.agent_on_behalf_of":        {disposition: referenceRetain},

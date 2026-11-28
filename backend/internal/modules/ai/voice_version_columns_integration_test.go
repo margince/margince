@@ -33,10 +33,9 @@ import (
 // databaseOwnedVersionColumns are the columns no writer supplies, with the
 // reason each belongs to the database rather than to a caller.
 var databaseOwnedVersionColumns = gatekit.Waive(map[string]string{
-	"id":          "the primary key, minted by the column default",
-	"version":     "the optimistic-concurrency counter, which starts at its default and moves only on update",
-	"created_at":  "when the row was written, which is the database's clock and not a caller's",
-	"archived_at": "set by an archive, never by the write that creates the row",
+	"id":         "the primary key, minted by the column default",
+	"version":    "the optimistic-concurrency counter, which starts at its default and moves only on update",
+	"created_at": "when the row was written, which is the database's clock and not a caller's",
 })
 
 func TestTheVoiceVersionWriterCoversEveryColumnACallerChooses(t *testing.T) {
@@ -51,10 +50,9 @@ func TestTheVoiceVersionWriterCoversEveryColumnACallerChooses(t *testing.T) {
 // writer owns, and a column added there is as invisible as one added to the
 // version.
 var databaseOwnedDeltaColumns = gatekit.Waive(map[string]string{
-	"id":          "the primary key, minted by the column default",
-	"created_at":  "when the row was written, which is the database's clock and not a caller's",
-	"updated_at":  "null until something updates the row, which is a fact about the row rather than a value the writer picks; the one update that exists (a candidate's outcome being decided) stamps it there",
-	"archived_at": "set by an archive, never by the write that creates the row",
+	"id":         "the primary key, minted by the column default",
+	"created_at": "when the row was written, which is the database's clock and not a caller's",
+	"updated_at": "null until something updates the row, which is a fact about the row rather than a value the writer picks; the one update that exists (a candidate's outcome being decided) stamps it there",
 })
 
 func TestTheVoiceDeltaWriterCoversEveryColumnACallerChooses(t *testing.T) {

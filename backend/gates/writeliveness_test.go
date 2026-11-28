@@ -116,6 +116,7 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:deleteArchivedClaim":           "reaches only an archived claim, on purpose: the data task deletes the duplicates the evidence index archived, and its DELETE names archived_at IS NOT NULL",
 	"internal/modules/capture:dropArchivedNarrowingTx":        "reaches only an archived connection, on purpose: a removed mailbox's pending history narrowing is dropped rather than carried out",
 	"internal/modules/capture:upsertConnection":               "a grant revives an archived connection on purpose, as the add path's ON CONFLICT does: reconnecting is how a withdrawn mailbox comes back",
 	"internal/modules/privacy:redactSignals":                  "redacts archived signals on purpose: an archived signal about the erased contact holds the same free text and personal members a live one does",
@@ -157,7 +158,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// pre-read, so a second attempt converges on the same row instead of racing.
 	"internal/modules/activities:archiveAbsorbedEcho": "folding a duplicate capture into its survivor, which takes the echo off the timeline. archived_at is coalesced so a row a noise disposition already hid keeps the instant its undo window is measured from — a filter here would refuse exactly that row",
 	"internal/modules/capture:withdrawConnection":     "disconnecting a mailbox, and the retry that re-drives the cleanup a previous call left unfinished. The already-withdrawn arm is the one that must reach a retired row, and it is what makes the withdrawal recoverable rather than half-done",
-	"internal/modules/customfields:Retire":            "the catalog field's own retirement, which moves `status` and not archived_at; lockField holds the row from before the decision read, and a repeat converges on the same status",
 	"internal/modules/identity:UpdateTeam":            "the team's archive and restore arms are this function, so both directions have to reach a row on the far side of the transition. The row is held FOR UPDATE from before the state is read",
 
 	// The company column writers are deliberately NOT here. They used to be:
@@ -176,8 +176,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:touchChildSetParent":        "the aggregate bump after a child row was written or taken away. The subject of a bought-data revert may be archived, so re-taking liveness here would refuse the case the helper exists for; the callers lock and probe the row first",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, through lockActivityForWrite — two hops past what a per-function scan follows, and the same indirection updateguard ratifies for this function",
 	"internal/modules/deals:recomputeOfferTotals":          "every caller holds the offer row lock through visibleOfferLocked, except createOfferTx where the offer was inserted in the same transaction",
-	"internal/modules/customfields:Update":                 "runs under the catalog row lock lockField mints, and the field's own mutability is checked under it. custom_field is retired through `status`; nothing in the tree writes its archived_at",
-	"internal/modules/customfields:setOptionsInTx":         "runs under the catalog row lock lockPicklistField mints, plus the per-table advisory lock serializeSchemaChange takes, and the same status-not-archived_at retirement applies",
 	"internal/modules/contacts:recomputeUnderOverrideTx":   "the scoring pass refreshing the machine value beside a human override. Its subject comes from the recompute's own selection of live leads, and the CAS on score_computed is what makes a lost race write nothing",
 
 	// THE WRITE CANNOT REACH A RETIRED ROW, because of what it is rather than
@@ -202,7 +200,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:completeContactName":             "filling first and last from a confident parse, and only into columns that are both still empty. The predicate is also the concurrency guard, and an erased subject has had them nulled with the row's other identity columns",
 	"internal/modules/contacts:absorbCompanyReferences":         "the merge relinking a retired source's references onto its survivor. A merge deliberately reaches the row it is retiring — that is what a merge is — and mergePair resolved the pair under LockPair before this runs",
 	"internal/modules/ai:persistBuildVersion":                   "recording the artifact a voice build produced, on the profile that build was raised for. The build row carries the profile id and the build itself is the selection; nothing in the tree writes voice_profile.archived_at",
-	"internal/modules/ai:finishBuildTx":                         "closing out a build's own status row. A build is completed or failed, never archived, and the row is the one this pass is executing",
 	"internal/modules/ai:RecordSendOutcomeTx":                   "closing a learning signal on the human's judgment of a draft, on a row lockJudgeableSignal has already held and confirmed is still `drafted`. That guard is narrower than liveness",
 	"internal/modules/knowledge:DeleteDocument":                 "destroying a corpus document and its passages, under the document's own FOR UPDATE. A destruction that refused a retired document would leave its bytes and its embeddings behind",
 	"internal/modules/knowledge:reconcilePages":                 "the boot-time handbook reconcile, which withdraws pages an earlier release shipped and this one does not. The set it acts on is derived from what the binary carries, not from a caller",

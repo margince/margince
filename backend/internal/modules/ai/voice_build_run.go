@@ -95,7 +95,7 @@ func (s *VoiceStore) ClaimBuild(ctx context.Context, profileID, buildID ids.UUID
 			    version = version + 1, updated_at = @now,
 			    attempt = attempt + CASE WHEN status = 'queued' THEN 0 ELSE 1 END,
 			    attempt_at = CASE WHEN status = 'queued' THEN attempt_at ELSE @now END
-			WHERE id = @id AND voice_profile_id = @profile AND archived_at IS NULL
+			WHERE id = @id AND voice_profile_id = @profile
 			  AND (status = 'queued'
 			       OR (status = 'deferred' AND next_attempt_at <= @now)
 			       OR (status = 'running' AND (@owned OR started_at < @cutoff)))
@@ -109,7 +109,7 @@ func (s *VoiceStore) ClaimBuild(ctx context.Context, profileID, buildID ids.UUID
 			// come back" — silently succeeding here would strand the build.
 			unclaimed, stateErr := scanVoiceBuild(tx.QueryRow(ctx, storekit.SQLf(`
 				SELECT %s FROM voice_build
-				WHERE id = $1 AND voice_profile_id = $2 AND archived_at IS NULL`,
+				WHERE id = $1 AND voice_profile_id = $2`,
 				voiceBuildColumns), buildID, profileID))
 			if errors.Is(stateErr, pgx.ErrNoRows) {
 				return nil
@@ -203,7 +203,7 @@ func (s *VoiceStore) SetBuildStage(ctx context.Context, buildID ids.UUID, claime
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE voice_build SET stage = @stage, version = version + 1, updated_at = @now
-			WHERE id = @id AND status = 'running' AND started_at = @claimed AND archived_at IS NULL`,
+			WHERE id = @id AND status = 'running' AND started_at = @claimed`,
 			pgx.StrictNamedArgs{"stage": stage, "now": s.now().UTC(), "id": buildID, "claimed": claimedAt})
 		if err != nil {
 			return err
@@ -228,7 +228,7 @@ func (s *VoiceStore) DeferBuild(ctx context.Context, buildID ids.UUID, claimedAt
 			UPDATE voice_build
 			SET status = 'deferred', status_code = 'budget_deferred', status_detail = $2,
 			    next_attempt_at = $3, version = version + 1, updated_at = $4
-			WHERE id = $1 AND status = 'running' AND started_at = $5 AND archived_at IS NULL
+			WHERE id = $1 AND status = 'running' AND started_at = $5
 			RETURNING %s`, voiceBuildColumns), buildID, detail, nextAttempt.UTC(), s.now().UTC(), claimedAt.UTC()))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
@@ -258,7 +258,7 @@ func (s *VoiceStore) FailBuild(ctx context.Context, buildID ids.UUID, claimedAt 
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		build, err := scanVoiceBuild(tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT %s FROM voice_build
-			WHERE id = $1 AND status = 'running' AND started_at = $2 AND archived_at IS NULL
+			WHERE id = $1 AND status = 'running' AND started_at = $2
 			FOR UPDATE`,
 			voiceBuildColumns), buildID, claimedAt.UTC()))
 		if errors.Is(err, pgx.ErrNoRows) {

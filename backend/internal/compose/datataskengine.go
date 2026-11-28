@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/archivedclaims"
 	"github.com/margince/margince/backend/internal/compose/companyclockrefold"
 	"github.com/margince/margince/backend/internal/compose/companyprofiles"
 	"github.com/margince/margince/backend/internal/compose/consentversions"
@@ -168,6 +169,6 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(), recordsources.PartyDataTask(), recordsources.LeadDataTask(), recordsources.ActivityDataTask(), rolemailboxseats.DataTask(), participantaddresses.DataTask(),
 		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now), contacts.LegacyEvidenceDataTask(),
 		leadArrivalOriginDataTask(), languages.DataTask(), negativecounts.DataTask(),
-		readproposals.DataTask(),
+		readproposals.DataTask(), archivedclaims.DataTask(),
 	}
 }

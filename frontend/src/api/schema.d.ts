@@ -55821,7 +55821,8 @@ export interface components {
             updated_at: string;
             /**
              * Format: date-time
-             * @description Base envelope field; stays null even when `status=retired`, because retiring is a status flip rather than an archive.
+             * @deprecated
+             * @description Never set; always null. A field is retired through `status`, never archived. Kept so existing clients keep compiling.
              */
             archived_at?: string | null;
             version?: components["schemas"]["RowVersion"];
@@ -60825,7 +60826,11 @@ export interface components {
             completed_at: string | null;
             /** Format: date-time */
             updated_at: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @deprecated
+             * @description Never set; always null. Kept so existing clients keep compiling.
+             */
             archived_at: string | null;
         };
         VoiceReviewReason: {
@@ -60889,7 +60894,11 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @deprecated
+             * @description Never set; always null. Kept so existing clients keep compiling.
+             */
             archived_at: string | null;
             /** Format: date-time */
             activated_at: string | null;
@@ -60917,7 +60926,11 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @deprecated
+             * @description Never set; always null. Kept so existing clients keep compiling.
+             */
             archived_at: string | null;
         };
         VoiceLearningTransformation: {
