@@ -245,7 +245,7 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 		}
 	}
 	_, joined := snapshotOf(ctx)
-	if _, proven := d.provenCompany(); d.installation && !proven {
+	if d.installation && !d.isProven() {
 		body := fn
 		fn = func(tx pgx.Tx) error {
 			started := d.clock().UnixNano()
@@ -284,6 +284,11 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 		}
 	}
 	return runTxWith(ctx, d.pool, opts, fn)
+}
+
+func (d *DB) isProven() bool {
+	_, ok := d.provenCompany()
+	return ok
 }
 
 // provenCompany answers the company the last check found live, while that
