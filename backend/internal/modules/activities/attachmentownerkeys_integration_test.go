@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -29,7 +30,7 @@ func (e *sendEnv) execAttachment(t *testing.T, sql string, args ...any) {
 func seedOwnerAttachment(t *testing.T, e *sendEnv, kind string, owner ids.UUID, key string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	e.execAttachment(t, `INSERT INTO attachment(id,entity_type,entity_id,filename,storage_key,source,captured_by,owner_unkeyed) VALUES($1,$2,$3,'review.txt',$4,'manual','human:test',true)`, id, kind, owner, key)
+	e.execAttachment(t, `INSERT INTO attachment(id,entity_type,entity_id,filename,storage_key,source,captured_by,owner_unkeyed,created_at,updated_at) VALUES($1,$2,$3,'review.txt',$4,'manual','human:test',true,now()-interval '2 days',now()-interval '2 days')`, id, kind, owner, key)
 	return id
 }
 
@@ -120,12 +121,15 @@ func TestDeletingTheLastSharedFileReferenceDefeatsAStaleRetire(t *testing.T) {
 	first := seedOwnerAttachment(t, e, "contact", owner, key)
 	last := seedOwnerAttachment(t, e, "contact", owner, key)
 	e.execAttachment(t, `DELETE FROM attachment WHERE id=$1`, first)
-	e.execAttachment(t, `UPDATE stored_object_intent SET recorded_at=now()-interval '2 days' WHERE storage_key=$1`, key)
-	_, ctx := systemStore(e)
+	e.execAttachment(t, `UPDATE stored_object_intent SET recorded_at=$2 WHERE storage_key=$1`, key, clocktest.Now(t).Add(-48*time.Hour))
+	store, ctx := systemStore(e)
 	ledger := storedobjects.NewLedger(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	pending, err := ledger.ListProvisional(ctx, time.Now(), 10)
+	pending, err := ledger.ListProvisional(ctx, clocktest.Now(t), 10)
 	if err != nil || len(pending) != 1 {
 		t.Fatalf("pending=%v, %v", pending, err)
+	}
+	if free, err := store.UnreferencedAttachmentKeys(ctx, []string{key}); err != nil || len(free) != 0 {
+		t.Fatalf("the reaper did not see the remaining file: %v, %v", free, err)
 	}
 	// The reaper saw the last row, then that row was deleted before Retire.
 	e.execAttachment(t, `DELETE FROM attachment WHERE id=$1`, last)
