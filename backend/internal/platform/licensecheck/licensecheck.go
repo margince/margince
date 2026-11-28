@@ -228,20 +228,25 @@ func (p Posture) Seats() (int, bool) {
 // env decides which authorities are honored (see issuers). A production
 // installation makes exactly one call, as it always has.
 func Resolve(ctx context.Context, token string, now time.Time, env runtimeenv.Environment) (Posture, error) {
-	return resolveWith(ctx, bundledModule, token, now, env)
+	return resolveWith(ctx, bundled, token, now, env)
 }
 
-// resolve is Resolve against a given module, so a test can run one that hangs.
-func resolveWith(ctx context.Context, module []byte, token string, now time.Time, env runtimeenv.Environment) (Posture, error) {
+// resolveWith is Resolve against the module load readies, so a test can run one
+// that hangs. load runs only once a token is there to check.
+func resolveWith(ctx context.Context, load func() (*validator, error), token string, now time.Time, env runtimeenv.Environment) (Posture, error) {
 	if strings.TrimSpace(token) == "" {
 		return Posture{State: StateAbsent, CheckedAt: now}, nil
+	}
+	module, err := load()
+	if err != nil {
+		return Posture{}, couldNotRun(err)
 	}
 	// The FIRST verdict is the one reported. A production license that expired
 	// says so; retrying it against the test authority would replace that with
 	// "invalid issuer", which sends the operator after the wrong problem.
 	var first Posture
 	for _, authority := range issuers(env) {
-		result, err := check(ctx, module, authority, product, generation, token)
+		result, err := module.check(ctx, authority, product, generation, token)
 		switch {
 		case errors.Is(err, ErrVerdict):
 			if first.State == "" {
@@ -252,8 +257,7 @@ func resolveWith(ctx context.Context, module []byte, token string, now time.Time
 			return Posture{}, fmt.Errorf("licensecheck: the license check was stopped before the bundled validation module (%s) answered: %w",
 				ModuleVersion(), err)
 		case err != nil:
-			return Posture{}, fmt.Errorf("licensecheck: the bundled validation module (%s) could not run: %s",
-				ModuleVersion(), sanitizeReason(err.Error()))
+			return Posture{}, couldNotRun(err)
 		case result.Grants == nil:
 			// Exit 0 with `null` or an empty document decodes without error and is
 			// not a grant. Admitting it would license an installation nothing
@@ -267,6 +271,13 @@ func resolveWith(ctx context.Context, module []byte, token string, now time.Time
 		}
 	}
 	return first, nil
+}
+
+// couldNotRun is the error for a module that gave no verdict, whether it failed
+// to compile or to run.
+func couldNotRun(err error) error {
+	return fmt.Errorf("licensecheck: the bundled validation module (%s) could not run: %s",
+		ModuleVersion(), sanitizeReason(err.Error()))
 }
 
 // issuers answers the license authorities this installation honors, production
