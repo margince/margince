@@ -82,7 +82,8 @@ func (ChatClarificationSweepArgs) FleetWide() {
 
 type chatClarificationSweepWorker struct{ sweep chatclarify.Sweep }
 
-// Work asks the colleagues of every workspace who wrote what they forwarded.
+// Work asks the installation's colleagues who wrote what they forwarded. It
+// sends messages, so it runs only while a company is live.
 func (w *chatClarificationSweepWorker) Work(ctx context.Context, _ *river.Job[ChatClarificationSweepArgs]) error {
-	return jobs.FaultContext(ctx, runEveryWorkspacePass(ctx, w.sweep.Pool, w.sweep.Workspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.sweep.Pool, w.sweep.Workspace))
 }

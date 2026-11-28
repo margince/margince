@@ -6,7 +6,11 @@ package database
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"sync"
+	"sync/atomic"
 	"time"
+	"weak"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,27 +18,118 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// DB is a pool that knows which workspace it binds — the installation's, the
-// only one there is (ADR-0061/A107).
+// DB is a pool that resolves the installation's one workspace itself. A caller
+// never passes or binds one.
 //
-// It exists to take that binding off the request context. The singleton is
-// resolved once, so no request path, job or fixture has to put it there first.
-// No table carries workspace_id and no policy reads one. What Tx checks below is
-// only that a caller reached the installation's one workspace at all. It does
-// not check that SQL is scoped by it.
+// No table carries workspace_id and no policy reads one, so a transaction is not
+// scoped by it. What Tx checks is that the installation has a company at all.
+// A handle on a host with no live company refuses before the body runs.
+// A handle from NewAcrossWorkspaces skips that check, for cleanup that sends
+// nothing out.
 //
-// The workspace arrives as a resolver rather than a value because bootstrap
-// has not necessarily happened when the server is assembled — the worker polls
-// until the API bootstraps. identity's resolver caches its first success, so
-// "resolved once" is a property of that resolver, not of a package-level
-// variable this type would otherwise have to own.
+// A transaction proves the company is live with one indexed statement inside
+// itself, and a handle repeats that proof at most once per InstallationRecheck.
+// So an archived company stops admitting transactions within that bound, not
+// never. Workspace always looks the company up fresh.
 type DB struct {
-	pool      *pgxpool.Pool
+	pool *pgxpool.Pool
+	// installation is true on a ForInstallation handle.
+	installation bool
+	// workspace pins the answer on a BindTo handle and is nil on the others.
 	workspace func(context.Context) (ids.WorkspaceID, error)
 	// budget bounds every statement this handle's transactions run, and is zero
 	// on a handle nobody bounded — see Bounded.
 	budget   time.Duration
 	admitted bool
+	// proven holds the newest check of the company. Copies of a handle share
+	// it. See stampProof.
+	proven  *atomic.Pointer[proof]
+	recheck time.Duration
+	// now dates a check and the window it is trusted for. Nil means time.Now.
+	now func() time.Time
+}
+
+// proof is one check of the installation's company. at is unix nanoseconds,
+// negative when no company was live.
+type proof struct {
+	at      int64
+	company ids.WorkspaceID
+}
+
+// provenByPool gives every ForInstallation handle on one pool the same proof. A
+// request builds many stores, each with its own handle, and one proof per handle
+// would pay the check once per store. The pool is held weakly, so a closed
+// pool's entry goes with it.
+var (
+	provenMu     sync.Mutex
+	provenByPool = map[weak.Pointer[pgxpool.Pool]]*atomic.Pointer[proof]{}
+)
+
+func provenFor(pool *pgxpool.Pool) *atomic.Pointer[proof] {
+	if pool == nil {
+		return new(atomic.Pointer[proof])
+	}
+	key := weak.Make(pool)
+	provenMu.Lock()
+	defer provenMu.Unlock()
+	if held, ok := provenByPool[key]; ok {
+		return held
+	}
+	held := new(atomic.Pointer[proof])
+	provenByPool[key] = held
+	runtime.AddCleanup(pool, func(key weak.Pointer[pgxpool.Pool]) {
+		provenMu.Lock()
+		defer provenMu.Unlock()
+		delete(provenByPool, key)
+	}, key)
+	return held
+}
+
+// ForgetInstallationProofs clears every pool's proof of a live company. A test
+// harness that empties the database calls it, because the proofs then describe a
+// company that no longer exists. Nothing in a running server replaces the
+// company, so nothing else calls it.
+func ForgetInstallationProofs() {
+	provenMu.Lock()
+	defer provenMu.Unlock()
+	for _, held := range provenByPool {
+		held.Store(nil)
+	}
+}
+
+func (d *DB) clock() time.Time {
+	if d.now == nil {
+		return time.Now()
+	}
+	return d.now()
+}
+
+// WithClock is this handle dating its checks by now, so a test can freeze the
+// recheck window.
+func (d *DB) WithClock(now func() time.Time) *DB {
+	if d == nil {
+		return nil
+	}
+	dated := *d
+	dated.now = now
+	return &dated
+}
+
+// InstallationRecheck is how long a ForInstallation handle trusts its last
+// proof that a company is live. It bounds how long an archived company keeps
+// admitting transactions. The Home and capture round-trip budgets leave no room
+// for a statement in every transaction.
+const InstallationRecheck = 2 * time.Second
+
+// Rechecking is this handle proving the company is live at most once per every.
+// Zero proves it in every transaction.
+func (d *DB) Rechecking(every time.Duration) *DB {
+	if d == nil {
+		return nil
+	}
+	rechecked := *d
+	rechecked.recheck = every
+	return &rechecked
 }
 
 // Bounded is this handle with a time ceiling on every statement its
@@ -62,7 +157,9 @@ func (d *DB) Bounded(budget time.Duration) *DB {
 	if d == nil {
 		return nil
 	}
-	return &DB{pool: d.pool, workspace: d.workspace, budget: budget, admitted: d.admitted}
+	bounded := *d
+	bounded.budget = budget
+	return &bounded
 }
 
 // Budget is the per-statement ceiling Bounded armed, or zero on a handle
@@ -74,15 +171,26 @@ func (d *DB) Budget() time.Duration {
 	return d.budget
 }
 
-// Bind returns a handle that resolves its workspace through resolve.
-func Bind(pool *pgxpool.Pool, resolve func(context.Context) (ids.WorkspaceID, error)) *DB {
-	return &DB{pool: pool, workspace: resolve}
+// ForInstallation returns a handle that looks the installation's live workspace
+// up in the database on every use. The name is not New because the object-gate
+// censuses in backend/gates resolve calls by name, and a callee named New
+// collides there.
+func ForInstallation(pool *pgxpool.Pool) *DB {
+	return &DB{pool: pool, installation: true, proven: provenFor(pool), recheck: InstallationRecheck}
 }
 
-// BindTo returns a handle pinned to one workspace, for the callers that
-// already hold it: bootstrap, which is creating the installation the resolver
-// would look for, and the cross-tenant suites, which seed a second workspace
-// precisely to prove one cannot read the other.
+// NewAcrossWorkspaces returns a handle whose transactions need no live
+// workspace. Only cleanup that sends nothing out may use it.
+// Archiving a company does not un-store its data, so the retention floor binds.
+// Workspace answers ErrNoWorkspace on this handle.
+func NewAcrossWorkspaces(pool *pgxpool.Pool) *DB {
+	return &DB{pool: pool}
+}
+
+// BindTo returns a handle pinned to one workspace. Test setup uses it for a
+// suite that seeds a second workspace. The gate
+// TestNoProductionCodePinsADatabaseHandleToAWorkspace keeps production code on
+// ForInstallation.
 func BindTo(pool *pgxpool.Pool, ws ids.WorkspaceID) *DB {
 	return &DB{pool: pool, workspace: func(context.Context) (ids.WorkspaceID, error) { return ws, nil }}
 }
@@ -103,7 +211,13 @@ func (d *DB) Workspace(ctx context.Context) (ids.WorkspaceID, error) {
 			"construct this store through compose, which binds the installation's pool",
 			ErrNoWorkspace)
 	}
-	return d.workspace(ctx)
+	switch {
+	case d.installation:
+		return d.installationWorkspace(ctx)
+	case d.workspace != nil:
+		return d.workspace(ctx)
+	}
+	return ids.WorkspaceID{}, fmt.Errorf("%w: this handle spans every workspace and names none", ErrNoWorkspace)
 }
 
 // Pool exposes the underlying pool for the paths that do not run a
@@ -169,8 +283,31 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 	// keys on the workspace, but a handle that cannot name the installation's
 	// one workspace has not been reached through a bootstrapped install, and
 	// that is a fault the caller must see before any SQL runs.
-	if _, err := d.workspace(ctx); err != nil {
-		return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
+	if d.workspace != nil {
+		if _, err := d.workspace(ctx); err != nil {
+			return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
+		}
+	}
+	_, joined := snapshotOf(ctx)
+	if d.installation && !d.isProven() {
+		body := fn
+		fn = func(tx pgx.Tx) error {
+			started := d.clock().UnixNano()
+			live, err := Remember(tx, "database:installation-workspace", func() (ids.UUID, error) {
+				return InstallationWorkspaceTx(ctx, tx)
+			})
+			if err != nil {
+				stampProof(d.proven, proof{at: -d.clock().UnixNano()})
+				return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
+			}
+			// A joined snapshot can be older than this check. Its answer
+			// describes the snapshot's start, so that is the moment it claims.
+			if opened, ok := snapshotStart(ctx); joined && ok && opened.UnixNano() < started {
+				started = opened.UnixNano()
+			}
+			stampProof(d.proven, proof{at: started, company: ids.From[ids.WorkspaceKind](live)})
+			return body(tx)
+		}
 	}
 	// The ambient snapshot, joined here for the reason WithTx joins it. Most
 	// stores reach this seam. A join spelled only in WithTx would leave a
@@ -196,24 +333,58 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 	return runTxWith(ctx, d.pool, opts, fn)
 }
 
-// ForWorkspace is this handle re-bound to another workspace, for the fleet
-// passes that enumerate every tenant and must read each one in its own bound
-// transaction.
-//
-// It is deliberately narrow: a pass qualifies only when it is driven by the
-// workspace ENUMERATION itself, never by a request. The single-installation
-// collapse (ADR-0091) retires these — with one workspace there is nothing to
-// enumerate — so a new caller here is a sign the work belongs on the job
-// fan-out, which hands each pass the tenant it runs for.
-func (d *DB) ForWorkspace(ws ids.WorkspaceID) *DB {
-	// The budget rides along: a pass that re-binds a bounded handle to another
-	// tenant is running the same statements against the same tables, and a
-	// ceiling that fell off at the re-bind would be one nobody could see was
-	// missing.
-	pinned := BindTo(d.pool, ws)
-	pinned.budget = d.budget
-	pinned.admitted = d.admitted
-	return pinned
+func (d *DB) isProven() bool {
+	_, ok := d.provenCompany()
+	return ok
+}
+
+// provenCompany answers the company the last check found live, while that
+// check is inside the recheck window.
+func (d *DB) provenCompany() (ids.WorkspaceID, bool) {
+	last := d.proven.Load()
+	if last == nil || last.at <= 0 || d.clock().Sub(time.Unix(0, last.at)) >= d.recheck {
+		return ids.WorkspaceID{}, false
+	}
+	return last.company, true
+}
+
+// installationWorkspace answers the proven company inside the window and looks
+// it up otherwise.
+func (d *DB) installationWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
+	if company, ok := d.provenCompany(); ok {
+		return company, nil
+	}
+	started := d.clock().UnixNano()
+	live, err := InstallationWorkspace(ctx, d.pool)
+	if err != nil {
+		stampProof(d.proven, proof{at: -d.clock().UnixNano()})
+		return ids.WorkspaceID{}, err
+	}
+	company := ids.From[ids.WorkspaceKind](live)
+	stampProof(d.proven, proof{at: started, company: company})
+	return company, nil
+}
+
+// stampProof records a check, and only ever moves the stamp forward by its
+// absolute time. A slow transaction that proved the company live cannot
+// overwrite a newer failure or a newer success.
+func stampProof(held *atomic.Pointer[proof], next proof) {
+	for {
+		current := held.Load()
+		if current != nil && abs64(current.at) >= abs64(next.at) {
+			return
+		}
+		if held.CompareAndSwap(current, &next) {
+			return
+		}
+	}
+}
+
+func abs64(n int64) int64 {
+	if n < 0 {
+		return -n
+	}
+	return n
 }
 
 // WithReadAdmission opts expensive reads into the pool's shared allowance.

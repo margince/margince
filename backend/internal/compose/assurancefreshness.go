@@ -61,7 +61,7 @@ func (f *AssuranceFreshness) WithRescans(rescans assuranceRescanEnqueuer) *Assur
 
 // NewAssuranceFreshness builds the consumer over the installation's handle.
 func NewAssuranceFreshness(pool *pgxpool.Pool, ident *identity.Service) *AssuranceFreshness {
-	db := database.Bind(pool, ident.InstallationWorkspace)
+	db := database.ForInstallation(pool)
 	return &AssuranceFreshness{db: db, store: assurance.NewStore(db), identity: ident}
 }
 

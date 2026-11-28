@@ -103,7 +103,7 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 		return err
 	}
 	wsCtx := systemWorkspaceContext(ctx, wsID.UUID)
-	ws := s.forWorkspace(wsID)
+	ws := s.passStore()
 
 	// note says the run is still working, and restarts the pacing from the write
 	// that just landed rather than from when the caller wished it had.

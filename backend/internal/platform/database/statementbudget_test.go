@@ -13,8 +13,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // recordingTx captures the statements a budget issues. The embedded interface
@@ -77,26 +75,6 @@ func TestANonPositiveBudgetIsRefusedAndIssuesNothing(t *testing.T) {
 		if len(tx.issued) != 0 {
 			t.Errorf("a refused budget of %s still issued %q", budget, tx.issued)
 		}
-	}
-}
-
-// A bounded handle re-bound to another tenant keeps its ceiling. The fleet
-// passes that re-bind run the same statements against the same tables, and a
-// budget that fell off at the re-bind would be one nobody could see was
-// missing.
-func TestABoundedHandleKeepsItsCeilingWhenReboundToAnotherTenant(t *testing.T) {
-	t.Parallel()
-	bounded := Bind(nil, func(context.Context) (ids.WorkspaceID, error) { return ids.WorkspaceID{}, nil }).
-		Bounded(5 * time.Second)
-
-	if got := bounded.ForWorkspace(ids.WorkspaceID{}).budget; got != 5*time.Second {
-		t.Errorf("the re-bound handle's budget is %s", got)
-	}
-	// An unbounded handle stays unbounded, so the ceiling is something a caller
-	// asks for rather than something re-binding hands out.
-	plain := Bind(nil, func(context.Context) (ids.WorkspaceID, error) { return ids.WorkspaceID{}, nil })
-	if got := plain.ForWorkspace(ids.WorkspaceID{}).budget; got != 0 {
-		t.Errorf("an unbounded handle grew a budget of %s", got)
 	}
 }
 

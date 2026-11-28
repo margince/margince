@@ -117,9 +117,7 @@ func seedCompanyDB(t *testing.T) (ids.UUID, *database.DB, *pgxpool.Pool) {
 	}
 	t.Cleanup(pool.Close)
 
-	db := database.Bind(pool, func(context.Context) (ids.WorkspaceID, error) {
-		return ids.From[ids.WorkspaceKind](company), nil
-	})
+	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](company))
 	return company, db, pool
 }
 

@@ -72,7 +72,7 @@ func slimmedOriginalOf(ctx context.Context, t *testing.T, db *database.DB, activ
 func TestANewMessagesOriginalNamesItsStoredFileInsteadOfCarryingIt(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 	file := largePDF()
 	raw := mimeWithFile(file)
 	rec := withFiles(mailRecord("msg-slim-"+tag), connector.Part{
@@ -119,7 +119,7 @@ func TestANewMessagesOriginalNamesItsStoredFileInsteadOfCarryingIt(t *testing.T)
 // is stored whole. The part sweep meets it as before.
 func TestAnOriginalNothingCanComeOutOfIsStoredWhole(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 	rec := withFiles(mailRecord("msg-whole-"+tag), onePDF())
 	if _, err := sink.Upsert(ctx, rec); err != nil {
 		t.Fatalf("capture: %v", err)
@@ -157,7 +157,7 @@ func TestAFileRecordedBeforeKeepsItsBytesInTheOriginal(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("seeding the earlier attachment row: %v", err)
 	}
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 	file := largePDF()
 	rec := withFiles(mailRecord(sourceID), connector.Part{
 		Ordinal: 1, Filename: "contract.pdf", ContentType: "application/pdf", Body: file,

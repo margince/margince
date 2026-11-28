@@ -259,7 +259,7 @@ func WithSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(context.Conte
 	}
 	return runTxWith(ctx, pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead}, func(tx pgx.Tx) error {
 		var snapshot pgx.Tx = newDeferredTx(tx)
-		return fn(context.WithValue(ctx, snapshotKey{}, snapshot))
+		return fn(context.WithValue(snapshotStarted(ctx), snapshotKey{}, snapshot))
 	})
 }
 
@@ -271,8 +271,22 @@ func WithWriteTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Contex
 		return fn(ctx)
 	}
 	return runTxWith(ctx, pool, pgx.TxOptions{}, func(tx pgx.Tx) error {
-		return fn(context.WithValue(ctx, snapshotKey{}, tx))
+		return fn(context.WithValue(snapshotStarted(ctx), snapshotKey{}, tx))
 	})
+}
+
+// snapshotStartKey carries when the ambient transaction began. A check run
+// inside it describes the database no later than that moment, so it is the
+// moment a proof drawn from it may claim.
+type snapshotStartKey struct{}
+
+func snapshotStarted(ctx context.Context) context.Context {
+	return context.WithValue(ctx, snapshotStartKey{}, time.Now())
+}
+
+func snapshotStart(ctx context.Context) (time.Time, bool) {
+	at, ok := ctx.Value(snapshotStartKey{}).(time.Time)
+	return at, ok
 }
 
 // Detached returns ctx with no ambient snapshot on it, so a call made with it

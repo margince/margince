@@ -128,9 +128,7 @@ func (w *geocodeBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UU
 	// never located — so it names itself rather than borrowing a principal,
 	// and company:read is gated like any other read.
 	wsCtx := geocodeBackfillActor(principal.WithWorkspaceID(ctx, ws))
-	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
-		return ids.From[ids.WorkspaceKind](ws), nil
-	}))
+	store := contacts.NewStore(database.ForInstallation(w.pool))
 	due, err := store.ListGeocodeOrphans(wsCtx, contacts.GeocodeBackfillBatch)
 	if err != nil {
 		return 0, err

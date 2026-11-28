@@ -134,9 +134,7 @@ func TestALookupWithNoEnricherConfiguredRecordsWhatItCouldNotRead(t *testing.T) 
 // route does.
 func technicalLedger(t *testing.T, e *integration.Env, company ids.UUID) []contacts.TechnicalLaneState {
 	t.Helper()
-	store := contacts.NewStore(database.Bind(e.Pool, func(context.Context) (ids.WorkspaceID, error) {
-		return ids.From[ids.WorkspaceKind](e.WS), nil
-	}))
+	store := contacts.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)))
 	lanes, err := store.TechnicalLaneState(
 		technicalActor(principal.WithWorkspaceID(context.Background(), e.WS)),
 		ids.From[ids.CompanyKind](company))

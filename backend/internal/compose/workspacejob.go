@@ -41,11 +41,10 @@ func bindInstallation(ctx context.Context, pool *pgxpool.Pool) (context.Context,
 // leaves them alone. TestEveryWorkspaceKindsRunTheEveryWorkspacePass holds the
 // list to the workers.
 var everyWorkspaceKinds = map[string]bool{
-	IdempotencyRetentionArgs{}.Kind():   true,
-	CaptureTraceSweepArgs{}.Kind():      true,
-	ChatClarificationSweepArgs{}.Kind(): true,
-	StoredObjectReapArgs{}.Kind():       true,
-	SuppressionJournalArgs{}.Kind():     true,
+	IdempotencyRetentionArgs{}.Kind(): true,
+	CaptureTraceSweepArgs{}.Kind():    true,
+	StoredObjectReapArgs{}.Kind():     true,
+	SuppressionJournalArgs{}.Kind():   true,
 }
 
 // searchBoundKinds bind a workspace through the search store. With no live

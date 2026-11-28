@@ -30,7 +30,7 @@ import (
 func TestACopiedMailboxWithholdsUntilAnAddressedSeatArrives(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 
 	const copied = "copied@fixture.example"
 	const addressed = "addressed@fixture.example"
@@ -109,7 +109,7 @@ func TestACopiedMailboxWithholdsUntilAnAddressedSeatArrives(t *testing.T) {
 func TestARemovedWithheldFileIsNotGivenBytes(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 
 	const copied = "copied@fixture.example"
 	const addressed = "addressed@fixture.example"

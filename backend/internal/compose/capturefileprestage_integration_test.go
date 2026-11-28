@@ -81,7 +81,7 @@ func TestAFileStoredForACaptureThatFailsAfterNamingItIsDeleted(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := &prestageBlob{Store: blobstore.NewMemory()}
 	failed := errors.New("the capture fails after naming its files")
-	sink := capture.NewSink(db).WithFileKeeper(recordHook{FileKeeper: fileKeeper(db.Pool(), blob), during: func() error { return failed }})
+	sink := capture.NewSink(db).WithFileKeeper(recordHook{FileKeeper: fileKeeper(db, blob), during: func() error { return failed }})
 
 	if _, err := sink.Upsert(ctx, withFiles(mailRecord("msg-failed-"+tag), onePDF())); !errors.Is(err, failed) {
 		t.Fatalf("capture = %v, want the injected failure", err)
@@ -100,7 +100,7 @@ func TestAFileStoredBeforeItsThreadTurnedPrivateIsDeleted(t *testing.T) {
 	blob := &prestageBlob{Store: blobstore.NewMemory()}
 	// The verdict lands between the short read and the capture transaction.
 	blob.beforePut = func() { markThreadPrivate(ctx, t, db, threadKey) }
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 
 	rec := withFiles(mailRecord("msg-turned-"+tag), onePDF())
 	rec.ThreadKey = threadKey

@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -50,10 +49,6 @@ type Service struct {
 	// without sleeping. Session/passport expiries stay on the database's
 	// now() — they are enforced inside SQL predicates, not Go logic.
 	now func() time.Time
-	// installation caches the singleton workspace id after the first
-	// successful resolution (installation.go) — the id is immutable for
-	// the process lifetime, so no request pays the lookup twice.
-	installation atomic.Pointer[ids.WorkspaceID]
 	// seatCeiling answers how many full seats the installation's license
 	// admits, injected by the composition root (seatceiling.go) because what
 	// a license grants is resolved from the deployment file and a validation
@@ -111,9 +106,7 @@ type Service struct {
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
-	svc := &Service{now: time.Now}
-	svc.db = database.Bind(pool, svc.InstallationWorkspace)
-	return svc
+	return &Service{db: database.ForInstallation(pool), now: time.Now}
 }
 
 // NewServiceFor is NewService over a handle whose workspace is already decided.

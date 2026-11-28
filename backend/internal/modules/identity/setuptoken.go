@@ -274,7 +274,7 @@ func (s *Service) ClaimInstallation(ctx context.Context, token string, in Instal
 	// every other request behind a pool connection they hold for free. The
 	// authoritative check still happens under the lock below — this one only
 	// declines to pay for a question already answered.
-	if cached := s.installation.Load(); cached != nil {
+	if _, live, err := database.LiveWorkspace(ctx, s.db.Pool()); err == nil && live {
 		return ids.WorkspaceID{}, nil, ErrAlreadyProvisioned
 	}
 	ctx = setupTokenActor(ctx)
@@ -298,7 +298,6 @@ func (s *Service) ClaimInstallation(ctx context.Context, token string, in Instal
 	if err != nil {
 		return ids.WorkspaceID{}, nil, err
 	}
-	s.installation.Store(&wsID)
 	return wsID, discarded, nil
 }
 

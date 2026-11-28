@@ -65,7 +65,7 @@ func TestANewerBusinessVerdictKeepsAttachmentBytes(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := asConnectorFor(e.Admin(), "connector:imap", e.Rep1)
 	db, tag := InstallationDB(e.Pool), e.WS.String()
-	sink := newCaptureSink(db.Pool(), CaptureConfig{}).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := newCaptureSink(db.Pool(), CaptureConfig{}).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 	address := "readmitted-" + tag + "@example.com"
 	first := "msg-first-" + tag
 	if _, err := sink.Upsert(ctx, fromAddress(mailRecord(first), address)); err != nil {

@@ -471,6 +471,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `pendingwriter_test.go` | H2 | A "no writer yet" classification stops being true the moment a writer lands. |
 | `piicolumncoverage_test.go` | H2 | The Art. 17 redaction, judged by column rather than by table. |
 | `piicoverage_test.go` | H2 | Every table registered as holding personal data is reached by Art. 17 erasure and, unless it is an opaque derived artifact, by the Art. 15 access report. |
+| `pinnedworkspace_test.go` | H2 | pinnedWorkspaceFloor guards against a vacuous pass: the walker must have looked at at least this many production files. |
 | `precheckwiring_test.go` | H2 | A precheck that exists but is not wired protects nothing. |
 | `preferencecentrewriters_test.go` | H2 | The public preference centre answers in one shape, and resolves "which address is theirs" in one place. |
 | `prefixindex_test.go` | H2 | A plain index does not hold a prefix of another index's columns. |

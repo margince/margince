@@ -38,7 +38,7 @@ func TestRecruitingRelayMailKeepsItsThreadParticipantsAndFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sink := newCaptureSink(e.Pool, CaptureConfig{}).WithFileKeeper(fileKeeper(e.Pool, blobstore.NewMemory()))
+	sink := newCaptureSink(e.Pool, CaptureConfig{}).WithFileKeeper(fileKeeper(InstallationDB(e.Pool), blobstore.NewMemory()))
 	if _, err := sink.Upsert(threadConnectorCtx(e, e.Rep1), withFiles(parsed.ToRecord("gmail", []byte(raw)), onePDF())); err != nil {
 		t.Fatal(err)
 	}

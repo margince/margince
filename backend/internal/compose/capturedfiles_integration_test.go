@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturetimeline"
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -216,7 +215,7 @@ func filesFrom(ctx context.Context, t *testing.T, db *database.DB, system, sourc
 func TestACapturedMessagesFileBecomesAnAttachment(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 
 	rec := withFiles(mailRecord("msg-with-file-"+tag), onePDF())
 	if _, err := sink.Upsert(ctx, rec); err != nil {
@@ -261,7 +260,7 @@ func TestACapturedMessagesFileBecomesAnAttachment(t *testing.T) {
 // DOC-AC-8: the same provider message pulled twice produces one row per part.
 func TestTheSameMessagePulledTwiceStoresItsFileOnce(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 
 	rec := withFiles(mailRecord("msg-pulled-twice-"+tag), onePDF())
 	for pull := 1; pull <= 2; pull++ {
@@ -285,7 +284,7 @@ func TestTheSameMessagePulledTwiceStoresItsFileOnce(t *testing.T) {
 // reach the insert.
 func TestTheDatabaseRefusesASecondRowForTheSameProviderPart(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 
 	rec := withFiles(mailRecord("msg-racing-pulls-"+tag), onePDF())
 	if _, err := sink.Upsert(ctx, rec); err != nil {
@@ -340,7 +339,7 @@ func TestWithNoObjectStoreTheMessageLandsAndItsFilesDoNot(t *testing.T) {
 // were dropped is not silently identical to one that carried none.
 func TestARefusedFileLeavesAnObservableReason(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 
 	rec := mailRecord("msg-dropped-file-" + tag)
 	rec.PartDrops = []connector.PartDrop{{Reason: "part_too_large", Count: 3}}
@@ -369,8 +368,8 @@ func TestARefusedFileLeavesAnObservableReason(t *testing.T) {
 // copy of it. Copying it was the whole defect: every case below passed while
 // the real wiring was free to rot, because nothing under test was the thing
 // that ships.
-func fileKeeper(pool *pgxpool.Pool, blob blobstore.Store) capture.FileKeeper {
-	return capturetimeline.FileKeeper{Store: activities.NewStore(InstallationDB(pool)).WithBlobstore(blob)}
+func fileKeeper(db *database.DB, blob blobstore.Store) capture.FileKeeper {
+	return capturetimeline.FileKeeper{Store: activities.NewStore(db).WithBlobstore(blob)}
 }
 
 // activityOf reads the activity a captured file hangs off, so a duplicate can
@@ -433,7 +432,7 @@ func onePhoto() connector.Part {
 func TestACapturedFilesCategoryNamesTheTransportThatCarriedIt(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 
 	channelID, mailID := "chan-with-file-"+tag, "mail-with-file-"+tag
 	if _, err := sink.Upsert(asConnector(ctx, "connector:telegram"),
@@ -469,7 +468,7 @@ func TestACapturedFilesCategoryNamesTheTransportThatCarriedIt(t *testing.T) {
 // is the thing a reader consults when the row is already gone.
 func TestTheAuditImageOfACapturedFileNamesTheCategoryTheRowHolds(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 
 	sourceID := "chan-audited-" + tag
 	if _, err := sink.Upsert(asConnector(ctx, "connector:telegram"),
@@ -506,7 +505,7 @@ func TestTheAuditImageOfACapturedFileNamesTheCategoryTheRowHolds(t *testing.T) {
 func TestAPrivateThreadsFilesAreNeverStored(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 
 	threadKey := "private-thread-" + tag
 	markThreadPrivate(ctx, t, db, threadKey)
@@ -530,7 +529,7 @@ func TestAPrivateThreadsFilesAreNeverStored(t *testing.T) {
 func TestAThreadWithNoVerdictStillStoresItsFiles(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 
 	rec := withFiles(mailRecord("msg-unjudged-"+tag), onePDF())
 	rec.ThreadKey = "unjudged-thread-" + tag
@@ -574,7 +573,7 @@ func activityExists(ctx context.Context, t *testing.T, db *database.DB, sourceID
 func TestAThreadHeldByItsOwnerWithholdsItsFilesToo(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 
 	threadKey := "owner-held-thread-" + tag
 	markThreadHeldByOwner(ctx, t, db, threadKey)
@@ -624,7 +623,7 @@ func withheldVerdict(ctx context.Context, t *testing.T, db *database.DB, sourceI
 // once. The test runs the real sink and the real keeper.
 func TestACapturedMailsDocumentLinkBecomesALinkRow(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 	rec := mailRecord("msg-with-link-" + tag)
 	fields, ok := rec.Fields.(capture.ActivityFields)
 	if !ok {

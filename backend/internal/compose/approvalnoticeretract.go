@@ -59,7 +59,7 @@ type ApprovalNoticeRetract struct {
 func NewApprovalNoticeRetract(
 	pool *pgxpool.Pool, store *notices.Store, ident *identity.Service, log *slog.Logger,
 ) *ApprovalNoticeRetract {
-	return &ApprovalNoticeRetract{db: database.Bind(pool, ident.InstallationWorkspace), notices: store, identity: ident, log: log}
+	return &ApprovalNoticeRetract{db: database.ForInstallation(pool), notices: store, identity: ident, log: log}
 }
 
 // HandleEvent routes one envelope. Anything that is not an approval decision

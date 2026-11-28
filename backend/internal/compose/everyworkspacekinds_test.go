@@ -21,6 +21,9 @@ func TestEveryWorkspaceKindsRunTheEveryWorkspacePass(t *testing.T) {
 			t.Errorf("%s is listed in everyWorkspaceKinds but api/jobs.yaml does not declare it", kind)
 		}
 	}
+	if everyWorkspaceKinds[ChatClarificationSweepArgs{}.Kind()] {
+		t.Error("chat clarification sends messages to people, so it must not run while no company is live")
+	}
 	entries, err := os.ReadDir(".")
 	if err != nil {
 		t.Fatal(err)

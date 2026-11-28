@@ -75,7 +75,7 @@ func runDealKeyNames(ctx context.Context, pool *pgxpool.Pool, args []string, std
 
 	ctx = principal.WithWorkspaceID(ctx, wsID)
 	ctx = principal.SystemActing(ctx, "system:deal_key_names")
-	store := deals.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](wsID)), compose.DealsInstallation())
+	store := deals.NewStore(database.ForInstallation(pool), compose.DealsInstallation())
 	results, err := store.RenameKeyNamedDeals(ctx, entries, *apply)
 	// The report prints even when a row failed: the renames before it are
 	// committed, and the operator needs to see which ones.

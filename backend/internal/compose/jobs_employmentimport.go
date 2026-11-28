@@ -31,7 +31,7 @@ func (w *employmentImportWorker) Work(ctx context.Context, _ *river.Job[Employme
 }
 
 func (w *employmentImportWorker) processWorkspace(ctx context.Context, workspace ids.UUID) error {
-	store := newContactsStore(database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace)))
+	store := newContactsStore(database.ForInstallation(w.pool))
 	actor := principal.WithWorkspaceID(ctx, workspace)
 	actor = principal.SystemActing(actor, "employment_import_worker")
 	return store.SweepEmploymentImports(actor)

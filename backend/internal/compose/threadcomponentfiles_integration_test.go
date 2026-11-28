@@ -44,7 +44,7 @@ func TestAnAbortedThreadJoinReusesItsStagedAttachment(t *testing.T) {
 	if len(record.Parts) != 1 {
 		t.Fatalf("parsed attachments=%d, want one", len(record.Parts))
 	}
-	keeper := &countedFileStage{FileKeeper: fileKeeper(o.e.Pool, blobstore.NewMemory())}
+	keeper := &countedFileStage{FileKeeper: fileKeeper(InstallationDB(o.e.Pool), blobstore.NewMemory())}
 	joiner := threadJoiner()
 	merge := joiner.Merge
 	attempts := 0

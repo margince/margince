@@ -58,7 +58,7 @@ func providerRunStore(pool *pgxpool.Pool, cfg ProviderRunsConfig, workspace ids.
 	// The workspace directly, where this took a job's ARGS. A collapsed pass
 	// carries none (ADR-0103): it takes the tenant from the fleet walk, so the
 	// handle is bound from that rather than read off a row.
-	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](workspace))
+	db := database.ForInstallation(pool)
 	store, err := integrations.NewStore(db, cfg.Vault, cfg.Registry, time.Now)
 	if err != nil {
 		return nil, err
