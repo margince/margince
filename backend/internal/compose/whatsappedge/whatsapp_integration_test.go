@@ -172,7 +172,7 @@ func (e *env) rawRows(t *testing.T) int {
 }
 
 func (e *env) ingestJobs(t *testing.T) int {
-	return e.count(t, `SELECT count(*) FROM river_job WHERE kind = 'whatsapp_ingest' AND args->>'workspace_id' = $1`, e.ws.String())
+	return e.count(t, `SELECT count(*) FROM river_job WHERE kind = 'whatsapp_ingest'`)
 }
 
 func sign(secret string, body []byte) string {

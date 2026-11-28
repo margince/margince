@@ -430,7 +430,7 @@ func (b *backfillWireEnv) cancelBackfill(p crmcontracts.CaptureProvider) func(ht
 
 func TestBackfillWire(t *testing.T) {
 	b := setupBackfillWire(t)
-	worker := &captureBackfillWorker{registry: b.registry, log: b.handlers.log}
+	worker := &captureBackfillWorker{pool: b.env.Pool, registry: b.registry, log: b.handlers.log}
 
 	assertUnwiredAndAnonymousOpsAreRefused(t, b)
 	assertPreviewValidatesItsWindowAndPricesHonestly(t, b)

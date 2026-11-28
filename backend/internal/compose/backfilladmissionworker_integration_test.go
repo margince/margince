@@ -34,7 +34,7 @@ func TestAnAdmissionWorkerPreservesTheSharedSessionBudgetSnooze(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx = database.WithSessionBudget(ctx, func(context.Context) (func(), error) { return nil, river.JobSnooze(5 * time.Second) })
-	worker := &captureBackfillWorker{registry: b.registry, log: b.handlers.log}
+	worker := &captureBackfillWorker{pool: b.env.Pool, registry: b.registry, log: b.handlers.log}
 	err := worker.Work(ctx, &river.Job[CaptureBackfillArgs]{JobRow: &rivertype.JobRow{}, Args: CaptureBackfillArgs{BackfillID: runID.String(), ExecutionGeneration: generation}})
 	if _, snoozed := errors.AsType[*river.JobSnoozeError](err); !snoozed {
 		t.Fatalf("resource deferral swallowed: %v", err)
@@ -102,7 +102,7 @@ func TestALegacyRunningImportEntersTheAdmissionBudget(t *testing.T) {
 	if _, err := b.env.Pool.Exec(ctx, fmt.Sprintf(`UPDATE capture_backfill SET status='running' WHERE id=$%d`, len(args)), args...); err != nil {
 		t.Fatal(err)
 	}
-	worker := &captureBackfillWorker{registry: b.registry, log: b.handlers.log}
+	worker := &captureBackfillWorker{pool: b.env.Pool, registry: b.registry, log: b.handlers.log}
 	jobArgs := CaptureBackfillArgs{BackfillID: runID.String()}
 	if err := worker.Work(ctx, &river.Job[CaptureBackfillArgs]{JobRow: &rivertype.JobRow{}, Args: jobArgs}); err != nil {
 		t.Fatal(err)

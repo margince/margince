@@ -113,14 +113,12 @@ func (f *rereadFixture) sweep(args StageEvidenceRereadArgs, page int) {
 	}
 }
 
-// queued answers the args of this workspace's queued jobs of one kind, oldest
-// first.
+// queued answers the args of the queued jobs of one kind, oldest first.
 func queuedJobs[T river.JobArgs](f *rereadFixture) []T {
 	f.t.Helper()
 	var kind T
 	rows, err := f.Pool.Query(context.Background(),
-		`SELECT args FROM river_job WHERE kind = $1 AND args->>'workspace_id' = $2 ORDER BY id`,
-		kind.Kind(), f.WS.String())
+		`SELECT args FROM river_job WHERE kind = $1 ORDER BY id`, kind.Kind())
 	if err != nil {
 		f.t.Fatalf("reading queued %s jobs: %v", kind.Kind(), err)
 	}
