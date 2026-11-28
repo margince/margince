@@ -267,6 +267,30 @@ jobs:
               - 'third-party-files.txt'
               - 'frontend/**'
               - 'backend/api/**'
+              # What the frontend lane reads outside frontend/.
+              # backend/gates/frontendlanereads_test.go fails on a read missing here.
+              - 'backend/Makefile'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/_lane-frontend.yml'
+              - '.github/actions/frontend-cache-key/**'
+              - '.github/actions/upload-artifact-retried/**'
+              - 'docs/reference/ui-copy-style*.md'
+              - 'docs/reference/mcp-info.json'
+              - 'docs/handbook/**'
+              - 'backend/gates/marketingquestion_test.go'
+              - 'backend/gates/testdata/servertrim.json'
+              - 'backend/gates/testdata/sourcecensus.json'
+              - 'backend/internal/shared/kernel/*/testdata/*'
+              - 'backend/internal/compose/approvalpreviewcoverage.go'
+              - 'backend/internal/compose/approvalpreviewevidence.go'
+              - 'backend/internal/compose/lifecyclereview/latest.go'
+              - 'backend/internal/compose/contact360/testdata/**'
+              - 'backend/internal/modules/activities/testdata/replysubjects.txt'
+              - 'backend/internal/modules/ai/callsentinels.go'
+              - 'backend/internal/modules/ai/callstore.go'
+              - 'backend/internal/modules/automation/catalog_actions.go'
+              - 'backend/internal/modules/identity/testdata/passwordrule.json'
+              - 'backend/internal/modules/identity/testdata/redirecturi.json'
               # Built from frontend/ by fe-drift, which alone sees a stale copy.
               - 'backend/internal/modules/agents/previewcatalog_gen.json'
               # The frontend job runs BOTH SPA lanes (ADR-0120), and the
@@ -1278,7 +1302,7 @@ jobs:
   # when the change is slower past a margin, so runner speed cannot redden it.
   # ADVISORY: it is not in the `ci` fan-in, and a red run stops no merge. The
   # scope step skips the rest when the diff cannot reach Home
-  # (scripts/home-budget-scope.sh); a push or a merge group always runs.
+  # (scripts/home-budget-scope.sh); a merge group or a run by hand always runs.
   home-budget:
     name: home-budget (advisory)
     timeout-minutes: 60
@@ -1379,28 +1403,16 @@ jobs:
         uses: ./.github/actions/install-playwright-chromium
       # Writes the wall time of each half, the API rows and the vitals line to
       # the job summary, pass or fail.
-      # The commit this change is judged against: a pull request's merge base,
-      # a push's previous tip, a merge group's base. A new branch has none, and
-      # then the fixed budgets judge it.
+      # The commit this change is judged against (scripts/ci-change-base.sh). With
+      # none, the fixed budgets judge it.
       - name: Choose the base to compare with
         id: base
         if: steps.scope.outputs.run == 'true'
         env:
-          EVENT: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref }}
-          BEFORE: ${{ github.event.before }}
-          GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          case "$EVENT" in
-            pull_request) base="$(git merge-base "origin/$BASE_REF" HEAD)" ;;
-            merge_group) base="$GROUP_BASE" ;;
-            push) base="$BEFORE" ;;
-            *) base="" ;;
-          esac
-          if [ -n "$base" ] && ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-            echo "home-budget: base $base is not in this clone, so the fixed budgets judge"
-            base=""
-          fi
+          base="$(bash scripts/ci-change-base.sh --fail-open)"
+          [ -n "$base" ] || echo "home-budget: no base to compare with, so the fixed budgets judge"
           echo "sha=$base" >> "$GITHUB_OUTPUT"
       - name: Home budget
         if: steps.scope.outputs.run == 'true'
