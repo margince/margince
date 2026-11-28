@@ -10,6 +10,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import { TimelineList } from "../../design-system/timeline";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { vi as vietnamese } from "../../i18n/vi";
 import { meFixture } from "../../testing/mefixture";
@@ -72,7 +73,7 @@ it("shows the same AI attribution and translation action in Worklist and History
       }
       const body = path.endsWith("/me")
         ? {
-            ...meFixture({ activity: ["read"] }),
+            ...meFixture({ allow: { activity: ["read"] } }),
             reader_rendering_available: true,
           }
         : path.endsWith("/worklist/handled")
@@ -113,7 +114,10 @@ it("shows the same AI attribution and translation action in Worklist and History
           <HandledForYouPanel />
         </section>
         <section aria-label="History">
-          <TimelineList entries={activityTimeline([note])} zone="UTC" />
+          <TimelineList
+            entries={activityTimeline([note])}
+            zone={browserZone()}
+          />
         </section>
       </LocaleProvider>
     </QueryClientProvider>,
