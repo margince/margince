@@ -282,7 +282,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"legal_name":                   "Tên pháp lý",
 		"linkedin_url":                 "Liên kết LinkedIn",
 		"locale":                       "Ngôn ngữ",
-		"lost_reason":                  "Lý do thua",
+		"lost_reason":                  "Lý do thất bại",
 		"meeting_status":               "Kết quả cuộc họp",
 		"name":                         "Tên",
 		"occurred_at":                  "Thời điểm xảy ra",

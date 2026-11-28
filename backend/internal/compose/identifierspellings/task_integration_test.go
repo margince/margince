@@ -147,8 +147,8 @@ func TestIdentifierSpellingRepairLeavesCollidingUsersForReview(t *testing.T) {
 
 func TestIdentifierSQLAndGoUseTheSameUnicodeSpelling(t *testing.T) {
 	e := integration.Setup(t)
-	for _, raw := range []string{" \tre\u200bp@example.test\u00a0", "E\u0301@EXAMPLE.TEST", "\u3000REP@EXAMPLE.TEST\u202f", "\r\nA@B.TEST\t"} {
-		got := e.WsScalar(t, `SELECT fold_identifier($1)`, raw)
+	for _, raw := range []string{" \tre\u200bp@example.test\u00a0", "E\u0301@EXAMPLE.TEST", "É@EXAMPLE.TEST", "ΟΣ@EXAMPLE.TEST", "İ@EXAMPLE.TEST", "\u3000REP@EXAMPLE.TEST\u202f", "\r\nA@B.TEST\t"} {
+		got := e.WsScalar(t, `SELECT fold_identifier($1 COLLATE "C")`, raw)
 		if want := correspondence.Fold(raw); got != want {
 			t.Errorf("SQL %q Go %q for %q", got, want, raw)
 		}

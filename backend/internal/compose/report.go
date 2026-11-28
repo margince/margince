@@ -14,6 +14,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 	"maps"
 	"slices"
 	"strings"
@@ -424,7 +425,7 @@ func buildSelectList(spec reportSpec, groupBy []string, aggregates []reportAggre
 		if !ok {
 			return nil, nil, &FieldNotAllowedError{Field: dim, Slot: slotGroupBy, Allowed: allowedReportNames(spec.dimensions)}
 		}
-		selects = append(selects, fmt.Sprintf("%s AS %s", expr, dim))
+		selects = append(selects, fmt.Sprintf("%s AS %s", expr, pgx.Identifier{dim}.Sanitize()))
 		columns = append(columns, dim)
 	}
 	for _, agg := range aggregates {

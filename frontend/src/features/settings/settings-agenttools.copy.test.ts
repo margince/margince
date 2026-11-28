@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import type { Translator } from "../../i18n";
+import { en } from "../../i18n/en";
 import { vi } from "../../i18n/vi";
 import { agentToolTitle } from "./settings-agenttools.copy";
 
@@ -14,7 +15,9 @@ it("has a catalog title for every published core tool", () => {
   const tools = manifest.tools.tools;
   expect(tools.length).toBeGreaterThan(40);
   const keyOf: Translator = (key) => key;
+  const english: Translator = (key) => en[key];
   for (const tool of tools) {
+    expect(agentToolTitle(english, tool.name, tool.title)).toBe(tool.title);
     expect(agentToolTitle(keyOf, tool.name, tool.title)).toBe(
       `tools.name.${tool.name}`,
     );

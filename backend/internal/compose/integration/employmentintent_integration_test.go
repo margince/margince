@@ -86,3 +86,21 @@ func TestAUserEndedEmploymentBlocksBothImportAndCapture(t *testing.T) {
 		})
 	}
 }
+
+func TestEmploymentUserDecisionsUseTheSameAuthorityForPeopleAndMCP(t *testing.T) {
+	e := Setup(t)
+	for _, c := range []struct {
+		actor    string
+		behalf   *ids.UUID
+		evidence string
+		want     string
+	}{
+		{"human", nil, "{}", "true"}, {"agent", &e.Rep1, "{}", "true"}, {"agent", nil, "{}", "false"},
+		{"human", nil, `{"run_id":"provider-import"}`, "false"}, {"system", nil, "{}", "false"},
+	} {
+		got := e.WsScalar(t, `SELECT (`+employment.UserDecisionSQL("a")+`)::text FROM (VALUES(@actor::text,@behalf::uuid,@evidence::jsonb)) a(actor_type,on_behalf_of,evidence)`, pgx.StrictNamedArgs{"actor": c.actor, "behalf": c.behalf, "evidence": c.evidence})
+		if got != c.want {
+			t.Errorf("actor %s behalf %v evidence %s: %s", c.actor, c.behalf, c.evidence, got)
+		}
+	}
+}

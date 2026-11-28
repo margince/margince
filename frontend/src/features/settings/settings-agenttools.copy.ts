@@ -1,5 +1,5 @@
 import type { Translator } from "../../i18n";
-import type { MessageKey } from "../i18n/en";
+import type { MessageKey } from "../../i18n/en";
 
 const toolTitles = new Map<string, MessageKey>([
   ["annotate_brief", "tools.name.annotate_brief"],

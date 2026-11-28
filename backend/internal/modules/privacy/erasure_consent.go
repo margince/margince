@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -147,10 +148,10 @@ func deleteConsentCapabilities(
 	// work may still be in front of a human, and a row vanishing under them
 	// leaves a queue pointing at nothing. What is left says a send was refused
 	// and no longer says who for.
-	if err := clearRefusedSendReviews(ctx, tx, contactID.UUID, emails); err != nil {
+	if err := tombstoneExceptionExplanations(ctx, tx, contactID.UUID, emails); err != nil {
 		return err
 	}
-	if err := tombstoneExceptionExplanations(ctx, tx, contactID.UUID, emails); err != nil {
+	if err := clearRefusedSendReviews(ctx, tx, contactID.UUID, emails); err != nil {
 		return err
 	}
 
@@ -228,7 +229,7 @@ func clearRefusedSendReviews(ctx context.Context, tx pgx.Tx, contactID ids.UUID,
 		 WHERE EXISTS (
 		         SELECT 1 FROM jsonb_array_elements(refusals) AS refusal
 		          WHERE refusal->>'subject_id' = $1
-		             OR lower(refusal->>'address') = ANY($2))`,
+		             OR `+correspondence.FoldSQL("refusal->>'address'")+` = ANY($2))`,
 		contactID.String(), lowerAll(addresses)); err != nil {
 		return fmt.Errorf("privacy: clearing the subject from refused-send reviews: %w", err)
 	}
@@ -259,7 +260,7 @@ func tombstoneExceptionExplanations(ctx context.Context, tx pgx.Tx, contactID id
 		          WHERE EXISTS (
 		                  SELECT 1 FROM jsonb_array_elements(r.refusals) AS refusal
 		                   WHERE refusal->>'subject_id' = $1
-		                      OR lower(refusal->>'address') = ANY($2)))`,
+		                      OR `+correspondence.FoldSQL("refusal->>'address'")+` = ANY($2)))`,
 		contactID.String(), lowerAll(addresses)); err != nil {
 		return fmt.Errorf("privacy: scrubbing what a director wrote about the subject: %w", err)
 	}

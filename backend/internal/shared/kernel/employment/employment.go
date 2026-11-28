@@ -144,8 +144,7 @@ func EndedAtCompanySQL(contact, company string) string {
  SELECT 1 FROM relationship gone
  WHERE gone.contact_id = %s AND gone.company_id = %s
    AND gone.kind = 'employment' AND NOT (%s)
-   AND (SELECT (a.actor_type = 'human' OR (a.actor_type = 'agent' AND a.on_behalf_of IS NOT NULL))
-               AND NOT (COALESCE(a.evidence, '{}'::jsonb) ? 'run_id')
+   AND (SELECT %s
           FROM audit_log a
          WHERE a.entity_type = 'relationship' AND a.entity_id = gone.id
            AND (a.action = 'archive' OR (a.action = 'update' AND (
@@ -154,7 +153,13 @@ func EndedAtCompanySQL(contact, company string) string {
              OR (a.after ->> 'employment_status' IN ('former', 'unknown')
                  AND a.after ->> 'employment_status' IS DISTINCT FROM a.before ->> 'employment_status'))))
          ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1)
-)`, contact, company, LiveSlotSQL("gone"))
+)`, contact, company, LiveSlotSQL("gone"), UserDecisionSQL("a"))
+}
+
+// UserDecisionSQL distinguishes a user's action from provider evidence,
+// including when an MCP client carries that user's authority.
+func UserDecisionSQL(alias string) string {
+	return sqlf("(%[1]s.actor_type = 'human' OR (%[1]s.actor_type = 'agent' AND %[1]s.on_behalf_of IS NOT NULL)) AND NOT (COALESCE(%[1]s.evidence, '{}'::jsonb) ? 'run_id')", alias)
 }
 
 // CurrentPrimarySlotSQL is the other question about `is_current_primary`:

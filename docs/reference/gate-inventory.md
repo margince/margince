@@ -145,6 +145,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `homerepairreasons_test.go` | H3 | Home repair labels cover the reasons emitted by its canonical classifiers and reviewed projections. |
 | `humanonlyenforcement_test.go` | H1 | The declaration reaches the thing that enforces it. |
 | `idempotencymap_test.go` | H3 | The contract decides which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must list the same operations. |
+| `identifiercase_test.go` | H3 | The SQL mapping is generated from Go rather than a server's locale tables. |
 | `identifierfields_test.go` | H3 | A provider's match rules are checked against IdentifierFields(), so that list has to name every field a contact actually carries. |
 | `identifierspellingparity_test.go` | H3 | The characters drop\_hidden\_characters removes in the database are the ones values.IdentifierText drops in Go. |
 | `inboundsigningrecipe_test.go` | H3 | The signing scope is one invariant spelled on both sides of a wire. |
