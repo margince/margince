@@ -6,7 +6,6 @@
 package compose
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -24,7 +23,7 @@ import (
 func TestReviewedImportReplaysItsOwnAtomicUpdateButRefusesAnInterveningEdit(t *testing.T) {
 	e := integration.Setup(t)
 	handler, initial := approvedLeadRun(t, e)
-	if err := commitWorkerFor(e, handler).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: initial}); err != nil {
+	if err := commitWorkerFor(e, handler).Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: initial}); err != nil {
 		t.Fatal(err)
 	}
 	ctx := importAdmin(e)

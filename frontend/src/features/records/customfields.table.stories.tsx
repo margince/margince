@@ -257,3 +257,20 @@ export const ChangeTrail: Story = {
     </StoryProviders>
   ),
 };
+
+export const ReportableRecordPicker: Story = {
+  render: () => (
+    <Table
+      fields={[
+        field({
+          label: "Site visit",
+          slug: "site_visit",
+          column_name: "cf_site_visit",
+          type: "record",
+          options: ["ext:reportdemo:visit"],
+          reportable: true,
+        }),
+      ]}
+    />
+  ),
+};

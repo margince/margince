@@ -145,6 +145,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `homerepairreasons_test.go` | H3 | Home repair labels cover the reasons emitted by its canonical classifiers and reviewed projections. |
 | `humanonlyenforcement_test.go` | H1 | The declaration reaches the thing that enforces it. |
 | `idempotencymap_test.go` | H3 | The contract decides which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must list the same operations. |
+| `identifiercase_test.go` | H3 | The SQL mapping is generated from Go rather than a server's locale tables. |
 | `identifierfields_test.go` | H3 | A provider's match rules are checked against IdentifierFields(), so that list has to name every field a contact actually carries. |
 | `identifierspellingparity_test.go` | H3 | The characters drop\_hidden\_characters removes in the database are the ones values.IdentifierText drops in Go. |
 | `inboundsigningrecipe_test.go` | H3 | The signing scope is one invariant spelled on both sides of a wire. |
@@ -273,6 +274,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `approvalselfonlyreaders_test.go` | H2 | Staging needs action authority before a proposal exists. |
 | `approvalsummarycopy_test.go` | H1 | An approval's summary is written through a per-language copy table, never as an English sentence in product code. |
 | `approvalwhy_test.go` | H1 | Every approval says why it was staged: the reason in words, or the quoted evidence it rests on. |
+| `archivefilter_test.go` | H2 | A storekit row write names the archive filter its table can answer. |
 | `arrayvocabulary_test.go` | H3 | A text array either closes its set in the database or says why its set is open. |
 | `assigneeeligibility_test.go` | H2 | A seat's fitness to receive work has one spelling, wherever it is asked. |
 | `assurancerules_test.go` | H3 | Every assurance rule proves both halves of its judgement. |
@@ -388,15 +390,17 @@ The eight shapes, what each is for, and how each one silently passes:
 | `historyfieldlabels_test.go` | H2 | Every field name the History tab can print has a word for it. |
 | `humanonlypending_test.go` | H1 | An agent may do what its user may do in the app, unless security says no. Every human-only operation a signed-in user reaches says why in the contract, as x-human-only-reason: security, covered by another tool, or pending, which tools/gen-agentpolicy requires. |
 | `humanonlytransport_test.go` | H1 | A human-only operation says so at the transport, not only in the gate. |
+| `identifierfold_test.go` | H2 | _(no doc comment)_ |
+| `identifierrepair_test.go` | H2 | _(no doc comment)_ |
 | `ifmatchversion_test.go` | H2 | Every route taking `If-Match` is checked for a read that publishes the record's version, with the routes having none ratified by name. |
 | `importedeventconsumers_test.go` | H3 | Every consumer of a stream an import writes has decided what it does with an imported event. |
 | `insertattemptcaps_test.go` | H2 | An insert that names no MaxAttempts still has a retry ladder: River's default of 25, on attempt-to-the-fourth backoff, which reaches days. |
 | `intenttimecolumns_test.go` | H2 | The second form leaves a zone that also describes a legacy instant free while no wall clock is stored. |
 | `interactionunit_test.go` | H3 | Every count that becomes a relationship-strength number counts the shared unit, not rows. |
-| `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
+| `jobbinding_test.go` | H2 | workMethodFloor guards against a vacuous pass. |
 | `jobcensus_test.go` | H3 | Every job kind api/jobs.yaml declares is wired in internal/compose, and every wired kind is declared. |
 | `jobregistration_test.go` | H2 | The unexported marker can be implemented only in compose, including its tests. |
-| `jobrole_test.go` | H2 | Every River job declares its role, and the declaration is the contract: a job either does tenant work for one workspace (jobs.WorkspaceScoped, method WorkspaceID) or only scans and enqueues (jobs.FleetWide). |
+| `jobrole_test.go` | H2 | Every River job declares its kind in api/jobs.yaml, and a job names no workspace and has no WorkspaceID method. |
 | `laneinputscope_test.go` | H3 | A path-filtered lane runs on a change to the scripts it executes. |
 | `langcopylanguagetables_test.go` | H2 | Every copy table keyed by language is read by a test that holds it to the style pages. |
 | `languagecolumns_test.go` | H2 | Every language or locale column has a foreign key to the language table or the locale shape check. |
@@ -471,6 +475,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `preferencecentrewriters_test.go` | H2 | The public preference centre answers in one shape, and resolves "which address is theirs" in one place. |
 | `prefixindex_test.go` | H2 | A plain index does not hold a prefix of another index's columns. |
 | `presetcertdisclosure_test.go` | H2 | A shipped preset binds a model to every task, and the certification records grade each of those bindings. |
+| `productiongrant_test.go` | H2 | Pages cannot promise indefinite free production seats. |
 | `profilefieldreaders_test.go` | H2 | contact\_profile\_field holds what a machine asserted about a contact, and ai\_feedback holds what a human then decided about that assertion. |
 | `projectionedgereaders_test.go` | H2 | The projection tier's read census. |
 | `projectkeyshape_test.go` | H1 | A project key has one shape, projectkey.CheckPattern, and Go reads it through projectkey.Shaped. |
@@ -604,8 +609,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `gitcontent_test.go` | H3 | What belongs to the repository, as against what happens to be in a working tree. |
 | `gitfixtureisolation_test.go` | H1 | Every test that builds a git repository keeps the caller's git config out of it. |
 | `jobfault_test.go` | H2 | Every River worker returns through jobs.Fault. |
-| `jobfleetwide_test.go` | H2 | A FleetWide declaration is a promise: this job enumerates and enqueues, and does no tenant write of its own (jobs.FleetWide). |
-| `jobwirekey_test.go` | H2 | One workspace arg, one spelling, and only where it means something. |
+| `jobfleetwide_test.go` | H2 | A FleetWide declaration is a promise: this job enumerates and enqueues, or runs one pass over the installation, and writes no tenant row inline (jobs.FleetWide). |
+| `jobnoworkspacearg_test.go` | H2 | An installation holds one company, so no job names a workspace. |
 | `listenvelope_test.go` | H2 | The contract's list envelope has one shape, and httperr.withEmptyLists relies on it. |
 | `manifestdigest_test.go` | H2 | Every hash a generated unit manifest publishes says which algorithm produced it. |
 | `noopifmatch_test.go` | H2 | An update that skips its write because nothing changes still answers the If-Match. |

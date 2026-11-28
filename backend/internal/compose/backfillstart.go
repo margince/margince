@@ -59,7 +59,7 @@ func (h backfillHandlers) scheduled(ctx context.Context, ws ids.UUID, start func
 	var enqueueErr error
 	run, err := start(ctx, func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
 		enqueueErr = h.inserter.EnqueueTx(ctx, tx, CaptureBackfillArgs{
-			Workspace: ws, BackfillID: backfillID.String(),
+			BackfillID: backfillID.String(),
 		}, jobs.QueuedAs[CaptureBackfillArgs](&river.InsertOpts{
 			// One attempt: the backfill row owns the outcome (api/jobs.yaml), and
 			// a River retry would re-page a run the engine already ended.

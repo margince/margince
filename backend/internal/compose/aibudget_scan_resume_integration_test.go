@@ -42,7 +42,7 @@ func TestRaisingTheAllowanceWakesAHeldAccountScan(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := runner.Enqueue(e.Admin(), AccountScanArgs{
-		Workspace: e.WS, CompanyID: company, ScanID: scanID, ViewerID: e.Rep1,
+		CompanyID: company, ScanID: scanID, ViewerID: e.Rep1,
 	}, &river.InsertOpts{ScheduledAt: next, MaxAttempts: 3}); err != nil {
 		t.Fatal(err)
 	}

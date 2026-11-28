@@ -197,6 +197,7 @@ func recordedCriteria() []string {
 // point: a waiver nobody had to justify is how a second spelling survives
 // review for a year.
 var retired = gatekit.Waive(map[string]string{
+	"backend/gates/productiongrant_test.go":                                 "people and persons describe licensed seats in deliberately withdrawn grant wording, never contact records",
 	"backend/internal/compose/meetingbrief/coachingcopy.go":                 "German human-role wording names the sales colleague and accountable actor, not the contact record type",
 	"backend/internal/compose/meetingbrief/advancecopy.go":                  "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/compose/meetingbrief/objectivecopy.go":                "German human-role wording names the responsible colleague or buying role, not the contact record type",

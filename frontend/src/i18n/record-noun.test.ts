@@ -374,6 +374,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "create.addressErased",
   ],
   vi: [
+    "tools.name.run_research",
+    "changes.check.ownerOnly",
     "webForms.field.notifyOwnerHint",
     "messenger.recipientsRequired",
     "webForms.field.notifyOwner",

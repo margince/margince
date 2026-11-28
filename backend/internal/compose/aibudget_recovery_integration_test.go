@@ -36,7 +36,7 @@ func TestAllowanceRecoveryAdvancesBothWebsiteClocksAndIsIdempotent(t *testing.T)
 	read, args := startDeepRead(t, e, company)
 	next := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), budgetDeferringBrain{next: next})
-	if err := worker.run(context.Background(), args); err == nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err == nil {
 		t.Fatal("expected budget deferral")
 	}
 	runner, err := jobs.NewInserter(e.Pool, slog.New(slog.DiscardHandler))

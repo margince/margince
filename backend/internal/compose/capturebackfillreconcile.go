@@ -35,14 +35,14 @@ type captureBackfillReconcileWorker struct {
 }
 
 func (w *captureBackfillReconcileWorker) Work(ctx context.Context, _ *river.Job[CaptureBackfillReconcileArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.reconcileWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.reconcileWorkspace))
 }
 
 func (w *captureBackfillReconcileWorker) reconcileWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	var dispatchErr error
 	if w.registry != nil {
-		dispatchErr = w.registry.DispatchBackfills(wsCtx, backfillScheduler(workspace), true)
+		dispatchErr = w.registry.DispatchBackfills(wsCtx, backfillScheduler(), true)
 	}
 	return errors.Join(dispatchErr, w.reconcileDerivedWork(wsCtx))
 }

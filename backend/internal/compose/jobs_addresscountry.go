@@ -72,22 +72,17 @@ func newAddressCountryWorker(pool *pgxpool.Pool, geocoder geocode.Client, clock 
 	return &addressCountryWorker{pool: pool, geocoder: geocoder, clock: clock}
 }
 
-// Work checks due records across every workspace until the lookup budget is spent.
+// Work checks due records until the lookup budget is spent.
 // A lookup that does not complete ends the pass with its error; the record stays
 // unchecked, and the next pass asks again.
 func (w *addressCountryWorker) Work(ctx context.Context, _ *river.Job[AddressCountryCheckArgs]) error {
-	workspaces, err := database.LiveWorkspaces(ctx, w.pool)
-	if err != nil {
+	ws, ok, err := database.LiveWorkspace(ctx, w.pool)
+	if err != nil || !ok {
 		return jobs.FaultContext(ctx, err)
 	}
 	pass := addressCountryPass{worker: w, lookupsLeft: addressCountryLookupsPerRun}
-	for _, ws := range workspaces {
-		if err := pass.checkWorkspace(ctx, ws); err != nil {
-			return jobs.FaultContext(ctx, err)
-		}
-		if pass.lookupsLeft == 0 {
-			break
-		}
+	if err := pass.checkWorkspace(ctx, ws); err != nil {
+		return jobs.FaultContext(ctx, err)
 	}
 	if pass.checked > 0 {
 		slog.InfoContext(ctx, "address country check recorded a batch",
@@ -96,7 +91,7 @@ func (w *addressCountryWorker) Work(ctx context.Context, _ *river.Job[AddressCou
 	return nil
 }
 
-// addressCountryPass is the budget and tally one Work call shares across workspaces.
+// addressCountryPass is the budget and tally one Work call keeps.
 type addressCountryPass struct {
 	worker      *addressCountryWorker
 	lookupsLeft int

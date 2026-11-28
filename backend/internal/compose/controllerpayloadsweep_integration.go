@@ -40,7 +40,11 @@ func DriveControllerPayloadSweepForTest(
 		worker.store = comms.NewStore(db, time.Now, activities.NewStore(db), opts...)
 	}
 	worker.clock = func() time.Time { return now }
-	return worker.Work(ctx, &river.Job[ControllerPayloadSweepArgs]{
+	bound, err := bindInstallation(ctx, pool)
+	if err != nil {
+		return err
+	}
+	return worker.Work(bound, &river.Job[ControllerPayloadSweepArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 1},
 	})
 }

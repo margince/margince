@@ -56,10 +56,7 @@ type pastActivityClockWorker struct {
 }
 
 func (w *pastActivityClockWorker) Work(ctx context.Context, _ *river.Job[PastActivityClockRefoldArgs]) error {
-	passCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	passCtx := ctx
 	passCtx = principal.SystemActing(passCtx, pastActivityClockActor)
 	refolded, err := RefoldPastActivityClocks(passCtx, InstallationDB(w.pool))
 	if err != nil {

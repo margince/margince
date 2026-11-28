@@ -111,10 +111,7 @@ func (w *aiActivityReconcileWorker) Work(ctx context.Context, _ *river.Job[AIAct
 // installation's workspace, a system actor, and a correlation id, so every
 // event this pass stages is traceable to the pass that staged it.
 func (w *aiActivityReconcileWorker) passContext(ctx context.Context, actor string) (context.Context, error) {
-	wsCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return nil, err
-	}
+	wsCtx := ctx
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 	return principal.WithActor(wsCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: actor,
@@ -142,10 +139,7 @@ type aiActivityRetentionWorker struct {
 }
 
 func (w *aiActivityRetentionWorker) Work(ctx context.Context, _ *river.Job[AIActivityRetentionArgs]) error {
-	wsCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: aiActivityRetentionActor,
 	})

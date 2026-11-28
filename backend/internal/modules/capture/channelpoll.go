@@ -53,48 +53,39 @@ type ChannelPollTarget struct {
 	PollOffset    int64
 }
 
-// DueChannelConnections lists every live connection of one provider across the
-// fleet. Only a `connected`, un-archived row is due: a disconnected or
-// reauth-required connection has nothing this installation may still poll, and
-// leaving it out of the scan is what stops the poll retrying a bot whose token
-// Telegram has already refused.
-//
-// One workspace's probe failing does NOT abandon the rest — the scan accumulates
-// and returns what it found alongside the joined error, the posture the push
-// walk takes. A single broken tenant must not stop every other workspace's
-// messages arriving.
+// DueChannelConnections lists every live connection of one provider. Only a
+// `connected`, un-archived row is due. A disconnected or reauth-required
+// connection is left out, which stops the poll retrying a bot whose token the
+// provider has already refused.
 func DueChannelConnections(ctx context.Context, pool *pgxpool.Pool, provider string) ([]DueChannelConnection, error) {
-	workspaces, err := database.LiveWorkspaces(ctx, pool)
-	if err != nil {
+	wsID, ok, err := database.LiveWorkspace(ctx, pool)
+	if err != nil || !ok {
 		return nil, err
 	}
 
 	var due []DueChannelConnection
-	var errs error
-	for _, wsID := range workspaces {
-		wsCtx := principal.WithWorkspaceID(ctx, wsID)
-		err := database.WithTx(wsCtx, pool, func(tx pgx.Tx) error {
-			rows, err := tx.Query(ctx, `
-				SELECT id FROM channel_connection
-				 WHERE provider = $1 AND status = $2 AND archived_at IS NULL AND `+botConnectionRow,
-				provider, channelStatusConnected)
-			if err != nil {
-				return err
-			}
-			live, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-			if err != nil {
-				return err
-			}
-			for _, id := range live {
-				due = append(due, DueChannelConnection{WorkspaceID: wsID, ID: id})
-			}
-			return nil
-		})
+	wsCtx := principal.WithWorkspaceID(ctx, wsID)
+	err = database.WithTx(wsCtx, pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT id FROM channel_connection
+			 WHERE provider = $1 AND status = $2 AND archived_at IS NULL AND `+botConnectionRow,
+			provider, channelStatusConnected)
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("capture: channel poll scan in workspace %s: %w", wsID, err))
+			return err
 		}
+		live, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		if err != nil {
+			return err
+		}
+		for _, id := range live {
+			due = append(due, DueChannelConnection{WorkspaceID: wsID, ID: id})
+		}
+		return nil
+	})
+	if err != nil {
+		return due, fmt.Errorf("capture: channel poll scan: %w", err)
 	}
-	return due, errs
+	return due, nil
 }
 
 // LoadChannelPollTarget reads the connection a poll is about to run, under the

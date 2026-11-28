@@ -58,10 +58,7 @@ type requestProofExpiryWorker struct {
 }
 
 func (w *requestProofExpiryWorker) Work(ctx context.Context, _ *river.Job[RequestProofExpiryArgs]) error {
-	wsCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	wsCtx = principal.SystemActing(wsCtx, requestProofExpiryActor)
 	now := w.now()
 	total := 0

@@ -24,7 +24,6 @@ describe("the orphan finder, over a planted tree", () => {
       module: ts.ModuleKind.ESNext,
       moduleResolution: ts.ModuleResolutionKind.Bundler,
       types: [],
-      baseUrl: "/",
       paths: { "@alias/copy": ["/app/src/aliased"] },
     };
     const host = ts.createCompilerHost(options);

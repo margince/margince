@@ -59,14 +59,14 @@ func TestProposeRefreshEndpointsEnqueue(t *testing.T) {
 	if len(fake.calls) != 1 {
 		t.Fatalf("the retired route enqueued a job: %d calls", len(fake.calls))
 	}
-	// The enqueue must request arg-scoped uniqueness on the bounded refresh
-	// queue: that is how two admins refreshing the same workspace collapse to
-	// one in-flight refresh (River hashes only the river:"unique" WorkspaceID)
-	// and how long jobs stay off the default queue. The fake can't exercise
-	// River's real dedup — this asserts the handler asks for it correctly.
+	// The enqueue must request uniqueness by kind over the in-flight states, on
+	// the bounded refresh queue. That is how two admins refreshing at once
+	// collapse to one in-flight refresh, and how long jobs stay off the default
+	// queue. The fake cannot exercise River's real dedup, so this asserts the
+	// handler asks for it correctly.
 	for i, opts := range fake.opts {
-		if opts == nil || !opts.UniqueOpts.ByArgs {
-			t.Fatalf("job %d InsertOpts = %+v, want UniqueOpts.ByArgs=true", i, opts)
+		if opts == nil || opts.UniqueOpts.ByArgs || len(opts.UniqueOpts.ByState) == 0 {
+			t.Fatalf("job %d InsertOpts = %+v, want unique by kind (ByArgs off) over the in-flight states", i, opts)
 		}
 		if opts.Queue != "rate_refresh" {
 			t.Fatalf("job %d queue = %q, want rate_refresh", i, opts.Queue)

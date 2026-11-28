@@ -37,7 +37,7 @@ func TestTheLiveListCheckRunsOnlyWhileListsAreOn(t *testing.T) {
 	}
 	for _, on := range []bool{false, true} {
 		worker := &listEvaluateWorker{enabled: on, pool: e.Pool, now: time.Now, log: slog.New(slog.DiscardHandler)}
-		if err := worker.Work(context.Background(), nil); err != nil {
+		if err := worker.Work(boundBackground(t), nil); err != nil {
 			t.Fatalf("lists on=%v: %v", on, err)
 		}
 		if got := checked(); (got > 0) != on {

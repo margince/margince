@@ -29,7 +29,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/vatcheck"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -44,7 +43,6 @@ import (
 // number the company actually states rather than the one it stated when the job
 // was made. A copy in the args would be a receipt for the wrong number.
 type CheckCompanyVatArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
 	CompanyID ids.UUID `json:"company_id"`
 	// Requested marks a consultation a CONTACT asked for, and it does two things
 	// that both matter.
@@ -63,9 +61,6 @@ type CheckCompanyVatArgs struct {
 
 // Kind is the stable job identifier River persists in river_job.
 func (CheckCompanyVatArgs) Kind() string { return "check_company_vat" }
-
-// WorkspaceID binds this consultation to its tenant (jobs.WorkspaceScoped).
-func (a CheckCompanyVatArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // vatCheckQueue mirrors api/jobs.yaml, and sizes the pool below; the insert
 // takes the queue from the declaration itself (jobs.QueuedAs).
@@ -92,15 +87,7 @@ func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) contacts.VatCheckEnqueue {
 		return nil
 	}
 	return func(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, requested bool) error {
-		ws, ok := principal.WorkspaceID(ctx)
-		if !ok {
-			// No tenant bound means no job that could ever be worked: River
-			// scopes by workspace, and a row without one is a job nobody
-			// dequeues. Refusing is louder than inserting an orphan.
-			return errors.New("compose: checking a company's VAT number outside any workspace")
-		}
 		return enqueue.EnqueueTx(ctx, tx, CheckCompanyVatArgs{
-			Workspace: ws,
 			CompanyID: companyID.UUID,
 			Requested: requested,
 		}, vatCheckInsertOpts())
@@ -166,14 +153,9 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVa
 	// Bound through the shared helper, so the args' own WorkspaceID() IS the
 	// binding: a worker that picked its own could claim one workspace and work
 	// in another.
-	wsCtx, err := workspaceJobCtx(ctx, args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	wsCtx = vatCheckJobActor(wsCtx)
-	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
-		return ids.From[ids.WorkspaceKind](args.Workspace), nil
-	}))
+	store := contacts.NewStore(InstallationDB(w.pool))
 	companyID := ids.From[ids.CompanyKind](args.CompanyID)
 
 	// ASKED AGAIN AFTER RECORDING, because the number can move while this job

@@ -191,7 +191,7 @@ const domainEvidenceActivityParam = "activity"
 // Domain evidence takes the newest date across a domain; acquisition takes the oldest per address.
 // Read failures keep the nil-evidence policy so capture can finish.
 func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID ids.ActivityID) *time.Time {
-	domain = strings.ToLower(strings.TrimSpace(domain))
+	domain = owndomain.Fold(domain)
 	if domain == "" {
 		return nil
 	}

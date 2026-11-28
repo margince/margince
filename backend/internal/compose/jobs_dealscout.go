@@ -90,7 +90,7 @@ func (w *scoutWorker) report(ctx, wsCtx context.Context, run func() (scoutTally,
 type dealScoutWorker struct{ scoutWorker }
 
 func (w *dealScoutWorker) Work(ctx context.Context, _ *river.Job[DealScoutArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
 		return scoutWorkspace(ctx, &w.scoutWorker, "system:deal-scout", workspace)
 	}))
 }

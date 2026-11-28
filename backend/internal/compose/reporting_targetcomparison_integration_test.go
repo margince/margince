@@ -212,7 +212,7 @@ func TestASentEditionKeepsTheTargetComparisonItWasEvaluatedWith(t *testing.T) {
 		t.Fatal(err)
 	}
 	worker := &reportScheduleSweepWorker{pool: q.env.Pool, now: func() time.Time { return q.at }}
-	if err := worker.Work(context.Background(), nil); err != nil {
+	if err := worker.Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	completed, err := q.service.GetExecution(q.human, ids.UUID(run.Id))

@@ -102,7 +102,7 @@ func TestReportingHTTPRevisionsSchedulesAndFrozenHistory(t *testing.T) {
 	reportingRequest(f.human, t, handler, http.MethodPatch, "schedules/"+schedule.Id.String(), reportingPayload(t, scheduleInput), schedule.Version, http.StatusConflict)
 	execution := reportingResponse[crmcontracts.ReportingExecution](t, reportingRequest(f.human, t, handler, http.MethodPost, path+"/editions", nil, -1, http.StatusAccepted))
 	worker := &reportScheduleSweepWorker{pool: f.env.Pool, now: func() time.Time { return f.at }}
-	if err := worker.Work(context.Background(), nil); err != nil {
+	if err := worker.Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	completed := reportingResponse[crmcontracts.ReportingExecution](t, reportingRequest(f.human, t, handler, http.MethodGet, "executions/"+execution.Id.String(), nil, -1, http.StatusOK))

@@ -38,6 +38,7 @@ const (
 // type from, where the census cannot read the value. A key names a writer and
 // never a type, so the types still come from the Go that owns them.
 var runtimeTypedAuditWriters = map[string]func(t *testing.T) []string{
+	"backend/internal/platform/database/storekit/identifierspelling.go:writeRow":     identifierRepairAuditTypes,
 	"backend/internal/platform/database/storekit/sourcechanges.go:auditSourceChange": sourceAuditTypes,
 	"backend/internal/modules/identity/grants.go:createRecordGrantInTx":              recordTypeNames,
 	"backend/internal/modules/identity/grants.go:RevokeRecordGrant":                  recordTypeNames,

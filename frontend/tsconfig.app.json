@@ -21,7 +21,6 @@
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["vite/client"],
-    "baseUrl": ".",
     // The composition alias — the TypeScript mirror of GOWORK. This project is
     // the VANILLA lane and resolves the committed empty-tree registry;
     // tsconfig.composed.json repoints the same specifier at

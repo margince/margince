@@ -69,7 +69,7 @@ func (f *rereadFixture) read(args StageEvidenceReadArgs) {
 	f.t.Helper()
 	f.lane.about = args.ActivityID
 	worker := newStageEvidenceReadWorker(f.Pool, f.lane, slog.New(slog.DiscardHandler))
-	if err := worker.Work(context.Background(), &river.Job[StageEvidenceReadArgs]{Args: args}); err != nil {
+	if err := worker.Work(boundBackground(f.t), &river.Job[StageEvidenceReadArgs]{Args: args}); err != nil {
 		f.t.Fatalf("reading activity %s: %v", args.ActivityID, err)
 	}
 }
@@ -78,7 +78,7 @@ func (f *rereadFixture) read(args StageEvidenceReadArgs) {
 // and runs it. Its row stays in River's table, as a finished job's does.
 func (f *rereadFixture) firstReading(mail ids.UUID) {
 	f.t.Helper()
-	args := StageEvidenceReadArgs{Workspace: f.WS, DealID: f.dealID.UUID, ActivityID: mail}
+	args := StageEvidenceReadArgs{DealID: f.dealID.UUID, ActivityID: mail}
 	queue, err := callerTxJobs()
 	if err != nil {
 		f.t.Fatal(err)
@@ -108,19 +108,17 @@ func (f *rereadFixture) sweep(args StageEvidenceRereadArgs, page int) {
 	f.t.Helper()
 	worker := newStageEvidenceRereadWorker(f.Pool, true, slog.New(slog.DiscardHandler))
 	worker.Page = page
-	if err := worker.Work(context.Background(), &river.Job[StageEvidenceRereadArgs]{Args: args}); err != nil {
+	if err := worker.Work(boundBackground(f.t), &river.Job[StageEvidenceRereadArgs]{Args: args}); err != nil {
 		f.t.Fatalf("running the sweep: %v", err)
 	}
 }
 
-// queued answers the args of this workspace's queued jobs of one kind, oldest
-// first.
+// queued answers the args of the queued jobs of one kind, oldest first.
 func queuedJobs[T river.JobArgs](f *rereadFixture) []T {
 	f.t.Helper()
 	var kind T
 	rows, err := f.Pool.Query(context.Background(),
-		`SELECT args FROM river_job WHERE kind = $1 AND args->>'workspace_id' = $2 ORDER BY id`,
-		kind.Kind(), f.WS.String())
+		`SELECT args FROM river_job WHERE kind = $1 ORDER BY id`, kind.Kind())
 	if err != nil {
 		f.t.Fatalf("reading queued %s jobs: %v", kind.Kind(), err)
 	}
@@ -262,8 +260,8 @@ func TestWithNoModelLaneTheSweepQueuesNothing(t *testing.T) {
 	f := newRereadFixture(t)
 	f.mail("cfo@buyer-corp.test")
 	worker := newStageEvidenceRereadWorker(f.Pool, false, slog.New(slog.DiscardHandler))
-	args := StageEvidenceRereadArgs{Workspace: f.WS, Domain: "buyer-corp.test", Removal: ids.NewV7()}
-	if err := worker.Work(context.Background(), &river.Job[StageEvidenceRereadArgs]{Args: args}); err != nil {
+	args := StageEvidenceRereadArgs{Domain: "buyer-corp.test", Removal: ids.NewV7()}
+	if err := worker.Work(boundBackground(f.t), &river.Job[StageEvidenceRereadArgs]{Args: args}); err != nil {
 		t.Fatal(err)
 	}
 	if readings := queuedJobs[StageEvidenceReadArgs](f); len(readings) != 0 {

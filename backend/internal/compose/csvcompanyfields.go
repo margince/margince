@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
 // storedPrimaryDomain reads the `domain` target's current value.
@@ -149,7 +150,7 @@ func domainsMergedOnto(current []byte, mapped []contacts.CompanyDomainInput) ([]
 	if err := json.Unmarshal(current, &record); err != nil {
 		return nil, false, fmt.Errorf("import: reading the stored domains: %w", err)
 	}
-	incoming := strings.ToLower(strings.TrimSpace(mapped[0].Domain))
+	incoming := owndomain.Fold(mapped[0].Domain)
 	merged := append([]contacts.CompanyDomainInput(nil), mapped...)
 	merged[0].IsPrimary = true
 	for _, held := range record.Domains {

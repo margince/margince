@@ -111,17 +111,17 @@ func (c chainWire) importOpened(t *testing.T, connID string, estimate int) (runs
 		WHERE entity_type = 'capture_connection' AND entity_id = $1 AND action = 'update'
 		  AND after->>'backfill_window_months' = '6' AND actor_type = 'human' AND actor_id = $2`,
 		connID, "human:"+c.env.Rep1.String())
-	return runs, audits, pagersIn(t, c.env.Pool, c.env.WS)
+	return runs, audits, pagersIn(t, c.env.Pool)
 }
 
-// pagersIn counts every backfill pager queued for one workspace, so a run that
-// should not exist cannot hide behind a run id nobody holds.
-func pagersIn(t *testing.T, pool *pgxpool.Pool, ws ids.UUID) int {
+// pagersIn counts every backfill pager queued, so a run that should not exist
+// cannot hide behind a run id nobody holds.
+func pagersIn(t *testing.T, pool *pgxpool.Pool) int {
 	t.Helper()
 	var n int
 	if err := pool.QueryRow(context.Background(), `
-		SELECT count(*) FROM river_job WHERE kind = $1 AND args->>'workspace_id' = $2`,
-		CaptureBackfillArgs{}.Kind(), ws.String()).Scan(&n); err != nil {
+		SELECT count(*) FROM river_job WHERE kind = $1`,
+		CaptureBackfillArgs{}.Kind()).Scan(&n); err != nil {
 		t.Fatalf("counting pagers: %v", err)
 	}
 	return n

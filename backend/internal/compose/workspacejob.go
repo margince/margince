@@ -3,18 +3,11 @@
 
 package compose
 
-// The scope a workspace-scoped job runs under. River's WorkerMiddleware sees
-// a rivertype.JobRow — raw JSON, never the typed args — so a middleware could
-// only bind by re-reading the wire key, which would leave the role declaration
-// a label beside the binding rather than the thing that governs it. Binding
-// from the args' own WorkspaceID() instead keeps the declaration load-bearing:
-// a worker cannot claim one workspace and work in another.
-
 import (
 	"context"
-	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -23,59 +16,61 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// workspaceJobCtx binds the workspace the args themselves declare, and only
-// that. Provenance stays where it already is — each pass names its own actor
-// and mints its own correlation id, and moving that here would change what the
-// audit rows say about work whose behaviour is meant to be untouched.
+// bindInstallation is the one decision about which workspace a job runs in.
+// River runs it as worker middleware around every job (installationBinding),
+// so no worker binds its own.
 //
-// A zero id is REFUSED rather than bound. Nothing downstream narrows a query
-// by workspace — no table carries the column and no policy reads one
-// (ADR-0061/ADR-0091 §5) — so an unrefused zero would not fail here or at any
-// later statement; it would simply be the value an audit entity id, a blob key
-// or an advisory-lock name carries instead of the real one, discovered only
-// much later and far from the job that produced it. It is also what an args
-// type decodes to when a queued job predates a change to its wire key, so the
-// refusal is the difference between a loud failure and a pass that quietly
-// touches nothing.
-func workspaceJobCtx(ctx context.Context, args jobs.WorkspaceScoped) (context.Context, error) {
-	ws := args.WorkspaceID()
-	if ws == (ids.UUID{}) {
-		return nil, fmt.Errorf("%s: declares WorkspaceScoped but carries no workspace", args.Kind())
-	}
-	return principal.WithWorkspaceID(ctx, ws), nil
-}
-
-// installationJobCtx binds the installation's workspace for a collapsed pass —
-// one that carries no workspace of its own (ADR-0103 §1).
+// It looks the workspace up on every call and keeps nothing between jobs: a
+// cached answer would outlive a change of the installation's company. It fails
+// when no workspace is live, and the job then does not run.
 //
-// The binding is NOT vestigial while any store still reads the workspace off
-// the context: storekit.MustWorkspace reads it, sixteen deals sites and a
-// handful in contacts, capture, ai and activities call it, and an agent tool
-// reaches several of them — as an audit entity id, a blob storage key or an
-// advisory-lock name, never as a column any of those stores writes. Unbound,
-// those calls would silently carry a zero uuid into whichever of those it
-// feeds, with nothing to fail loudly on. It retires with MustWorkspace itself
-// (ADR-0091 §5), not before.
-func installationJobCtx(ctx context.Context, svc *identity.Service) (context.Context, error) {
-	ws, err := svc.InstallationWorkspace(ctx)
+// Some stores still read the workspace off the context, as an audit entity id,
+// a blob key or an advisory-lock name. Without the binding those would carry a
+// zero id with nothing to fail on.
+func bindInstallation(ctx context.Context, pool *pgxpool.Pool) (context.Context, error) {
+	ws, err := identity.NewService(pool).InstallationWorkspace(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return principal.WithWorkspaceID(ctx, ws.UUID), nil
 }
 
-// workspaceJobDB binds a handle to the workspace a per-workspace job NAMES.
-//
-// A fleet pass runs one job per workspace, so the installation resolver is the
-// wrong answer here twice over: it refuses outright while more than one
-// workspace exists (ADR-0061 §3), and even with one it would be answering a
-// question the job has already answered in its args. The workspace comes from
-// the args exactly as it did when the binding rode the context — this is the
-// same fact, moved to where the transaction now reads it (ADR-0091 §9 step 3).
-func workspaceJobDB(pool *pgxpool.Pool, args jobs.WorkspaceScoped) (*database.DB, error) {
-	ws := args.WorkspaceID()
-	if ws == (ids.UUID{}) {
-		return nil, fmt.Errorf("%s: declares WorkspaceScoped but carries no workspace", args.Kind())
+// everyWorkspaceKinds are the jobs that clean up data in every workspace row,
+// archived ones included, and so must run when no company is live. They run
+// through runEveryWorkspacePass, which reads the rows itself, so the binding
+// leaves them alone. TestEveryWorkspaceKindsRunTheEveryWorkspacePass holds the
+// list to the workers.
+var everyWorkspaceKinds = map[string]bool{
+	IdempotencyRetentionArgs{}.Kind():   true,
+	CaptureTraceSweepArgs{}.Kind():      true,
+	ChatClarificationSweepArgs{}.Kind(): true,
+	StoredObjectReapArgs{}.Kind():       true,
+	SuppressionJournalArgs{}.Kind():     true,
+}
+
+// searchBoundKinds bind a workspace through the search store. With no live
+// workspace, the re-embed hands its marker back and cancels. The middleware
+// would fail such a job before it could.
+var searchBoundKinds = map[string]bool{
+	EmbedReindexArgs{}.Kind(): true,
+}
+
+// installationBinding is the jobs.Config.BindWorkspace of the worker client.
+func installationBinding(pool *pgxpool.Pool) jobs.BindWorkspace {
+	return func(ctx context.Context, job *rivertype.JobRow) (context.Context, error) {
+		if everyWorkspaceKinds[job.Kind] || searchBoundKinds[job.Kind] {
+			return ctx, nil
+		}
+		return bindInstallation(ctx, pool)
 	}
-	return database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), nil
+}
+
+// boundWorkspace reads the workspace installationJobCtx bound, for a worker
+// that hands it to a store which still takes one.
+func boundWorkspace(ctx context.Context) (ids.UUID, error) {
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return ids.UUID{}, database.ErrNoWorkspace
+	}
+	return ws, nil
 }
