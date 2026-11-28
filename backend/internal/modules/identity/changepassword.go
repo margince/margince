@@ -302,7 +302,7 @@ func (h Handlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	// revokes every prior session, so the one it issues is the ONLY row the
 	// session list will show, and a blank device there would be this account's
 	// whole history.
-	token, err := h.svc.ChangePassword(withUserAgent(r.Context(), r.UserAgent()), req.CurrentPassword, req.NewPassword)
+	token, err := h.svc.ChangePassword(httpserver.WithRequestOrigin(r.Context(), r), req.CurrentPassword, req.NewPassword)
 	if h.writePasswordProofRefusal(w, r, err) {
 		return
 	}

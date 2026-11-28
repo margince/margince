@@ -547,7 +547,9 @@ it.each([
     await waitFor(() => expect(review).toHaveProperty("disabled", false));
     await user.click(review);
     const composer = await screen.findByRole("dialog", { name: "Compose" });
-    expect(composer.getAttribute("data-reason")).toBe(context.reason);
+    await waitFor(() =>
+      expect(composer.getAttribute("data-reason")).toBe(context.reason),
+    );
   },
 );
 
@@ -604,9 +606,11 @@ it("closes onto the contact's meetings by going back when it was opened from the
   );
   const stop = watchAddress(() => undefined);
   mount();
+  // The traversal settles as a real step would land it. Left in flight, its
+  // one-second fallback replaces the address in whichever test runs next.
   const go = vi
     .spyOn(globalThis.history, "go")
-    .mockImplementation(() => undefined);
+    .mockImplementation(() => globalThis.dispatchEvent(new Event("pageshow")));
   await user.click(await screen.findByRole("button", { name: "Close" }));
   expect(go.mock.calls).toEqual([[-1]]);
   go.mockRestore();

@@ -25,17 +25,26 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// signIn opens one session for the env's member, recording the user-agent the
-// login handler would have captured from the request. Returns the raw cookie
-// token so the caller can hash it (to name the current session) or authenticate
-// with it (to prove a revoke took effect).
+// signedInFrom binds the origin the login handler would have captured from a
+// request sent by userAgent from the documentation address 203.0.113.7.
+func signedInFrom(ctx context.Context, userAgent string) context.Context {
+	r := httptest.NewRequest(http.MethodPost, "/v1/auth/login", nil)
+	r.RemoteAddr = "203.0.113.7:5100"
+	r.Header.Set("User-Agent", userAgent)
+	return httpserver.WithRequestOrigin(ctx, r)
+}
+
+// signIn opens one session for the env's member, from the origin the login
+// handler would have captured. It returns the raw cookie token. A caller hashes
+// it to name the current session, or authenticates with it to prove a revoke.
 func (e *revocationEnv) signIn(t *testing.T, userAgent string) string {
 	t.Helper()
-	ctx := withUserAgent(e.wsOnlyCtx(), userAgent)
+	ctx := signedInFrom(e.wsOnlyCtx(), userAgent)
 	_, login, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("member login (%s): %v", userAgent, err)
@@ -170,7 +179,7 @@ func TestRevokeSessionRefusesAnotherMembersSession(t *testing.T) {
 	e := setupRevocationEnv(t, "sessions-scope")
 
 	// The admin's own session, opened through the real login path.
-	adminLoginCtx := withUserAgent(e.wsOnlyCtx(), "admin device")
+	adminLoginCtx := signedInFrom(e.wsOnlyCtx(), "admin device")
 	_, adminLogin, err := e.svc.Login(adminLoginCtx, e.admin.Email, bootstrapPassword, noDevice)
 	if err != nil {
 		t.Fatalf("admin login: %v", err)
@@ -201,6 +210,14 @@ func TestSessionsOverHTTPMarkCurrentRevokeAndNeverLeakIP(t *testing.T) {
 	// row the list must mark current.
 	token := e.signIn(t, "Mozilla/5.0 (http device)")
 	ctx := e.asMember()
+	var recorded string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT host(ip) FROM session WHERE token_hash = $1`, hashToken(token)).Scan(&recorded); err != nil {
+		t.Fatalf("read the session's address: %v", err)
+	}
+	if recorded != "203.0.113.7" {
+		t.Fatalf("session ip = %q, want the address the sign-in came from", recorded)
+	}
 
 	listReq := httptest.NewRequest(http.MethodGet, "/v1/me/sessions", nil).WithContext(ctx)
 	listReq.AddCookie(&http.Cookie{Name: SessionCookieName, Value: token})

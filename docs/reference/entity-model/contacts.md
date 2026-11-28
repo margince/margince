@@ -706,7 +706,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_acquisition_evidence
 
-15 columns · primary key `(id)` · referenced by 1 foreign key
+14 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -717,7 +717,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `note` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone` |  |  |
-| `purpose_claimed` | `text` |  |  |
 | `recorded_for_addresses` | `text[]` |  |  |
 | `request_retracted_at` | `timestamp with time zone` |  |  |
 | `request_retracted_by` | `text` |  |  |
@@ -747,8 +746,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "note": 2000, "captured_by": 20000, "stated_source": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000,"stated_source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "note": 2000, "captured_by": 20000, "stated_source": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000,"stated_source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "note": 2000, "captured_by": 20000, "stated_source": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000,"stated_source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "note": 2000, "captured_by": 20000, "stated_source": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000,"stated_source":20000}')`
 
 ## contact_address_country
 
@@ -1107,7 +1106,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## conversation_claim
 
-20 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1115,7 +1114,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `body` | `text` | yes | What the claim says, in the reader's language. |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `corrected_at` | `timestamp with time zone` |  | When a human typed over the machine. |
-| `corrected_by_user_id` | `uuid` |  | Points at `app_user.id`. |
 | `due_at` | `timestamp with time zone` |  |  |
 | `evidence_fingerprint` | `text` | yes |  |
 | `kind` | `text` | yes | One of `commitment_ours`, `commitment_theirs`, `open_question`, `decision`, `priority`, `objection` and 2 more. |
@@ -1138,7 +1136,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 |---|---|---|
 | `source_activity_id` | `activity` | deleting the parent deletes this row |
 | `contact_id` | `contact` | deleting the parent deletes this row |
-| `corrected_by_user_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `taken_by_user_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `task_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 

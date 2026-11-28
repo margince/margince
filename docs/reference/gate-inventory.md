@@ -274,6 +274,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `approvalselfonlyreaders_test.go` | H2 | Staging needs action authority before a proposal exists. |
 | `approvalsummarycopy_test.go` | H1 | An approval's summary is written through a per-language copy table, never as an English sentence in product code. |
 | `approvalwhy_test.go` | H1 | Every approval says why it was staged: the reason in words, or the quoted evidence it rests on. |
+| `archivefilter_test.go` | H2 | A storekit row write names the archive filter its table can answer. |
 | `arrayvocabulary_test.go` | H3 | A text array either closes its set in the database or says why its set is open. |
 | `assigneeeligibility_test.go` | H2 | A seat's fitness to receive work has one spelling, wherever it is asked. |
 | `assurancerules_test.go` | H3 | Every assurance rule proves both halves of its judgement. |
@@ -384,7 +385,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |
-| `gatelanetrigger_test.go` | H2 | A gate runs in a lane that every path it reads can trigger. |
+| `gatelanetrigger_test.go` | H2 | A lane runs on a change to every path it reads. |
 | `governedkindseams_test.go` | H2 | The two halves of automatic apply agree about which kinds it covers. |
 | `historyfieldlabels_test.go` | H2 | Every field name the History tab can print has a word for it. |
 | `humanonlypending_test.go` | H1 | An agent may do what its user may do in the app, unless security says no. Every human-only operation a signed-in user reaches says why in the contract, as x-human-only-reason: security, covered by another tool, or pending, which tools/gen-agentpolicy requires. |
