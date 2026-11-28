@@ -16,6 +16,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strconv"
@@ -145,6 +146,8 @@ func archiveFilterUses(
 		t.Fatalf("parsing %s: %v", path, err)
 	}
 	constants := packageStringConstants(t, filepath.Dir(path), packageConstants)
+	topConstants := topLevelConstantSpecs(file)
+	storekitName := importNames(t, file)["github.com/margince/margince/backend/internal/platform/database/storekit"]
 	var uses []archiveFilterUse
 	ast.Inspect(file, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
@@ -161,14 +164,18 @@ func archiveFilterUses(
 		case *ast.BasicLit:
 			table, _ = strconv.Unquote(arg.Value)
 		case *ast.Ident:
-			table = constants[arg.Name]
+			if arg.Obj == nil || arg.Obj.Kind == ast.Con && topConstants[arg.Obj.Decl] {
+				table = constants[arg.Name]
+			}
 		}
 		filter := "LiveOnly"
 		if at.filter >= 0 {
 			filter = ""
 			selector, ok := call.Args[at.filter].(*ast.SelectorExpr)
 			if ok && storekitArchiveFilters[selector.Sel.Name] {
-				filter = selector.Sel.Name
+				if pkg, ok := selector.X.(*ast.Ident); ok && pkg.Obj == nil && pkg.Name == storekitName {
+					filter = selector.Sel.Name
+				}
 			}
 		}
 		line := gatekit.SourceFileSet().Position(call.Pos()).Line
@@ -176,6 +183,20 @@ func archiveFilterUses(
 		return true
 	})
 	return uses
+}
+
+// topLevelConstantSpecs are the file's package-level const specs, so an
+// identifier bound to a local declaration of the same name is not read as one.
+func topLevelConstantSpecs(file *ast.File) map[any]bool {
+	specs := map[any]bool{}
+	for _, decl := range file.Decls {
+		if gen, ok := decl.(*ast.GenDecl); ok && gen.Tok == token.CONST {
+			for _, spec := range gen.Specs {
+				specs[spec] = true
+			}
+		}
+	}
+	return specs
 }
 
 // archiveFilterForwarders names each call, as file:writer, that hands storekit
