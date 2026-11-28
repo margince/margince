@@ -27,6 +27,6 @@ func Record(ctx context.Context, pool *pgxpool.Pool, workspace ids.UUID, watch *
 	if len(watch.Unloaded()) == 0 {
 		return nil
 	}
-	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), Actor)
+	ctx = principal.SystemActing(ctx, Actor)
 	return database.WithTx(ctx, pool, func(tx pgx.Tx) error { return watch.RecordTx(ctx, tx) })
 }

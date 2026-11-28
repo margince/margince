@@ -87,7 +87,7 @@ func settleHomeCorpus(t *testing.T, e *apptest.AppEnv) {
 func stampSeededMail(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	ws := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ws), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:reply_settled_stamp",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})

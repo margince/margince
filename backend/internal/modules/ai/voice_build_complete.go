@@ -307,8 +307,7 @@ func (s *VoiceStore) DueDeferredBuilds(ctx context.Context) ([]VoiceBuildRef, er
 		return nil, err
 	}
 	var due []VoiceBuildRef
-	wsCtx := principal.WithWorkspaceID(ctx, wsID)
-	err = s.db.Tx(wsCtx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		now := s.now().UTC()
 		wsRows, err := tx.Query(ctx, `
 			SELECT id, voice_profile_id, requested_by FROM voice_build
@@ -328,7 +327,7 @@ func (s *VoiceStore) DueDeferredBuilds(ctx context.Context) ([]VoiceBuildRef, er
 			return err
 		}
 		for _, ref := range refs {
-			free, err := s.db.WorkLeaseAvailable(wsCtx, tx, "voice_build", ref.BuildID)
+			free, err := s.db.WorkLeaseAvailable(ctx, tx, "voice_build", ref.BuildID)
 			if err != nil {
 				return err
 			}

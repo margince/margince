@@ -177,7 +177,7 @@ func (r *heldContactReleaser) releaseOne(ctx context.Context, id ids.ContactID) 
 }
 
 // reconcileWorkspace releases the next page of held contacts whose hold has
-// ended, in the workspace bound in ctx. It returns how many changed.
+// ended, in the installation's workspace. It returns how many changed.
 func (r *heldContactReleaser) reconcileWorkspace(ctx context.Context) (int, error) {
 	ctx = principal.SystemActing(ctx, confidentialityActor)
 	var held []ids.ContactID

@@ -41,7 +41,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // lockWaitBoundedPool is a second pool whose statements refuse to WAIT for a
@@ -77,7 +76,7 @@ func eraseWhileAccountIsLocked(t *testing.T, e *integration.Env, contact ids.UUI
 	t.Helper()
 	eraser := privacy.NewEraser(database.BindTo(lockWaitBoundedPool(t), ids.From[ids.WorkspaceKind](e.WS))).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 	admin := e.Admin()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	var eraseErr error
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := storekit.LockChannelIdentities(ctx, tx, []storekit.ChannelIdentityKey{
@@ -163,7 +162,7 @@ func eraseWhileAddressIsLocked(t *testing.T, e *integration.Env, contact ids.UUI
 	t.Helper()
 	eraser := privacy.NewEraser(database.BindTo(lockWaitBoundedPool(t), ids.From[ids.WorkspaceKind](e.WS))).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 	admin := e.Admin()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	var eraseErr error
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := storekit.LockSubjectKeys(ctx, tx, nil, []string{lockedEmail}); err != nil {

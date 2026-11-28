@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAllowanceWriteIsLiveAuditedAndRevisionGuarded(t *testing.T) {
@@ -44,7 +43,7 @@ func TestAllowanceWriteIsLiveAuditedAndRevisionGuarded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	live, err := NewSeatBudget(e.Pool).MonthlyTokenBudget(context.Background(), ids.From[ids.WorkspaceKind](e.WS))
+	live, err := NewSeatBudget(e.Pool).MonthlyTokenBudget(context.Background())
 	if err != nil || live != after.MonthlyTokens {
 		t.Fatalf("runtime %d, saved %d: %v", live, after.MonthlyTokens, err)
 	}

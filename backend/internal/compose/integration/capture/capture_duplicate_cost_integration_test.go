@@ -55,7 +55,7 @@ func TestASecondMailboxDeliveringKnownMailStoresNoContentAndStaysWithinItsBudget
 		t.Fatalf("connecting the second mailbox: %v", err)
 	}
 	conn.raws = raws
-	ctx, meter := database.WithStatementMeter(principal.WithWorkspaceID(context.Background(), e.WS))
+	ctx, meter := database.WithStatementMeter(context.Background())
 	if err := registry.SyncOnce(ctx, connID); err != nil {
 		t.Fatalf("second mailbox SyncOnce: %v", err)
 	}

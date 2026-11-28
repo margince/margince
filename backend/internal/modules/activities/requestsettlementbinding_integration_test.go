@@ -25,7 +25,7 @@ import (
 
 // asSettler is the settlement pass's own principal.
 func asSettler(e *loadEnv) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: RequestSettlementActor,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
@@ -34,7 +34,7 @@ func asSettler(e *loadEnv) context.Context {
 
 // asEditor is a colleague who may change activities.
 func asEditor(e *loadEnv) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
 		Permissions: principal.Permissions{

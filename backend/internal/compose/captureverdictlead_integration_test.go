@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func seedReviewLead(t *testing.T, e *integration.Env, address string) {
@@ -38,7 +37,7 @@ func TestALeadsAddressIsNotOfferedAsANewContact(t *testing.T) {
 	retireToUnsure(t, e, dispositionID)
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.StageReviewsWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
 	if n := counterpartyProposals(t, e, dispositionID); n != 0 {

@@ -36,7 +36,7 @@ import (
 func failRunAfterOnePage(t *testing.T, e *integration.SearchEnv) (*capturemod.Registry, ids.UUID) {
 	t.Helper()
 	registry, runID := startFlakyBackfill(t, e, []error{nil, connector.ErrAuthRejected})
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if _, _, _, err := registry.RunBackfillStep(wsCtx, runID); err != nil {
 		t.Fatalf("first page: %v", err)
 	}
@@ -52,7 +52,7 @@ func failRunAfterOnePage(t *testing.T, e *integration.SearchEnv) (*capturemod.Re
 func TestAStartAfterAFailedRunContinuesItFromWhereItStopped(t *testing.T) {
 	e := integration.SetupSearch(t)
 	registry, runID := failRunAfterOnePage(t, e)
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
 	rep := ids.From[ids.UserKind](e.Rep1)
 
@@ -99,7 +99,7 @@ func TestStartingOverReadsTheWindowAgainInANewRun(t *testing.T) {
 func TestAnInternalPageFaultIsRetriedInsteadOfEndingTheRun(t *testing.T) {
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{errors.New("capture: a fault of our own")})
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 
 	done, _, retryAfter, err := registry.RunBackfillStep(wsCtx, runID)
 	if err == nil || done || retryAfter <= 0 {
@@ -120,7 +120,7 @@ func TestAnInternalPageFaultIsRetriedInsteadOfEndingTheRun(t *testing.T) {
 func TestARejectedPageTokenWalksTheWindowAgain(t *testing.T) {
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{nil, connector.ErrCursorGone, nil, connector.ErrCursorGone})
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if _, _, _, err := registry.RunBackfillStep(wsCtx, runID); err != nil {
 		t.Fatalf("first page: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestARunCountsTheMessagesItCouldNotCapture(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if _, _, _, err := registry.RunBackfillStep(wsCtx, run.ID); err != nil {
 		t.Fatalf("page: %v", err)
 	}

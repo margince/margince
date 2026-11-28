@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestLaterPassCannotReplaceANewerRenewalWithOlderEvidence(t *testing.T) {
@@ -48,7 +47,7 @@ func TestLaterPassCannotReplaceANewerRenewalWithOlderEvidence(t *testing.T) {
 		AsOf:    now, ReadMessages: messages, Extractor: signalScanActor, SourceActivityID: messages[0],
 		Summary: "Send pricing", Quote: "I will send pricing.", Seat: &e.Rep1, Confidence: 0.95, Locator: "pricing-renewal", Body: "I will send pricing.",
 	}
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	dispatch := func() CommitmentOutcome {
 		t.Helper()
@@ -119,7 +118,7 @@ func TestConcurrentOlderRenewalCannotOverwriteCommittedNewerWork(t *testing.T) {
 	older := newer
 	older.AsOf = now.Add(2 * time.Hour)
 	older.AdmissionSourceID, older.RenewedAt, older.DueDate = &f.messages[1], new(now.Add(-24*time.Hour)), "2026-10-19"
-	ctx, cancel := context.WithCancel(withTranscriptReader(principal.WithWorkspaceID(context.Background(), f.e.WS), "human:"+f.e.Rep1.String(), ids.NewV7()))
+	ctx, cancel := context.WithCancel(withTranscriptReader(context.Background(), "human:"+f.e.Rep1.String(), ids.NewV7()))
 	defer cancel()
 	dispatcher := NewCommitmentDispatcher(f.e.Pool, approvals.NewService(f.e.DB()))
 	held := make(chan uint32, 1)
@@ -206,7 +205,7 @@ func TestErasingOldRenewalWaitsForTheTaskAndRechecksItsEvidence(t *testing.T) {
 		Summary: "Send new pricing", Quote: "I will send pricing.", Seat: &f.e.Rep1, PromisedTo: &f.contact,
 		Confidence: 0.95, Locator: "private-renewal", DueDate: "2026-10-23",
 	}
-	ctx, cancel := context.WithCancel(withTranscriptReader(principal.WithWorkspaceID(context.Background(), f.e.WS), "human:"+f.e.Rep1.String(), ids.NewV7()))
+	ctx, cancel := context.WithCancel(withTranscriptReader(context.Background(), "human:"+f.e.Rep1.String(), ids.NewV7()))
 	defer cancel()
 	eraseCtx, stopErase := context.WithCancel(f.e.Admin())
 	defer stopErase()

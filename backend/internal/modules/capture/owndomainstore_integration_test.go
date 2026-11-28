@@ -26,7 +26,6 @@ import (
 
 // adminOwnDomainContext binds an administrator who may change capture settings.
 func adminOwnDomainContext(ctx context.Context, ws ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman,
 		ID:   "human:" + ids.NewV7().String(),
@@ -119,7 +118,11 @@ func TestAnAdministratorsDomainIsVerifiedAndSuppressesMail(t *testing.T) {
 	// The consequence, not just the row: mail among that domain's addresses
 	// stops being stored.
 	// The sink runs as the connector, never as the human who configured it.
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	sink := capture.NewSink(db)
 	if _, err := sink.Upsert(mailSinkContext(context.Background(), ws),
 		mailRecord("admin-dom-1", "boss@acme.com",
@@ -169,7 +172,11 @@ func TestRemovingADomainLetsItsMailBeCapturedAgain(t *testing.T) {
 		t.Fatalf("Remove: %v", err)
 	}
 
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	sink := capture.NewSink(db)
 	if _, err := sink.Upsert(mailSinkContext(context.Background(), ws),
 		mailRecord("removed-dom-1", "boss@acme.com",
@@ -244,7 +251,11 @@ func TestTheListShowsOnlyCandidatesCaptureStillKeeps(t *testing.T) {
 		t.Fatalf("registry = %v, want %v", listed, want)
 	}
 
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	sink := capture.NewSink(db)
 	upsert := func(domain string) error {
 		_, err := sink.Upsert(mailSinkContext(context.Background(), ws),
@@ -315,9 +326,8 @@ func TestAValueThatIsNotADomainIsRefused(t *testing.T) {
 // control, so it is asserted against a rep-shaped grant rather than a principal
 // holding nothing at all.
 func TestARepReadsTheDomainsAndCannotChangeThem(t *testing.T) {
-	ctx, db := ownDomainWorkspace(t)
-	ws, _ := principal.WorkspaceID(ctx)
-	rep := principal.WithActor(principal.WithWorkspaceID(context.Background(), ws),
+	_, db := ownDomainWorkspace(t)
+	rep := principal.WithActor(context.Background(),
 		principal.Principal{
 			Type: principal.PrincipalHuman,
 			ID:   "human:" + ids.NewV7().String(),

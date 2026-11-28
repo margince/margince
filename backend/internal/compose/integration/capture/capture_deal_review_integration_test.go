@@ -544,7 +544,7 @@ func TestARelinkAndTheDealRuleRacingLeaveOneDeal(t *testing.T) {
 	waitForLockWaiters(t, e, pid, 1)
 	ruled := make(chan error, 1)
 	go func() {
-		connectorCtx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		connectorCtx := principal.WithActor(context.Background(), principal.Principal{
 			Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: e.Rep1, OnBehalfOf: e.Rep1,
 			SeatType: principal.SeatFull, TeamIDs: []ids.UUID{e.Team1},
 			Permissions: principal.Permissions{

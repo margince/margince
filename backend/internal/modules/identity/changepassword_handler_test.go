@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // changeRequest posts a body to the handler as an authenticated human, so the
@@ -32,7 +31,7 @@ func changeRequest(t *testing.T, h Handlers, body string, bind bool) *httptest.R
 			WorkspaceID: ids.WorkspaceID{UUID: ids.NewV7()},
 		}
 		r = r.WithContext(withIdentity(
-			principal.WithWorkspaceID(r.Context(), id.WorkspaceID.UUID), id,
+			r.Context(), id,
 		))
 	}
 	h.ChangePassword(rec, r)
@@ -108,7 +107,7 @@ func TestChangePasswordAnswersAreMachineReadable(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/v1/auth/change-password",
 		strings.NewReader(`{"current_password":"x","new_password":"a fine new password"}`))
 	r = r.WithContext(withIdentity(
-		principal.WithWorkspaceID(r.Context(), ids.NewV7()), Identity{UserID: key},
+		r.Context(), Identity{UserID: key},
 	))
 	h.ChangePassword(rec, r)
 	if rec.Code != http.StatusTooManyRequests {

@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -39,7 +38,7 @@ func seedInteraction(t *testing.T, e *Env) ids.ActivityID {
 // stampParties runs the real capture write inside a workspace transaction.
 func stampParties(t *testing.T, e *Env, activity ids.ActivityID, trusted bool, parties ...connector.MessageParticipant) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return capture.StampFurtherParticipants(ctx, tx, activity, "email", "", trusted, parties)
 	}); err != nil {
@@ -166,7 +165,7 @@ func TestANonInteractionKindStampsNoParties(t *testing.T) {
 	note := ids.From[ids.ActivityKind](SeedIDRow(t, OwnerConn(t), `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'note', 'thinking', '2026-08-01T09:00:00Z', 'manual', 'human:x')`))
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return capture.StampFurtherParticipants(ctx, tx, note, "note", "", true,
 			[]connector.MessageParticipant{{Email: "sam@target.example", Role: connector.ParticipantRoleCC}})

@@ -199,7 +199,7 @@ func TestBackfillCountsOnlyTheCounterpartiesItsOwnPagesCreated(t *testing.T) {
 	// window: another gmail connection's captures, and a human's own typing.
 	seedForeignCounterparties(t, e)
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	done, _, retryAfter, err := registry.RunBackfillStep(wsCtx, run.ID)
 	if err != nil || !done || retryAfter != 0 {
 		t.Fatalf("the single page must finish the run: done=%v retryAfter=%v err=%v", done, retryAfter, err)
@@ -273,7 +273,7 @@ func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
 		midPageContacts, midPageCompanies = status.Contacts, status.Companies
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if done, _, _, err := registry.RunBackfillStep(wsCtx, run.ID); err != nil || !done {
 		t.Fatalf("the single page must finish the run: done=%v err=%v", done, err)
 	}
@@ -377,7 +377,7 @@ func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
 	// send and its reply — one send alone defers to the verdict and creates
 	// nobody.
 	prov.failAfterMessages = 4
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if _, _, retryAfter, err := registry.RunBackfillStep(wsCtx, run.ID); err == nil || retryAfter <= 0 {
 		t.Fatalf("the page must fail transiently and ask for a retry: retryAfter=%v err=%v", retryAfter, err)
 	}
@@ -449,7 +449,7 @@ func TestBackfillYieldsSurviveACancelUnderTheRunningPage(t *testing.T) {
 		}
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if _, _, _, err := registry.RunBackfillStep(wsCtx, run.ID); err != nil {
 		t.Fatalf("the cancelled page's step: %v", err)
 	}
@@ -500,7 +500,7 @@ func TestBackfillYieldsAreCreditedOnceAtTheRetryCeiling(t *testing.T) {
 	// Sit the run ON the ceiling, so this page's fault is the one that ends it.
 	seedBackfillFailuresAtCeiling(t, e, run.ID)
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	done, _, retryAfter, err := registry.RunBackfillStep(wsCtx, run.ID)
 	if err == nil {
 		t.Fatal("the page must surface its fault")
@@ -569,7 +569,7 @@ func TestRetriedCreationCreditsCountOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if done, _, _, stepErr := registry.RunBackfillStep(wsCtx, run.ID); stepErr != nil || !done {
 		t.Fatalf("the page must finish the run: done=%v err=%v", done, stepErr)
 	}
@@ -671,7 +671,7 @@ func TestACompletedImportReconcilesItsCreationLedger(t *testing.T) {
 		t.Fatalf("StartBackfill: %v", err)
 	}
 	run = started
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if _, _, _, stepErr := registry.RunBackfillStep(wsCtx, run.ID); stepErr != nil {
 		t.Fatalf("RunBackfillStep: %v", stepErr)
 	}
@@ -782,7 +782,7 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if _, _, _, stepErr := registry.RunBackfillStep(wsCtx, run.ID); stepErr != nil {
 		t.Fatalf("RunBackfillStep: %v", stepErr)
 	}
@@ -834,7 +834,7 @@ func TestACountTheLedgerCannotSeeIsKept(t *testing.T) {
 		t.Fatalf("StartBackfill: %v", err)
 	}
 	run = started
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if _, _, _, stepErr := registry.RunBackfillStep(wsCtx, run.ID); stepErr != nil {
 		t.Fatalf("RunBackfillStep: %v", stepErr)
 	}

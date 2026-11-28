@@ -54,12 +54,14 @@ func runAuthzDisagreement(ctx context.Context, pool *pgxpool.Pool, args []string
 	if err != nil {
 		return fmt.Errorf("authz-disagreement: --workspace is not an id: %w", err)
 	}
+	if err := requireInstallationWorkspace(ctx, pool, "authz-disagreement", wsID); err != nil {
+		return err
+	}
 
 	// The system principal, because this is the installation asking about its
 	// own rollout rather than a seat asking about a contact. Nothing it returns
 	// names a subject: no address, no consent state, only how two rules have
 	// compared.
-	ctx = principal.WithWorkspaceID(ctx, wsID)
 	ctx = principal.SystemActing(ctx, "system:authz_disagreement")
 
 	store := consent.NewStore(database.ForInstallation(pool))
@@ -158,4 +160,18 @@ func runDatabaseSubcommand(
 		return false, nil
 	}
 	return true, command(ctx, pool, resolveVault, settings, args[1:], stdout)
+}
+
+// requireInstallationWorkspace refuses a --workspace id that is not the
+// installation's company. A command that names the workspace it acts on stays a
+// confirmation, and no store takes the id: each finds the company itself.
+func requireInstallationWorkspace(ctx context.Context, pool *pgxpool.Pool, command string, named ids.UUID) error {
+	company, err := database.InstallationWorkspace(ctx, pool)
+	if err != nil {
+		return fmt.Errorf("%s: resolving this installation's workspace: %w", command, err)
+	}
+	if company != named {
+		return fmt.Errorf("%s: --workspace %s is not this installation's workspace", command, named)
+	}
+	return nil
 }

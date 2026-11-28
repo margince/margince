@@ -125,7 +125,11 @@ func TestAnEvidenceApplyClearingANameWaitsOnTheNameLock(t *testing.T) {
 			}
 			// Overwrite, so the clear actually reaches the column: the fill
 			// arm has nothing to fill and would write no row at all.
-			_, err = applyEvidenceFieldsWithOverwrite(ctx, tx, workspaceID(ctx), companyID, "site_read", by,
+			wsID, err := workspaceID(ctx, tx)
+			if err != nil {
+				return err
+			}
+			_, err = applyEvidenceFieldsWithOverwrite(ctx, tx, wsID, companyID, "site_read", by,
 				[]ColdStartFieldInput{{
 					Field: fieldLegalName, Value: "",
 					EvidenceSnippet: "the imprint no longer states a registered name",
@@ -186,7 +190,11 @@ func TestAnEvidenceApplyWithoutANameDoesNotWaitOnTheNameLock(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			_, err = applyEvidenceFields(ctx, tx, workspaceID(ctx), companyID, by,
+			wsID, err := workspaceID(ctx, tx)
+			if err != nil {
+				return err
+			}
+			_, err = applyEvidenceFields(ctx, tx, wsID, companyID, by,
 				[]ColdStartFieldInput{{
 					Field: "industry", Value: "logistics",
 					EvidenceSnippet: "Spedition und Logistik seit 1974",

@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
@@ -34,15 +33,6 @@ func leadMailDataTask(pool *pgxpool.Pool) datatask.Task {
 			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: capture.EstimateLeadFiling,
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-				// The capturing seat's authority is resolved per workspace,
-				// which the executor's system context does not carry.
-				if _, bound := principal.WorkspaceID(ctx); !bound {
-					ws, err := db.Workspace(ctx)
-					if err != nil {
-						return datatask.BatchOut{}, err
-					}
-					ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-				}
 				return repair.BatchTx(ctx, tx, in)
 			},
 		}},

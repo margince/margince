@@ -23,7 +23,7 @@ import (
 // ScopeKindManagedTeams (themselves plus their team), so the query names no
 // scope.
 func (e *forecastEnv) teamLensManagerCtx(user ids.UUID, teams []ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:team-lead", UserID: user, TeamIDs: teams,
 		Permissions: principal.Permissions{

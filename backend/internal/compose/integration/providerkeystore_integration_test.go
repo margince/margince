@@ -606,7 +606,7 @@ func searchSealedBlobCount(t *testing.T, e *SearchEnv) int {
 // one grant this surface gates on — the credential a model calls with is not
 // something a rep may read, rotate or delete.
 func (e *SearchEnv) repNoRoutingCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
@@ -658,7 +658,7 @@ func TestAReadOnlySeatCannotSealAKey(t *testing.T) {
 // routingReaderCtx holds ai_routing READ and nothing else: it may see which
 // vendors are configured, and change none of them.
 func (e *SearchEnv) routingReaderCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),

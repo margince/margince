@@ -83,12 +83,7 @@ func (s *SlackReceiver) Receive(ctx context.Context, d chatlinks.Delivery) (crmc
 		s.release(ctx, key)
 		return none, err
 	}
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		s.release(ctx, key)
-		return none, chatlinks.ErrEventsUnavailable
-	}
-	if err := s.Pull(ctx, workspace, bot.ConnectionID); err != nil {
+	if err := s.Pull(ctx, bot.ConnectionID); err != nil {
 		s.release(ctx, key)
 		return none, err
 	}

@@ -176,7 +176,7 @@ func TestTheOwnSentMailRepairReplaysWithoutASecondClaim(t *testing.T) {
 	runOwnSentMailRepair(t, e)
 	runOwnSentMailRepair(t, e)
 
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), ownSentMailRepairActor)
+	ctx := principal.SystemActing(context.Background(), ownSentMailRepairActor)
 	row := capture.StoredOwnSentMail{Activity: ids.From[ids.ActivityKind](id), Seat: e.AdminUser, Sender: repairFormerSelf}
 	raw := repairMessage(repairFormerSelf, repairBuyer, "replayed@previous-employer.example", false)
 	var verdict string

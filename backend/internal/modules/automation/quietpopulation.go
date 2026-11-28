@@ -129,7 +129,7 @@ func (s *TimeScanner) scanActivityInstance(ctx context.Context, h workflow.Handl
 	if !ok {
 		return errors.New("automation: quiet population scan is not configured")
 	}
-	reader, err := ownerContext(ctx, s.engine.resolver, ws, inst.owner)
+	reader, err := ownerContext(ctx, s.engine.resolver, inst.owner)
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return nil
 	}

@@ -19,7 +19,7 @@ import (
 
 func TestOnlyAHumanOrAnAgentStoredActorIsActedAs(t *testing.T) {
 	t.Parallel()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	for _, kind := range []principal.PrincipalType{principal.PrincipalSystem, principal.PrincipalConnector, ""} {
 		stored := migration.StoredActor{Type: kind, ID: "system:import-worker", UserID: ids.NewV7()}
 		_, err := storedActor{}.rebuild(ctx, stored)
@@ -29,18 +29,9 @@ func TestOnlyAHumanOrAnAgentStoredActorIsActedAs(t *testing.T) {
 	}
 }
 
-func TestAStoredActorIsNotRebuiltOutsideAWorkspace(t *testing.T) {
-	t.Parallel()
-	stored := migration.StoredActor{Type: principal.PrincipalHuman, UserID: ids.NewV7()}
-	actor, err := storedActor{}.rebuild(context.Background(), stored)
-	if err == nil || actor.Type != "" {
-		t.Fatalf("rebuilding with no workspace bound answered %+v, %v; want no principal and an error", actor, err)
-	}
-}
-
 func TestAnImportRunActsOnlyWithItsActorAndItsCorrelation(t *testing.T) {
 	t.Parallel()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	stored := migration.StoredActor{Type: principal.PrincipalHuman, UserID: ids.NewV7()}
 	correlation := ids.NewV7()
 

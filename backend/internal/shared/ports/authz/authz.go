@@ -35,12 +35,12 @@ type RBAC struct {
 // may cache above it as an optimization, never inside it.
 type Resolver interface {
 	// EffectiveRBAC resolves the human's current role grants + teams for
-	// (workspace, human). A missing/archived/suspended user resolves to
+	// the human. A missing/archived/suspended user resolves to
 	// apperrors.ErrNotFound — never to an empty-but-valid authority.
-	EffectiveRBAC(ctx context.Context, workspaceID, humanID ids.UUID) (RBAC, error)
+	EffectiveRBAC(ctx context.Context, humanID ids.UUID) (RBAC, error)
 	// SeatType returns the human's current seat (read | full) — the seat
 	// ceiling (A62/ADR-0047).
-	SeatType(ctx context.Context, workspaceID, humanID ids.UUID) (principal.SeatType, error)
+	SeatType(ctx context.Context, humanID ids.UUID) (principal.SeatType, error)
 
 	// AdmittedAuthority answers everything an ADMISSION needs about one agent
 	// call, in a single snapshot: that the passport is still live, and the
@@ -71,5 +71,5 @@ type Resolver interface {
 	// A revoked or expired passport, one no longer granted by this human, or a
 	// human who is gone resolves to apperrors.ErrNotFound — never to an
 	// empty-but-valid authority.
-	AdmittedAuthority(ctx context.Context, workspaceID, humanID, passportID ids.UUID) (RBAC, principal.SeatType, error)
+	AdmittedAuthority(ctx context.Context, humanID, passportID ids.UUID) (RBAC, principal.SeatType, error)
 }

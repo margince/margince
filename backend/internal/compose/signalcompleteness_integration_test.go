@@ -85,7 +85,7 @@ func (o *owedEnv) customerSays(t *testing.T, key, inReplyTo, body, encoding stri
 
 func (o *owedEnv) runEventPass(t *testing.T, brain *askedBrain) {
 	t.Helper()
-	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), o.e.WS), signalScanActor)
+	pass := principal.SystemActing(context.Background(), signalScanActor)
 	later := func() time.Time { return o.now.Add(72 * time.Hour) }
 	if _, err := NewSignalExtractor(o.e.Pool, brain, later, slog.Default()).
 		RunWorkspace(pass, ids.From[ids.WorkspaceKind](o.e.WS)); err != nil {

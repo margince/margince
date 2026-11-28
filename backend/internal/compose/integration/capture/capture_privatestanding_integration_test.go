@@ -58,7 +58,7 @@ func (v kindVerdict) Complete(_ context.Context, req model.Request) (model.Respo
 func answerEverySenderAs(t *testing.T, e *integration.SearchEnv, kind string) {
 	t.Helper()
 	engine := compose.NewCounterpartyVerdictEngine(e.Pool, kindVerdict{kind: kind}, compose.CaptureConfig{}, quietLog())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 }
@@ -195,7 +195,7 @@ func connectFor(t *testing.T, env captureEnv, user ids.UUID, provider, label, pa
 	if err != nil {
 		t.Fatalf("connecting %s: %v", label, err)
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), env.e.WS)
+	wsCtx := context.Background()
 	return func(t *testing.T, sent map[string]bool, raws ...[]byte) {
 		t.Helper()
 		conn.raws, conn.sent = raws, sent

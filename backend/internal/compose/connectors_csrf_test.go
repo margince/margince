@@ -131,10 +131,9 @@ func TestCallbackAcceptsAConsentStartedBeforeTheCookieWasNamespaced(t *testing.T
 	h := graphWiredHandlers()
 	h.oauth = refusingOAuth{}
 	state := h.signer.sign(connectState{
-		Workspace: ids.MustParse("11111111-1111-1111-1111-111111111111"),
-		User:      ids.MustParse("22222222-2222-2222-2222-222222222222"),
-		Provider:  providerGmail,
-		Nonce:     "legacy-nonce",
+		User:     ids.MustParse("22222222-2222-2222-2222-222222222222"),
+		Provider: providerGmail,
+		Nonce:    "legacy-nonce",
 	}, time.Now().Add(connectStateTTL))
 
 	code := "the-code"

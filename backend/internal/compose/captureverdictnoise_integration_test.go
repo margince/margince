@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -47,7 +46,7 @@ func TestANoiseVerdictHidesEveryMessageThatSenderWrote(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -60,7 +59,7 @@ func TestANoiseVerdictHidesEveryMessageThatSenderWrote(t *testing.T) {
 	for _, id := range []ids.UUID{first, second, third} {
 		backdateArchive(t, e, id)
 	}
-	if err := engine.RedactNoiseWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), capture.NoiseUndoWindow, 0); err != nil {
+	if err := engine.RedactNoiseWorkspace(context.Background(), capture.NoiseUndoWindow, 0); err != nil {
 		t.Fatalf("redaction sweep: %v", err)
 	}
 	if n := countIn(t, e, `
@@ -93,10 +92,10 @@ func TestAForgedSenderCannotReachTheWorkspacesOwnCorrespondence(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
-	if err := engine.HideNoiseStragglersWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if err := engine.HideNoiseStragglersWorkspace(context.Background()); err != nil {
 		t.Fatalf("straggler sweep: %v", err)
 	}
 
@@ -111,7 +110,7 @@ func TestAForgedSenderCannotReachTheWorkspacesOwnCorrespondence(t *testing.T) {
 	// assertions below would hold whatever the scope rule did.
 	backdateArchive(t, e, forged)
 	backdateArchive(t, e, ownSent)
-	if err := engine.RedactNoiseWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), capture.NoiseUndoWindow, 0); err != nil {
+	if err := engine.RedactNoiseWorkspace(context.Background(), capture.NoiseUndoWindow, 0); err != nil {
 		t.Fatalf("redaction sweep: %v", err)
 	}
 	if n := countIn(t, e, `SELECT count(*) FROM activity WHERE id = $1 AND body IS NOT NULL`, forged); n != 1 {
@@ -154,7 +153,7 @@ func TestRedactionCollectsMailWhoseOriginalOutlivedItsText(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -165,7 +164,7 @@ func TestRedactionCollectsMailWhoseOriginalOutlivedItsText(t *testing.T) {
 	}
 
 	backdateArchive(t, e, activityID)
-	if err := engine.RedactNoiseWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), capture.NoiseUndoWindow, 0); err != nil {
+	if err := engine.RedactNoiseWorkspace(context.Background(), capture.NoiseUndoWindow, 0); err != nil {
 		t.Fatalf("redaction sweep: %v", err)
 	}
 	if n := rawCaptureRows(t, e, activityID); n != 0 {
@@ -191,7 +190,7 @@ func TestANoiseVerdictWithoutBulkCorroborationHidesButNeverDestroys(t *testing.T
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -204,7 +203,7 @@ func TestANoiseVerdictWithoutBulkCorroborationHidesButNeverDestroys(t *testing.T
 	// turns an uncorroborated verdict into permission to destroy.
 	backdateArchive(t, e, activityID)
 	for range 2 {
-		if err := engine.RedactNoiseWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), capture.NoiseUndoWindow, 0); err != nil {
+		if err := engine.RedactNoiseWorkspace(context.Background(), capture.NoiseUndoWindow, 0); err != nil {
 			t.Fatalf("redaction sweep: %v", err)
 		}
 	}
@@ -242,7 +241,7 @@ func TestANoiseVerdictCannotReachMailSentLongAfterIt(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -250,7 +249,7 @@ func TestANoiseVerdictCannotReachMailSentLongAfterIt(t *testing.T) {
 	// about anything — and then the real owner writes.
 	backdateResolution(t, e, dispositionID, 30*24*time.Hour)
 	genuine := seedCapturedMail(t, e, "cfo@bigcorp.example", "re: our contract renewal")
-	if err := engine.HideNoiseStragglersWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if err := engine.HideNoiseStragglersWorkspace(context.Background()); err != nil {
 		t.Fatalf("straggler sweep: %v", err)
 	}
 
@@ -269,7 +268,7 @@ func TestANoiseVerdictCannotReachMailSentLongAfterIt(t *testing.T) {
 	stampOccurredAt(t, e, dated, 90*24*time.Hour)
 	sync := seedPendingDisposition(t, e, "cfo@bigcorp.example", "bigcorp.example", dated)
 	resolveAsNoise(t, e, sync)
-	if err := engine.HideNoiseStragglersWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if err := engine.HideNoiseStragglersWorkspace(context.Background()); err != nil {
 		t.Fatalf("straggler sweep: %v", err)
 	}
 	if n := countIn(t, e, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NOT NULL`, dated); n != 1 {
@@ -353,7 +352,7 @@ func TestABlastIsHiddenThoughItCopiesAContact(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", blast)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -376,7 +375,7 @@ func TestTheSendersOwnRecordStillCallsTheSweepOff(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", mail)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -468,7 +467,7 @@ func TestAnOwnerDecidingDuringTheModelCallIsNotOverruled(t *testing.T) {
 		seedSenderOverride(t, e, e.Rep1, "dana.olsen@partner.example", capture.OverrideBusiness)
 	}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -519,7 +518,7 @@ func TestAnOwnerDecidingDuringTheModelCallIsNotOverruled(t *testing.T) {
 // than when a machine is slow.
 func TestASenderDecisionAndItsReaderSerializeOnOneKey(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 
 	held := make(chan struct{})
 	release := make(chan struct{})

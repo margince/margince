@@ -42,7 +42,7 @@ func (w *widestStatement) QueryRow(ctx context.Context, sql string, args ...any)
 // note. It answers the widest statement that took, and how many readers there were.
 func (e *partyEnv) parties(t *testing.T) (facts []string, widestArgs, readerCount int) {
 	t.Helper()
-	ws := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), chatLinksPrincipal)
+	ws := principal.WithActor(context.Background(), chatLinksPrincipal)
 	widest := &widestStatement{}
 	err := database.WithTx(ws, e.pool, func(tx pgx.Tx) error {
 		readers, err := noteReaders(ws, tx, chatlinks.Link{DealID: &e.deal, ChannelSlug: "acme"})

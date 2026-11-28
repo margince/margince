@@ -26,7 +26,7 @@ import (
 func largeBodyHandler(t *testing.T, registry *Registry) (*httpMCPHandler, *httptest.Server) {
 	t.Helper()
 	h, ok := NewHTTPHandler(registry, func(r *http.Request) (context.Context, error) {
-		return principal.WithActor(principal.WithWorkspaceID(r.Context(), ids.NewV7()), principal.Principal{
+		return principal.WithActor(r.Context(), principal.Principal{
 			Type: principal.PrincipalAgent, ID: "agent:large", OnBehalfOf: ids.NewV7(),
 			Scopes: principal.NewScopeSet(principal.ScopeRead),
 		}), nil

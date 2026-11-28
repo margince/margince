@@ -81,7 +81,7 @@ func (p *closesUnderneath) AdvanceDeal(_ context.Context, in datasource.AdvanceD
 // agentInvoking is a full-seat agent principal with the scope a deal move
 // needs — the caller the gate exists to bound.
 func agentInvoking() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:pin", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeWrite),

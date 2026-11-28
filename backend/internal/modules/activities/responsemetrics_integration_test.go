@@ -28,7 +28,7 @@ import (
 // see. Same grants and the same row scope — what differs is only who it is,
 // which is what the audience arm answers on.
 func asOther(e *loadEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.other.String(), UserID: e.other,

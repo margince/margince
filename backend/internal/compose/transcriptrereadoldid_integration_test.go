@@ -30,7 +30,7 @@ func (e *transcriptEnv) readAsBeforeTheSplit(t *testing.T, brain completer) {
 	if err != nil {
 		t.Fatalf("starting the reading: %v", err)
 	}
-	old := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	old := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalSystem, ID: transcriptProposalActor, UserID: e.Rep1, OnBehalfOf: e.Rep1,
 	})
 	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, func() time.Time { return clocktest.Now(t) }, slog.New(slog.DiscardHandler))

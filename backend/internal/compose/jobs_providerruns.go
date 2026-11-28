@@ -99,11 +99,11 @@ type providerRunSubmitWorker struct {
 func (w *providerRunSubmitWorker) Work(ctx context.Context, job *river.Job[ProviderRunSubmitArgs]) error {
 	wsCtx := ctx
 	wsCtx = providerJobActor(wsCtx)
-	ws, err := boundWorkspace(wsCtx)
+	company, err := database.ProvenWorkspace(wsCtx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	store, err := providerRunStore(w.pool, w.cfg, ws)
+	store, err := providerRunStore(w.pool, w.cfg, company.UUID)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -153,7 +153,7 @@ func (w *providerRunPollSweepWorker) Work(ctx context.Context, _ *river.Job[Prov
 }
 
 func (w *providerRunPollSweepWorker) pollWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := providerJobActor(principal.WithWorkspaceID(ctx, workspace))
+	wsCtx := providerJobActor(ctx)
 	store, err := providerRunStore(w.pool, w.cfg, workspace)
 	if err != nil {
 		return err

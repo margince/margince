@@ -21,7 +21,7 @@ func TestCompletedForwardScanRetainsItsSequenceAcrossQuietPolls(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `SELECT connection_id FROM chat_link WHERE id=$1`, e.link).Scan(&connection); err != nil {
 		t.Fatal(err)
 	}
-	ctx := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), chatLinksPrincipal), ids.NewV7())
+	ctx := principal.WithCorrelationID(principal.WithActor(context.Background(), chatLinksPrincipal), ids.NewV7())
 	links, err := e.store.PullLinks(ctx, connection)
 	if err != nil || len(links) != 1 {
 		t.Fatalf("links: %+v %v", links, err)

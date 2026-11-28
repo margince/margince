@@ -18,7 +18,7 @@ import (
 // asMember is the default member seat. It may create and update relationships
 // but holds no relationship delete grant, so only the deal write can admit a removal.
 func (e *edgeAnchorEnv) asMember(user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
@@ -137,7 +137,7 @@ func TestArchiveAnswersAlikeForAnEdgeAndAMissingIdWithoutReadGrant(t *testing.T)
 	e := setupEdgeAnchor(t)
 	edge := e.seedEdgeAsMe(e.as(e.me), t)
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.me.String(), UserID: e.me,
 		Permissions: principal.Permissions{

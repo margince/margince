@@ -59,7 +59,7 @@ func (s *sharedMailboxSuite) bindAnnaToChat(t *testing.T) {
 // does, on the account binding given, and answers its activity id.
 func (s *sharedMailboxSuite) fileChat(t *testing.T, binding connector.ChatBinding, messageID, body string) ids.UUID {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), s.e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:telegram",

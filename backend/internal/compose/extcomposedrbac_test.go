@@ -52,13 +52,13 @@ type objectSeat struct {
 	objects map[string]principal.ObjectGrant
 }
 
-func (s objectSeat) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (s objectSeat) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: principal.Permissions{
 		RoleKeys: []string{"test"}, Objects: s.objects,
 	}}, nil
 }
 
-func (objectSeat) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (objectSeat) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -124,7 +124,7 @@ func registryForComposedVerb(t *testing.T, verb extension.Verb, seat objectSeat)
 // key. A human's grants are read off the context — Gate.Admit returns early for
 // a non-agent — so they are stamped here, which is how the real one arrives.
 func readOnlySeatCtx(objects map[string]principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:readonly", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{RoleKeys: []string{"readonly"}, Objects: objects},
@@ -135,7 +135,7 @@ func readOnlySeatCtx(objects map[string]principal.ObjectGrant) context.Context {
 // scope, so anything refused below refused on the OBJECT — the store verb
 // declares write, and a scope refusal would prove nothing about the grant.
 func agentSeatCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:readonly", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
@@ -219,6 +219,6 @@ func TestAReadOnlySeatCannotReplaceTheComposedSigningKey(t *testing.T) {
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (s objectSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, s.EffectiveRBAC, s.SeatType)
+func (s objectSeat) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, s.EffectiveRBAC, s.SeatType)
 }

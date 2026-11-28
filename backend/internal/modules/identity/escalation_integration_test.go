@@ -121,7 +121,7 @@ func TestADelegatedMemberAdministratorCannotReachAnAdmin(t *testing.T) {
 // read the context now, so a caller built that way holds nothing and every case
 // here would pass by being refused for the wrong reason.
 func escalationCtx(id Identity) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), id.WorkspaceID.UUID)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + id.UserID.String(),
 		UserID: id.UserID.UUID, SeatType: principal.SeatType(id.SeatType),

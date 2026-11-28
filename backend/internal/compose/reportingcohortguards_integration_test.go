@@ -249,7 +249,7 @@ func TestRoutingAndCaptureRecordTheOwnerAndOriginALeadArrivedWith(t *testing.T) 
 		t.Fatalf("routing the lead = %+v, %v, want it assigned", decision, err)
 	}
 	// A connector captures for the seat that connected it, which owns its leads.
-	syncing := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7()), principal.Principal{
+	syncing := principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()), principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:test", UserID: e.Rep1, OnBehalfOf: e.Rep1,
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"lead": {Create: true, Read: true}}, RowScope: principal.RowScopeAll},
 	})

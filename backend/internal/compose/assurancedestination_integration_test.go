@@ -22,7 +22,7 @@ import (
 
 // answeringRepCtx is a rep who may answer findings on the deals they own.
 func (e *forecastEnv) answeringRepCtx(user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{

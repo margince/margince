@@ -62,7 +62,7 @@ func TestOwnMessageDoneStateRefusesWhomTheWriterRefuses(t *testing.T) {
 	contact := e.customerAt(t, "customer")
 	sent, _ := e.sentTo(t, contact, "", 2*24*time.Hour)
 	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, sent)
-	system := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws),
+	system := principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 	for name, ctx := range map[string]context.Context{"a colleague outside the audience": e.asSeat(e.other), "the system": system} {
 		if got := ownMessageDoneOf(ctx, t, e, sent); got.CanMark {

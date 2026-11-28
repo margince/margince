@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The scrape an operator alerts on. A role whose bound cannot reach its
@@ -19,7 +20,7 @@ func TestAnUnreachableBoundScrapesAsUnanswerable(t *testing.T) {
 	var out strings.Builder
 	// No Redis: the fail-closed composition, which is what an unreachable
 	// store leaves the meter in.
-	Server{volumeMeter: agentvolume.New(nil, agentvolume.Limits{}, time.Minute)}.writeAgentVolumeSection(&out)
+	Server{volumeMeter: agentvolume.New(nil, agentvolume.Limits{}, time.Minute).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))}.writeAgentVolumeSection(&out)
 
 	scrape := out.String()
 	if !strings.Contains(scrape, "margince_agent_volume_bound 1") {

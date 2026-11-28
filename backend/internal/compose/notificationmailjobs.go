@@ -222,7 +222,7 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 		return nil
 	}
 
-	seatCtx, live, scopeErr := seatContext(ctx, identity.NewService(w.pool), noticeWorkspace(ctx), attempt.Recipient.UUID)
+	seatCtx, live, scopeErr := seatContext(ctx, identity.NewService(w.pool), attempt.Recipient.UUID)
 	if scopeErr != nil {
 		w.recordMailFailure(ctx, attempt.Notice.ID, "recipient authority could not be read")
 		return nil
@@ -422,14 +422,6 @@ func writeNoticeSection(body *emailview.Content, notice notices.Notice, facts ap
 	if facts.Deadline != "" {
 		body.Note(mailcopy.OneLine(facts.Deadline), emailview.Info)
 	}
-}
-
-func noticeWorkspace(ctx context.Context) ids.UUID {
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ids.Nil
-	}
-	return workspace
 }
 
 func approvalMailAction(attempt notices.EmailAttempt, base string, words mailcopy.Copy) emailview.Content {

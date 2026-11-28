@@ -16,8 +16,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -43,7 +41,7 @@ func jobOf(unit, job string) extension.JobDeclaration {
 // to a pool it never reaches: every case below is refused before the queue, and
 // a pool that answered would be testing the queue rather than the bound.
 func wiredRuntime(unit string) *callRuntime {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return &callRuntime{
 		unit:    unit,
 		live:    true,

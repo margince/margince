@@ -10,13 +10,12 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func runPendingPass(ctx context.Context, pool *pgxpool.Pool, pass func(context.Context) (bool, error)) error {
 	more := false
 	err := runInstallationPass(ctx, pool, func(ctx context.Context, workspace ids.UUID) error {
-		next, err := pass(principal.WithWorkspaceID(ctx, workspace))
+		next, err := pass(ctx)
 		more = more || next
 		return err
 	})

@@ -157,7 +157,7 @@ func TestPacingNeverCarriesOverFromOneCallerToTheNext(t *testing.T) {
 // With no policy read yet and none to read, the meter's own policy names no
 // unpaced role, so every agent keeps today's pacing.
 func TestAMeterWithNoPolicySourcePacesEveryAgent(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 	if !meter.Paced(agentOf(inWorkspace(t), "admin")) {
 		t.Error("an Admin's agent went unpaced on a meter that never read the allowances")
 	}

@@ -171,7 +171,7 @@ func mailedCommitmentReply(t *testing.T, message, promiser ids.UUID, confidence 
 // runSignalPass runs the hourly pass the way the worker does.
 func runSignalPass(t *testing.T, e *integration.Env, reply string) error {
 	t.Helper()
-	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), signalScanActor)
+	pass := principal.SystemActing(context.Background(), signalScanActor)
 	_, err := NewSignalExtractor(e.Pool, cannedBrain{reply: reply}, time.Now, slog.Default()).
 		RunWorkspace(pass, ids.From[ids.WorkspaceKind](e.WS))
 	return err
@@ -207,7 +207,7 @@ func TestTheLegacyConversionSettlesEverySignalItIsOwed(t *testing.T) {
 		}
 		return reply
 	}}
-	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), signalScanActor)
+	pass := principal.SystemActing(context.Background(), signalScanActor)
 	if _, err := NewSignalExtractor(e.Pool, brain, func() time.Time { return clocktest.Now(t) }, slog.Default()).RunWorkspace(pass, ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 		t.Fatalf("the pass failed: %v", err)
 	}
@@ -282,7 +282,7 @@ func TestASignalTheConversionCannotReadCostsOnlyItself(t *testing.T) {
 	older := seedOwedCommitmentSignal(t, e, "thread-older", -72*time.Hour)
 	newer := seedOwedCommitmentSignal(t, e, "thread-newer", -71*time.Hour)
 
-	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), signalScanActor)
+	pass := principal.SystemActing(context.Background(), signalScanActor)
 	brain := brainFailingOn{marker: "thread-older", reply: `{"events":[]}`}
 	_, err := NewSignalExtractor(e.Pool, brain, time.Now, slog.Default()).
 		RunWorkspace(pass, ids.From[ids.WorkspaceKind](e.WS))

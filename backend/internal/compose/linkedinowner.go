@@ -88,7 +88,7 @@ func ghostOwners(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {
 // denial, never empty permission. The seat rides along, so a read seat's
 // standing write shares confirm nothing on their behalf.
 func asGhostOwner(ctx context.Context, resolver authz.Resolver, workspace, owner ids.UUID) (context.Context, error) {
-	member, err := authz.MemberPrincipal(ctx, resolver, workspace, owner)
+	member, err := authz.MemberPrincipal(ctx, resolver, owner)
 	if err != nil {
 		return nil, err
 	}

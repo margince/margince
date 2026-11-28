@@ -90,7 +90,7 @@ func checkOwnerPermission(ctx context.Context, resolver authz.Resolver, ev workf
 	// it writes — so there is no read-only branch to spare here. The set is
 	// named rather than spelled out: an enumeration copied into a comment is
 	// a second catalog, and this one had gone stale by an action already.
-	rbac, seat, err := resolver.AdmittedAuthority(ctx, ev.WorkspaceID, ev.OwnerID, ids.Nil)
+	rbac, seat, err := resolver.AdmittedAuthority(ctx, ev.OwnerID, ids.Nil)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			// A gone, archived or suspended owner is a real denial, never an

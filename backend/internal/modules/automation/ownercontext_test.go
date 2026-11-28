@@ -15,7 +15,7 @@ func TestOwnerContextCarriesTheOwnersSeat(t *testing.T) {
 	for _, seat := range []principal.SeatType{principal.SeatRead, principal.SeatFull} {
 		t.Run(string(seat), func(t *testing.T) {
 			owner := ids.NewV7()
-			ctx, err := ownerContext(context.Background(), &fakeAuthzResolver{seat: seat}, ids.NewV7(), owner)
+			ctx, err := ownerContext(context.Background(), &fakeAuthzResolver{seat: seat}, owner)
 			if err != nil {
 				t.Fatalf("ownerContext: %v", err)
 			}

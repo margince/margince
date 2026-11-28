@@ -55,7 +55,7 @@ func TestADomainRepeatedPastACommitSliceIsRefusedAsTheTestRunSaid(t *testing.T) 
 // company and died past it.
 func failAfterTheFirstCreate(t *testing.T, e *apptest.AppEnv, runID, sourceName, ref, company string) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool))
+	ctx := context.Background()
 	user := ids.NewV7()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

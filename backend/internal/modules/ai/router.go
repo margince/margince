@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -227,14 +226,13 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// below comes from THIS binding, so the call lands in the meter under the
 	// configuration that actually served it.
 	b := r.binding()
-	rawWS, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		// No workspace ⇒ no RLS-writable trace row; fail before building
-		// the trace so we never attempt a tenant write outside a tenant.
-		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: task %s outside workspace context", task)
+	wsID, err := r.meter.Workspace(ctx)
+	if err != nil {
+		// No live company ⇒ no trace row to write; fail before building the
+		// trace so we never attempt a write outside the installation.
+		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: task %s needs a live company: %w", task, err)
 	}
-	wsID := ids.From[ids.WorkspaceKind](rawWS)
-	ladder, degraded, budgetErr := r.applyBudget(ctx, task, wsID, ladder)
+	ladder, degraded, budgetErr := r.applyBudget(ctx, task, ladder)
 	if budgetErr != nil && errors.Is(budgetErr, ErrBudgetDeferred) {
 		// A deferral is pacing, not failure — the work re-queues itself for
 		// the boundary the error names — so it is neither traced nor
@@ -359,8 +357,8 @@ func (r *Router) Invalidate(workspaceID ids.WorkspaceID) { r.cache.invalidate(wo
 
 // applyBudget bends the ladder per §1.3: soft-degrade one tier at 80%,
 // defer background work / pin interactive work to local-small at 100%.
-func (r *Router) applyBudget(ctx context.Context, task Task, wsID ids.WorkspaceID, ladder []Tier) ([]Tier, bool, error) {
-	budgetTokens, err := r.budget.MonthlyTokenBudget(ctx, wsID)
+func (r *Router) applyBudget(ctx context.Context, task Task, ladder []Tier) ([]Tier, bool, error) {
+	budgetTokens, err := r.budget.MonthlyTokenBudget(ctx)
 	if err != nil {
 		return nil, false, fmt.Errorf("ai: budget policy: %w", errors.Join(errBudgetUnavailable, err))
 	}

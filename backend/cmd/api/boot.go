@@ -346,7 +346,7 @@ func sharedRedisClient(cfg apiConfig, logger *slog.Logger) (*redis.Client, func(
 // in rdb. A role whose rdb is nil gets the fail-closed meter New builds.
 func newVolumeMeter(rdb *redis.Client, pool *pgxpool.Pool) *agentvolume.Meter {
 	return agentvolume.New(rdb, agentvolume.Limits{}, agentvolume.DefaultWindow).
-		WithPolicySource(compose.NewAgentAllowanceSource(pool))
+		WithPolicySource(compose.NewAgentAllowanceSource(pool)).WithCompany(compose.AgentVolumeCompany(pool))
 }
 
 func agentVolumeOptions(volumeMeter *agentvolume.Meter) []compose.Option {

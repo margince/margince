@@ -51,7 +51,7 @@ func setupExtRuntime(t *testing.T) *extRuntimeEnv {
 // actor, and a correlation id — the secret store writes a system_log row on
 // every operation and needs all three.
 func (e *extRuntimeEnv) callCtx(ws ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, "system:extruntime-test")
 }
 
@@ -67,21 +67,15 @@ func (e *extRuntimeEnv) runtime(unit string) (*callRuntime, context.Context) {
 }
 
 // TestRuntimeTxOpensOneTransactionOnTheInvokingWorkspace: the callback is
-// handed the invocation's tenant and a single transaction. Two statements
+// handed a single transaction. Two statements
 // reporting the same txid is what "one transaction" means from inside it —
 // a helper that opened a connection per statement would report two.
 func TestRuntimeTxOpensOneTransactionOnTheInvokingWorkspace(t *testing.T) {
 	e := setupExtRuntime(t)
 	rt, ctx := e.runtime("alpha")
 
-	var scoped ids.UUID
 	var first, second uint64
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		ws, ok := principal.WorkspaceID(ctx)
-		if !ok {
-			return errors.New("the callback ran with no workspace on its context")
-		}
-		scoped = ws
 		if err := tx.QueryRow(ctx, `SELECT txid_current()`).Scan(&first); err != nil {
 			return err
 		}
@@ -89,33 +83,8 @@ func TestRuntimeTxOpensOneTransactionOnTheInvokingWorkspace(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if scoped != e.WS {
-		t.Fatalf("the callback ran on workspace %q, want the invoking %q", scoped, e.WS)
-	}
 	if first != second {
 		t.Fatalf("the callback's two statements ran in transactions %d and %d, want one", first, second)
-	}
-}
-
-// TestRuntimeTxRefusesACallWithNoWorkspace: a Runtime is minted per
-// invocation, and an invocation with no tenant bound has no workspace to pin
-// to. The seam refuses rather than opening a transaction on behalf of nobody.
-func TestRuntimeTxRefusesACallWithNoWorkspace(t *testing.T) {
-	e := setupExtRuntime(t)
-	// Minted from an INVOCATION with no tenant: that, and not the context the
-	// handler passes, is where the workspace now comes from.
-	rt := runtimeFor(context.Background(), "alpha", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: e.Pool, vault: e.vault})
-
-	ran := false
-	err := rt.Tx(context.Background(), func(context.Context, extension.Tx) error {
-		ran = true
-		return nil
-	})
-	if err == nil {
-		t.Fatal("an unpinned Tx opened anyway")
-	}
-	if ran {
-		t.Fatal("the callback ran inside a transaction bound to no tenant")
 	}
 }
 
@@ -292,52 +261,6 @@ func sqlState(err error) string {
 		return pgErr.Code
 	}
 	return ""
-}
-
-// TestRuntimeTxIgnoresAWorkspaceTheHandlerSuppliesItself is the design's
-// load-bearing claim, made structural. A handler holds a context and can
-// build another; what it must not be able to do is make the transaction run
-// somewhere else. The core re-derives the tenant from the invocation every
-// time, so a context naming a different workspace is simply overwritten.
-func TestRuntimeTxIgnoresAWorkspaceTheHandlerSuppliesItself(t *testing.T) {
-	e := setupExtRuntime(t)
-	rt, _ := e.runtime("alpha")
-
-	// The handler's own context, pointed at a tenant this invocation has no
-	// business in — exactly what a unit reaching for its neighbour's rows
-	// would write.
-	elsewhere := ids.NewV7()
-	hostile := principal.WithWorkspaceID(e.callCtx(e.WS), elsewhere)
-
-	var pinned ids.UUID
-	if err := rt.Tx(hostile, func(ctx context.Context, _ extension.Tx) error {
-		ws, ok := principal.WorkspaceID(ctx)
-		if !ok {
-			return errors.New("the callback ran with no workspace on its context")
-		}
-		pinned = ws
-		return nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if pinned == elsewhere {
-		t.Fatalf("the handler re-pointed its own transaction at workspace %q", pinned)
-	}
-	if pinned != e.WS {
-		t.Fatalf("the transaction ran on %q, want the invoking %q", pinned, e.WS)
-	}
-
-	// The same for the secret namespace, which resolves its tenant from the
-	// context it is handed too: a hostile context must not move the namespace.
-	if err := rt.Secrets().Put(hostile, "signing", []byte("alpha's key")); err != nil {
-		t.Fatal(err)
-	}
-	// Read it back under the honest invocation context. If Put had honoured
-	// the hostile tenant, this read would find nothing.
-	honest, _ := e.runtime("alpha")
-	if got, err := honest.Secrets().Get(e.callCtx(e.WS), "signing"); err != nil || string(got) != "alpha's key" {
-		t.Fatalf("the secret landed in the workspace the handler named, not the invoking one: %q, %v", got, err)
-	}
 }
 
 // TestRuntimeSecretsCannotReachAnotherUnitsNamespace is the wall itself: two

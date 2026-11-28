@@ -99,7 +99,7 @@ func (e *pullEnv) sayIn(slug string, m dispacttest.Message, minutes int) {
 
 func (e *pullEnv) pull(t *testing.T) {
 	t.Helper()
-	if err := e.puller.Pull(principal.WithWorkspaceID(context.Background(), e.ws), e.conn); err != nil {
+	if err := e.puller.Pull(context.Background(), e.conn); err != nil {
 		t.Fatalf("pull: %v", err)
 	}
 }
@@ -316,7 +316,7 @@ func TestAChosenThreadLeavesOutAReplyStampedBeforeTheLink(t *testing.T) {
 }
 
 func (e *pullEnv) memberCtx() context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, chatLinksPrincipal)
 }
 
@@ -589,7 +589,7 @@ func TestAMemberWhoCanReadTheDealBoundsTheNames(t *testing.T) {
 func (e *partyEnv) chatNotesAs(t *testing.T, user ids.UUID, query *string) int {
 	t.Helper()
 	var found int
-	ws := principal.WithWorkspaceID(context.Background(), e.ws)
+	ws := context.Background()
 	err := database.WithTx(ws, e.pool, func(tx pgx.Tx) error {
 		members, err := identity.MemberPrincipalsTx(ws, tx, []ids.UUID{user})
 		if err != nil {
@@ -660,7 +660,7 @@ func (e *pullEnv) previous(t *testing.T, before time.Time) string {
 	t.Helper()
 	link := chatlinks.Link{DealID: &e.deal, ChannelSlug: "acme"}
 	var got string
-	err := database.WithTx(principal.WithWorkspaceID(context.Background(), e.ws), e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(context.Background(), e.pool, func(tx pgx.Tx) error {
 		var err error
 		got, err = previousNote(context.Background(), tx, link, before)
 		return err

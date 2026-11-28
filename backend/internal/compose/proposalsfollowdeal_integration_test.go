@@ -193,7 +193,7 @@ func TestADecidedOrExpiredCardStaysWithTheSeatItWasAskedOf(t *testing.T) {
 		t.Fatalf("rejecting: %v", err)
 	}
 	e.WsExec(t, `UPDATE approval SET expires_at = now() - interval '1 minute' WHERE id = $1`, lapsedID)
-	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:approval-expiry")
+	sweep := principal.SystemActing(context.Background(), "system:approval-expiry")
 	if _, err := e.svc.ExpireDue(sweep); err != nil {
 		t.Fatalf("running the expiry sweep: %v", err)
 	}
@@ -267,7 +267,7 @@ func (e *reconcileEnv) readTranscriptFor(
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, func() time.Time { return clocktest.Now(t) }, quiet)
-	worker := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), requestedBy, started.ID)
+	worker := withTranscriptReader(context.Background(), requestedBy, started.ID)
 	if err := proposer.Read(worker, e.Activities, started.ID, activity); err != nil {
 		t.Fatalf("reading the transcript: %v", err)
 	}
@@ -331,7 +331,7 @@ func TestAPromiseNobodyCanBeNamedForStagesNoCard(t *testing.T) {
 	now := clocktest.Now(t)
 	proposer := NewTranscriptProposer(e.Pool, cannedBrain{reply: groundedReply(t, 3, 0.95, ids.NewV7())},
 		e.svc, func() time.Time { return now }, slog.New(slog.NewTextHandler(os.Stderr, nil)))
-	worker := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), requestedBy, started.ID)
+	worker := withTranscriptReader(context.Background(), requestedBy, started.ID)
 	if err := proposer.Read(worker, e.Activities, started.ID, meeting); err != nil {
 		t.Fatalf("reading the transcript: %v", err)
 	}
@@ -568,7 +568,7 @@ func TestADraftComposedForAnOwnerWhoLeftIsDroppedAndRedraftedNextSweep(t *testin
 		pool:  e.Pool,
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:overnight")
+	sweep := principal.SystemActing(context.Background(), "system:overnight")
 	if err := deals.NewFollowUpReconciler(e.DB(), stager, quiet).ReconcileWorkspace(sweep); err != nil {
 		t.Fatal(err)
 	}
@@ -667,7 +667,7 @@ func TestAHandOverNobodyCanBeNamedForIsRefused(t *testing.T) {
 	}
 	draft, _ := e.heldDraftFor(t, draftDeal)
 
-	anonymous := principal.WithWorkspaceID(context.Background(), e.WS)
+	anonymous := context.Background()
 	for name, deal := range map[string]ids.UUID{"the task card": taskDeal, "the drafted reply": draftDeal} {
 		err := e.DB().Tx(anonymous, func(tx pgx.Tx) error {
 			return approvals.FollowDealOwnerInTx(anonymous, tx, deal, &e.Rep1, &e.Rep2)
@@ -705,7 +705,7 @@ func TestADraftingFailureStagesNothingInsteadOfATask(t *testing.T) {
 		pool:  e.Pool,
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:overnight")
+	sweep := principal.SystemActing(context.Background(), "system:overnight")
 	if err := deals.NewFollowUpReconciler(e.DB(), stager, quiet).ReconcileWorkspace(sweep); err == nil {
 		t.Fatal("the pass reported success while the drafter was down")
 	}

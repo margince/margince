@@ -71,7 +71,8 @@ func (e *revocationEnv) roleMeter(t *testing.T) *agentvolume.Meter {
 	t.Helper()
 	at := clocktest.Now(t)
 	return agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow,
-		func() time.Time { return at }).WithPolicySource(storedPolicy{e})
+		func() time.Time { return at }).WithCompany(agentvolume.FixedCompany(ids.UUID{1})).
+		WithPolicySource(storedPolicy{e})
 }
 
 // agentOn is the call context of the agent a token authenticates to now.
@@ -81,7 +82,7 @@ func (e *revocationEnv) agentOn(t *testing.T, token string) context.Context {
 	if err != nil {
 		t.Fatalf("authenticating the passport: %v", err)
 	}
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws.UUID), agent.Principal())
+	return principal.WithActor(context.Background(), agent.Principal())
 }
 
 // callsAllowed is the calls ceiling the meter holds passport to, as
@@ -92,7 +93,7 @@ func (e *revocationEnv) callsAllowed(t *testing.T, meter *agentvolume.Meter, pas
 	if err != nil {
 		t.Fatalf("authenticating the passport: %v", err)
 	}
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws.UUID), agent.Principal())
+	ctx := principal.WithActor(context.Background(), agent.Principal())
 	return meter.Read(ctx, agentvolume.Calls).Limit
 }
 

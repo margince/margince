@@ -42,7 +42,7 @@ func (e *stagingEnv) stageOn(t *testing.T, kind string, deal ids.UUID, ttl *time
 	for _, activity := range cites {
 		in.Evidence = append(in.Evidence, Evidence{Snippet: "as written", SourceType: objectActivity, SourceID: activity})
 	}
-	id, err := e.svc.Stage(principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "background-review"), in)
+	id, err := e.svc.Stage(principal.SystemActing(context.Background(), "background-review"), in)
 	if err != nil {
 		t.Fatalf("staging %s: %v", kind, err)
 	}

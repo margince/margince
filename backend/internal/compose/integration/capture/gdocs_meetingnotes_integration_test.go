@@ -127,7 +127,7 @@ func connectNotes(t *testing.T, env captureEnv, feed *docsFeed, account string, 
 	}
 	return connID, func() {
 		t.Helper()
-		if err := reg.SyncOnce(principal.WithWorkspaceID(context.Background(), env.e.WS), connID); err != nil {
+		if err := reg.SyncOnce(context.Background(), connID); err != nil {
 			t.Fatalf("SyncOnce gdocs: %v", err)
 		}
 	}
@@ -398,7 +398,7 @@ func TestNotesAreNotReadOnceTheOrganizersDomainIsNoLongerOurs(t *testing.T) {
 // readsActivity reports whether user may read the activity's content.
 func readsActivity(t *testing.T, e *integration.SearchEnv, user, activity ids.UUID) bool {
 	t.Helper()
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}, "contact": {Read: true}},

@@ -25,7 +25,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // cimdEnv is one installation plus a document server it controls.
@@ -77,7 +76,7 @@ func setupCIMD(t *testing.T, slug string) *cimdEnv {
 	e := &cimdEnv{
 		svc:        svc,
 		adminEmail: "admin@" + slug + ".test",
-		ctx:        principal.WithWorkspaceID(context.Background(), wsID.UUID),
+		ctx:        context.Background(),
 		body: func(url string) string {
 			return `{"client_id":"` + url + `","client_name":"Metadata Client",` +
 				`"redirect_uris":["http://127.0.0.1:9876/callback"]}`

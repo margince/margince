@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestPersonalMailIsDestroyedOnceItsWindowCloses(t *testing.T) {
@@ -371,7 +370,7 @@ func sweepPersonal(t *testing.T, e *integration.Env) int {
 	// The worker's context: a workspace and no actor. An admin context here
 	// is what let every test pass while the job itself could not destroy
 	// anything.
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	n, err := purger.SweepPersonalMail(ctx, capture.DefaultPersonalPurgeWindows())
 	if err != nil {
 		t.Fatalf("sweeping personal mail: %v", err)

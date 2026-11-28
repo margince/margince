@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -58,13 +57,15 @@ func (s stubClient) Embed(context.Context, model.EmbedRequest) (model.Embeddings
 func (s stubClient) Caps() model.Capabilities { return model.Capabilities{} }
 
 func wsCtx() context.Context {
-	return principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	return withTestCompany(context.Background())
 }
 
 type stubMeter struct{}
 
 func (stubMeter) Record(context.Context, Usage) error        { return nil }
 func (stubMeter) MonthTokens(context.Context) (int64, error) { return 0, nil }
+
+func (stubMeter) Workspace(ctx context.Context) (ids.WorkspaceID, error) { return lenientCompany(ctx) }
 
 // capturingMeter records every Usage it is asked to meter, mirroring how
 // fakeCallStore captures []Call — the seam TestCompleteCarriesCacheWriteTokens
@@ -78,9 +79,13 @@ func (m *capturingMeter) Record(_ context.Context, u Usage) error {
 
 func (m *capturingMeter) MonthTokens(context.Context) (int64, error) { return 0, nil }
 
+func (m *capturingMeter) Workspace(ctx context.Context) (ids.WorkspaceID, error) {
+	return lenientCompany(ctx)
+}
+
 type unlimitedBudget struct{}
 
-func (unlimitedBudget) MonthlyTokenBudget(context.Context, ids.WorkspaceID) (int64, error) {
+func (unlimitedBudget) MonthlyTokenBudget(context.Context) (int64, error) {
 	return 1_000_000_000, nil
 }
 
@@ -334,7 +339,7 @@ func TestCompleteEmitsSlog(t *testing.T) {
 	)
 
 	// Execute a completion
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := wsCtx()
 	_, _, err := r.Complete(ctx, TaskSummarize, model.Request{
 		Messages: []model.Message{{Role: "user", Content: "summarize this"}},
 	})
@@ -619,6 +624,10 @@ func longestRun(s string, c rune) int {
 // failingMeter fails every metering write, producing the
 // served-but-metering-failed terminal.
 type failingMeter struct{}
+
+func (failingMeter) Workspace(ctx context.Context) (ids.WorkspaceID, error) {
+	return lenientCompany(ctx)
+}
 
 func (failingMeter) Record(context.Context, Usage) error        { return errors.New("meter db down") }
 func (failingMeter) MonthTokens(context.Context) (int64, error) { return 0, nil }

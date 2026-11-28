@@ -207,7 +207,11 @@ func readInternalMailSource(ctx context.Context, tx pgx.Tx, id ids.UUID) (Intern
 }
 
 func emitInternalMailPolicyChanged(ctx context.Context, tx pgx.Tx, auditID ids.UUID) error {
-	return storekit.EmitEvent(ctx, tx, auditID, storekit.MustWorkspace(ctx), crmcontracts.InternalEventCaptureSettingsUpdated{ChangedKeys: []string{internalMailPolicyKey}})
+	installation, err := storekit.Workspace(ctx, tx)
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, installation, crmcontracts.InternalEventCaptureSettingsUpdated{ChangedKeys: []string{internalMailPolicyKey}})
 }
 
 func validInternalMailSourceMetadata(source InternalMailSource) bool {

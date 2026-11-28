@@ -51,16 +51,16 @@ type documentSeat struct {
 	teams []ids.UUID
 }
 
-func (s documentSeat) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (s documentSeat) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: s.perms, TeamIDs: s.teams}, nil
 }
 
-func (documentSeat) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (documentSeat) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
-func (s documentSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, s.EffectiveRBAC, s.SeatType)
+func (s documentSeat) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, s.EffectiveRBAC, s.SeatType)
 }
 
 // documentRepPerms is a team-scoped rep who may change every record a document hangs off.
@@ -104,7 +104,7 @@ func newDocumentHarness(t *testing.T, perms principal.Permissions) documentHarne
 		Teams:       []ids.TeamID{ids.From[ids.TeamKind](e.Team1)},
 		Permissions: perms,
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return documentHarness{
 		e: e, blob: blob, registry: registry, passport: passport,

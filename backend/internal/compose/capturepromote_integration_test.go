@@ -185,7 +185,7 @@ func openDisposition(t *testing.T, e *integration.Env, email string) (ids.UUID, 
 func runVerdict(t *testing.T, e *integration.Env, brain *scriptedVerdictBrain) {
 	t.Helper()
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 }
@@ -848,7 +848,7 @@ func TestOnlyTheOwnerPublishesACapturedContact(t *testing.T) {
 // seatCtx is one seat acting as themselves, which is the only principal the
 // capture-privacy door accepts.
 func seatCtx(e *integration.Env, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(),

@@ -32,7 +32,7 @@ func (p *preflightEnv) scheduledReader(t *testing.T, user ids.UUID, teams []ids.
 	for _, object := range without {
 		delete(perms.Objects, object)
 	}
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), p.workspaceID(t)), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, TeamIDs: teams, Permissions: perms,
 	})

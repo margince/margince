@@ -144,7 +144,7 @@ func TestAnAgentAllowanceOutsideItsRangeIsRefused(t *testing.T) {
 func TestAnAgentCannotChangeItsOwnAllowance(t *testing.T) {
 	e := integration.Setup(t)
 	h := allowanceHandlers(t, e, wallClock(t))
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(), PassportID: ids.NewV7(),
 		OnBehalfOf: ids.NewV7(),
@@ -162,7 +162,7 @@ func TestAnAgentCannotChangeItsOwnAllowance(t *testing.T) {
 // readAgentPolicyAsMachinery reads the plan the way the meter does, so the
 // test sees what binds rather than what the settings answer reports.
 func readAgentPolicyAsMachinery(e *integration.Env) (agentvolume.Policy, error) {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	var policy agentvolume.Policy
 	err := NewSettingsStore(e.Pool).WriteTx(ctx, func(tx pgx.Tx) error {
 		var err error
@@ -179,8 +179,9 @@ func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
 	h := allowanceHandlers(t, e, wallClock(t))
 	at := clocktest.Now(t)
 	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow,
-		func() time.Time { return at }).WithPolicySource(NewAgentAllowanceSource(e.Pool))
-	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		func() time.Time { return at }).WithCompany(agentvolume.FixedCompany(ids.UUID{1})).
+		WithPolicySource(NewAgentAllowanceSource(e.Pool))
+	agent := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:importer", PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
 	})
 
@@ -209,9 +210,9 @@ func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
 // passport the agent was refused on may have been renewed since.
 func TestAReleaseOfAConnectionsPassportWidensTheConnection(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	passport, grant := seedConnectionPassport(t, e)
-	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, wallClock(t))
+	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, wallClock(t)).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))
 	renewed := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:connector", PassportID: ids.NewV7(), ConnectionID: grant,
 	})
@@ -219,8 +220,9 @@ func TestAReleaseOfAConnectionsPassportWidensTheConnection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	applied, err := connectionReleaser{meter: meter, pool: e.Pool}.Release(ctx, e.WS, passport, agentvolume.Writes,
+	applied, err := connectionReleaser{meter: meter, pool: e.Pool}.Release(ctx, passport, agentvolume.Writes,
 		meter.Bucket(ctx), time.Hour)
+
 	if err != nil || !applied {
 		t.Fatalf("releasing the connection → applied=%v err=%v", applied, err)
 	}
@@ -271,10 +273,10 @@ func wallClock(t *testing.T) func() time.Time {
 // passport is counted as itself, as it was if it was not a connection's.
 func TestAReleaseOfAGonePassportStillDecides(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, wallClock(t))
+	ctx := context.Background()
+	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, wallClock(t)).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))
 
-	applied, err := connectionReleaser{meter: meter, pool: e.Pool}.Release(ctx, e.WS, ids.NewV7(), agentvolume.Writes,
+	applied, err := connectionReleaser{meter: meter, pool: e.Pool}.Release(ctx, ids.NewV7(), agentvolume.Writes,
 		meter.Bucket(ctx), time.Hour)
 
 	if err != nil || !applied {

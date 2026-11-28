@@ -30,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -89,7 +88,7 @@ func (p *preflightEnv) sharedMailbox(t *testing.T, readers ...string) ids.UUID {
 		t.Fatal(err)
 	}
 	ws := p.workspaceID(t)
-	ref, err := p.Vault.Put(principal.WithWorkspaceID(context.Background(), ws), ids.From[ids.WorkspaceKind](ws), []byte(bundle))
+	ref, err := p.Vault.Put(context.Background(), ids.From[ids.WorkspaceKind](ws), []byte(bundle))
 	if err != nil {
 		t.Fatalf("sealing the shared credential: %v", err)
 	}

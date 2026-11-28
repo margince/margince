@@ -119,13 +119,13 @@ const fixtureOwnerEmail = "fixture-owner@example.test"
 // what these tests are about is the vault, not identity.
 type fixtureAuthority struct{}
 
-func (fixtureAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (fixtureAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
 		"activity": {Create: true}, "contact": {Create: true}, "lead": {Create: true},
 	}}}, nil
 }
 
-func (fixtureAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (fixtureAuthority) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -193,13 +193,13 @@ func newCaptureRegistryFixture(t *testing.T) (context.Context, *capture.Registry
 	reg := capture.NewRegistry(database.BindTo(pool, ids.From[ids.WorkspaceKind](wsUUID)), nil, fixtureAuthority{}, vault)
 	reg.Register(fixtureConnector{})
 
-	actorCtx := principal.WithWorkspaceID(ctx, wsUUID)
+	actorCtx := ctx
 	actorCtx = principal.WithActor(actorCtx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + userUUID.String(), UserID: userUUID,
 	})
 	actorCtx = principal.WithCorrelationID(actorCtx, ids.NewV7())
 
-	return actorCtx, reg, vault, ids.From[ids.WorkspaceKind](wsUUID)
+	return withTenant(actorCtx, wsUUID), reg, vault, ids.From[ids.WorkspaceKind](wsUUID)
 }
 
 // connectFixtureConnection grants the "gmail" provider (the only one
@@ -542,6 +542,24 @@ func poolFromFixture(t *testing.T) *pgxpool.Pool {
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (r fixtureAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r fixtureAuthority) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
+}
+
+// tenantKey carries the workspace a fixture seeded. The suites that seed one of
+// their own per test share a database with many live workspaces, so the fixture
+// names its own. Production code never reads it.
+type tenantKey struct{}
+
+func withTenant(ctx context.Context, ws ids.UUID) context.Context {
+	return context.WithValue(ctx, tenantKey{}, ws)
+}
+
+func tenantOf(t *testing.T, ctx context.Context) ids.UUID {
+	t.Helper()
+	ws, ok := ctx.Value(tenantKey{}).(ids.UUID)
+	if !ok {
+		t.Fatal("the fixture context names no workspace")
+	}
+	return ws
 }

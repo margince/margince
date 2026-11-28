@@ -41,7 +41,7 @@ func TestASweepWhoseStoredZoneWillNotLoadRunsInUTCAndRecordsOneFault(t *testing.
 
 	for range 2 {
 		err := runInstallationPass(context.Background(), e.Pool, func(ctx context.Context, ws ids.UUID) error {
-			return corrector.SweepWorkspace(principal.SystemActing(principal.WithWorkspaceID(ctx, ws), closeDateSweepActor))
+			return corrector.SweepWorkspace(principal.SystemActing(ctx, closeDateSweepActor))
 		})
 		if err != nil {
 			t.Fatalf("the close-date pass stopped on a zone that will not load: %v", err)
@@ -64,7 +64,7 @@ func TestAPassWhoseZoneLoadsRecordsNoFault(t *testing.T) {
 	e := integration.Setup(t)
 	corrector := NewCloseDateCorrector(e.Pool, slog.New(slog.DiscardHandler))
 	err := runInstallationPass(context.Background(), e.Pool, func(ctx context.Context, ws ids.UUID) error {
-		return corrector.SweepWorkspace(principal.SystemActing(principal.WithWorkspaceID(ctx, ws), closeDateSweepActor))
+		return corrector.SweepWorkspace(principal.SystemActing(ctx, closeDateSweepActor))
 	})
 	if err != nil {
 		t.Fatalf("the close-date pass failed: %v", err)

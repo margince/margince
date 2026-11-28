@@ -100,7 +100,10 @@ func (s *Store) ApplyEnrichmentTx(ctx context.Context, tx pgx.Tx, companyID ids.
 		return errors.New("contacts: an accepted enrichment carries no fields")
 	}
 
-	wsID := workspaceID(ctx)
+	wsID, err := workspaceID(ctx, tx)
+	if err != nil {
+		return err
+	}
 	// The target is a KNOWN row — an enrichment never creates or resolves
 	// by domain. Row-scope is re-checked here so a leaked company id buys
 	// nothing (existence-hiding 404).

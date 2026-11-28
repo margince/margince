@@ -102,7 +102,6 @@ func admitOpenMove(t *testing.T, callerIfMatch string) (seen string, answered *h
 // agentRequestCtx is the passport principal the gate governs: a full seat with
 // the scope a deal move needs.
 func agentRequestCtx(ctx context.Context) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:rest-pin", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeWrite),

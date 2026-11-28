@@ -37,7 +37,7 @@ import (
 
 func TestCaptureHealthCountsABacklogAnAdminCannotSee(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 
 	// A captured contact still owner-private, with no settled answer about its
 	// sender: exactly the row the sweeps repair and nobody can see.
@@ -185,7 +185,7 @@ func TestTheOwnersWaitingListIsWhatTheAdminCountCounts(t *testing.T) {
 
 func TestTheOwnersWaitingListRefusesAnAgent(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		// Bound to the owner's seat, so only the human rung can refuse it.
 		Type: principal.PrincipalAgent, ID: "agent:reader", UserID: e.Rep1,
 		Permissions: principal.Permissions{
@@ -213,7 +213,7 @@ func TestCaptureHealthCarriesNoCorrespondence(t *testing.T) {
 	e.WsExec(t, `INSERT INTO capture_pending_counterparty (email, owner_id, activity_id, status)
 		VALUES ('planted.pending@private.test', $1, $2, 'unsure')`, e.Rep1, activity)
 	if err := capture.NewSweepLedger(InstallationDB(e.Pool)).RecordSweep(
-		principal.WithWorkspaceID(context.Background(), e.WS),
+		context.Background(),
 		sweepReceiptFor(capture.SweepStrandedContacts, time.Now(), time.Now(), sweepTally{},
 			errors.New("planted.error@private.test refused"))); err != nil {
 		t.Fatal(err)
@@ -324,7 +324,7 @@ func TestTheCaptureHealthSeamTellsACalendarFromAMailbox(t *testing.T) {
 
 func TestCaptureSummaryKeepsUnobservedSweepsAfterAFailedSweep(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	if err := capture.NewSweepLedger(InstallationDB(e.Pool)).RecordSweep(ctx,
 		sweepReceiptFor(capture.Sweeps()[0], at, at, sweepTally{}, errors.New("synthetic failure"))); err != nil {

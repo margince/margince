@@ -163,7 +163,7 @@ func TestNarrowingOneMailboxLeavesTheSeatsOtherMailboxAlone(t *testing.T) {
 	}
 	sync(t, customerMail("first-1@acme.example"), customerMail("first-2@acme.example"))
 	second.raws = [][]byte{email("anna@acme.example", "Anna Acme", secondAddress, "second-1@acme.example", "")}
-	if err := env.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), e.WS), secondID); err != nil {
+	if err := env.registry.SyncOnce(context.Background(), secondID); err != nil {
 		t.Fatalf("syncing the second mailbox: %v", err)
 	}
 	secondMail := activityIDOf(t, e, "second-1@acme.example")

@@ -91,7 +91,7 @@ func TestAMaskedReaderIsListedNoFindingMoneyOnADealTheyCannotChange(t *testing.T
 	testdb.AssertPoolsQuiesced(t)
 
 	// RowScopeTeam, not All: auth.Unbounded skips masks under row_scope=all.
-	repCtx := principal.WithWorkspaceID(context.Background(), wsTyped.UUID)
+	repCtx := context.Background()
 	repCtx = principal.WithCorrelationID(repCtx, ids.NewV7())
 	repCtx = principal.WithActor(repCtx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + mine.String(), UserID: mine,

@@ -13,7 +13,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/decision"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -43,13 +42,13 @@ func TestNewModelPathExposesCacheInvalidation(t *testing.T) {
 // (see ai_fake_modelpath_integration_test.go).
 func TestModelPathInvalidateCacheForcesAFreshCompletion(t *testing.T) {
 	fake := ai.NewFakeClient()
-	path, err := NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithFakeClient(fake))
+	workspace := ids.New[ids.WorkspaceKind]()
+	path, err := NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithFakeClient(fake), ai.WithCompany(workspace))
 	if err != nil {
 		t.Fatalf("NewLocalModelPath: %v", err)
 	}
 
-	workspace := ids.New[ids.WorkspaceKind]()
-	ctx := principal.WithWorkspaceID(context.Background(), workspace.UUID)
+	ctx := context.Background()
 	req := model.Request{
 		System:   "test",
 		Messages: []model.Message{{Role: "user", Content: "hello"}},
@@ -84,7 +83,7 @@ func TestAReRunAsksTheModelAgainForStepsTheRunnerRefused(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLocalModelPath: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	job := runner.Job{Goal: "find the open deal", Tools: []string{agentLoopRegistry()[0].Name}}
 	agent := runner.New(agentLoopToolSurface{}, path.AgentLoop)
 
@@ -170,7 +169,7 @@ func TestRouterBrainDecides(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLocalModelPath: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	page := crawlPage{URL: "https://parked.example", Text: "This domain is for sale."}
 
 	out, err := ai.Decide(ctx, path.SiteTriage, triageDecisionSite, triageDecision(page),

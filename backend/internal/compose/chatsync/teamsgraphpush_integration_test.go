@@ -39,7 +39,7 @@ func TestTeamsGraphNoticesPinScopeAndRecoverMissedCoverageWithoutContent(t *test
 	e.exec(t, `UPDATE channel_connection SET provider='teams',channel_id=$2,address=NULL WHERE id=$1`, connection, tenant+"/"+team)
 	channel := team + "/19:channel@thread.tacv2"
 	e.exec(t, `UPDATE chat_link SET provider='teams',channel_slug=$2 WHERE id=$1`, e.link, channel)
-	ctx := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), chatLinksPrincipal), ids.NewV7())
+	ctx := principal.WithCorrelationID(principal.WithActor(context.Background(), chatLinksPrincipal), ids.NewV7())
 	vault := keyvault.NewMemory()
 	e.store.WithVault(func() keyvault.Vault { return vault })
 	links, err := e.store.PullLinks(ctx, connection)
@@ -63,8 +63,8 @@ func TestTeamsGraphNoticesPinScopeAndRecoverMissedCoverageWithoutContent(t *test
 		t.Fatal(err)
 	}
 	queued := 0
-	parent := &Receiver{Links: e.store, Roots: e.store, Replays: fakeReplays{}, Marks: fakeMarks{}, Now: func() time.Time { return now }, Log: e.flusher.Log, Pull: func(_ context.Context, ws, conn ids.UUID) error {
-		if ws != e.ws || conn != connection {
+	parent := &Receiver{Links: e.store, Roots: e.store, Replays: fakeReplays{}, Marks: fakeMarks{}, Now: func() time.Time { return now }, Log: e.flusher.Log, Pull: func(_ context.Context, conn ids.UUID) error {
+		if conn != connection {
 			t.Error("notification escaped connection scope")
 		}
 		queued++

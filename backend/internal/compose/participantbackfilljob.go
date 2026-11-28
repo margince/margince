@@ -73,7 +73,6 @@ func (w *participantBackfillWorker) Work(ctx context.Context, _ *river.Job[Parti
 }
 
 func (w *participantBackfillWorker) backfillOneWorkspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.WithWorkspaceID(ctx, workspace)
 	recovered, err := w.backfillWorkspace(ctx, workspace)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
@@ -89,7 +88,7 @@ func (w *participantBackfillWorker) backfillOneWorkspace(ctx context.Context, wo
 // moment a batch reports no work — which is what makes a caught-up
 // installation cost one probe per pass rather than a full drain.
 func (w *participantBackfillWorker) backfillWorkspace(ctx context.Context, ws ids.UUID) (int, error) {
-	wsCtx := principal.WithWorkspaceID(ctx, ws)
+	wsCtx := ctx
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: contacts.DisplayNameRepairActor,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},

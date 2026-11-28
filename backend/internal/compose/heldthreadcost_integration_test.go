@@ -87,6 +87,11 @@ func activityForThread(t *testing.T, e *integration.Env, threadKey string) ids.U
 // heldThreadReadCost is the statements one read spends, and the rows it found.
 func heldThreadReadCost(t *testing.T, e *integration.Env, user ids.UUID) (int64, int) {
 	t.Helper()
+	// The first read after the pool's proof of the live company lapses refreshes
+	// it. That would charge one read a statement the other does not pay.
+	if _, err := database.ProvenWorkspace(context.Background(), e.Pool); err != nil {
+		t.Fatalf("naming the installation's company: %v", err)
+	}
 	metered, meter := database.WithStatementMeter(purgeCtx(e, user))
 	// One default page holds every thread seeded here, so the count is the
 	// whole queue's.

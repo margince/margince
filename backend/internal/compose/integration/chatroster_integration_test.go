@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -42,7 +41,7 @@ func seedChatMessage(t *testing.T) ids.ActivityID {
 // stampRoster runs the real capture write for a roster on a chat transport.
 func stampRoster(t *testing.T, e *Env, activity ids.ActivityID, attested bool, parties ...connector.MessageParticipant) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return capture.StampFurtherParticipants(ctx, tx, activity, "message", rosterProvider, attested, parties)
 	}); err != nil {

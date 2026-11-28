@@ -112,7 +112,7 @@ func setupResolve(t *testing.T) *resolveEnv {
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
 	e.gate = NewGate(e.store)
 
-	opCtx := principal.WithWorkspaceID(context.Background(), e.ws)
+	opCtx := context.Background()
 	opCtx = principal.WithCorrelationID(opCtx, ids.NewV7())
 	e.ctx = principal.WithActor(opCtx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,

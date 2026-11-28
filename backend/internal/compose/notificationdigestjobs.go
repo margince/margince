@@ -103,7 +103,7 @@ func (w *notificationDigestWorker) digestOneWorkspace(ctx context.Context, works
 	if clock == nil {
 		clock = time.Now
 	}
-	return w.digestWorkspace(principal.WithWorkspaceID(ctx, workspace), workspace, clock().UTC())
+	return w.digestWorkspace(ctx, workspace, clock().UTC())
 }
 
 // digestWorkspace sends this workspace's mornings, and reports what it could
@@ -207,7 +207,7 @@ func (w *notificationDigestWorker) morningFor(
 func (w *notificationDigestWorker) digestFor(
 	ctx context.Context, wsID ids.UUID, seat ids.UserID, address string, window notices.Window,
 ) error {
-	seatCtx, live, err := seatContext(ctx, w.users, wsID, seat.UUID)
+	seatCtx, live, err := seatContext(ctx, w.users, seat.UUID)
 	if err != nil || !live {
 		return err
 	}
@@ -280,7 +280,7 @@ func (w *notificationDigestWorker) deliver(
 	// THE RECIPIENT'S OWN AUTHORITY, bound before a single word of content is
 	// read. Everything below this line runs as the colleague the message is
 	// addressed to.
-	seatCtx, live, err := seatContext(sysCtx, w.users, wsID, seat.UUID)
+	seatCtx, live, err := seatContext(sysCtx, w.users, seat.UUID)
 	if err != nil {
 		w.log.WarnContext(sysCtx, "the morning digest was not sent: the recipient's authority did not resolve",
 			"user", seat, "cause", err)

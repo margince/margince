@@ -58,8 +58,7 @@ func TestAnAgentReadsAndAnswersOnlyItsOwnColleaguesDealQuestion(t *testing.T) {
 	mail := createdID(t, d.e, "/v1/activities", AnyMap{
 		"kind": "email", "direction": "inbound", "subject": "Which rollout?", "source": "manual",
 	})
-	ws := apptest.InstallationWorkspaceUUID(t.Context(), t, d.e.Owner)
-	system := principal.SystemActing(principal.WithWorkspaceID(t.Context(), ws), "system:capture-which-deal")
+	system := principal.SystemActing(t.Context(), "system:capture-which-deal")
 	if err := database.WithTx(system, d.e.Pool, func(tx pgx.Tx) error {
 		return activities.AskWhichDealTx(system, tx, activities.WhichDealQuestion{
 			Mail: ids.From[ids.ActivityKind](ids.MustParse(mail)), Seat: ids.MustParse(askedID),

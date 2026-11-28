@@ -118,7 +118,7 @@ func TestAFindingIsVisibleExactlyWhereItsDealIs(t *testing.T) {
 	testdb.AssertPoolsQuiesced(t)
 
 	// A rep who may read only their OWN deals.
-	repCtx := principal.WithWorkspaceID(context.Background(), ws)
+	repCtx := context.Background()
 	repCtx = principal.WithCorrelationID(repCtx, ids.NewV7())
 	repCtx = principal.WithActor(repCtx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + mine.String(), UserID: mine,
@@ -185,7 +185,7 @@ func TestAFindingIsVisibleExactlyWhereItsDealIs(t *testing.T) {
 	//
 	// RowScopeAll deliberately: it is the configuration that makes the row half
 	// above a no-op, so a pass here cannot be the row scope doing the work.
-	noDealCtx := principal.WithWorkspaceID(context.Background(), ws)
+	noDealCtx := context.Background()
 	noDealCtx = principal.WithCorrelationID(noDealCtx, ids.NewV7())
 	noDealCtx = principal.WithActor(noDealCtx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + mine.String(), UserID: mine,

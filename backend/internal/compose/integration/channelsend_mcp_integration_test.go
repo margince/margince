@@ -108,11 +108,7 @@ func (c *channelSendEnv) verbInvoker(t *testing.T, agentToken, verb string) func
 	})
 	authSvc := identity.NewService(c.Pool)
 	return func(args string) (string, error) {
-		wsID, err := authSvc.InstallationWorkspace(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		ctx := principal.WithWorkspaceID(context.Background(), wsID.UUID)
+		ctx := context.Background()
 		agent, err := authSvc.AuthenticateAgent(ctx, agentToken)
 		if err != nil {
 			t.Fatal(err)

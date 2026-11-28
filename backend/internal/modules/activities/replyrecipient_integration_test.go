@@ -351,7 +351,7 @@ func TestAddressingRefusesACallerWithoutTheContactReadGrant(t *testing.T) {
 	// the name nor the address may reach them through the drafting door that
 	// the contacts surface closes.
 	ctx := principal.WithCorrelationID(
-		principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+		context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
 		Permissions: principal.Permissions{

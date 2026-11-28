@@ -211,7 +211,7 @@ func (e *linkEnv) seat(user ids.UUID) context.Context {
 }
 
 func (e *linkEnv) seatWith(user ids.UUID, scope principal.RowScope, grants map[string]principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{RoleKeys: []string{"rep"}, RowScope: scope, Objects: grants},
@@ -220,7 +220,7 @@ func (e *linkEnv) seatWith(user ids.UUID, scope principal.RowScope, grants map[s
 }
 
 func (e *linkEnv) system() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:chat_links",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},

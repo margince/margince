@@ -408,9 +408,13 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 // Logout revokes the session behind the cookie. Revoking an unknown or
 // already-revoked token is a no-op: logout is idempotent.
 func (s *Service) Logout(ctx context.Context, rawToken string) error {
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		// A workspace that doesn't resolve holds no sessions — nothing to
-		// revoke, same no-op as an unknown token.
+	_, live, err := s.liveCompany(ctx)
+	if err != nil {
+		return err
+	}
+	if !live {
+		// An installation with no company holds no sessions, so there is
+		// nothing to revoke. It is the same no-op as an unknown token.
 		return nil
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {

@@ -23,7 +23,7 @@ import (
 // ownSeat holds the deal and activity grants over its own rows only, so every
 // proposal about a colleague's deal is one it cannot decide.
 func ownSeat(ws, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	full := principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	return principal.WithActor(ctx, principal.Principal{
@@ -78,7 +78,7 @@ func TestPendingCountAgreesWithEveryPageOfTheInboxForEachReader(t *testing.T) {
 	colleague := e.secondRep(t)
 	repDeal := seeder.dealOwnedBy(t, &e.rep)
 	colleagueDeal := seeder.dealOwnedBy(t, &colleague)
-	staging := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "background-review")
+	staging := principal.SystemActing(context.Background(), "background-review")
 	allSeat := seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact)
 	short := time.Hour
 	for i := range 3*inboxBatch + 17 {
@@ -152,7 +152,7 @@ func TestPendingCountEndpointAnswersTheEngineCount(t *testing.T) {
 	e := setupStaging(t)
 	seeder := newDealSeeder(t, e)
 	deal := seeder.dealOwnedBy(t, &e.rep)
-	staging := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "background-review")
+	staging := principal.SystemActing(context.Background(), "background-review")
 	for i := range 3 {
 		if _, err := e.svc.Stage(staging, StageInput{
 			Kind: "advance_deal", ProposedChange: []byte(`{"stage":"won"}`),
@@ -187,7 +187,7 @@ func TestPendingCountEndpointAnswersTheEngineCount(t *testing.T) {
 // stageAdvance stages one deal proposal through the real writer.
 func (e *stagingEnv) stageAdvance(t *testing.T, deal ids.UUID, hash string, ttl *time.Duration) {
 	t.Helper()
-	staging := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "background-review")
+	staging := principal.SystemActing(context.Background(), "background-review")
 	if _, err := e.svc.Stage(staging, StageInput{
 		Kind: "advance_deal", ProposedChange: []byte(`{"stage":"won"}`), DiffHash: hash,
 		TargetType: tableDeal, TargetID: deal, Summary: "Review the proposed deal stage", TTL: ttl,

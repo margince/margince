@@ -5,13 +5,11 @@ package costestimate
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ---- fakes for the embed-reindex estimate's four ports (no DB; mirrors the
@@ -44,7 +42,7 @@ func (f fakeEmbedModel) CurrentModelForTier(ai.Tier) (ai.ModelRef, bool) { retur
 // figure — the fixtures below never need per-workspace variation.
 type fakeMonthlyBudget int64
 
-func (f fakeMonthlyBudget) MonthlyTokenBudget(context.Context, ids.WorkspaceID) (int64, error) {
+func (f fakeMonthlyBudget) MonthlyTokenBudget(context.Context) (int64, error) {
 	return int64(f), nil
 }
 
@@ -171,24 +169,23 @@ func TestEstimateEmbedReindexUnboundEmbedLaneIsNilCost(t *testing.T) {
 	}
 }
 
-// fakeRatesPerWorkspace prices per workspace, which fakeRates cannot: the
-// estimator resolves a rate inside each workspace's own context, and
-// ai_model_rate is workspace-scoped under RLS. A workspace absent from the map
+// fakeRatesPerRow prices each row of the estimate against its own sheet, which
+// fakeRates cannot. The estimator asks once per priced row, in workspace id
+// order, so the nth sheet answers the nth row. A row past the last sheet
 // resolves no rate at all, which is the reachable form of two sheets
 // disagreeing about one corpus.
-type fakeRatesPerWorkspace map[ids.WorkspaceID]fakeRates
+type fakeRatesPerRow struct {
+	sheets []fakeRates
+	asked  int
+}
 
-var errNoWorkspaceInRateContext = errors.New("costestimate test: rate resolved outside a workspace context")
-
-func (f fakeRatesPerWorkspace) RateFor(ctx context.Context, provider, model string, at time.Time) (*ai.ModelRate, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		// The estimator always resolves a rate inside a workspace context, so
-		// an unbound one is a wiring fault in the test rather than a workspace
-		// that happens to price nothing.
-		return nil, errNoWorkspaceInRateContext
+func (f *fakeRatesPerRow) RateFor(ctx context.Context, provider, model string, at time.Time) (*ai.ModelRate, error) {
+	row := f.asked
+	f.asked++
+	if row >= len(f.sheets) {
+		return nil, nil
 	}
-	return f[ids.From[ids.WorkspaceKind](ws)].RateFor(ctx, provider, model, at)
+	return f.sheets[row].RateFor(ctx, provider, model, at)
 }
 
 // Case D — two workspaces over ONE corpus: the total is what the installation
@@ -236,10 +233,9 @@ func TestEstimateEmbedReindexTotalsOneCorpusNotTheSumOfTheRows(t *testing.T) {
 	}
 }
 
-// The cost is the one figure two workspaces can legitimately disagree on:
-// ai_model_rate is workspace-scoped under RLS, so each prices the shared corpus
-// against its own sheet. With no single price to state, none is stated — the
-// same never-fabricate honesty the per-row field keeps for an unresolvable rate.
+// The cost is the one figure two rows can disagree on: each prices the shared
+// corpus against the sheet it resolves. With no single price to state, none is
+// stated. The per-row field states nothing the same way for an unresolvable rate.
 func TestEstimateEmbedReindexWithholdsACostTwoRateSheetsDisagreeOn(t *testing.T) {
 	wsA, wsB := testWorkspaceID(7), testWorkspaceID(8)
 	pending := fakePending{
@@ -249,7 +245,7 @@ func TestEstimateEmbedReindexWithholdsACostTwoRateSheetsDisagreeOn(t *testing.T)
 	model := fakeEmbedModel{ref: ai.ModelRef{Provider: "gemini", Model: "embed"}, ok: true}
 	// wsB resolves no rate at all, which is the reachable form of disagreement:
 	// one sheet prices the corpus and the other cannot.
-	rates := fakeRatesPerWorkspace{wsA: fakeRates{rateKey("gemini", "embed"): pricedRate}}
+	rates := &fakeRatesPerRow{sheets: []fakeRates{{rateKey("gemini", "embed"): pricedRate}}}
 	e := newEmbedEstimator(pending, rates, model, fakeMonthlyBudget(1_000_000))
 
 	_, total, err := e.EstimateEmbedReindex(context.Background(), "gemini/embed@1024")
@@ -277,10 +273,10 @@ func TestEstimateEmbedReindexWithholdsACostTwoSheetsPriceDifferently(t *testing.
 	}
 	dearerRate := &ai.ModelRate{InputPerMTokMicroUSD: 9_000_000, OutputPerMTokMicroUSD: 9_000_000}
 	model := fakeEmbedModel{ref: ai.ModelRef{Provider: "gemini", Model: "embed"}, ok: true}
-	rates := fakeRatesPerWorkspace{
-		wsA: fakeRates{rateKey("gemini", "embed"): pricedRate},
-		wsB: fakeRates{rateKey("gemini", "embed"): dearerRate},
-	}
+	rates := &fakeRatesPerRow{sheets: []fakeRates{
+		{rateKey("gemini", "embed"): pricedRate},
+		{rateKey("gemini", "embed"): dearerRate},
+	}}
 	e := newEmbedEstimator(pending, rates, model, fakeMonthlyBudget(100_000_000))
 
 	rows, total, err := e.EstimateEmbedReindex(context.Background(), "gemini/embed@1024")
@@ -313,7 +309,7 @@ func TestEstimateEmbedReindexIgnoresAnEmptyWorkspaceWithoutARate(t *testing.T) {
 		tokens: map[ids.WorkspaceID]int64{wsA: 600_000, wsB: 0},
 	}
 	model := fakeEmbedModel{ref: ai.ModelRef{Provider: "gemini", Model: "embed"}, ok: true}
-	rates := fakeRatesPerWorkspace{wsA: fakeRates{rateKey("gemini", "embed"): pricedRate}}
+	rates := &fakeRatesPerRow{sheets: []fakeRates{{rateKey("gemini", "embed"): pricedRate}}}
 	e := newEmbedEstimator(pending, rates, model, fakeMonthlyBudget(1_000_000))
 
 	_, total, err := e.EstimateEmbedReindex(context.Background(), "gemini/embed@1024")

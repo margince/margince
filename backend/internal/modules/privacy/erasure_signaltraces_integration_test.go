@@ -78,7 +78,6 @@ func auditActorCtx(ctx context.Context, t *testing.T, tx pgx.Tx) (context.Contex
 	mustExec(ctx, t, tx, `INSERT INTO workspace (id) VALUES ($1)`, ws)
 	mustExec(ctx, t, tx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
 		user, "admin-"+user.String()+"@signals.test")
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user}), user
 }

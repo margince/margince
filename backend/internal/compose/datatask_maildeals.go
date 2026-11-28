@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
@@ -24,7 +23,6 @@ import (
 // It decides as the mailbox that captured each mail, and asks nobody. It never
 // touches a colleague's filing; the operator preview reports what it leaves.
 func mailDealsDataTask(pool *pgxpool.Pool) datatask.Task {
-	db := InstallationDB(pool)
 	repair := mailDealRepair(pool)
 	return datatask.Task{
 		ID: "core/1792680000_captured_mail_filed_on_its_deal", Version: 1,
@@ -34,15 +32,6 @@ func mailDealsDataTask(pool *pgxpool.Pool) datatask.Task {
 			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: capture.EstimateDealRepair,
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-				// The capturing seat's authority is resolved per workspace,
-				// which the executor's system context does not carry.
-				if _, bound := principal.WorkspaceID(ctx); !bound {
-					ws, err := db.Workspace(ctx)
-					if err != nil {
-						return datatask.BatchOut{}, err
-					}
-					ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-				}
 				return repair.BatchTx(ctx, tx, in)
 			},
 		}},

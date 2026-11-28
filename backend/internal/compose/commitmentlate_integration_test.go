@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A meeting typed up after the horizon is still evidence a colleague supplied
@@ -114,7 +113,7 @@ func TestOnlyHandLoggedEvidenceIsProposedPastTheHorizon(t *testing.T) {
 			if test.private {
 				c.PrivateTo = &e.Rep1
 			}
-			ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+			ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 			dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())

@@ -30,7 +30,7 @@ import (
 func TestTwoMeetingRecapRulesStageOneDraftAfterNotesAndHeld(t *testing.T) {
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
-	rbac, err := identity.NewService(e.Pool).EffectiveRBAC(e.Admin(), e.WS, e.AdminUser)
+	rbac, err := identity.NewService(e.Pool).EffectiveRBAC(e.Admin(), e.AdminUser)
 	if err != nil {
 		t.Fatal(err)
 	}

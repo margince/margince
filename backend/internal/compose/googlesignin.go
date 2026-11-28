@@ -242,12 +242,12 @@ func enabledOidcProviders(pool *pgxpool.Pool, svc *identity.Service, configured 
 		if pool == nil {
 			return configured, nil
 		}
-		wsID, err := svc.InstallationWorkspace(ctx)
+		_, err := svc.InstallationWorkspace(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("resolving the installation for the sign-in provider policy: %w", err)
 		}
 		readCtx := principal.SystemActing(
-			principal.WithWorkspaceID(ctx, wsID.UUID), enabledOidcProvidersReadActor)
+			ctx, enabledOidcProvidersReadActor)
 		chosen, err := config.StoredVal(readCtx, StoredConfig(pool), identity.EnabledOidcProviders)
 		if err != nil {
 			return nil, fmt.Errorf("reading the enabled sign-in providers: %w", err)

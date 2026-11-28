@@ -211,12 +211,11 @@ func (w *DealRoomTimeline) write(ctx context.Context, env events.Envelope, note 
 	return nil
 }
 
-// noteContext binds the workspace, the trace and the system actor this consumer
+// noteContext binds the trace and the system actor this consumer
 // runs as. A subscriber carries none of them: without this the governed write
 // would fail for want of an actor, and the note would carry no correlation back
 // to what happened in the room.
 func (w *DealRoomTimeline) noteContext(ctx context.Context, env events.Envelope, ws ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	// The note's own event names what caused it, so a reader can walk from the
 	// timeline entry back to the comment or release that produced it.

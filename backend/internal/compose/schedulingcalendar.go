@@ -49,11 +49,7 @@ func (c schedulingCalendar) hostMayBook(ctx context.Context, host ids.UserID) er
 	if c.registry == nil {
 		return apperrors.ErrPermissionDenied
 	}
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return apperrors.ErrPermissionDenied
-	}
-	member, err := authz.MemberPrincipal(ctx, c.Seats, workspace, host.UUID)
+	member, err := authz.MemberPrincipal(ctx, c.Seats, host.UUID)
 	if err != nil {
 		return err
 	}

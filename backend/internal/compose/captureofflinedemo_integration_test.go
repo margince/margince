@@ -21,7 +21,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TestTheDirectoryReadsThroughTheSeam is the regression this file exists for.
@@ -30,7 +29,7 @@ func TestTheDirectoryReadsThroughTheSeam(t *testing.T) {
 	// The workspace must be BOUND, exactly as the capture job binds it before
 	// calling the connector. Without it the read is refused rather than empty:
 	// the failure is loud.
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	seat := ids.UUID(e.Rep1)
 
 	company := seedOfflineDemoAccount(t, e, seat, "acme")
@@ -67,7 +66,7 @@ func TestTheDirectoryReadsThroughTheSeam(t *testing.T) {
 // the wrong mailbox, and the sink would refuse the link anyway.
 func TestTheDirectoryOnlyReturnsThisSeatsAccounts(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 
 	mine := seedOfflineDemoAccount(t, e, ids.UUID(e.Rep1), "mine")
 	theirs := seedOfflineDemoAccount(t, e, ids.UUID(e.Rep3), "theirs")

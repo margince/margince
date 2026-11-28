@@ -270,8 +270,7 @@ func setupGoogleAppWithEnvApp(t *testing.T, opts ...compose.Option) (*apptest.Ap
 // arrives, which no request of this composition can do.
 func storedAppCtx(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
-	ws := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
-	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), ws), "test-stored-app")
+	return principal.SystemActing(context.Background(), "test-stored-app")
 }
 
 // An app the environment supplies is the one the consent flow uses, over an app

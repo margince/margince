@@ -18,7 +18,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -55,7 +54,11 @@ func TestDropBeforeStoreAgreesWithUpsert(t *testing.T) {
 // full download decides. Unsent mail, and history, are dropped as before.
 func TestDropBeforeStoreLeavesTheSeatsOwnSentMailToItsBody(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `

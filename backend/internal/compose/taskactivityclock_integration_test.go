@@ -201,7 +201,7 @@ func TestTheDataTaskTakesATaskOutOfAStoredClockOnce(t *testing.T) {
 	for table, id := range map[string]ids.UUID{"contact": f.contact, "company": f.company, "deal": f.deal, "project": f.project} {
 		before[table] = readClockRow(t, f.e, table, id)
 	}
-	runCtx := datatask.Acting(principal.WithWorkspaceID(context.Background(), f.e.WS), task.ID)
+	runCtx := datatask.Acting(context.Background(), task.ID)
 	f.assertNoTaskClocks(t, "after the run")
 	for _, step := range task.Steps {
 		in := datatask.BatchIn{Limit: 10}
@@ -234,7 +234,7 @@ func TestTheDataTaskLeavesAClockATaskSharesWithAMail(t *testing.T) {
 // assertNoTaskClocks holds the data task's selection empty on every table.
 func (f taskClockFixture) assertNoTaskClocks(t *testing.T, why string) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), f.e.WS)
+	ctx := context.Background()
 	for _, table := range []storekit.ClockTable{storekit.ClockContacts, storekit.ClockCompanies, storekit.ClockDeals, storekit.ClockProjects} {
 		var selected []ids.UUID
 		if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) (err error) {

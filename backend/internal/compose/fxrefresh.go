@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -112,7 +111,11 @@ func (f fxRefresh) run(ctx context.Context) error {
 	}
 	fetched := f.collect(base, pairs, trackedCurrencySet(symbols))
 
-	ws := storekit.MustWorkspace(ctx)
+	company, err := database.ProvenWorkspace(ctx, f.pool)
+	if err != nil {
+		return fmt.Errorf("fx refresh: %w", err)
+	}
+	ws := company.UUID
 	said := approvalSummaryCopyOver(ctx, f.pool)
 	staged := 0
 	for cur, newRate := range fetched {

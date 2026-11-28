@@ -20,9 +20,8 @@ import (
 )
 
 // GraphGuestsDataTask gives a meeting that a Microsoft calendar event resolved
-// onto, an import for instance, the guests the stored event lists. inWorkspace
-// binds the installation's workspace, which the seat's authority is read in.
-func GraphGuestsDataTask(authority authz.Resolver, inWorkspace func(context.Context) (context.Context, error)) datatask.Task {
+// onto, an import for instance, the guests the stored event lists.
+func GraphGuestsDataTask(authority authz.Resolver) datatask.Task {
 	return datatask.Task{
 		ID: "core/1795253138_matched_graph_meeting_guests", Version: 1,
 		Title:    systemtext.Literal("datatask.title.core.1795253138_matched_graph_meeting_guests"),
@@ -34,10 +33,6 @@ func GraphGuestsDataTask(authority authz.Resolver, inWorkspace func(context.Cont
 				return storedmail.Count(ctx, q, matchedGraphOriginals, maximum)
 			},
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-				ctx, err := inWorkspace(ctx)
-				if err != nil {
-					return datatask.BatchOut{}, err
-				}
 				return storedmail.Page(ctx, tx, in, "a.id, "+originalstore.SQL("a"), matchedGraphOriginals,
 					func(row *storedEvent) (ids.UUID, *[]byte) { return row.ID, &row.Payload },
 					func(ctx context.Context, tx pgx.Tx, row storedEvent) (bool, error) {

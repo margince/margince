@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -84,7 +83,7 @@ func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
 	rt := &callRuntime{
 		unit:    syncNowUnit,
 		live:    true,
-		callCtx: principal.WithWorkspaceID(ctx, ws),
+		callCtx: ctx,
 		deps:    extensionRuntimeBinding{pool: pool},
 	}
 

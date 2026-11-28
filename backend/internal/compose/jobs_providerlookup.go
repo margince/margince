@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ProviderLookupSweepArgs schedules one fleet-wide catch-up pass.
@@ -49,7 +48,7 @@ func (w *providerLookupSweepWorker) Work(ctx context.Context, _ *river.Job[Provi
 }
 
 func (w *providerLookupSweepWorker) lookupWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := providerJobActor(principal.WithWorkspaceID(ctx, workspace))
+	wsCtx := providerJobActor(ctx)
 	store, err := providerLookupStore(w.pool, w.cfg, workspace)
 	if err != nil {
 		return err

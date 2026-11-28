@@ -75,7 +75,7 @@ func (w *riskVerdictSweepWorker) Work(ctx context.Context, _ *river.Job[RiskVerd
 }
 
 func (w *riskVerdictSweepWorker) recordWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	wsCtx = principal.SystemActing(wsCtx, riskVerdictActor)
 	return jobs.FaultContext(ctx, w.record(wsCtx, workspace))
 }

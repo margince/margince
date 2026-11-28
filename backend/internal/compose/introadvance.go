@@ -300,14 +300,13 @@ func (a *IntroAdvance) answerAsksTo(
 	return nil
 }
 
-// advanceContext binds the workspace, the trace and the system actor this
+// advanceContext binds the trace and the system actor this
 // consumer runs as. A subscriber carries none of them: without the actor the
 // first governed call fails, and without the correlation id the audit row this
 // causes has no link back to the message that caused it.
 func (a *IntroAdvance) advanceContext(
 	ctx context.Context, env events.Envelope, ws ids.UUID,
 ) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem,

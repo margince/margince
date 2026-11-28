@@ -52,7 +52,7 @@ func mintWithdrawal(t *testing.T, e *channelConsentEnv, in WithdrawalMintInput) 
 // holding grants no presser has can pass a press that a real one could not, and
 // the direction that hides is the one this file exists to catch.
 func pressCtx(e *channelConsentEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:public_preferences",
@@ -943,7 +943,7 @@ func TestAContactsCredentialIsRefusedByTheAddressStop(t *testing.T) {
 func TestAPressWithNoActorBoundRecordsNothing(t *testing.T) {
 	e := setupChannelConsent(t)
 	address := "no-actor-" + e.ws.String() + "@example.test"
-	unattributed := principal.WithWorkspaceID(context.Background(), e.ws)
+	unattributed := context.Background()
 
 	var stopped bool
 	err := e.store.db.Tx(unattributed, func(tx pgx.Tx) error {

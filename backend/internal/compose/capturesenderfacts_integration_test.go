@@ -31,7 +31,7 @@ func sendersReader(e *integration.Env, user ids.UUID, contactRead bool) context.
 	if contactRead {
 		objects["contact"] = principal.ObjectGrant{Read: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

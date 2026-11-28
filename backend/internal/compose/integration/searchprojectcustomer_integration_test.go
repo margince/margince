@@ -39,7 +39,7 @@ type projectCompanyFixture struct {
 
 // writer seeds as Rep1, a seat the fixture created, with the admin grants.
 func (q *queryEnv) writer() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), q.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + q.Rep1.String(), UserID: q.Rep1,
@@ -113,7 +113,7 @@ func (q *queryEnv) readerAs(user, team ids.UUID, scope principal.RowScope, witho
 	for _, object := range without {
 		delete(grants, object)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), q.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		TeamIDs:     []ids.UUID{team},

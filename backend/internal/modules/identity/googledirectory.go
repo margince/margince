@@ -278,14 +278,9 @@ func (s *Service) directoryLookupWanted(ctx context.Context, provider string, cl
 // directoryCredential opens the stored credential, read as the installation: the
 // anonymous sign-in has no workspace bound yet. ok is false when none is stored.
 func (s *Service) directoryCredential(ctx context.Context) (cred directoryCredential, fingerprint string, ok bool) {
-	ws, err := s.InstallationWorkspace(ctx)
-	if err != nil {
-		slog.WarnContext(ctx, "resolving the installation for the Google directory", "err", err)
-		return directoryCredential{}, "", false
-	}
-	readCtx := principal.WithWorkspaceID(principal.WithActor(ctx, principal.Principal{
+	readCtx := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: directoryActor,
-	}), ws.UUID)
+	})
 	sealed, err := config.StoredVal(readCtx, s.directory.cfg, GoogleDirectoryCredential)
 	if err != nil {
 		slog.WarnContext(ctx, "opening the Google directory credential", "err", err)

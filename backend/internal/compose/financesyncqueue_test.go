@@ -12,8 +12,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // syncInsertRecorder is the job runner's insert seam, remembering one insert.
@@ -31,7 +29,7 @@ func (r *syncInsertRecorder) Enqueue(_ context.Context, args river.JobArgs, opts
 // A press of "sync now" queues this workspace's pass on the declared queue,
 // and a second press while one is queued or running joins it.
 func TestQueueSyncQueuesThisWorkspacesPassOnceWhileOneIsActive(t *testing.T) {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	enqueuer := &syncInsertRecorder{}
 
 	if err := (financeSyncQueue{enqueue: enqueuer}).QueueSync(ctx); err != nil {

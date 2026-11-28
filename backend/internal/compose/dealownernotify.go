@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -67,9 +69,9 @@ func followDealOwnerAndTell(ctx context.Context, tx pgx.Tx, dealID ids.UUID, fro
 // decide, and takes the former holders' lines back. The check is the staging
 // announcement's, asked under the new owner's own authority.
 func tellNewDecider(ctx context.Context, tx pgx.Tx, store *notices.Store, decider ids.UUID, moved []ids.ApprovalID, clock func() time.Time) error {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("compose: a deal's owner changed outside a bound workspace")
+	wsID, err := storekit.Workspace(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("compose: a deal's owner changed with no live company: %w", err)
 	}
 	seatCtx, live, err := deciderContextTx(ctx, tx, decider)
 	if err != nil {

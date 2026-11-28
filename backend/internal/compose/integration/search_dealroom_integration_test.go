@@ -38,7 +38,7 @@ func roomSeats(read bool) map[string]principal.ObjectGrant {
 }
 
 func (e *SearchEnv) asSeat(user, team ids.UUID, scope principal.RowScope, objects map[string]principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
@@ -163,7 +163,7 @@ func TestASeatWithoutRoomReadFindsNoDealRoom(t *testing.T) {
 func TestABuyerSearchingForARoomGetsTheAnswerOfAQueryThatMatchesNothing(t *testing.T) {
 	e := SetupSearch(t)
 	seedRooms(t, e)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalBuyer, ID: "buyer:" + ids.NewV7().String(),
 		Permissions: principal.Permissions{Objects: roomSeats(true), RowScope: principal.RowScopeAll},

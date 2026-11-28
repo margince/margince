@@ -278,7 +278,7 @@ func TestOnlyAPipelineAdminEditsExitCriteria(t *testing.T) {
 	stageID := openStage(t, e, SemanticOpen)
 	criterion := addCriterion(t, e, stageID, "buyer_confirmed")
 
-	reader := principal.WithWorkspaceID(context.Background(), e.ws)
+	reader := context.Background()
 	reader = principal.WithCorrelationID(reader, ids.NewV7())
 	reader = principal.WithActor(reader, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,
@@ -409,7 +409,7 @@ func TestAnArchivedStagesCriteriaAreStillReadable(t *testing.T) {
 
 	// Removing a stage is pipeline:delete, a different verb from the config
 	// grant the rest of these cases use.
-	remover := principal.WithWorkspaceID(context.Background(), e.ws)
+	remover := context.Background()
 	remover = principal.WithCorrelationID(remover, ids.NewV7())
 	remover = principal.WithActor(remover, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,
@@ -575,7 +575,7 @@ func moveDealToAnotherOpenStage(t *testing.T, e *configEnv, from ids.StageID, de
 // refusal proven through it weaker, and deal:delete is exactly the authority
 // several of those refusals are about.
 func (e *configEnv) asDealArchiver() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,

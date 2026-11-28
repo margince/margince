@@ -194,7 +194,7 @@ func TestACallerIsTheirOwnTeammate(t *testing.T) {
 // refusal keeps an agent seat or a background pass from probing the chart.
 func TestACallerWithNoHumanBehindItIsRefused(t *testing.T) {
 	e := setupRevocationEnv(t, "team-membership-nonhuman")
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws.UUID)
+	ctx := context.Background()
 
 	// An agent seat is refused with the permission sentinel, which is the answer
 	// a caller acts on: it is a decision about authority rather than a
@@ -232,7 +232,7 @@ func inviteMember(ctx context.Context, t *testing.T, e *revocationEnv, email, na
 	if err != nil {
 		t.Fatalf("inviting %s: %v", email, err)
 	}
-	redeem := principal.WithCorrelationID(principal.WithWorkspaceID(ctx, e.ws.UUID), ids.NewV7())
+	redeem := principal.WithCorrelationID(ctx, ids.NewV7())
 	if err := e.svc.RedeemPasswordReset(redeem, rawToken, "a member password!"); err != nil {
 		t.Fatalf("redeeming the invite for %s: %v", email, err)
 	}

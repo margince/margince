@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestLastActivityAudience_NarrowingTheNewestMessageMovesEveryClockButTheDeals(t *testing.T) {
@@ -273,7 +272,7 @@ func (e *Env) contactClock(t *testing.T, id ids.ContactID) *time.Time {
 // harness, and the column is what all four helpers write and every reader reads.
 func (e *Env) projectClock(t *testing.T, id ids.UUID) *time.Time {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	var at *time.Time
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT last_activity_at FROM project WHERE id = $1`, id).Scan(&at)

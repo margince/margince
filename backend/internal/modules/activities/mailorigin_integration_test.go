@@ -113,7 +113,7 @@ func (e *promiseEnv) reading(objects ...string) context.Context {
 	for _, object := range objects {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
 		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},

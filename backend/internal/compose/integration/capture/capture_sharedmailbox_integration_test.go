@@ -47,7 +47,7 @@ func sharedMailbox(t *testing.T, env captureEnv, team ids.UUID, posture string) 
 	id := integration.ConnectSharedMailbox(t, registry, env.e.WS, integration.SharedMailbox{
 		Provider: sharedMailboxProvider, Address: sharedMailboxAddress, ReaderTeam: team, ConnectedBy: env.e.Rep1, Posture: posture,
 	})
-	wsCtx := principal.WithWorkspaceID(context.Background(), env.e.WS)
+	wsCtx := context.Background()
 	return id, func(t *testing.T, raws ...[]byte) {
 		t.Helper()
 		conn.raws, conn.sent, conn.deals, conn.kinds = raws, nil, nil, nil
@@ -69,7 +69,7 @@ func mailTo(msgID, body string, to ...string) []byte {
 // readerAs is a member reading the timeline with an ordinary role, its teams
 // as identity's loadGrants hands them over.
 func readerAs(e *integration.SearchEnv, user ids.UUID, teams ...ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, TeamIDs: teams,
 		SeatType: principal.SeatFull,
@@ -270,7 +270,7 @@ func TestAnArchivedReaderTeamReadsNothingAndStopsTheSync(t *testing.T) {
 	if _, err := e.Owner.Exec(context.Background(), `UPDATE capture_sync_state SET next_sync_at = now() - interval '1 minute' WHERE connection_id = $1`, box); err != nil {
 		t.Fatal(err)
 	}
-	due, err := env.registry.DueConnections(principal.WithWorkspaceID(context.Background(), e.WS), sharedMailboxProvider)
+	due, err := env.registry.DueConnections(context.Background(), sharedMailboxProvider)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -284,7 +284,7 @@ func TestAnArchivedReaderTeamReadsNothingAndStopsTheSync(t *testing.T) {
 func TestASharedMailboxIsScheduledLikeAPersonalOne(t *testing.T) {
 	env := newCaptureEnv(t)
 	box, _ := sharedMailbox(t, env, env.e.Team1, capturemod.PostureHeld)
-	due, err := env.registry.DueConnections(principal.WithWorkspaceID(context.Background(), env.e.WS), sharedMailboxProvider)
+	due, err := env.registry.DueConnections(context.Background(), sharedMailboxProvider)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -450,7 +450,7 @@ func TestABrokenSharedMailboxShowsInFleetHealth(t *testing.T) {
 	if _, err := e.Owner.Exec(context.Background(), `UPDATE capture_connection SET status = 'error' WHERE id = $1`, box); err != nil {
 		t.Fatal(err)
 	}
-	operator := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	operator := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"job_health": {Read: true}}, RowScope: principal.RowScopeAll},
 	})

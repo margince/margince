@@ -95,7 +95,7 @@ func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) e
 		return nil
 	}
 	db := InstallationDB(n.pool)
-	ws, err := db.Workspace(ctx)
+	_, err := db.Workspace(ctx)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,6 @@ func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) e
 	// actor the audited write below has nobody to name; without the correlation
 	// id the audit row has no link back to the contact.created that caused it,
 	// so a redelivery cannot be told from a second real event.
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem,

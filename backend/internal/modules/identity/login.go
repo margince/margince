@@ -12,9 +12,6 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // LoginSession is what a successful password login hands the browser: the
@@ -32,16 +29,16 @@ type LoginSession struct {
 // browser presented from an earlier login, empty for none; it matters only
 // while the account is §27-locked (see checkCredentials).
 func (s *Service) Login(ctx context.Context, email, plaintext, device string) (Identity, LoginSession, error) {
-	rawWsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		// The middleware binds the singleton company on every request
-		// (installation.go); an unbound context means the installation is
-		// not bootstrapped — and the answer must not disclose that:
+	wsID, live, err := s.liveCompany(ctx)
+	if err != nil {
+		return Identity{}, LoginSession{}, err
+	}
+	if !live {
+		// An installation with no company yet must not disclose that:
 		// credentials against a not-yet-existing company read exactly
 		// like wrong credentials.
 		return Identity{}, LoginSession{}, ErrBadCredentials
 	}
-	wsID := ids.From[ids.WorkspaceKind](rawWsID)
 	// Read before the credential check so the outcome of a genuine outage is a
 	// refused login rather than a session minted against an unknown policy.
 	sso, err := s.enforcedSSO(ctx)

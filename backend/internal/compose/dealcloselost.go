@@ -72,7 +72,7 @@ type closeDecision struct {
 	reason  string
 }
 
-// CloseWorkspace closes every due deal in the workspace bound in ctx and
+// CloseWorkspace closes every due deal in the installation's workspace and
 // reports how many it closed. One deal that cannot close does not stop the
 // others; it is logged and tried again at the next check.
 func (c silentDealCloser) CloseWorkspace(ctx context.Context) (int, error) {

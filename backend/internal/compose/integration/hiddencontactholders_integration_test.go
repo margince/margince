@@ -148,7 +148,7 @@ func TestAnAgentIsNotToldAboutARestrictedContactOrItsHolder(t *testing.T) {
 	e.WsExec(t, `INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
 		VALUES ($1, 'processing_restriction', 'test', 'human:test', 'subject')`, restricted)
 
-	base := principal.WithWorkspaceID(context.Background(), e.WS)
+	base := context.Background()
 	base = principal.WithCorrelationID(base, ids.NewV7())
 	agent := principal.WithActor(base, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,

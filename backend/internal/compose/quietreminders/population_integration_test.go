@@ -79,7 +79,7 @@ func TestQuietCustomerListNeedsNoOpenDealAndSharesReminderSuppression(t *testing
 	}
 	e.MakeCapturePrivate(t, "contact", private, e.Rep2)
 	e.GrantRole(t, e.Rep1, "admin")
-	rbac, err := identity.NewService(e.Pool).EffectiveRBAC(e.Admin(), e.WS, e.Rep1)
+	rbac, err := identity.NewService(e.Pool).EffectiveRBAC(e.Admin(), e.Rep1)
 	if err != nil {
 		t.Fatal(err)
 	}

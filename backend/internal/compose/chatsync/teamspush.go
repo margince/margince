@@ -158,11 +158,7 @@ func (r *TeamsReceiver) actTeams(ctx context.Context, app capture.ConnectorApp, 
 	if err := r.Store.InvalidateNativeRoot(ctx, bot.ConnectionID, channel, chatwire.RootRef{ID: root, Revision: revision, Deleted: activity.Type == "messageDelete" && root == activity.ID}); err != nil {
 		return crmcontracts.DispactChannelEventReceipt{}, err
 	}
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return crmcontracts.DispactChannelEventReceipt{}, chatlinks.ErrEventsUnavailable
-	}
-	if err := r.Pull(ctx, workspace, bot.ConnectionID); err != nil {
+	if err := r.Pull(ctx, bot.ConnectionID); err != nil {
 		return crmcontracts.DispactChannelEventReceipt{}, err
 	}
 	return receipt(crmcontracts.DispactChannelEventReceiptStatusPullQueued), nil

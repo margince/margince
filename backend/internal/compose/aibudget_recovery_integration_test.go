@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -36,7 +35,7 @@ func TestAllowanceRecoveryAdvancesBothWebsiteClocksAndIsIdempotent(t *testing.T)
 	read, args := startDeepRead(t, e, company)
 	next := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), budgetDeferringBrain{next: next})
-	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err == nil {
+	if err := worker.run(context.Background(), args); err == nil {
 		t.Fatal("expected budget deferral")
 	}
 	runner, err := jobs.NewInserter(e.Pool, slog.New(slog.DiscardHandler))
@@ -218,7 +217,7 @@ func setRecoveryAllowance(t *testing.T, e *integration.Env, tokens int64) {
 // so the run says why no provider was called. A call that was made is not one.
 func TestAnAgentStepTheRouterDeclinedReachesTheRunnerAsItsReason(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
+	ctx := t.Context()
 	meter := ai.NewMeter(InstallationDB(e.Pool))
 	if err := meter.Record(ctx, ai.Usage{Task: ai.TaskAgentLoop, Tier: ai.TierCheapCloud, TokensIn: 10}); err != nil {
 		t.Fatalf("spending the allowance: %v", err)

@@ -25,7 +25,7 @@ import (
 )
 
 func TestInternalMailSourceEnrollmentRequiresHumanAdminAndAuditsAtomically(t *testing.T) {
-	ctx, _, _, ws := newCaptureRegistryFixture(t)
+	ctx, _, _, _ := newCaptureRegistryFixture(t)
 	_, pool := setupCaptureDB(t)
 	actor, ok := principal.Actor(ctx)
 	if !ok {
@@ -121,7 +121,7 @@ func TestInternalMailSourceEnrollmentRequiresHumanAdminAndAuditsAtomically(t *te
 		t.Fatal("rollback accepted")
 	}
 	assertInternalMailPolicyAudit(ctx, t, pool, 1)
-	if _, err := store.SetInternalMailPolicy(principal.WithWorkspaceID(ctx, ws.UUID), false, selection); err != nil {
+	if _, err := store.SetInternalMailPolicy(ctx, false, selection); err != nil {
 		t.Fatal(err)
 	}
 	assertInternalMailPolicyAudit(ctx, t, pool, 2)

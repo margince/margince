@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -34,7 +33,7 @@ func useInstallationZone(t *testing.T, e *Env, zone string) {
 
 func inWorkspaceTx(t *testing.T, e *Env, fn func(ctx context.Context, tx pgx.Tx) error) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error { return fn(ctx, tx) }); err != nil {
 		t.Fatal(err)
 	}

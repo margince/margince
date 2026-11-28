@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -255,7 +256,7 @@ func TestACallUnderEveryBoundIsAdmitted(t *testing.T) {
 // check — so a busy agent cannot lock its own operator out of the product.
 func TestAHumanIsNeverRefusedByAQuota(t *testing.T) {
 	quota := over(agentvolume.Calls, 9999, 1000)
-	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep"})
 
 	if _, err := quotaGate(quota).Admit(ctx, readSpec, noResolve); err != nil {
@@ -306,7 +307,7 @@ func TestARestReadUnderTheBoundIsAdmitted(t *testing.T) {
 // RBAC at the store, and a busy agent must not lock its operator out of the UI.
 func TestAHumansRestReadIsNeverRefusedByTheBound(t *testing.T) {
 	quota := over(agentvolume.Calls, 9999, 1000)
-	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep"})
 
 	if err := quotaGate(quota).AdmitRead(ctx); err != nil {
@@ -323,7 +324,7 @@ func TestAHumansRestReadIsNeverRefusedByTheBound(t *testing.T) {
 // the count could not be read, never that the agent reached a limit.
 func TestAnUnreadableCountRefusesWithoutClaimingALimit(t *testing.T) {
 	gate := NewGate(&stubAuthority{seat: principal.SeatFull},
-		WithVolumeMeter(agentvolume.New(nil, agentvolume.Limits{}, agentvolume.DefaultWindow)))
+		WithVolumeMeter(agentvolume.New(nil, agentvolume.Limits{}, agentvolume.DefaultWindow).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))))
 
 	for door, err := range map[string]error{
 		"REST": gate.AdmitRead(agentCtx(principal.ScopeRead)),

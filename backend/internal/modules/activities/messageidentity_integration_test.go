@@ -84,7 +84,7 @@ func (e *sendEnv) sentRow(t *testing.T, id ids.ActivityID) sentRow {
 // storekit.Emit requires. It is NOT the sender's seat — a seat revoked between
 // staging and transmit must not strand the message's identity.
 func (e *sendEnv) asSendWorker() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, "system:comms-send")
 }
 

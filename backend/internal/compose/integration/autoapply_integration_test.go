@@ -35,7 +35,7 @@ import (
 // principal, which is what makes the row server-proposed (passport_id NULL) and
 // therefore eligible to apply at all.
 func stageCtx(e *Env) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, "system:close-date-sweep")
 }
 
@@ -111,7 +111,7 @@ func turnAutoApplyOn(t *testing.T, svc *approvals.Service, e *Env, rep ids.UUID)
 // own. The pass binds the OWNER per row, so a principal here would only mask
 // which authority each apply actually ran under.
 func sweepCtx(e *Env) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
 
@@ -337,11 +337,12 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	// and the test would pass even if grantCompanyRepRole granted the wrong thing.
 	// Same call, same source, both sides.
 	rbac, seat, err := identity.NewService(e.Pool).EffectiveAuthority(
-		principal.WithWorkspaceID(context.Background(), e.WS), e.WS, e.Rep1)
+		context.Background(), e.Rep1)
+
 	if err != nil {
 		t.Fatalf("resolving the rep's own authority: %v", err)
 	}
-	undoCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	undoCtx := context.Background()
 	undoCtx = principal.WithActor(undoCtx, principal.Principal{
 		Type:        principal.PrincipalHuman,
 		ID:          principal.HumanIDPrefix + e.Rep1.String(),

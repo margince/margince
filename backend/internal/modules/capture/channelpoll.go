@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // DueChannelConnection names one connection the dispatcher schedules a poll
@@ -64,8 +63,7 @@ func DueChannelConnections(ctx context.Context, pool *pgxpool.Pool, provider str
 	}
 
 	var due []DueChannelConnection
-	wsCtx := principal.WithWorkspaceID(ctx, wsID)
-	err = database.WithTx(wsCtx, pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT id FROM channel_connection
 			 WHERE provider = $1 AND status = $2 AND archived_at IS NULL AND `+botConnectionRow,
@@ -103,16 +101,14 @@ func DueChannelConnections(ctx context.Context, pool *pgxpool.Pool, provider str
 func LoadChannelPollTarget(ctx context.Context, pool *pgxpool.Pool, provider string, id ids.UUID) (ChannelPollTarget, error) {
 	var out ChannelPollTarget
 	var credentialRef string
-	// The workspace comes from the ctx the caller already established from the
-	// job's args, not from the row: the poll runs bound to a tenant before it
-	// asks which connection to poll, so reading it back would only re-state what
-	// the transaction is already scoped to.
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ChannelPollTarget{}, errors.New("capture: loading a channel poll target outside workspace context")
+	// The workspace is the installation's live company, not a column of the
+	// row: no table carries one.
+	company, err := database.ProvenWorkspace(ctx, pool)
+	if err != nil {
+		return ChannelPollTarget{}, fmt.Errorf("capture: loading a channel poll target: %w", err)
 	}
-	out.WorkspaceID = ws
-	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
+	out.WorkspaceID = company.UUID
+	err = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT id, channel_id, credential_ref, poll_offset
 			  FROM channel_connection
@@ -166,7 +162,7 @@ func AdvanceChannelPollOffsetTx(ctx context.Context, tx pgx.Tx, id ids.UUID, bot
 }
 
 // StopPollingChannelConnection takes a connection out of the poll rotation and
-// records why, under the workspace bound to ctx.
+// records why, under the the installation's workspace.
 //
 // status must be one the due-scan does not select, which is what actually stops
 // the polling — there is no separate "enabled" flag to clear, and a second flag

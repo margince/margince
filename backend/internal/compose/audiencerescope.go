@@ -85,15 +85,14 @@ func (g *AudienceRescopeGen) HandleEvent(ctx context.Context, env events.Envelop
 	})
 }
 
-// rescopeContext binds the installation's workspace and a system principal:
-// the models being corrected are maintenance state, and the correction must
-// reach every row whatever the limiting human could themselves read.
+// rescopeContext binds a system principal. The models being corrected are
+// maintenance state. The correction must reach every row, whatever the limiting
+// human could read.
 func (g *AudienceRescopeGen) rescopeContext(ctx context.Context, env events.Envelope) (context.Context, error) {
-	ws, err := g.db.Workspace(ctx)
+	_, err := g.db.Workspace(ctx)
 	if err != nil {
 		return nil, err
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:audience_rescope",

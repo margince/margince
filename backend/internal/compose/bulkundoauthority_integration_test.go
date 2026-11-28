@@ -42,7 +42,7 @@ func agentOnConnection(e *integration.Env, human, connection ids.UUID) context.C
 		Teams:        []ids.TeamID{ids.From[ids.TeamKind](e.Team1)},
 		Permissions:  integration.RepPerms,
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, agent.Principal())
 }

@@ -42,7 +42,7 @@ func reportingSeat(t *testing.T, e *forecastEnv, user ids.UUID, scope principal.
 	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET seat_type='full' WHERE id=$1`, user); err != nil {
 		t.Fatal(err)
 	}
-	return principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7()), actor)
+	return principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()), actor)
 }
 
 func TestIndividualPerformanceOffJudgesAMyTeamsEditionOnTheRosterItKept(t *testing.T) {

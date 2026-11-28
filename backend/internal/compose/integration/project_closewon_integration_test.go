@@ -454,7 +454,7 @@ func TestTheDeliveryTransitionDecidesUnderTheProjectLock(t *testing.T) {
 
 	// Held from its own transaction, so the win below cannot pass LockRow
 	// until this one commits. No sleep decides the ordering — the lock does.
-	holderCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	holderCtx := context.Background()
 	holder, err := e.Pool.Begin(holderCtx)
 	if err != nil {
 		t.Fatal(err)

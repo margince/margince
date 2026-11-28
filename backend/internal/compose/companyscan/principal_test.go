@@ -20,7 +20,7 @@ type grants struct {
 	err  error
 }
 
-func (g grants) EffectiveAuthority(context.Context, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func (g grants) EffectiveAuthority(context.Context, ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return g.rbac, g.seat, g.err
 }
 
@@ -35,7 +35,7 @@ func TestTheWorkerRunsAsTheReaderWithTheScanAsItsTrace(t *testing.T) {
 		rbac: authz.RBAC{Permissions: principal.Permissions{RoleKeys: []string{"rep"}}, TeamIDs: []ids.UUID{team}},
 		seat: principal.SeatFull,
 	}
-	ctx, err := WorkerContext(principal.WithWorkspaceID(t.Context(), ids.NewV7()), authority, viewer, scan)
+	ctx, err := WorkerContext(t.Context(), authority, viewer, scan)
 	if err != nil {
 		t.Fatalf("worker context: %v", err)
 	}
@@ -51,13 +51,10 @@ func TestTheWorkerRunsAsTheReaderWithTheScanAsItsTrace(t *testing.T) {
 	}
 }
 
-func TestTheWorkerRefusesToRunWithoutAWorkspaceOrAnAuthority(t *testing.T) {
+func TestTheWorkerRefusesToRunWithoutAnAuthority(t *testing.T) {
 	viewer := ids.New[ids.UserKind]()
-	if _, err := WorkerContext(t.Context(), grants{}, viewer, ids.NewV7()); err == nil {
-		t.Error("a job context with no workspace was bound to a principal")
-	}
 	refused := errors.New("no such human")
-	_, err := WorkerContext(principal.WithWorkspaceID(t.Context(), ids.NewV7()), grants{err: refused}, viewer, ids.NewV7())
+	_, err := WorkerContext(t.Context(), grants{err: refused}, viewer, ids.NewV7())
 	if !errors.Is(err, refused) {
 		t.Errorf("err = %v, want the authority's refusal carried", err)
 	}

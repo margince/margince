@@ -29,14 +29,10 @@ import (
 func ServiceMember(
 	ctx context.Context, pool *pgxpool.Pool, unit string,
 	connected func(context.Context, pgx.Tx, string, ids.UUID) (bool, error),
-	resolve func(context.Context, *pgxpool.Pool, ids.UUID, ids.UUID) (principal.Principal, error),
+	resolve func(context.Context, *pgxpool.Pool, ids.UUID) (principal.Principal, error),
 ) (principal.Principal, bool, error) {
 	if pool == nil {
 		return principal.Principal{}, false, nil
-	}
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return principal.Principal{}, false, database.ErrNoWorkspace
 	}
 	var member ids.UUID
 	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
@@ -64,7 +60,7 @@ func ServiceMember(
 	if err != nil || member.IsZero() {
 		return principal.Principal{}, false, err
 	}
-	own, err := resolve(ctx, pool, workspace, member)
+	own, err := resolve(ctx, pool, member)
 	if err != nil {
 		return principal.Principal{}, false, fmt.Errorf("compose: resolving the service member of %s: %w", unit, err)
 	}

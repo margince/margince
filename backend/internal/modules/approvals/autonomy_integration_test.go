@@ -43,7 +43,7 @@ func decidesCountedKind() principal.Permissions {
 // asRep is the context for a rep other than the env's own, so a test can prove
 // one colleague's record is not another's.
 func (e *stagingEnv) asRep(rep ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + rep.String(), UserID: rep,

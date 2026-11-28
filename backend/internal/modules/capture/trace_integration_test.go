@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // traceWorkspace binds a workspace the trace writes run in.
@@ -36,7 +35,6 @@ func traceWorkspace(t *testing.T) (context.Context, *database.DB) {
 		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	return ctx, database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))
 }
 

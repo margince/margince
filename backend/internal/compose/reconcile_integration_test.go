@@ -137,7 +137,7 @@ func (e *reconcileEnv) grantOwner(t *testing.T, userID ids.UUID, document string
 // reconcile runs the reconciler over this env's workspace under exactly the
 // scope the follow_up_workspace worker binds.
 func (e *reconcileEnv) reconcile() error {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.SystemActing(ctx, "system:overnight")
 	return e.reconciler.ReconcileWorkspace(ctx)
 }
@@ -264,7 +264,7 @@ func (e *reconcileEnv) stageLegacyFollowUp(t *testing.T, dealID, evidence ids.UU
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = onBehalfOf(principal.SystemActing(ctx, overnightAgent), e.Rep1)
 	id, err := e.svc.Stage(ctx, approvals.StageInput{
 		Kind: deals.FollowUpReconcileKind, ProposedChange: canonical, DiffHash: hash,
@@ -582,7 +582,7 @@ func TestTheSlippingLaneReadsABookedMeetingAsANextStep(t *testing.T) {
 	bare := e.SeedDeal(t, "Has nothing planned", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, bare, "call", "Discovery call", 3)
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx,
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:overnight"})
 	stepless, err := dealsWithNoOpenNextStep(

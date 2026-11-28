@@ -310,7 +310,7 @@ func TestAConnectorCannotCancelAnotherConnectorsMeeting(t *testing.T) {
 	// A Telegram sync, naming the calendar's key. Everything about this
 	// principal is legitimate except the provider it is speaking for.
 	impostor := principal.WithCorrelationID(
-		principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+		context.Background(), ids.NewV7())
 	impostor = principal.WithActor(impostor, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:telegram",
 		UserID: e.AdminUser, OnBehalfOf: e.AdminUser,

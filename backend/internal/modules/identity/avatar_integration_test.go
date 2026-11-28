@@ -67,7 +67,7 @@ func avatarAudits(t *testing.T, e *revocationEnv, user ids.UserID) int {
 }
 
 func systemCtx(e *revocationEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws.UUID)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 }
@@ -270,12 +270,12 @@ func TestEveryReadThatNamesASeatCarriesItsPictureURL(t *testing.T) {
 	fillFromGoogle(t, e, rep.UserID, "ws/avatar/google-1.png")
 	want := "/v1/users/" + rep.UserID.String() + "/avatar?v=" + AvatarETag("ws/avatar/google-1.png")
 
-	loggedIn, session, err := e.svc.Login(principal.WithWorkspaceID(context.Background(), e.ws.UUID), "rep@acme.test", seatNamePassword, noDevice)
+	loggedIn, session, err := e.svc.Login(context.Background(), "rep@acme.test", seatNamePassword, noDevice)
 	if err != nil {
 		t.Fatalf("signing in: %v", err)
 	}
 	expectPicture(t, "/auth/login", NewHandlers(e.svc).meResponse(me, loggedIn).User.AvatarUrl, want)
-	signedIn, err := e.svc.Authenticate(principal.WithWorkspaceID(context.Background(), e.ws.UUID), session.Token)
+	signedIn, err := e.svc.Authenticate(context.Background(), session.Token)
 	if err != nil {
 		t.Fatalf("resolving the session: %v", err)
 	}

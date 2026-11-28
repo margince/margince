@@ -307,7 +307,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 func TestAcceptedOfferSummaryRefreshesOnlyTheProfile(t *testing.T) {
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
-	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	base := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	agent := principal.WithActor(base, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "agent:coldstart",
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: integration.AdminPerms,
@@ -368,7 +368,7 @@ func TestAcceptedOfferSummaryRefreshesOnlyTheProfile(t *testing.T) {
 func TestAnOfferSummaryAtTheDocumentLimitStaysInTheProfile(t *testing.T) {
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
-	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	base := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	agent := principal.WithActor(base, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "agent:coldstart",
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: integration.AdminPerms,
@@ -415,7 +415,7 @@ func TestAnOfferSummaryAtTheDocumentLimitStaysInTheProfile(t *testing.T) {
 func TestColdStartCreateWithoutLegalNameUsesDerivedDomainName(t *testing.T) {
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
-	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	base := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	agent := principal.WithActor(base, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "agent:coldstart",
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: integration.AdminPerms,

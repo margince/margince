@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -19,7 +18,7 @@ import (
 // and takes at most MaxResponsible contacts in a call.
 func TestTheSetAsideReadNeedsItsDeclarationAndBoundsABatch(t *testing.T) {
 	user, contact := ids.NewV7().String(), ids.NewV7().String()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	binding := extensionRuntimeBinding{pool: &pgxpool.Pool{}}
 
 	composeReader(t, extension.SystemReadDeals)

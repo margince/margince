@@ -53,11 +53,7 @@ func setupQueue(t *testing.T) *queueEnv {
 func (q *queueEnv) invoker(t *testing.T, token string) func(tool, args string) (string, error) {
 	t.Helper()
 	return func(tool, args string) (string, error) {
-		ws, err := q.auth.InstallationWorkspace(context.Background())
-		if err != nil {
-			t.Fatalf("resolving the installation workspace: %v", err)
-		}
-		ctx := principal.WithWorkspaceID(context.Background(), ws.UUID)
+		ctx := context.Background()
 		agent, err := q.auth.AuthenticateAgent(ctx, token)
 		if err != nil {
 			t.Fatalf("authenticating the passport: %v", err)
@@ -73,11 +69,7 @@ func (q *queueEnv) invoker(t *testing.T, token string) func(tool, args string) (
 func (q *queueEnv) automaticInvoker(t *testing.T, token string) func(tool, args string) (string, error) {
 	t.Helper()
 	return func(tool, args string) (string, error) {
-		ws, err := q.auth.InstallationWorkspace(context.Background())
-		if err != nil {
-			t.Fatalf("resolving the installation workspace: %v", err)
-		}
-		ctx := principal.WithWorkspaceID(context.Background(), ws.UUID)
+		ctx := context.Background()
 		agent, err := q.auth.AuthenticateAgent(ctx, token)
 		if err != nil {
 			t.Fatalf("authenticating the passport: %v", err)

@@ -8,18 +8,20 @@ import (
 	"errors"
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // retiredBy is a vault double that records which blobs a swap retires.
 func retiredBy() (*Sealer, *[]string) {
 	retired := &[]string{}
-	return &Sealer{Retire: func(_ context.Context, ref string) { *retired = append(*retired, ref) }}, retired
+	return &Sealer{Retire: func(_ context.Context, _ ids.WorkspaceID, ref string) { *retired = append(*retired, ref) }}, retired
 }
 
 func TestARolledBackSwapRetiresTheNewBlobAndKeepsTheOld(t *testing.T) {
 	sealer, retired := retiredBy()
 	refused := errors.New("the write was refused")
-	err := settleSwap(context.Background(), sealer, "test.sealed", swapOutcome{
+	err := settleSwap(context.Background(), ids.WorkspaceID{}, sealer, "test.sealed", swapOutcome{
 		previous: "ref-old", next: "ref-new", err: refused,
 	})
 	if !errors.Is(err, refused) {
@@ -33,7 +35,7 @@ func TestARolledBackSwapRetiresTheNewBlobAndKeepsTheOld(t *testing.T) {
 func TestAnUnclearCommitKeepsTheNewBlob(t *testing.T) {
 	sealer, retired := retiredBy()
 	lost := errors.New("the connection dropped during commit")
-	err := settleSwap(context.Background(), sealer, "test.sealed", swapOutcome{
+	err := settleSwap(context.Background(), ids.WorkspaceID{}, sealer, "test.sealed", swapOutcome{
 		previous: "ref-old", next: "ref-new", bodyDone: true, err: lost,
 	})
 	if !errors.Is(err, lost) {
@@ -46,7 +48,7 @@ func TestAnUnclearCommitKeepsTheNewBlob(t *testing.T) {
 
 func TestACommittedSwapRetiresTheReplacedBlob(t *testing.T) {
 	sealer, retired := retiredBy()
-	if err := settleSwap(context.Background(), sealer, "test.sealed", swapOutcome{
+	if err := settleSwap(context.Background(), ids.WorkspaceID{}, sealer, "test.sealed", swapOutcome{
 		previous: "ref-old", next: "ref-new", committed: true, bodyDone: true,
 	}); err != nil {
 		t.Fatalf("settle: %v", err)

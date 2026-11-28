@@ -159,7 +159,7 @@ func TestTheActionCatalogNamesEveryActionsArguments(t *testing.T) {
 func TestTheActionCatalogAnswersOnlyForWhatTheCallerIsOffered(t *testing.T) {
 	f := newRareListingFixture(t)
 	describe, _ := f.r.tools[describeRouterActionsName].(describeRouterActions)
-	readOnly := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+	readOnly := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:r", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull,
 		Scopes: principal.NewScopeSet(principal.ScopeRead), Permissions: everyRecordedGrant(),
 	})

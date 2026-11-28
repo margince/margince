@@ -369,7 +369,7 @@ func TestASendCheckWaitsForAnUncommittedErasureAndRefuses(t *testing.T) {
 		locked, release := make(chan struct{}), make(chan struct{})
 		var erasure int32
 		go func() {
-			ctx := principal.WithWorkspaceID(context.Background(), r.e.WS)
+			ctx := context.Background()
 			committed <- database.WithTx(ctx, r.e.Pool, func(tx pgx.Tx) error {
 				if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&erasure); err != nil {
 					return err

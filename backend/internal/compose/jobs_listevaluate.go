@@ -82,7 +82,7 @@ func (w *listEvaluateWorker) checkWorkspace(ctx context.Context, workspace ids.U
 // watch it; the check repeats every pass, so a pause missed now lands on the
 // next.
 func CheckLiveLists(ctx context.Context, pool *pgxpool.Pool, workspace ids.UUID, now func() time.Time) ([]collections.LiveCheck, error) {
-	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), listCheckerActor)
+	wsCtx := principal.SystemActing(ctx, listCheckerActor)
 	checks, err := NewCollectionsStore(pool).CheckLiveLists(wsCtx, func() time.Time { return now().UTC() })
 	db := InstallationDB(pool)
 	pauser := automation.NewRulePauser(db, noticesNotifier{store: notices.NewStore(db)}, NewListRules(pool))

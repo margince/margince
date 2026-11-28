@@ -22,11 +22,11 @@ import (
 // seat and no grants — enough for the registry's admission-order tests.
 type fullSeatAuthority struct{}
 
-func (fullSeatAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (fullSeatAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{}, nil
 }
 
-func (fullSeatAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (fullSeatAuthority) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -75,7 +75,7 @@ func TestInvokeGatesBeforeHandle(t *testing.T) {
 	confirmationRequired := &fakeTool{spec: mcp.ToolSpec{Name: "archive_record", Title: "archive_record", Version: testToolVersion, Description: describedForRegistration, InputSchema: json.RawMessage(`{"type":"object"}`), RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired}}
 	r.Register(confirmationRequired)
 
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeWrite),
@@ -101,7 +101,7 @@ func TestInvokeRefusesAnAgentPrincipalOnAHumanOnlyTool(t *testing.T) {
 	stub := &fakeTool{spec: mcp.ToolSpec{Name: "human_only_op", Title: "human_only_op", Version: testToolVersion, Description: describedForRegistration, InputSchema: json.RawMessage(`{"type":"object"}`), HumanOnly: true}}
 	r.Register(stub)
 
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
@@ -123,7 +123,7 @@ func TestInvokeAdmitsAHumanPrincipalOnAHumanOnlyTool(t *testing.T) {
 	r.Register(stub)
 
 	human := ids.NewV7()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + human.String(), OnBehalfOf: human,
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
@@ -138,6 +138,6 @@ func TestInvokeAdmitsAHumanPrincipalOnAHumanOnlyTool(t *testing.T) {
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (r fullSeatAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r fullSeatAuthority) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }

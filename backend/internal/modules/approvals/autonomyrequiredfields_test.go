@@ -52,7 +52,7 @@ func TestAnAbsentAutonomyFieldIsRefusedRatherThanRead(t *testing.T) {
 // field guards rather than stopping at the human-only gate.
 func aHuman() context.Context {
 	rep := ids.NewV7()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + rep.String(), UserID: rep,

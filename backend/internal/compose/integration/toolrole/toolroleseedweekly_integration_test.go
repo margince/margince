@@ -55,8 +55,7 @@ func (s sweepSeed) weeklyEngine() *weekly.Engine {
 // admin on the teams named, and answers that principal.
 func (s sweepSeed) assembleWeek(teams []ids.UUID) context.Context {
 	admin := ids.MustParse(apptest.SessionUserID(s.t, s.e))
-	ws := apptest.InstallationWorkspaceUUID(context.Background(), s.t, s.e.Pool)
-	ctx := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), ws), ids.NewV7()), principal.Principal{
+	ctx := principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + admin.String(), UserID: admin, TeamIDs: teams, Permissions: integration.AdminPerms,
 	})
 	if _, _, err := s.weeklyEngine().AssembleFor(ctx, clocktest.Now(s.t)); err != nil {
@@ -71,8 +70,7 @@ func (s sweepSeed) assembleWeek(teams []ids.UUID) context.Context {
 func finishedSiteRead(s sweepSeed, withLogo bool) string {
 	read := s.create["site_read"]()
 	admin := ids.MustParse(apptest.SessionUserID(s.t, s.e))
-	ws := apptest.InstallationWorkspaceUUID(context.Background(), s.t, s.e.Pool)
-	ctx := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), ws), principal.Principal{
+	ctx := principal.WithCorrelationID(principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:deep_read", UserID: admin, OnBehalfOf: admin,
 	}), ids.MustParse(read))
 	store := contacts.NewStore(compose.InstallationDB(s.e.Pool))

@@ -252,7 +252,6 @@ func (h *inboundHandler) invoke(
 	endpoint extension.InboundEndpoint,
 	req extension.InboundRequest,
 ) (extension.InboundOutcome, error) {
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector,
 		ID:   "connector:ext:" + string(u.name),

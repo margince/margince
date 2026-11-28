@@ -226,7 +226,11 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string, conne
 		}
 		// Audit-only, like the own-domain list beside it: this is capture
 		// configuration, and the closed event catalog carries no type for it.
-		_, err = storekit.AuditEvent(ctx, tx, "update", captureSettingsObject, storekit.MustWorkspace(ctx),
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
+		_, err = storekit.AuditEvent(ctx, tx, "update", captureSettingsObject, installation,
 			exclusionAuditImage(out))
 		return err
 	})
@@ -280,7 +284,11 @@ func (s *ExclusionStore) Remove(ctx context.Context, id ids.UUID) error {
 		}
 		// "archive", not a delete verb: the audit vocabulary is closed and
 		// lifting a rule IS retiring it, as the own-domain list reads it.
-		_, err = storekit.Audit(ctx, tx, "archive", captureSettingsObject, storekit.MustWorkspace(ctx),
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
+		_, err = storekit.Audit(ctx, tx, "archive", captureSettingsObject, installation,
 			exclusionAuditImage(e), nil)
 		return err
 	})

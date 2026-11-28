@@ -30,7 +30,7 @@ func seedHandoff(s sweepSeed) string {
 	if err := s.e.Owner.QueryRow(s.t.Context(), `SELECT id FROM workspace`).Scan(&workspace); err != nil {
 		s.t.Fatal(err)
 	}
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(s.t.Context(), workspace), ids.NewV7())
+	ctx := principal.WithCorrelationID(s.t.Context(), ids.NewV7())
 	db := database.BindTo(s.e.Pool, ids.From[ids.WorkspaceKind](workspace))
 	err = db.Tx(ctx, func(tx pgx.Tx) error {
 		members, err := identity.MemberPrincipalsTx(ctx, tx, []ids.UUID{actor})

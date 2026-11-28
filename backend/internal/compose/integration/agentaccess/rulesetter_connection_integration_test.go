@@ -237,7 +237,6 @@ func TestStoredWorkFollowsItsAgentsConnection(t *testing.T) {
 	if err := o.Owner.QueryRow(ctx, `SELECT id, oauth_grant_id FROM passport WHERE token_hash = $1`, sha256Hex(access)).Scan(&first, &connection); err != nil {
 		t.Fatal(err)
 	}
-	ctx = principal.WithWorkspaceID(ctx, workspace)
 	live, err := identity.NewService(o.Pool).AuthenticateAgentByID(ctx, ids.From[ids.PassportKind](first))
 	if err != nil {
 		t.Fatal(err)

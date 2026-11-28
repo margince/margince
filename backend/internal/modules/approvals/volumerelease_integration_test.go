@@ -39,7 +39,7 @@ func (e *stagingEnv) asAgent(t *testing.T) context.Context {
 		passport, e.rep, storekit.TokenHash(passport.String())); err != nil {
 		t.Fatalf("seeding the lent passport: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + e.rep.String(),

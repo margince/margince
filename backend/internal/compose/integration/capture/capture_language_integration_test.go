@@ -156,7 +156,7 @@ func TestEditingAMessageRetiresItsRecordedLanguage(t *testing.T) {
 
 // writerCtx is one seat editing correspondence they may write.
 func writerCtx(e *integration.SearchEnv, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

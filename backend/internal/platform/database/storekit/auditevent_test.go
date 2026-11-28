@@ -22,7 +22,7 @@ import (
 func auditingContext() context.Context {
 	ctx := principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String()})
-	return principal.WithWorkspaceID(ctx, ids.NewV7())
+	return ctx
 }
 
 // Each image's POSITION in the INSERT's argument list, so the assertions below

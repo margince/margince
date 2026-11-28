@@ -27,7 +27,7 @@ import (
 // check runs before the wording rule, so a bare context would fail these tests
 // on the wrong obligation and prove nothing about wording.
 func wordingCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:test",

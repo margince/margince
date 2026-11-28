@@ -52,7 +52,7 @@ func TestAMixedGraphBatchLocksItsHistoricalTargetsBeforeItsFirstFold(t *testing.
 		second := logHistoryGraphMail(source, t, b, []ids.UUID{contact}, clocktest.Now(t).Add(-24*time.Hour))
 		arrivals = append(arrivals, latestDerivedEvent(t, b.env, "activity.captured", second, ""))
 	}
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "system:graph_edge_reconcile")
+	system := principal.SystemActing(context.Background(), "system:graph_edge_reconcile")
 	ctx, cancel := context.WithTimeout(system, 10*time.Second)
 	defer cancel()
 	entered, release := make(chan struct{}), make(chan struct{})

@@ -53,7 +53,7 @@ func stageMailedProposal(t *testing.T) mailedProposal {
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
 	}
-	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), signalScanActor)
+	pass := principal.SystemActing(context.Background(), signalScanActor)
 	if _, err := NewSignalExtractor(e.Pool, cannedBrain{reply: string(reply)}, time.Now, slog.Default()).
 		RunWorkspace(pass, ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 		t.Fatalf("reading the thread: %v", err)
@@ -69,7 +69,7 @@ func stageMailedProposal(t *testing.T) mailedProposal {
 // as for anyone who may read the whole account.
 func TestAWaitingMailedCommitmentIsCountedOnItsAccount(t *testing.T) {
 	m := stageMailedProposal(t)
-	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), m.WS), signalScanActor)
+	pass := principal.SystemActing(context.Background(), signalScanActor)
 	company, err := ids.Parse(m.WsScalar(t, `SELECT company_id::text FROM relationship WHERE contact_id = $1`, m.customer))
 	if err != nil {
 		t.Fatalf("reading the account: %v", err)

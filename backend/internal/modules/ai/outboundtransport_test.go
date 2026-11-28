@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -165,7 +163,7 @@ func routerWithEmbedder(t *testing.T, embedder model.Client) *Router {
 // workspaceCtx is the workspace-bound context Router.Embed requires; which
 // workspace is immaterial, only that one is bound.
 func workspaceCtx() context.Context {
-	return principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	return context.Background()
 }
 
 // TestEveryCloudAdapterUsesTheHardenedTransport is the census: every provider

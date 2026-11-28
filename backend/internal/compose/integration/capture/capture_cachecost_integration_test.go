@@ -53,7 +53,7 @@ func TestWorkerCacheReportsHistoryPreparationCost(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			ctx, meter := database.WithStatementMeter(principal.WithWorkspaceID(context.Background(), e.WS))
+			ctx, meter := database.WithStatementMeter(context.Background())
 			done, completed, _, err := registry.RunBackfillStep(ctx, run.ID)
 			if err != nil || !done || !completed {
 				t.Fatalf("import: done=%v completed=%v err=%v", done, completed, err)

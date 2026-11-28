@@ -46,9 +46,5 @@ func (s *AutomationStore) previewReaders(ctx context.Context, stored Automation,
 
 // authorizerContext is ctx acting as owner, on owner's live grants.
 func (s *AutomationStore) authorizerContext(ctx context.Context, owner ids.UUID) (context.Context, error) {
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, apperrors.ErrPermissionDenied
-	}
-	return ownerContext(ctx, s.previewAuthority, workspace, owner)
+	return ownerContext(ctx, s.previewAuthority, owner)
 }

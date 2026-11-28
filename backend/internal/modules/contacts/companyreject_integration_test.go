@@ -35,7 +35,7 @@ import (
 // asRejector is the seat that may reject: company delete AND update, which
 // are the archive and the standing domain decision.
 func (e *dedupeEnv) asRejector() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
@@ -189,7 +189,7 @@ func TestRejectingNeedsBothTheArchiveAndTheDomainAuthority(t *testing.T) {
 // pair of refusals above. Every other object is absent: what is under test is
 // which half of the company authority is missing.
 func (e *dedupeEnv) asHalfSeat(grant principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

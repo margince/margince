@@ -23,16 +23,16 @@ import (
 // caseRepSeat resolves every seat to the own-scope rep the case suites use.
 type caseRepSeat struct{}
 
-func (caseRepSeat) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (caseRepSeat) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: caseRepPerms}, nil
 }
 
-func (caseRepSeat) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (caseRepSeat) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
-func (s caseRepSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, s.EffectiveRBAC, s.SeatType)
+func (s caseRepSeat) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, s.EffectiveRBAC, s.SeatType)
 }
 
 func TestAnAgentsCaseMergeKeepsEveryOtherOwnersAccess(t *testing.T) {
@@ -43,7 +43,7 @@ func TestAnAgentsCaseMergeKeepsEveryOtherOwnersAccess(t *testing.T) {
 	registry := registryWithGate(c.e.DB(), auth.NewGate(caseRepSeat{}), nil,
 		SendPath{}, companyEnricher{}, nil, nil, nil, nil, nil, registryFeatures{})
 
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), c.e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	agent := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:case-merge", SeatType: principal.SeatFull,
 		OnBehalfOf: c.e.Rep1, UserID: c.e.Rep1,

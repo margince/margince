@@ -7,7 +7,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -28,7 +27,7 @@ func TestFeaturePolicyAgreesWithServingBudgetAndProfile(t *testing.T) {
 				if task == TaskEmbeddings {
 					continue
 				}
-				ladder, _, err := router.applyBudget(wsContext(t), task, ids.From[ids.WorkspaceKind](ids.NewV7()), taskLadders[task])
+				ladder, _, err := router.applyBudget(wsContext(t), task, taskLadders[task])
 				if errors.Is(err, ErrBudgetDeferred) {
 					if row.Impact != "budget_blocked" {
 						t.Fatalf("%s: expected deferral", task)

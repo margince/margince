@@ -48,13 +48,13 @@ func (e *recencyEnv) closeAs(ctx context.Context, t *testing.T, reminder ids.UUI
 
 // asEngine is the automation engine's posture when it completes a reminder.
 func (e *recencyEnv) asEngine() context.Context {
-	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), systemCapturedBy)
+	return principal.SystemActing(context.Background(), systemCapturedBy)
 }
 
 // repairNewsletterReminders runs the repair over every reminder in one page.
 func (e *recencyEnv) repairNewsletterReminders(t *testing.T) int {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:data-task-test")
+	ctx := principal.SystemActing(context.Background(), "system:data-task-test")
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	var reopened int
 	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) (err error) {
@@ -95,7 +95,7 @@ func TestTheRepairLeavesEveryOtherClosedReminderAlone(t *testing.T) {
 		}},
 		{"another system writer closed it", func(e *recencyEnv, t *testing.T, deal, reminder ids.UUID) {
 			e.seedNewsletter(t, deal, pinnedQuiet.AddDate(0, 0, 89))
-			e.closeAs(principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:review-close"), t, reminder)
+			e.closeAs(principal.SystemActing(context.Background(), "system:review-close"), t, reminder)
 		}},
 		{"a member worked on it after the engine closed it", func(e *recencyEnv, t *testing.T, deal, reminder ids.UUID) {
 			e.seedNewsletter(t, deal, pinnedQuiet.AddDate(0, 0, 89))

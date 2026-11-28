@@ -83,7 +83,7 @@ func TestTheDoorAdmitsExactlyThePublicSurface(t *testing.T) {
 		"some verbs off": fullRegistry(t, WithCallAvailability(unavailableVerbs{})),
 	}
 	agent := func(scope principal.Scope, grants principal.Permissions, areas principal.WorkAreas) context.Context {
-		return principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+		return principal.WithActor(context.Background(), principal.Principal{
 			Type: principal.PrincipalAgent, ID: "agent:census", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull,
 			Scopes: principal.NewScopeSet(scope), Permissions: grants, Areas: areas,
 		})

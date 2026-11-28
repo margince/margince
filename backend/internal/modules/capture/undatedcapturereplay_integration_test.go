@@ -14,14 +14,17 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A mail the provider sent without a timestamp lands no later than the
 // database's now(). A replay keeps the time it landed with.
 func TestAnUndatedCaptureKeepsItsTimeOnReplay(t *testing.T) {
 	ctx, db := ownDomainWorkspace(t)
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	sink := capture.NewSink(db)
 	record := mailRecord("undated-replay", "buyer@buyer.example", "buyer@buyer.example", "rep@seller.example")
 	landed := func() (ids.UUID, time.Time, time.Time) {
@@ -31,7 +34,7 @@ func TestAnUndatedCaptureKeepsItsTimeOnReplay(t *testing.T) {
 			t.Fatalf("capturing the undated mail: %v", err)
 		}
 		var occurred, now time.Time
-		if err := db.Tx(principal.WithWorkspaceID(context.Background(), ws), func(tx pgx.Tx) error {
+		if err := db.Tx(context.Background(), func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `SELECT occurred_at, now() FROM activity WHERE id = $1`, ref.ID).Scan(&occurred, &now)
 		}); err != nil {
 			t.Fatal(err)

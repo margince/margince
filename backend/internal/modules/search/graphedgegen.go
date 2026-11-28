@@ -82,11 +82,10 @@ func (g *GraphEdgeGen) HandleEvent(ctx context.Context, env events.Envelope) err
 // trigger the event could not read, or the edge counts would differ depending
 // on who last touched the record.
 func (g *GraphEdgeGen) projectionContext(ctx context.Context, env events.Envelope) (context.Context, error) {
-	ws, err := g.store.db.Workspace(ctx)
+	_, err := g.store.db.Workspace(ctx)
 	if err != nil {
 		return nil, err
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:graph_edge",

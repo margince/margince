@@ -26,7 +26,7 @@ func TestEveryRecordGradedUnderTodaysRuleSaysWhatItsRowsSay(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading the records: %v", err)
 	}
-	stamps, perSite, err := CurrentStamps(wsContext(t), corpus, census)
+	stamps, perSite, err := CurrentStamps(t.Context(), corpus, census)
 	if err != nil {
 		t.Fatalf("stamping the corpus: %v", err)
 	}

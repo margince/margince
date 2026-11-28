@@ -78,7 +78,7 @@ func TestContact360NamesABouncedAddressAndWithholdsWithoutTheGrant(t *testing.T)
 	if err := commsStore.RecordSent(sender, deliveryID, connector.SendReceipt{ProviderMessageID: "prov-1"}); err != nil {
 		t.Fatalf("recording the send: %v", err)
 	}
-	reporter := principal.WithWorkspaceID(context.Background(), e.WS)
+	reporter := context.Background()
 	reporter = principal.WithActor(reporter, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",
 		UserID: e.Rep1, OnBehalfOf: e.Rep1,

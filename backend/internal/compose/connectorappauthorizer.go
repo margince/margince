@@ -20,6 +20,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -34,8 +35,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -293,13 +294,12 @@ func newConnectorAppResolvers(
 // gate rather than declaring the entry ungated.
 func appCredentialsFrom(store *capture.ConnectorAppStore, p capture.AppProvider) appResolver {
 	return func(ctx context.Context) (capture.ConnectorApp, bool, error) {
-		ws, ok := principal.WorkspaceID(ctx)
-		if !ok {
-			// No workspace bound is a caller that has not authenticated; the
-			// transport's own gate judges that, and answering "no app" here
-			// would let it read as an unconfigured installation.
+		app, ok, err := store.Credentials(bootCtx(ctx, connectorAppReadActor), p)
+		if errors.Is(err, database.ErrNoWorkspace) || errors.Is(err, database.ErrNotBootstrapped) {
+			// With no live company there is no stored app, and answering
+			// "no app" keeps that from reading as a failure of the store.
 			return capture.ConnectorApp{}, false, nil
 		}
-		return store.Credentials(bootCtx(ctx, ws, connectorAppReadActor), p)
+		return app, ok, err
 	}
 }

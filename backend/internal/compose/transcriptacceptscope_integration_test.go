@@ -192,7 +192,7 @@ func TestAnAgentAcceptingForItsHumanWritesTheTask(t *testing.T) {
 		t.Fatalf("seeding the passport: %v", err)
 	}
 	agent := principal.WithActor(principal.WithCorrelationID(
-		principal.WithWorkspaceID(context.Background(), s.WS), ids.NewV7()), principal.Principal{
+		context.Background(), ids.NewV7()), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + s.Rep1.String(), SeatType: principal.SeatFull,
 		PassportID: passport, OnBehalfOf: s.Rep1, UserID: s.Rep1, TeamIDs: []ids.UUID{s.Team1},
 		Scopes: principal.NewScopeSet(principal.ScopeWrite), Permissions: transcriptPerms,

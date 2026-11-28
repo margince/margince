@@ -465,8 +465,7 @@ func (e *AppEnv) DB() *database.DB {
 // cannot own makes it a second, weaker authority masquerading as a writer.
 func (e *AppEnv) DealWriterContext(t *testing.T) context.Context {
 	t.Helper()
-	wsID := InstallationWorkspaceUUID(context.Background(), t, e.Pool)
-	ctx := principal.WithWorkspaceID(context.Background(), wsID)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	user := ids.NewV7()
 	return principal.WithActor(ctx, principal.Principal{

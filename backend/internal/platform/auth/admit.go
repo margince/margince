@@ -108,9 +108,8 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	if g == nil || g.authority == nil {
 		return ctx, fmt.Errorf("%s cannot run here, because this server cannot check whose authority a call carries: %w", spec.Name, apperrors.ErrPermissionDenied)
 	}
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok || p.OnBehalfOf.IsZero() {
-		return ctx, fmt.Errorf("%s runs only for an agent acting in a workspace for the human who granted it: %w", spec.Name, apperrors.ErrPermissionDenied)
+	if p.OnBehalfOf.IsZero() {
+		return ctx, fmt.Errorf("%s runs only for an agent acting for the human who granted it: %w", spec.Name, apperrors.ErrPermissionDenied)
 	}
 	// ONE read, answering three questions about one instant.
 	//
@@ -137,7 +136,7 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// the member never held, a role change and a seat change crossing between
 	// two transactions leaving permissions from before beside a seat from
 	// after. Both are ceilings on the same act.
-	rbac, seat, err := g.authority.AdmittedAuthority(ctx, wsID, p.OnBehalfOf, p.PassportID)
+	rbac, seat, err := g.authority.AdmittedAuthority(ctx, p.OnBehalfOf, p.PassportID)
 	if err != nil {
 		return ctx, deniedIfGone("the credential or the human behind it", spec.Name, err)
 	}

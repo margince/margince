@@ -315,7 +315,7 @@ func TestImportingTwoCardsFromOneCompanyCreatesOneCompany(t *testing.T) {
 // already exists.
 func TestImportingRefusesACallerWhoMayNotUpdateContacts(t *testing.T) {
 	e := setupDedupe(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

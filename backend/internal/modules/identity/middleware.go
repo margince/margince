@@ -17,7 +17,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // publicRequests need no session; every other /v1 request 401s without one.
@@ -165,16 +164,16 @@ func isOneSegmentCallback(path, prefix string) bool {
 	return ok && provider != "" && !strings.Contains(provider, "/")
 }
 
-// Middleware chains company binding and session authentication: the
-// installation's singleton workspace → GUC context; cookie → Principal.
-// One installation serves one company (ADR-0061), so no request
-// selects a tenant — the server resolves it. Public paths still get the
-// workspace bound (login needs it), just no session requirement.
+// Middleware chains the installation's admission and session authentication.
+// A live company admits the request, and a cookie becomes the Principal.
+// One installation serves one company (ADR-0061), so no request selects a
+// tenant. Public paths are admitted the same way, because login needs a
+// company, but they need no session.
 func (h Handlers) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		wsID, err := h.svc.InstallationWorkspace(ctx)
+		_, err := h.svc.InstallationWorkspace(ctx)
 		switch {
 		case errors.Is(err, ErrNotBootstrapped), errors.Is(err, ErrMultipleWorkspaces):
 			// An availability state, not an authentication one: the
@@ -187,7 +186,6 @@ func (h Handlers) Middleware(next http.Handler) http.Handler {
 			httperr.Write(w, r, err)
 			return
 		}
-		ctx = principal.WithWorkspaceID(ctx, wsID.UUID)
 
 		if AdmittedWithoutSession(r) {
 			// Sign-in stays open while locked, so a seat can reach the screen that

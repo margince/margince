@@ -168,7 +168,7 @@ func TestRouteStatesRefusesAContactTheCallerCannotSee(t *testing.T) {
 // behind it.
 func TestRouteStatesNeedsAContactBehindIt(t *testing.T) {
 	e := setupIntro(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:none",
 		Permissions: principal.Permissions{

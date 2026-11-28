@@ -23,8 +23,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const queryCanceled = "57014"
@@ -40,7 +38,7 @@ func laneEnv(t *testing.T) (context.Context, *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	return principal.WithWorkspaceID(context.Background(), ids.NewV7()), pool
+	return context.Background(), pool
 }
 
 // onSnapshot runs fn with the snapshot's own transaction in hand, so a probe can

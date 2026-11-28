@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -369,16 +370,16 @@ func UUIDOrNil(id ids.UUID) *ids.UUID {
 	return &id
 }
 
-// MustWorkspace is the installation's workspace as the caller's context names
-// it — for the job envelopes, blob keys and audit ENTITY ids that still name a
-// workspace, not for a tenant column: ADR-0091 §8 phase D has taken the last of
-// those off the schema, the ledgers included.
-//
-// It survives that phase, because what its callers need is an identifier for the
-// installation.
-func MustWorkspace(ctx context.Context) ids.UUID {
-	wsID, _ := principal.WorkspaceID(ctx)
-	return wsID
+// Workspace is the installation's one live company, as tx proves it, for the
+// audit ENTITY ids, blob keys and advisory-lock names that name the
+// installation. It is not a tenant column: no table carries one. It fails
+// before a statement runs when no company is live.
+func Workspace(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
+	ws, err := database.WorkspaceTx(ctx, tx)
+	if err != nil {
+		return ids.UUID{}, fmt.Errorf("store: naming the installation: %w", err)
+	}
+	return ws.UUID, nil
 }
 
 // LockWriteIdentity serializes every writer of one logical record identity

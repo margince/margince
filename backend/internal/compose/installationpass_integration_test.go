@@ -15,19 +15,13 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestBindInstallationBindsTheInstallationsWorkspace(t *testing.T) {
+func TestBindInstallationAdmitsAJobWhileTheInstallationHasACompany(t *testing.T) {
 	e := integration.Setup(t)
 
-	ctx, err := bindInstallation(context.Background(), e.Pool)
-	if err != nil {
-		t.Fatalf("binding the installation: %v", err)
-	}
-	got, ok := principal.WorkspaceID(ctx)
-	if !ok || got != e.WS {
-		t.Fatalf("bound workspace = %s (bound=%v), want the installation's %s", got, ok, e.WS)
+	if _, err := bindInstallation(context.Background(), e.Pool); err != nil {
+		t.Fatalf("admitting the job: %v", err)
 	}
 }
 

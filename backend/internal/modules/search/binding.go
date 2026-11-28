@@ -289,7 +289,6 @@ const systemPrincipalID = "system"
 // pass (EmbedGen, pendingStats, ReembedWorkspace) reads and writes as the
 // system actor instead.
 func systemWorkspaceContext(ctx context.Context, wsID ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, wsID)
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: systemPrincipalID})
 }
 

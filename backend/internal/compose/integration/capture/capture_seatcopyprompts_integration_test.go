@@ -285,7 +285,7 @@ func seedDeals(t *testing.T, s seatCopyEnv, names ...string) []ids.DealID {
 // briefReader is a seat that may read what a meeting brief reads.
 func briefReader(e *integration.SearchEnv, user ids.UUID) context.Context {
 	read := principal.ObjectGrant{Read: true}
-	return principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7()),
+	return principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
 			Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{

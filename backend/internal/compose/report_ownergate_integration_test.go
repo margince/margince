@@ -211,7 +211,7 @@ func TestADrillThroughShowsWhatTheOrdinaryReadShowsAndNoMore(t *testing.T) {
 
 // typedReader is an own-scope seat asking typed questions of deals and projects.
 func (e *forecastEnv) typedReader(user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{

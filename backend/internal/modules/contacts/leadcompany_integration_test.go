@@ -36,7 +36,7 @@ func (e *privacyEnv) linker(user ids.UUID, scope principal.RowScope) context.Con
 }
 
 func (e *privacyEnv) linkerWith(user ids.UUID, scope principal.RowScope, grants map[string]principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

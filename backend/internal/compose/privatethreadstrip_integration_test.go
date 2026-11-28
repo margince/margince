@@ -333,7 +333,11 @@ func TestTheVerdictJobStripsPrivateThreadFilesOnlyWithAnObjectStore(t *testing.T
 	source, thread := "msg-stage-"+tag, "thread-"+tag
 	captureBeforeTheVerdict(ctx, t, db, blob, source, thread, address)
 	judgeThreadPersonal(ctx, t, db, source, thread, address, "8 days")
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 
 	unwired := &counterpartyVerdictWorker{stripper: privateThreadStripperFor(db.Pool(), nil)}
 	if err := unwired.stripPrivateThreads(ctx, ctx, ws); err != nil {

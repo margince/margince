@@ -19,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // errMFARequired stops a password login one step short of a session: the
@@ -195,8 +194,11 @@ func (s *Service) admission(ctx context.Context, tx pgx.Tx) (AdmissionSettings, 
 // member can retype a mistyped code on the same challenge.
 func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, challenge MFAChallenge, code string) (Identity, string, error) {
 	jti := challenge.Jti
-	rawWsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
+	wsID, live, err := s.liveCompany(ctx)
+	if err != nil {
+		return Identity{}, "", err
+	}
+	if !live {
 		return Identity{}, "", ErrBadCredentials
 	}
 	if jti == "" {
@@ -204,7 +206,6 @@ func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, c
 		// refuse rather than admit an infinitely replayable token.
 		return Identity{}, "", errBadMFACode
 	}
-	wsID := ids.From[ids.WorkspaceKind](rawWsID)
 	token, tokenHash, err := mintSessionToken()
 	if err != nil {
 		return Identity{}, "", err

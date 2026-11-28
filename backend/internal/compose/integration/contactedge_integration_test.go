@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // seedSharedThread seeds one activity carrying BOTH contacts (and our
@@ -49,7 +48,7 @@ func seedSharedThread(t *testing.T, e *Env, colleague, contactA, contactB ids.UU
 			t.Fatalf("seeding a contact participant: %v", err)
 		}
 	}
-	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
+	wsCtx := ctx
 	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{id})
 	}); err != nil {
@@ -100,7 +99,7 @@ func TestDroppingAContactRemovesTheirContactEdgesOnEitherEnd(t *testing.T) {
 	birgit := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
 	seedSharedThread(t, e, e.Rep1, anna, birgit, "the shared thread", "workspace")
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	// The subject on the LEXICALLY GREATER side, so a contact_a-only delete —
 	// the copy-paste this test exists to refuse — would leave the row.
 	subject := anna

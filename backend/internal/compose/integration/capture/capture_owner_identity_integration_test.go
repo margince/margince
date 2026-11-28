@@ -47,7 +47,7 @@ func declareIdentity(t *testing.T, e *integration.SearchEnv, user ids.UUID, kind
 
 // seatContext is one human seat, which is all declaring your own address takes.
 func seatContext(e *integration.SearchEnv, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

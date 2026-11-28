@@ -133,7 +133,10 @@ func (s *Store) ApplyColdStartProfileTx(ctx context.Context, tx pgx.Tx, in Apply
 // applyColdStartTx resolves the target and applies accepted evidence inside the
 // caller's transaction. It returns the changed columns used by audit and geocoding.
 func applyColdStartTx(ctx context.Context, tx pgx.Tx, in ApplyColdStartProfileInput, host, by string) (ids.CompanyID, map[string]any, error) {
-	wsID := workspaceID(ctx)
+	wsID, err := workspaceID(ctx, tx)
+	if err != nil {
+		return ids.CompanyID{}, nil, err
+	}
 	// Same pair of rules as ApplyDeepReadTx: only when a name is coming, and
 	// then before the row lock the image read takes. Stated here rather than
 	// left to the resolve step to take on the way past, so the ordering does

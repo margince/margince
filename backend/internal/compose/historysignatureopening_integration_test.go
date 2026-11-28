@@ -73,7 +73,7 @@ func TestAutomaticOpeningKeepsItsHistoryOriginAndAnOwnerCanRequestALiveRead(t *t
 	}
 	brain := &answerEveryThreadBrain{}
 	engine := NewConfidentialityVerdictEngine(b.env.Pool, brain, b.handlers.log)
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), b.env.WS), 10); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 10); err != nil {
 		t.Fatal(err)
 	}
 	if got := activityAudience(t, b.env, ref.ID); got != "workspace" {
@@ -103,7 +103,7 @@ func TestAutomaticOpeningKeepsItsHistoryOriginAndAnOwnerCanRequestALiveRead(t *t
 	if got := b.env.WsCount(t, fmt.Sprintf(`SELECT count(*) FROM contact_signature_enrich_state WHERE contact_id=$%d AND deferred_run_id=$%d AND requested_generation>processed_generation`, len(args)-1, len(args)), args...); got != 1 {
 		t.Fatalf("automatic history work was not deferred: %d", got)
 	}
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
+	system := principal.SystemActing(context.Background(), "agent:enrich")
 	store := newContactsStore(InstallationDB(b.env.Pool))
 	candidates, err := store.SignatureCandidatesForContacts(system, []ids.ContactID{ids.From[ids.ContactKind](ids.UUID(contact.Id))}, 100, true)
 	if err != nil || len(candidates) != 0 {
@@ -136,7 +136,7 @@ func TestAutomaticOpeningKeepsItsHistoryOriginAndAnOwnerCanRequestALiveRead(t *t
 func assertAutomaticHistoryGraph(source context.Context, t *testing.T, b *backfillWireEnv, run, contact ids.UUID, seat string, opening events.Envelope) {
 	t.Helper()
 	gen := NewGraphEdgeConsumer(b.env.Pool)
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "system:graph_edge_reconcile")
+	system := principal.SystemActing(context.Background(), "system:graph_edge_reconcile")
 	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error {
 		history, err := graphHistoryForEventTx(system, tx, opening)
 		if err != nil {

@@ -66,7 +66,7 @@ func TestABackfillCountsTheContactTheVerdictMakesFromItsMail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if done, _, _, err := registry.RunBackfillStep(wsCtx, run.ID); err != nil || !done {
 		t.Fatalf("the page: done=%v err=%v", done, err)
 	}

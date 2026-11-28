@@ -95,11 +95,12 @@ func (s *Service) issueSetPasswordToken(
 	if !principal.SeatType(actor.SeatType).CanMutate() {
 		return "", time.Time{}, apperrors.ErrSeatTierInsufficient
 	}
-	// The value is no longer needed — auth_token carries no tenant since
-	// ADR-0091 §8 phase D — but the CHECK is: this refuses a caller that is not
-	// workspace-bound, before it mints an account-takeover credential. Dropping
-	// it with the column would turn a guard into a coincidence.
-	if _, ok := workspaceFrom(ctx); !ok {
+	// auth_token carries no tenant, but the check stays: this refuses a caller
+	// while the installation has no live company, before it mints an
+	// account-takeover credential.
+	if _, live, err := s.liveCompany(ctx); err != nil {
+		return "", time.Time{}, err
+	} else if !live {
 		return "", time.Time{}, apperrors.ErrNotFound
 	}
 	raw, tokenHash, err := mintSessionToken()

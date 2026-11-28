@@ -30,7 +30,7 @@ func (e *loadEnv) chatRow(t *testing.T, audience string, importedBy ...ids.UUID)
 // chatSeat is a seat reading every activity, with the update grant and seat
 // type the case names.
 func (e *loadEnv) chatSeat(seat ids.UUID, update bool, seatType principal.SeatType) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, SeatType: seatType,

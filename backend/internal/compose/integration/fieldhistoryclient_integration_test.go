@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestFieldHistoryNamesTheClientOfARotatedPassport(t *testing.T) {
@@ -65,7 +64,7 @@ func TestFieldHistoryNamesTheClientOfARotatedPassport(t *testing.T) {
 // list while the rows it authorized stay.
 func revokePassport(t *testing.T, e *Env, passport ids.UUID) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
+	ctx := t.Context()
 	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE passport SET revoked_at = now() WHERE id = $1`, passport)
 		return err
@@ -89,7 +88,7 @@ func seedDelegatedDiffRow(t *testing.T, e *Env, contact, human, passport ids.UUI
 	if err != nil {
 		t.Fatalf("encoding the after image: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
+	ctx := t.Context()
 	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, on_behalf_of, passport_id,

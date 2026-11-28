@@ -50,12 +50,12 @@ type signaturePreviewImages struct {
 	inlined map[previewImageKey]previewImageCopy
 }
 
-// previewImageKey scopes a copy to the workspace and the reader who fetched
+// previewImageKey scopes a copy to the reader who fetched
 // it. An address may answer each reader differently, so no reader is served
 // bytes another reader's fetch got.
 type previewImageKey struct {
-	workspace, reader ids.UUID
-	address           string
+	reader  ids.UUID
+	address string
 }
 
 // previewImageCopy is a data: URL, or empty for an image that could not be
@@ -85,7 +85,6 @@ func (p *signaturePreviewImages) Inline(ctx context.Context, markup string) stri
 // copies answers a data: URL for each address it could draw, fetching the
 // ones not cached at the same time. An address it could not draw is absent.
 func (p *signaturePreviewImages) copies(ctx context.Context, addresses []string) map[string]string {
-	workspace, _ := principal.WorkspaceID(ctx)
 	var reader ids.UUID
 	if actor, ok := principal.Actor(ctx); ok {
 		reader = actor.UserID
@@ -95,7 +94,7 @@ func (p *signaturePreviewImages) copies(ctx context.Context, addresses []string)
 	var missing []string
 	p.mu.Lock()
 	for _, address := range addresses {
-		if cached, ok := p.inlined[previewImageKey{workspace, reader, address}]; ok && now.Sub(cached.at) < signaturePreviewCacheTTL {
+		if cached, ok := p.inlined[previewImageKey{reader, address}]; ok && now.Sub(cached.at) < signaturePreviewCacheTTL {
 			out[address] = cached.dataURL
 		} else if _, queued := out[address]; !queued {
 			out[address] = ""
@@ -118,7 +117,7 @@ func (p *signaturePreviewImages) copies(ctx context.Context, addresses []string)
 		if len(p.inlined) >= signaturePreviewCacheSize {
 			clear(p.inlined)
 		}
-		p.inlined[previewImageKey{workspace, reader, address}] = previewImageCopy{dataURL: fetched[i], at: now}
+		p.inlined[previewImageKey{reader, address}] = previewImageCopy{dataURL: fetched[i], at: now}
 	}
 	return out
 }

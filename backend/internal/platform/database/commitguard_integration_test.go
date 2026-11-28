@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A COMMIT that has started finishes when its caller's context ends during it.
@@ -138,7 +137,7 @@ func TestARollbackOnAnEndedContextKeepsTheConnection(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	selectOne := func(tx pgx.Tx) error { _, err := tx.Exec(ctx, `SELECT 1`); return err }
 	if err := database.WithTx(ctx, pool, selectOne); err != nil {
 		t.Fatal(err)

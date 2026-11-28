@@ -98,7 +98,6 @@ func (w *linkReconcileWorker) Work(ctx context.Context, _ *river.Job[LinkReconci
 const adoptStrandedPerTick = 200
 
 func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.WithWorkspaceID(ctx, workspace)
 	sweepCtx := w.systemContext(ctx, workspace)
 	leadsFiled, leadErr := w.repairLeadFilings(sweepCtx)
 	if leadErr == nil && leadsFiled > 0 {
@@ -349,7 +348,7 @@ func (w *linkReconcileWorker) attachDomainBacklogs(sweepCtx context.Context, ws 
 	return failed
 }
 
-// systemContext binds the workspace and the maintenance principal the pass runs
+// systemContext binds the maintenance principal the pass runs
 // under.
 //
 // The mail half creates nothing — it attaches messages the workspace already
@@ -359,7 +358,6 @@ func (w *linkReconcileWorker) attachDomainBacklogs(sweepCtx context.Context, ws 
 // over contacts they cannot see. A sweep with no human behind it is the honest
 // actor for both.
 func (w *linkReconcileWorker) systemContext(ctx context.Context, ws ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	// The correlation id is not decoration: storekit.EmitEvent REFUSES to
 	// publish without one, so a pass that omitted it repaired nothing at all —
 	// every contact failed on its own event, the whole sweep retried three

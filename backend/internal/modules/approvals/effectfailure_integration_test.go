@@ -128,7 +128,7 @@ func TestAFailedEffectIsListedForItsDeciderAlone(t *testing.T) {
 		stranger, "other-"+stranger.String()+"@st.test"); err != nil {
 		t.Fatal(err)
 	}
-	otherCtx := principal.WithWorkspaceID(context.Background(), e.ws)
+	otherCtx := context.Background()
 	otherCtx = principal.WithCorrelationID(otherCtx, ids.NewV7())
 	otherCtx = principal.WithActor(otherCtx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + stranger.String(), UserID: stranger,

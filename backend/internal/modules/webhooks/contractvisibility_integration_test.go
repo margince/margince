@@ -125,7 +125,7 @@ func (e *contractVisEnv) seedDealAndContract(t *testing.T) ids.UUID {
 // asHolding is a rep whose row scope is their own records, holding exactly the
 // object grants named. The point of the fixture is what it does NOT hold.
 func (e *contractVisEnv) asHolding(objects map[string]principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,

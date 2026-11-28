@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -36,7 +35,7 @@ func getTaskOverrides(ctx context.Context, h aiRoutingHandlers) *httptest.Respon
 }
 
 func overrideActor(kind principal.PrincipalType, grant principal.ObjectGrant) context.Context {
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+	return principal.WithActor(context.Background(), principal.Principal{
 		Type: kind, ID: "seat:task-overrides", SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"ai_routing": grant}, RowScope: principal.RowScopeAll},
 	})

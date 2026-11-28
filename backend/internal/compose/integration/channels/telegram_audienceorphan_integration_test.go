@@ -45,7 +45,7 @@ func (c *telegramEnv) audienceWriterCtx(t *testing.T) context.Context {
 	if err != nil {
 		t.Fatalf("parsing the admin id: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), c.workspaceID(t))
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + c.admin, UserID: user,
 		SeatType: principal.SeatFull,

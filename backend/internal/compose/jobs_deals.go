@@ -76,7 +76,7 @@ func (w *closeDateSweepWorker) Work(ctx context.Context, _ *river.Job[CloseDateS
 const closeDateSweepActor = "system:close-date"
 
 func (w *closeDateSweepWorker) correctWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	wsCtx = principal.SystemActing(wsCtx, closeDateSweepActor)
 	if err := w.corrector.SweepWorkspace(wsCtx); err != nil {
 		return jobs.FaultContext(ctx, err)
@@ -100,10 +100,10 @@ func (w *followUpReconcileWorker) Work(ctx context.Context, _ *river.Job[FollowU
 }
 
 func (w *followUpReconcileWorker) reconcileWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	// The overnight pass acts for no one. Its writes and stagings carry
 	// system:overnight, and every read the reconciler makes is scoped by its
-	// own query predicate against the workspace bound above.
+	// own query predicate.
 	wsCtx = principal.SystemActing(wsCtx, overnightSweep)
 	return jobs.FaultContext(ctx, w.reconciler.ReconcileWorkspace(wsCtx))
 }

@@ -88,7 +88,7 @@ func setPassCap(t *testing.T, e *integration.Env, passCap int) {
 // does.
 func runPassOn(t *testing.T, e *integration.Env, engine *ConfidentialityVerdictEngine) {
 	t.Helper()
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("confidentiality pass: %v", err)
 	}
 }
@@ -155,7 +155,7 @@ func TestAnUntunedInstallationRunsTheDeclaredPassCap(t *testing.T) {
 	e := integration.Setup(t)
 	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
 
-	got, err := store.PassCap(principal.WithWorkspaceID(context.Background(), e.WS))
+	got, err := store.PassCap(context.Background())
 	if err != nil {
 		t.Fatalf("reading the pass cap: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestAnUntunedInstallationRunsTheDeclaredPassCap(t *testing.T) {
 func TestTheBacklogCountsWhatThePassStillOwesAndAgesTheOldest(t *testing.T) {
 	e := integration.Setup(t)
 	db := InstallationDB(e.Pool)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 
 	empty, err := capture.ReadThreadBacklog(ctx, db)
 	if err != nil || empty.Waiting != 0 || empty.OldestWait != 0 {
@@ -213,7 +213,7 @@ func TestTheBacklogCountsWhatThePassStillOwesAndAgesTheOldest(t *testing.T) {
 func TestTheBacklogLeavesOutThreadsThePassWillNotClaim(t *testing.T) {
 	e := integration.Setup(t)
 	db := InstallationDB(e.Pool)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	seedThreadQuestion(t, e, "thread-unclaimable", seedHeldThreadMail(t, e, "thread-unclaimable", "kunde@example.test", "Anfrage"))
 	// The seat leaves the classified posture through the registry's own writer.
 	registry := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), backfillAuthority{}, keyvault.NewMemory())
@@ -258,7 +258,7 @@ func TestTheScrapeReaderAnswersTheBacklog(t *testing.T) {
 func TestAnUnreachableDatabaseFailsThePassCapAndTheBacklogReads(t *testing.T) {
 	e := integration.Setup(t)
 	seedHeldThreads(t, e, 1)
-	cancelled, cancel := context.WithCancel(principal.WithWorkspaceID(context.Background(), e.WS))
+	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
 
 	if _, err := capture.ReadThreadBacklog(cancelled, InstallationDB(e.Pool)); err == nil {
@@ -285,7 +285,7 @@ func TestAnUnreachableDatabaseFailsThePassCapAndTheBacklogReads(t *testing.T) {
 // past the cap it read. Printing this value after the pass tells them apart.
 func passCapNow(t *testing.T, e *integration.Env) int {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS),
+	ctx := principal.SystemActing(context.Background(),
 		confidentialityActor)
 	got, err := capture.NewThreadVerdictStore(InstallationDB(e.Pool)).PassCap(ctx)
 	if err != nil {
@@ -323,7 +323,7 @@ func TestTheVerdictRunJudgesNoMoreSendersThanTheSavedCap(t *testing.T) {
 	brain := &unreadableVerdictBrain{}
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict run: %v", err)
 	}
 

@@ -51,7 +51,7 @@ func SendersOf(registry *capture.Registry, vault keyvault.Vault) func(db *databa
 // Workspace runs the pass for one tenant. No member decides it, so it runs as
 // the system and is bound to the workspace it was queued for.
 func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), actorID)
+	ctx = principal.SystemActing(ctx, actorID)
 	return s.asker(workspace).Sweep(ctx)
 }
 

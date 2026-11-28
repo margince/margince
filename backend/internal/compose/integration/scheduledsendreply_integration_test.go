@@ -89,7 +89,7 @@ func (p *preflightEnv) theyWrite(t *testing.T, mail inbound) ids.UUID {
 func (p *preflightEnv) mailboxCtx(t *testing.T) context.Context {
 	t.Helper()
 	rep := uuidOf(t, p.user)
-	ctx := principal.WithWorkspaceID(context.Background(), p.workspaceID(t))
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: rep, OnBehalfOf: rep,

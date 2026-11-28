@@ -174,7 +174,7 @@ func sealedSecret(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault,
 		return declared, nil
 	}
 	b := vaultBinding{pool: pool, vault: vault, ws: ids.From[ids.WorkspaceKind](ws), log: log}
-	return resolveSecret(bootCtx(ctx, ws, secretSealActor), b, s, declared)
+	return resolveSecret(bootCtx(ctx, secretSealActor), b, s, declared)
 }
 
 // RemoveDeclaredAbsentCredentials deletes the sealed copy of every deployment
@@ -203,7 +203,7 @@ func unsealSecret(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault,
 		return nil
 	}
 	b := vaultBinding{pool: pool, vault: vault, ws: ids.From[ids.WorkspaceKind](ws), log: log}
-	return b.unseal(bootCtx(ctx, ws, secretSealActor), s)
+	return b.unseal(bootCtx(ctx, secretSealActor), s)
 }
 
 // unseal deletes the sealed copy of a credential declared absent: the blob

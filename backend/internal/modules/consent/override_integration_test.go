@@ -35,7 +35,7 @@ import (
 // writer door in this file needs and RowScopeAll so ownership never confounds
 // the level comparison under test.
 func writerCtxAt(ws, user ids.UUID, role string) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

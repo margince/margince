@@ -188,7 +188,7 @@ func TestALeadsEarlierHistoryIsFiledAndItsClockStartsAtCreation(t *testing.T) {
 
 func runLeadFirstResponse(t *testing.T, l *leadMailEnv, activity ids.UUID) {
 	t.Helper()
-	ctx := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), l.e.WS), ids.NewV7()),
+	ctx := principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 	for _, h := range contacts.LeadSLAWorkflows(contacts.NewStore(l.e.DB())) {
 		if h.Spec().Name != "lead_first_response" {
@@ -319,7 +319,7 @@ func (l *leadMailEnv) settleSenderVerdict(t *testing.T, address string, mail ids
 	l.e.WsExec(t, `UPDATE capture_pending_counterparty SET status = 'pending', next_attempt_at = now() WHERE id = $1`, question)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{question.String(): kind}}
 	engine := NewCounterpartyVerdictEngine(l.e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), l.e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 }

@@ -186,10 +186,10 @@ func openPool(ctx context.Context, cfg *pgxpool.Config) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-// ErrNoWorkspace means a caller that needs the installation's workspace id found
-// none bound to its context, or a store was built without a database handle.
-// Either way it surfaces before any SQL runs.
-var ErrNoWorkspace = errors.New("pg: no workspace bound to context")
+// ErrNoWorkspace means a caller that needs the installation's workspace id has
+// no handle that can name one. The store was built without a database handle,
+// or the handle spans every workspace. It surfaces before any SQL runs.
+var ErrNoWorkspace = errors.New("pg: no workspace could be named")
 
 // WithTx runs fn inside one transaction, or joins the one a snapshot or write
 // transaction bound to ctx.

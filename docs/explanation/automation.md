@@ -227,7 +227,7 @@ database:
 
 | | Event trigger (`HandleEvent`, `engine.go`) | Clock trigger (`TimeScanner`, `timescan.go`) |
 |---|---|---|
-| **Tenant** | `WithWorkspaceID(env.WorkspaceID)`, from the bus envelope | `WithWorkspaceID(wsID)`, one per listed workspace |
+| **Tenant** | none: the store's database handle names the installation's company | none: the same |
 | **Actor** | `PrincipalSystem`, id `"system"` | `PrincipalSystem`, id `"system:time-scan"` |
 | **Correlation** | a new `ids.NewV7()` per event | a new `ids.NewV7()` per scan pass |
 | **Cause** | `WithCausationEvent(env.EventID)`: the event that triggered it is the parent edge | none: a clock pass has no source event |

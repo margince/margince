@@ -11,13 +11,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // A unit reads attachments only when declared, unattended and as a seat it names.
 func TestTheAttachmentReadsNeedTheirDeclarationAnUnattendedCallAndASeat(t *testing.T) {
-	ctx, binding := principal.WithWorkspaceID(context.Background(), ids.NewV7()), extensionRuntimeBinding{pool: &pgxpool.Pool{}}
+	ctx, binding := context.Background(), extensionRuntimeBinding{pool: &pgxpool.Pool{}}
 	seat, id := extension.UserID(ids.NewV7().String()), ids.NewV7().String()
 	expect := func(what string, rt extension.Runtime, actAs extension.UserID, want error) {
 		t.Helper()

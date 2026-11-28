@@ -19,8 +19,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestVoiceLiveSmoke(t *testing.T) {
@@ -62,7 +60,7 @@ func TestVoiceLiveSmoke(t *testing.T) {
 			Text: text, WordCount: ai.WordCount(text),
 		})
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	heldOut, buildSamples := splitVoiceHeldOut(samples, "live-smoke")
 	artifact, err := ai.DeriveVoice(ctx, path.VoiceBuild, "Blunt, bilingual, allergic to filler.", "live-smoke", buildSamples)
 	if err != nil {

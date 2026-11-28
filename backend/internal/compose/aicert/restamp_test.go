@@ -15,7 +15,7 @@ const olderRule = "grading-rule-older"
 // a record graded before the current rule is.
 func ruleOnlyRecord(t *testing.T, sc Scenario) Record {
 	t.Helper()
-	stamps, err := scenarioStampsUnder(wsContext(t), olderRule, []Scenario{sc}, testCensus(t))
+	stamps, err := scenarioStampsUnder(t.Context(), olderRule, []Scenario{sc}, testCensus(t))
 	if err != nil {
 		t.Fatalf("stamping under the older rule: %v", err)
 	}
@@ -36,7 +36,7 @@ func restampBasis(t *testing.T, sc Scenario) RestampBasis {
 		delete(restampableRules, olderRule)
 		delete(collectionOfRule, olderRule)
 	})
-	basis, err := NewRestampBasis(wsContext(t), olderRule, []Scenario{sc}, testCensus(t))
+	basis, err := NewRestampBasis(t.Context(), olderRule, []Scenario{sc}, testCensus(t))
 	if err != nil {
 		t.Fatalf("building the basis: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestARecordWhoseOnlyChangeIsTheGradingRuleIsRestamped(t *testing.T) {
 	if got.Refusal != "" || !got.Changed {
 		t.Fatalf("refused or unchanged: %+v", got)
 	}
-	now, err := ScenarioStamps(wsContext(t), []Scenario{sc}, testCensus(t))
+	now, err := ScenarioStamps(t.Context(), []Scenario{sc}, testCensus(t))
 	if err != nil {
 		t.Fatalf("stamping today: %v", err)
 	}
@@ -178,7 +178,7 @@ func TestARowThisRuleWouldRunAgainIsFound(t *testing.T) {
 // whatever the stamps say.
 func TestARuleNoReviewerClearedCannotBeRestampedFrom(t *testing.T) {
 	for _, from := range []string{gradingRule, "grading-rule-unknown"} {
-		if _, err := NewRestampBasis(wsContext(t), from, nil, testCensus(t)); err == nil || !strings.Contains(err.Error(), "restampableRules") {
+		if _, err := NewRestampBasis(t.Context(), from, nil, testCensus(t)); err == nil || !strings.Contains(err.Error(), "restampableRules") {
 			t.Errorf("from %q: err = %v, want a refusal naming restampableRules", from, err)
 		}
 	}
@@ -194,7 +194,7 @@ func TestARuleThatCollectedItsRunsAnotherWayCannotBeRestampedFrom(t *testing.T) 
 		delete(restampableRules, from)
 		delete(collectionOfRule, from)
 	})
-	if _, err := NewRestampBasis(wsContext(t), from, nil, testCensus(t)); err == nil || !strings.Contains(err.Error(), "collected its runs") {
+	if _, err := NewRestampBasis(t.Context(), from, nil, testCensus(t)); err == nil || !strings.Contains(err.Error(), "collected its runs") {
 		t.Errorf("err = %v, want a refusal naming the collection", err)
 	}
 }
@@ -226,7 +226,7 @@ func siteCheckRestamp(t *testing.T, sc Scenario, oldCheck string) RestampBasis {
 	old := sc.Task + "/" + sc.Site + " " + oldCheck + "\n"
 	restampableSiteChecks[goldenDigest(old)] = goldenDigest(siteChecksGolden)
 	t.Cleanup(func() { delete(restampableSiteChecks, goldenDigest(old)) })
-	basis, err := NewSiteCheckRestampBasis(wsContext(t), old, []Scenario{sc}, testCensus(t))
+	basis, err := NewSiteCheckRestampBasis(t.Context(), old, []Scenario{sc}, testCensus(t))
 	if err != nil {
 		t.Fatalf("building the basis: %v", err)
 	}
@@ -237,7 +237,7 @@ func siteCheckRestamp(t *testing.T, sc Scenario, oldCheck string) RestampBasis {
 // site carried check under this build's rule.
 func siteCheckRecord(t *testing.T, sc Scenario, check string) Record {
 	t.Helper()
-	stamps, err := scenarioStampsWith(wsContext(t), gradingRule, map[string]string{sc.Task + "/" + sc.Site: check}, []Scenario{sc}, testCensus(t))
+	stamps, err := scenarioStampsWith(t.Context(), gradingRule, map[string]string{sc.Task + "/" + sc.Site: check}, []Scenario{sc}, testCensus(t))
 	if err != nil {
 		t.Fatalf("stamping under the earlier check: %v", err)
 	}
@@ -254,7 +254,7 @@ func TestARecordStampedUnderTheEarlierSiteCheckHashIsRestamped(t *testing.T) {
 	if got.Refusal != "" || !got.Changed {
 		t.Fatalf("refused or unchanged: %+v", got)
 	}
-	now, err := ScenarioStamps(wsContext(t), []Scenario{sc}, testCensus(t))
+	now, err := ScenarioStamps(t.Context(), []Scenario{sc}, testCensus(t))
 	if err != nil {
 		t.Fatalf("stamping today: %v", err)
 	}
@@ -276,7 +276,7 @@ func TestARecordStampedUnderAnotherSiteCheckIsNotRestamped(t *testing.T) {
 // An earlier golden no reviewer paired with today's is refused whole.
 func TestAnUnreviewedSiteCheckChangeBuildsNoBasis(t *testing.T) {
 	sc := testScenario("basic", wideBands)
-	if _, err := NewSiteCheckRestampBasis(wsContext(t), "basic/x unreviewed\n", []Scenario{sc}, testCensus(t)); err == nil {
+	if _, err := NewSiteCheckRestampBasis(t.Context(), "basic/x unreviewed\n", []Scenario{sc}, testCensus(t)); err == nil {
 		t.Fatal("an unreviewed site check change built a restamp basis")
 	}
 }

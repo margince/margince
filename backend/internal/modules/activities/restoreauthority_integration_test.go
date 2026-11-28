@@ -22,7 +22,7 @@ import (
 // asActivitySeat is a full seat for user holding grant on activities over
 // every row.
 func (e *promiseEnv) asActivitySeat(user ids.UUID, grant principal.ObjectGrant) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{

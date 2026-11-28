@@ -17,7 +17,7 @@ import (
 )
 
 func humanWith(objects map[string]principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(), SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: objects},

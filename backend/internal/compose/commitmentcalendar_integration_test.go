@@ -18,14 +18,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func TestCancellingOneCalendarOccurrenceLeavesTheHeldMeetingsPromiseCurrent(t *testing.T) {
 	e := integration.Setup(t)
 	asOf := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	for _, test := range []struct {
 		name   string

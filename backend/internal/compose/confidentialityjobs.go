@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ConfidentialityVerdictArgs runs one fleet-wide confidentiality dispatch.
@@ -48,7 +47,7 @@ func (w *confidentialityVerdictWorker) Work(ctx context.Context, _ *river.Job[Co
 }
 
 func (w *confidentialityVerdictWorker) judgeWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	// A deployment with no model bound holds every thread, which is the correct
 	// answer rather than a fault: RunWorkspace returns cleanly. Failing the job
 	// instead would fill the log with an alarm about a configuration somebody

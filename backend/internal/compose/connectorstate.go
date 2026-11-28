@@ -36,7 +36,6 @@ type connectState struct {
 	SlackHistory       *chatwire.HistoryProfile
 	MessagingWorkspace string
 	MessengerRecord    *messengerReturnRecord
-	Workspace          ids.UUID
 	User               ids.UUID
 	Provider           string
 	Nonce              string
@@ -69,7 +68,6 @@ type wireState struct {
 	SlackHistory       *chatwire.HistoryProfile `json:"slack_history,omitempty"`
 	MessagingWorkspace string                   `json:"messaging_workspace,omitempty"`
 	MessengerRecord    *messengerReturnRecord   `json:"messenger_record,omitempty"`
-	Workspace          string                   `json:"ws"`
 	User               string                   `json:"u"`
 	Provider           string                   `json:"p"`
 	Nonce              string                   `json:"n"`
@@ -107,7 +105,6 @@ func (s stateSigner) usable() bool { return len(s.key) >= minStateKeyLen }
 func (s stateSigner) sign(st connectState, exp time.Time) string {
 	payload, _ := json.Marshal(wireState{ //nolint:errchkjson // string/int-only struct never errors
 		SlackHistory: st.SlackHistory, MessagingWorkspace: st.MessagingWorkspace, MessengerRecord: st.MessengerRecord,
-		Workspace:    st.Workspace.String(),
 		User:         st.User.String(),
 		Provider:     st.Provider,
 		Nonce:        st.Nonce,
@@ -147,17 +144,13 @@ func (s stateSigner) verify(token string, now time.Time) (connectState, error) {
 	if now.Unix() > w.Exp {
 		return connectState{}, errors.New("connector state: expired")
 	}
-	ws, err := ids.Parse(w.Workspace)
-	if err != nil {
-		return connectState{}, fmt.Errorf("connector state: bad workspace id: %w", err)
-	}
 	user, err := ids.Parse(w.User)
 	if err != nil {
 		return connectState{}, fmt.Errorf("connector state: bad user id: %w", err)
 	}
 	return connectState{
 		SlackHistory: w.SlackHistory, MessagingWorkspace: w.MessagingWorkspace, MessengerRecord: w.MessengerRecord,
-		Workspace: ws, User: user, Provider: w.Provider,
+		User: user, Provider: w.Provider,
 		Nonce: w.Nonce, ReturnTo: w.ReturnTo, Version: w.Version,
 		Then: w.Then, SharedConsent: w.Shared, WindowMonths: w.WindowMonths,
 	}, nil

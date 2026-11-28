@@ -303,11 +303,7 @@ func (a *accountSendEnv) flooredAccountSendInvoker(t *testing.T, agentToken stri
 
 	authSvc := identity.NewService(a.Pool)
 	return func(args string) (string, error) {
-		wsID, err := authSvc.InstallationWorkspace(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		ctx := principal.WithWorkspaceID(context.Background(), wsID.UUID)
+		ctx := context.Background()
 		agent, err := authSvc.AuthenticateAgent(ctx, agentToken)
 		if err != nil {
 			t.Fatal(err)
@@ -330,11 +326,7 @@ func (a *accountSendEnv) accountSendStageInfo(t *testing.T, token string, args j
 	t.Helper()
 	registry := compose.NewRegistry(a.Pool, compose.SendPath{})
 	authSvc := identity.NewService(a.Pool)
-	wsID, err := authSvc.InstallationWorkspace(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := principal.WithWorkspaceID(t.Context(), wsID.UUID)
+	ctx := t.Context()
 	agent, err := authSvc.AuthenticateAgent(ctx, token)
 	if err != nil {
 		t.Fatal(err)

@@ -79,7 +79,7 @@ func queryGrants() map[string]principal.ObjectGrant {
 // admin reads every record type with nothing hidden — the positive control the
 // team rep's narrower view is measured against.
 func (q *queryEnv) admin() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), q.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{Objects: queryGrants(), RowScope: principal.RowScopeAll},
@@ -89,7 +89,7 @@ func (q *queryEnv) admin() context.Context {
 // teamRep is the same object vocabulary with the row scope narrowed to one
 // team, so a comparison isolates row scope from object RBAC.
 func (q *queryEnv) teamRep(user, team ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), q.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		TeamIDs:     []ids.UUID{team},
@@ -150,7 +150,7 @@ func (q *queryEnv) seedLocatedCompany(t *testing.T, name string, lat, lon float6
 // through the writer the geocode worker calls.
 func (q *queryEnv) recordGeocode(t *testing.T, company ids.UUID, status string, lat, lon *float64) {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), q.WS), "system:geocode-test")
+	ctx := principal.SystemActing(context.Background(), "system:geocode-test")
 	store := contacts.NewStore(database.BindTo(q.Pool, ids.From[ids.WorkspaceKind](q.WS)))
 	id := ids.From[ids.CompanyKind](company)
 	address, ok, err := store.AddressForGeocode(ctx, id)

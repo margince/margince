@@ -48,7 +48,7 @@ func TestEveryMailReaderShowsAOneCopyReaderThatCopy(t *testing.T) {
 // it: the other seat cannot reach a copy only its owner reads.
 func fileCopyUnder(t *testing.T, s seatCopyEnv, seat, copyID ids.UUID, entityType string, entity ids.UUID) {
 	t.Helper()
-	ctx := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), s.e.WS), ids.NewV7()),
+	ctx := principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, SeatType: principal.SeatFull,
 			Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{

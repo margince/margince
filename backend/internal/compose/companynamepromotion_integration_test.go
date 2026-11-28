@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // seedProvisionalCompany plants one company named from its domain, as the
@@ -105,7 +104,7 @@ func TestCompanyNamePromotionAgreeingSignaturesStillAskAHuman(t *testing.T) {
 	seedSigningEmployee(t, e, company, "Bob Signer", "Gitex Global")
 
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 
@@ -119,7 +118,7 @@ func TestCompanyNamePromotionAgreeingSignaturesStillAskAHuman(t *testing.T) {
 	}
 
 	t.Run("a second pass joins the pending offer instead of stacking another", func(t *testing.T) {
-		if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+		if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 			t.Fatalf("RunWorkspace: %v", err)
 		}
 		staged := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'company_name_promotion' AND target_entity_id = $1`, company)
@@ -135,7 +134,7 @@ func TestCompanyNamePromotionAsksAboutASingleSignature(t *testing.T) {
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
 
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 
@@ -149,7 +148,7 @@ func TestCompanyNamePromotionAsksAboutASingleSignature(t *testing.T) {
 	}
 
 	t.Run("a re-run joins the pending offer instead of stacking another", func(t *testing.T) {
-		if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+		if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 			t.Fatalf("RunWorkspace: %v", err)
 		}
 		staged := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'company_name_promotion' AND target_entity_id = $1`, company)
@@ -168,7 +167,7 @@ func TestCompanyNamePromotionNeverOverwritesAStrongerSource(t *testing.T) {
 			seedSigningEmployee(t, e, company, "Bob Signer", "Acme Signature GmbH")
 
 			promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
-			if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+			if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 				t.Fatalf("RunWorkspace: %v", err)
 			}
 			name, got := companyNameAndSource(t, e, company)
@@ -189,7 +188,7 @@ func TestCompanyNamePromotionCorroboratedByTheDossier(t *testing.T) {
 	seedDossierName(t, e, company, "Gitex Global GmbH")
 
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 
@@ -222,7 +221,7 @@ func TestCompanyNamePromotionReachesCandidatesBeyondTheFirstPage(t *testing.T) {
 	seedDossierName(t, e, ready, "Ready Global")
 
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 
@@ -243,7 +242,7 @@ func TestCompanyNamePromotionDoesNotReofferADeclinedRename(t *testing.T) {
 
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 	var approvalID ids.UUID
@@ -259,12 +258,12 @@ func TestCompanyNamePromotionDoesNotReofferADeclinedRename(t *testing.T) {
 		t.Fatalf("declining the rename: %v", err)
 	}
 
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 	// Twice, because the refusal has to hold on every later pass rather than
 	// only the one that immediately follows the decline.
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 	if n := e.WsCount(t, `
@@ -287,7 +286,7 @@ func TestAnApprovedCompanyRenameIsWrittenByTheAgentForTheDecider(t *testing.T) {
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 	approvalID := e.WsScalar(t, `SELECT id::text FROM approval WHERE kind = 'company_name_promotion' AND target_entity_id = $1`, company)
@@ -312,7 +311,7 @@ func TestAnApprovedCompanyRenameIsWrittenByTheAgentForTheDecider(t *testing.T) {
 // returns — the setup both tests below start from.
 func declineTheStagedRename(t *testing.T, e *integration.Env, promoter *CompanyNamePromoter, company ids.UUID) {
 	t.Helper()
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 	var approvalID ids.UUID
@@ -347,7 +346,7 @@ func TestCompanyNamePromotionRemembersADeclineAfterTheEvidenceMoves(t *testing.T
 	// list, so a different payload and a different diff hash — the same
 	// question.
 	seedSigningEmployee(t, e, company, "Bob Signer", "Gitex Global")
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 
@@ -373,14 +372,14 @@ func TestCompanyNamePromotionSupersedesAStalePendingOffer(t *testing.T) {
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
 
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 
 	// A second signer for the same claim: same normalized name, different
 	// evidence, so a different payload and a different diff hash.
 	seedSigningEmployee(t, e, company, "Bob Signer", "Gitex Global")
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 
@@ -431,7 +430,7 @@ func TestCompanyNamePromotionRemembersADeclineRecordedBeforeTheIdentityField(t *
 	// agrees — the combination that normally writes without asking.
 	seedSigningEmployee(t, e, company, "Bob Signer", "GITEX GLOBAL")
 	seedDossierName(t, e, company, "Gitex Global")
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 
@@ -460,7 +459,7 @@ func TestCompanyNamePromotionDoesNotAutoApplyADeclinedRename(t *testing.T) {
 	// The dossier now agrees — the one corroboration that normally writes
 	// without asking.
 	seedDossierName(t, e, company, "Gitex Global")
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 
@@ -473,7 +472,7 @@ func TestCompanyNamePromotionDoesNotAutoApplyADeclinedRename(t *testing.T) {
 	fresh := seedProvisionalCompany(t, e, "Acme", "domain")
 	seedSigningEmployee(t, e, fresh, "Carol Signer", "Acme Global")
 	seedDossierName(t, e, fresh, "Acme Global")
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 	if name, source := companyNameAndSource(t, e, fresh); name != "Acme Global" || source != "signature" {
@@ -494,7 +493,7 @@ func TestASuppressedSignatureStopsCorroboratingARename(t *testing.T) {
 	suppressCompanyNameSignature(t, e, alice, "Gitex Global")
 
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 
@@ -521,7 +520,7 @@ func TestACorrectedSignatureCorroboratesTheHumansValue(t *testing.T) {
 	recordCompanyNameVerdict(t, e, alice, ai.VerdictCorrected, "Gitex Global", &corrected)
 
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
-	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := promoter.RunWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 

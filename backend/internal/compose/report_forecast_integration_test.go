@@ -153,7 +153,7 @@ func (e *forecastEnv) seedOpenDeal(t *testing.T, name string, probability int, o
 }
 
 func (e *forecastEnv) dealReadCtx(userID ids.UUID, teams []ids.UUID, scope principal.RowScope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + userID.String(), UserID: userID, TeamIDs: teams,
 		Permissions: principal.Permissions{

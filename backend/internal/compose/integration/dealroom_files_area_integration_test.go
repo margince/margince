@@ -70,8 +70,7 @@ func captureFileOnEmail(t *testing.T, e *apptest.AppEnv, blob blobstore.Store, d
 // nothing else, on the installation's workspace.
 func captureContext(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
-	wsID := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), wsID), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:imap",
 		Permissions: principal.Permissions{

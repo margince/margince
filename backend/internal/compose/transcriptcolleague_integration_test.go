@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Rep2 attends the meeting and speaks the promise, so Rep2 asks for the reading
@@ -38,7 +37,7 @@ func TestTheRequestersOwnPromiseIsFiledByTheirAgent(t *testing.T) {
 		t.Fatalf("starting the reading: %v", err)
 	}
 	reader := &transcriptProposeWorker{users: identity.NewService(e.Pool)}
-	worker, live, err := reader.readerFor(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep2.String(), started.ID)
+	worker, live, err := reader.readerFor(context.Background(), "human:"+e.Rep2.String(), started.ID)
 	if err != nil || !live {
 		t.Fatalf("binding the reader for Rep2: live=%t err=%v", live, err)
 	}

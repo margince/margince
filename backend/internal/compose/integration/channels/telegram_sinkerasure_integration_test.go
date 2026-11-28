@@ -52,7 +52,7 @@ import (
 // acting for no human, permitted to create the activity it captures and the
 // contact that activity names.
 func sinkConnectorCtx(e *integration.Env) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:telegram",
 		Permissions: principal.Permissions{

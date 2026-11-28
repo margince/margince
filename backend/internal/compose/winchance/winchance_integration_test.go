@@ -90,9 +90,9 @@ func newFixture(t *testing.T) *fixture {
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`); err != nil {
 		t.Fatalf("seeding the base currency: %v", err)
 	}
-	f.writer = principal.WithCorrelationID(principal.SystemActing(principal.WithWorkspaceID(context.Background(), env.WS), "system:winchance-test"), ids.NewV7())
+	f.writer = principal.WithCorrelationID(principal.SystemActing(context.Background(), "system:winchance-test"), ids.NewV7())
 	read := principal.ObjectGrant{Read: true}
-	f.reader = principal.WithActor(principal.WithWorkspaceID(context.Background(), env.WS), principal.Principal{
+	f.reader = principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + env.Rep1.String(), UserID: env.Rep1, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{
 			"deal": read, "forecast": read, "installation_settings": read, "pipeline": read,
@@ -434,7 +434,7 @@ func (f *fixture) mustAccuracy(at time.Time) forecasting.Accuracy {
 
 func (f *fixture) showIndividualPerformance(on bool) {
 	f.t.Helper()
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), f.env.WS), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:settings-admin", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}},

@@ -60,7 +60,7 @@ func meetingTenureEnv(t *testing.T) (context.Context, *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 	testdb.AssertPoolsQuiesced(t)
-	wsCtx := principal.WithWorkspaceID(ctx, ws)
+	wsCtx := ctx
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
 		Type: principal.PrincipalConnector,
 		ID:   "connector:imap",
@@ -69,7 +69,25 @@ func meetingTenureEnv(t *testing.T) (context.Context, *pgxpool.Pool) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	return principal.WithCorrelationID(wsCtx, ids.NewV7()), pool
+	return principal.WithCorrelationID(withTenant(wsCtx, ws), ids.NewV7()), pool
+}
+
+// tenantKey carries the workspace a fixture seeded. The suites that seed one of
+// their own per test share a database with many live workspaces, so the fixture
+// names its own. Production code never reads it.
+type tenantKey struct{}
+
+func withTenant(ctx context.Context, ws ids.UUID) context.Context {
+	return context.WithValue(ctx, tenantKey{}, ws)
+}
+
+func tenantOf(t *testing.T, ctx context.Context) ids.UUID {
+	t.Helper()
+	ws, ok := ctx.Value(tenantKey{}).(ids.UUID)
+	if !ok {
+		t.Fatal("the fixture context names no workspace")
+	}
+	return ws
 }
 
 // seedMeetingWith records one connector-captured meeting the address was

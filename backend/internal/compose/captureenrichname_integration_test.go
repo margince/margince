@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -61,7 +60,7 @@ func seedNamedContact(t *testing.T, e *integration.Env, email, display, captured
 func runNamePass(t *testing.T, e *integration.Env, reply string) {
 	t.Helper()
 	enricher := NewCaptureEnricher(e.Pool, &replyBrain{text: reply}, slog.New(slog.DiscardHandler))
-	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 }

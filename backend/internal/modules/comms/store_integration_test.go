@@ -138,7 +138,7 @@ func setupStore(t *testing.T) *storeEnv {
 // StageTx requires to derive user_id, since sending is a human act with no
 // caller-suppliable identity.
 func actorCtx(ws ids.UUID, user ids.UserID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user.UUID,
 	})

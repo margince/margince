@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The grant is column-scoped and the trigger checks the columns, so the setting
@@ -41,7 +40,7 @@ func TestTheAuditExceptionRefusesAChangeToWhatTheRowSaysHappened(t *testing.T) {
 		{"the actor", `actor_id = gen_random_uuid()`},
 	} {
 		t.Run(change.name, func(t *testing.T) {
-			ws := principal.WithWorkspaceID(context.Background(), e.WS)
+			ws := context.Background()
 			err := database.WithTx(ws, e.Pool, func(tx pgx.Tx) error {
 				if _, err := tx.Exec(ws,
 					`SELECT set_config('margince.audit_credential_mask', 'on', true)`); err != nil {
@@ -232,7 +231,7 @@ func TestTheAuditExceptionRefusesAnImageThatIsNotMasked(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			ws := principal.WithWorkspaceID(context.Background(), e.WS)
+			ws := context.Background()
 			err := database.WithTx(ws, e.Pool, func(tx pgx.Tx) error {
 				switch c.setting {
 				case "local":

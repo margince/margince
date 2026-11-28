@@ -18,7 +18,6 @@ import (
 
 // recordingReleaser is the meter as the decision path uses it.
 type recordingReleaser struct {
-	ws       ids.UUID
 	passport ids.UUID
 	counter  agentvolume.Counter
 	bucket   int64
@@ -32,10 +31,10 @@ type recordingReleaser struct {
 	widened bool
 }
 
-func (r *recordingReleaser) Release(_ context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64, length time.Duration) (bool, error) {
+func (r *recordingReleaser) Release(_ context.Context, passport ids.UUID, c agentvolume.Counter, bucket int64, length time.Duration) (bool, error) {
 	r.length = length
 	r.calls++
-	r.ws, r.passport, r.counter, r.bucket = ws, passport, c, bucket
+	r.passport, r.counter, r.bucket = passport, c, bucket
 	return r.widened, r.err
 }
 
@@ -50,23 +49,19 @@ func stepUpRow(t *testing.T, passport ids.UUID, proposal agentvolume.ReleaseProp
 	return row{Kind: KindVolumeRelease, PassportID: &id, ProposedChange: raw}
 }
 
-func releaseCtx(ws ids.UUID) context.Context {
-	return principal.WithWorkspaceID(context.Background(), ws)
-}
-
 // The release names the window the AGENT was refused in, from the row's own
 // passport — not the approver's context. A version that read the context would
 // widen the approving human's counter, which is not metered at all, so it would
 // look like it worked while the agent stayed refused.
 func TestAReleaseWidensTheAgentsWindowAndNotTheApproversContext(t *testing.T) {
-	ws, passport := ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.PassportKind]().UUID
+	passport := ids.New[ids.PassportKind]().UUID
 	meter := &recordingReleaser{widened: true}
 	svc := NewService(nil).WithVolumeReleaser(meter)
 	a := stepUpRow(t, passport, agentvolume.ReleaseProposal{
 		Counter: agentvolume.Writes, Observed: 241, Limit: 200, Bucket: "42", Tool: "update_record",
 	})
 
-	if err := svc.applyVolumeRelease(releaseCtx(ws), a); err != nil {
+	if err := svc.applyVolumeRelease(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,9 +70,6 @@ func TestAReleaseWidensTheAgentsWindowAndNotTheApproversContext(t *testing.T) {
 	}
 	if meter.length != agentvolume.DefaultWindow {
 		t.Errorf("a proposal staged without a length released under %v, want the default window", meter.length)
-	}
-	if meter.ws != ws {
-		t.Errorf("released workspace %s, want %s", meter.ws, ws)
 	}
 	if meter.counter != agentvolume.Writes || meter.bucket != 42 {
 		t.Errorf("released %s in window %d, want writes in 42", meter.counter, meter.bucket)
@@ -94,7 +86,7 @@ func TestAReleaseThatWidenedNothingIsNotAnError(t *testing.T) {
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
 		agentvolume.ReleaseProposal{Counter: agentvolume.Writes, Bucket: "1"})
 
-	if err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err != nil {
+	if err := svc.applyVolumeRelease(context.Background(), a); err != nil {
 		t.Errorf("a release into a rolled window reported an error: %v", err)
 	}
 }
@@ -111,7 +103,7 @@ func TestAnEditedPayloadCannotTurnAStepUpIntoAHardStopRelease(t *testing.T) {
 		a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
 			agentvolume.ReleaseProposal{Counter: counter, Bucket: "1"})
 
-		err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a)
+		err := svc.applyVolumeRelease(context.Background(), a)
 
 		if err == nil {
 			t.Errorf("an edited payload released %s, which no rung of the ladder allows", counter)
@@ -131,7 +123,7 @@ func TestAStagedWindowThatIsNotAWindowReleasesNothing(t *testing.T) {
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
 		agentvolume.ReleaseProposal{Counter: agentvolume.Writes, Bucket: "not-a-window"})
 
-	if err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err == nil {
+	if err := svc.applyVolumeRelease(context.Background(), a); err == nil {
 		t.Error("an unreadable window was released against whatever window happened to be current")
 	}
 	if meter.calls != 0 {
@@ -150,7 +142,7 @@ func TestAStepUpWithNoPassportIsRefusedRatherThanReleasedAgainstTheApprover(t *t
 		t.Fatal(err)
 	}
 
-	applyErr := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID),
+	applyErr := svc.applyVolumeRelease(context.Background(),
 		row{Kind: KindVolumeRelease, ProposedChange: raw})
 
 	if applyErr == nil || !strings.Contains(applyErr.Error(), "no passport") {
@@ -169,7 +161,7 @@ func TestApprovingAStepUpWithNoMeterComposedFails(t *testing.T) {
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
 		agentvolume.ReleaseProposal{Counter: agentvolume.Writes, Bucket: "1"})
 
-	if err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err == nil {
+	if err := svc.applyVolumeRelease(context.Background(), a); err == nil {
 		t.Error("a service with no meter reported a release it could not have made")
 	}
 }
@@ -183,7 +175,7 @@ func TestAMeterFailureReachesTheDecidingHuman(t *testing.T) {
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
 		agentvolume.ReleaseProposal{Counter: agentvolume.Writes, Bucket: "1"})
 
-	err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a)
+	err := svc.applyVolumeRelease(context.Background(), a)
 
 	if err == nil {
 		t.Fatal("a meter failure was swallowed; the human is told the agent may continue when it may not")
@@ -244,14 +236,14 @@ func TestAStepUpWithNoLenderIsDecidableByNobody(t *testing.T) {
 // A release names the length its bucket was counted under. So a window that
 // ended at a length change cannot be widened by a bucket number from another.
 func TestAReleasePassesOnTheLengthItsWindowWasCountedUnder(t *testing.T) {
-	ws, passport := ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.PassportKind]().UUID
+	passport := ids.New[ids.PassportKind]().UUID
 	meter := &recordingReleaser{widened: true}
 	svc := NewService(nil).WithVolumeReleaser(meter)
 	a := stepUpRow(t, passport, agentvolume.ReleaseProposal{
 		Counter: agentvolume.Writes, Bucket: "42", WindowSeconds: "43200", Tool: "update_record",
 	})
 
-	if err := svc.applyVolumeRelease(releaseCtx(ws), a); err != nil {
+	if err := svc.applyVolumeRelease(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
 

@@ -104,7 +104,6 @@ func TestEveryRegistryServedRouteRunsTheToolItDeclaresThroughInvoke(t *testing.T
 }
 
 func agentHolding(ctx context.Context, scopes ...principal.Scope) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:route-guard", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
 		Scopes: principal.NewScopeSet(scopes...),

@@ -24,7 +24,7 @@ import (
 
 // repCtx is the deal's owner, who may link and unlink every deal.
 func (e *pullEnv) repCtx() context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	grant := principal.ObjectGrant{Read: true, Update: true}
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
@@ -137,7 +137,7 @@ func TestALinkAskingForTheTalkSoFarDuringAPullRunsThePullOnceMore(t *testing.T) 
 	e := setupPull(t)
 	worker := &PullWorker[pullArgs]{Puller: e.puller}
 	job := &river.Job[pullArgs]{Args: pullArgs{conn: e.conn}}
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	if err := worker.Work(ctx, job); err != nil {
 		t.Fatalf("a pull with no new link = %v, want it to end", err)
 	}

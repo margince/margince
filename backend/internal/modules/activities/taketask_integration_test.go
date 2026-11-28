@@ -21,7 +21,7 @@ import (
 
 // seatWithGrant is a full seat of user at own-row scope, holding grant on tasks.
 func (e *promiseEnv) seatWithGrant(user ids.UUID, grant principal.ObjectGrant) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{

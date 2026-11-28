@@ -144,7 +144,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 // token takes the dispactapp branch in front of it (mcpHandler).
 func mcpAuthenticate(auth *identity.Service) func(*http.Request) (context.Context, error) {
 	return func(r *http.Request) (context.Context, error) {
-		wsID, err := auth.InstallationWorkspace(r.Context())
+		_, err := auth.InstallationWorkspace(r.Context())
 		if err != nil {
 			// Resolving WHICH installation this is has nothing to do with the
 			// credential the caller presented, so no failure of it may be
@@ -152,7 +152,7 @@ func mcpAuthenticate(auth *identity.Service) func(*http.Request) (context.Contex
 			// database, not an unreachable one.
 			return nil, fmt.Errorf("mcp: resolving the installation: %w: %w", err, agents.ErrAuthUnavailable)
 		}
-		ctx := principal.WithWorkspaceID(r.Context(), wsID.UUID)
+		ctx := r.Context()
 		// bearerToken requires the scheme name and a non-empty credential
 		// after it. A TrimPrefix-style read would accept a header that never
 		// carried the prefix, turning an unrelated credential (or a Basic

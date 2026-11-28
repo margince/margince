@@ -10,8 +10,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // WithMeetingVault binds encrypted management-link storage to the booking engine.
@@ -35,30 +33,30 @@ func (s *Store) sealBookingLink(ctx context.Context, prefix, token string) (stri
 	if err := s.publicOriginUsable(); err != nil {
 		return "", err
 	}
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok || s.meetingVault == nil {
+	workspace, err := s.db.Workspace(ctx)
+	if err != nil || s.meetingVault == nil {
 		return "", apperrors.ErrPermissionDenied
 	}
 	link := strings.TrimRight(s.publicBaseURL, "/") + "/#/book/" + prefix + token
-	ref, err := s.meetingVault.Put(ctx, ids.From[ids.WorkspaceKind](workspace), []byte(link))
+	ref, err := s.meetingVault.Put(ctx, workspace, []byte(link))
 	return string(ref), err
 }
 
 func (s *Store) openMeetingLink(ctx context.Context, ref string) (string, error) {
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok || s.meetingVault == nil {
+	workspace, err := s.db.Workspace(ctx)
+	if err != nil || s.meetingVault == nil {
 		return "", apperrors.ErrPermissionDenied
 	}
-	secret, err := s.meetingVault.Get(ctx, ids.From[ids.WorkspaceKind](workspace), keyvault.Ref(ref))
+	secret, err := s.meetingVault.Get(ctx, workspace, keyvault.Ref(ref))
 	return string(secret), err
 }
 
 func (s *Store) deleteMeetingLink(ctx context.Context, ref string) error {
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok || s.meetingVault == nil {
+	workspace, err := s.db.Workspace(ctx)
+	if err != nil || s.meetingVault == nil {
 		return apperrors.ErrPermissionDenied
 	}
-	return s.meetingVault.Delete(ctx, ids.From[ids.WorkspaceKind](workspace), keyvault.Ref(ref))
+	return s.meetingVault.Delete(ctx, workspace, keyvault.Ref(ref))
 }
 
 // The proposal remains a recipient capability after use, so reloading can recover

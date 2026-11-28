@@ -287,7 +287,7 @@ func TestACallForAnotherDayKeepsItsWindowAndTheServersClock(t *testing.T) {
 }
 
 func (e *callEnv) passCtxFor() context.Context {
-	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), assuranceActor)
+	return principal.SystemActing(context.Background(), assuranceActor)
 }
 
 // recordCallFor calls the period holding day.

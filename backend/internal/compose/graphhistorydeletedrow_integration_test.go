@@ -78,7 +78,7 @@ func assertHistorySurvivesDeletedGraphRow(t *testing.T, table string, parties in
 	if _, err := b.env.Activities.ArchiveActivity(b.env.Admin(), ids.From[ids.ActivityKind](first), nil); err != nil {
 		t.Fatal(err)
 	}
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "system:graph_edge_reconcile")
+	system := principal.SystemActing(context.Background(), "system:graph_edge_reconcile")
 	ctx, cancel := context.WithTimeout(system, 10*time.Second)
 	defer cancel()
 	commitDelete := holdGraphRecompute(ctx, t, b.env.Pool, []ids.UUID{first})

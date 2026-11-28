@@ -238,11 +238,11 @@ func (w *telegramPollWorker) Work(ctx context.Context, job *river.Job[TelegramPo
 		return jobs.FaultContext(ctx, err)
 	}
 
-	ws, err := boundWorkspace(wsCtx)
+	company, err := database.ProvenWorkspace(wsCtx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	token, err := w.vault.Get(wsCtx, ids.From[ids.WorkspaceKind](ws), target.CredentialRef)
+	token, err := w.vault.Get(wsCtx, company, target.CredentialRef)
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("telegram_poll: unsealing the bot token for connection %s: %w", connID, err))
 	}

@@ -297,7 +297,7 @@ func TestDayEntriesAreReadABatchAtATime(t *testing.T) {
 	year, month, day := date.Date()
 	asOf := time.Date(year, month, day, 8, 0, 0, 0, kiritimati)
 	mark := activities.ClockRefoldMark{At: asOf.AddDate(0, 0, -1)}
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), f.e.WS), pastActivityClockActor)
+	ctx := principal.SystemActing(context.Background(), pastActivityClockActor)
 
 	seen := map[ids.UUID]bool{}
 	var after activities.ClockRefoldMark
@@ -402,7 +402,7 @@ func TestASecondRefoldWritesNothing(t *testing.T) {
 func TestOverlappingRefoldsAndAWriteDoNotDeadlock(t *testing.T) {
 	f := newAccountFixture(t)
 	second := employedAt(t, f.e, f.company, "Quinn Past")
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), f.e.WS), pastActivityClockActor)
+	ctx := principal.SystemActing(context.Background(), pastActivityClockActor)
 	sets := []storekit.LastActivityTargets{
 		{Contacts: []ids.UUID{f.contact, second}, Deals: []ids.UUID{f.deal}},
 		{Contacts: []ids.UUID{second, f.contact}, Companies: []ids.UUID{f.company}, Deals: []ids.UUID{f.deal}},
@@ -446,7 +446,7 @@ func TestTheDataTaskMovesBackAClockTheOldRuleLeftInTheFuture(t *testing.T) {
 	}
 
 	task := pastActivityClocksDataTask()
-	ctx := datatask.Acting(principal.WithWorkspaceID(context.Background(), f.e.WS), task.ID)
+	ctx := datatask.Acting(context.Background(), task.ID)
 	runTask := func() int {
 		changed := 0
 		for _, step := range task.Steps {

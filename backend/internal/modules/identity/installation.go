@@ -13,6 +13,7 @@ package identity
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -136,6 +137,22 @@ func (s *Service) BootstrapInstallation(ctx context.Context, create func() (Inst
 // id. The worker polls this until the API has bootstrapped.
 func (s *Service) InstallationWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
 	return s.db.Workspace(ctx)
+}
+
+// liveCompany names the installation's company for a request that holds no
+// session yet. live is false while the installation has no company or more than
+// one. The public-path callers answer that with the neutral refusal they give an
+// unknown token. Any other failure is returned, so an outage is not read as a
+// missing company.
+func (s *Service) liveCompany(ctx context.Context) (company ids.WorkspaceID, live bool, err error) {
+	company, err = s.db.Workspace(ctx)
+	if errors.Is(err, ErrNotBootstrapped) || errors.Is(err, ErrMultipleWorkspaces) || errors.Is(err, database.ErrNoWorkspace) {
+		return ids.WorkspaceID{}, false, nil
+	}
+	if err != nil {
+		return ids.WorkspaceID{}, false, err
+	}
+	return company, true, nil
 }
 
 // activeWorkspaces lists un-archived workspace ids. LIMIT 3: the caller
@@ -315,7 +332,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in Ins
 		// Boot bootstrap IS the originating operation: it mints the one
 		// correlation id its seed writes (pipeline.created, …) trace to —
 		// the id the HTTP middleware would have minted per request.
-		seedCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, wsID.UUID), "system")
+		seedCtx := principal.SystemActing(ctx, "system")
 		if err := seed(seedCtx, tx); err != nil {
 			return ids.WorkspaceID{}, err
 		}

@@ -77,9 +77,9 @@ func (c IdentifierColumn) Repair(ctx context.Context, tx pgx.Tx, after ids.UUID,
 	arg := func(value any) string { args = append(args, value); return "$" + strconv.Itoa(len(args)) }
 	parent := pgx.Identifier{c.Parent}.Sanitize()
 	if c.HashedDomainKey {
-		id := MustWorkspace(ctx)
-		if id.IsZero() {
-			return IdentifierPage{}, errors.New("identifier repair needs the installation identity")
+		id, err := Workspace(ctx, tx)
+		if err != nil {
+			return IdentifierPage{}, fmt.Errorf("identifier repair needs the installation identity: %w", err)
 		}
 		parent = arg(id) + "::uuid"
 	}

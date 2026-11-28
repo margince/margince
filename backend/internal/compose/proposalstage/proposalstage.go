@@ -95,7 +95,7 @@ func New(db *database.DB, inbox *approvals.Service) *Suggester {
 // installation's workspace, which a bus envelope does not carry, and keeps the
 // correlation id of the event that raised the question.
 func (s *Suggester) bind(ctx context.Context) (context.Context, error) {
-	workspace, err := s.db.Workspace(ctx)
+	_, err := s.db.Workspace(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (s *Suggester) bind(ctx context.Context) (context.Context, error) {
 		correlation = ids.NewV7()
 	}
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: proposalStageActor})
-	return principal.WithCorrelationID(principal.WithWorkspaceID(ctx, workspace.UUID), correlation), nil
+	return principal.WithCorrelationID(ctx, correlation), nil
 }
 
 // Suggest asks the deal's owner whether to move it, unless there is nothing

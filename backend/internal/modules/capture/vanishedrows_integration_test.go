@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // vanishedRowsTx runs body in a workspace transaction it rolls back, so each
@@ -37,7 +36,7 @@ func vanishedRowsTx(t *testing.T, body func(ctx context.Context, tx pgx.Tx)) {
 // row left to read; the run answers not-found rather than reading nothing.
 func TestARunOnAConnectionThatIsGoneAnswersNotFound(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
-	ws, _ := principal.WorkspaceID(ctx)
+	ws := tenantOf(t, ctx)
 	r := NewRegistry(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), nil, nil, nil)
 	gone := ids.NewV7()
 	if err := r.syncConnection(ctx, gone); !errors.Is(err, apperrors.ErrNotFound) {
@@ -115,8 +114,7 @@ func TestReclaimingSentMailWithoutABoundPassIsRefused(t *testing.T) {
 			VALUES ('gmail', $1, 'connected', $2)`, seat, address); err != nil {
 			t.Fatalf("seeding the seat's mailbox: %v", err)
 		}
-		ws, _ := principal.WorkspaceID(ctx)
-		passless := principal.WithWorkspaceID(context.Background(), ws)
+		passless := context.Background()
 		row := StoredOwnSentMail{Activity: ids.From[ids.ActivityKind](ids.NewV7()), Seat: seat, Sender: address}
 		original := []byte("From: " + address + "\r\nTo: buyer@buyer.example\r\n\r\nHello.\r\n")
 		if _, err := ReclaimStoredOwnSentMailTx(passless, tx, nil, nil, row, original); !errors.Is(err, apperrors.ErrPermissionDenied) {

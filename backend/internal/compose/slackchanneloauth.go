@@ -44,7 +44,7 @@ func (s Server) slackChannelApp(ctx context.Context) (slack.OAuth, string, error
 
 // GetSlackChannelSetup reports shared installation and history-profile prerequisites.
 func (s Server) GetSlackChannelSetup(w http.ResponseWriter, r *http.Request) {
-	if _, _, ok := signedInHuman(w, r); !ok {
+	if _, ok := signedInHuman(w, r); !ok {
 		return
 	}
 	if err := auth.Require(r.Context(), "channel_connection", principal.ActionRead); err != nil {
@@ -69,7 +69,7 @@ func (s Server) GetSlackChannelSetup(w http.ResponseWriter, r *http.Request) {
 
 // ConnectSlackChannels requests shared bot and read-only channel-reader consent.
 func (s Server) ConnectSlackChannels(w http.ResponseWriter, r *http.Request) {
-	actor, workspace, ok := signedInHuman(w, r)
+	actor, ok := signedInHuman(w, r)
 	if !ok {
 		return
 	}
@@ -96,7 +96,7 @@ func (s Server) ConnectSlackChannels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h := s.messengerOAuthHandlers
-	state := connectState{Workspace: workspace, User: actor.UserID, Provider: "channel:slack", Version: stateVersionNamespacedCSRF}
+	state := connectState{User: actor.UserID, Provider: "channel:slack", Version: stateVersionNamespacedCSRF}
 	state.SlackHistory = profile
 	state.Nonce = setCSRFNonce(w, "channel_slack_csrf", "/v1/channel-providers/slack")
 	signed := newStateSigner([]byte(h.cfg.StateKey)).sign(state, h.now().Add(connectStateTTL))

@@ -355,7 +355,7 @@ func (r recoveryEnv) ownMailbox(t *testing.T) context.Context {
 // authority, as the capture registry builds it for a sync (connectorActing).
 func seatMailboxCtx(t *testing.T, ws, seat ids.UUID) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: seat, OnBehalfOf: seat,

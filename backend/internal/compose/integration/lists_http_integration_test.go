@@ -195,7 +195,7 @@ func assertAnswersItsSchema(t *testing.T, e *apptest.AppEnv, tool string, got ap
 // switch rather than an unknown list id.
 func seedShortlistBehindTheSwitch(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(t.Context(), apptest.InstallationWorkspaceUUID(t.Context(), t, e.Pool)), "system:lists-off-test")
+	ctx := principal.SystemActing(t.Context(), "system:lists-off-test")
 	list, err := compose.NewCollectionsStore(e.Pool).CreateList(ctx, collections.CreateListInput{
 		Name: "Hidden picks", EntityType: "contact", Sharing: "workspace",
 	})

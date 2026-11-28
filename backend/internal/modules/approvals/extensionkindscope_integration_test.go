@@ -65,7 +65,7 @@ func TestAStagedRowOfAnOwnedKindExistsOnlyInsideTheCallersScope(t *testing.T) {
 		{principal.RowScopeOwn, map[ids.UUID]bool{mine: true, unowned: true}},
 		{principal.RowScopeAll, map[ids.UUID]bool{mine: true, colleagues: true, unowned: true}},
 	} {
-		actor := principal.WithActor(principal.WithWorkspaceID(ctx, e.ws), principal.Principal{
+		actor := principal.WithActor(ctx, principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
 			Permissions: principal.Permissions{RowScope: level.scope},
 		})

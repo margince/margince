@@ -115,7 +115,7 @@ func createDealForReopen(ctx context.Context, t *testing.T, registry *agents.Reg
 // prove nothing about it.
 func reopenAgentCtx(t *testing.T, e *Env) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:reopen-probe", SeatType: principal.SeatFull,

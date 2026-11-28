@@ -44,7 +44,7 @@ func repOwnedContact(t *testing.T, e *channelConsentEnv) ids.ContactID {
 // systemCtx is the principal the public preference edge binds: the product
 // acting on the contact's own press.
 func systemCtx(ws ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
 }

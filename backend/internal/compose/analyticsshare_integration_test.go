@@ -161,7 +161,7 @@ var writerUser = ids.NewV7()
 // snapshotWriterCtx is the unbounded principal the nightly job runs as — the
 // issuer's side of a share, who sees both teams.
 func snapshotWriterCtx(ws ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	// The write shape links the audit row to a request's trace, and a snapshot
 	// is a write. Without one, TakeSnapshot refuses rather than writing an
 	// unattributable row — which is the guard working, not a test fixture gap.
@@ -610,7 +610,7 @@ func (e *forecastEnv) seededIssuer(t *testing.T, email string) (ids.UUID, contex
 	seat := ids.NewV7()
 	e.seedSeatHolding(t, seat, email, "share_issuer_seeded")
 	ctx := principal.WithCorrelationID(
-		principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+		context.Background(), ids.NewV7())
 	return seat, principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat,
 		Permissions: principal.Permissions{

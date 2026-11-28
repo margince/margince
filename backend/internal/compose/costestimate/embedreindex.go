@@ -66,7 +66,7 @@ type EmbedModelResolver interface {
 // BudgetReader is ai.BudgetPolicy.MonthlyTokenBudget — the workspace's
 // calendar-month token pool, the utilization_impact denominator.
 type BudgetReader interface {
-	MonthlyTokenBudget(ctx context.Context, workspaceID ids.WorkspaceID) (int64, error)
+	MonthlyTokenBudget(ctx context.Context) (int64, error)
 }
 
 // SpentReader is ai.Meter.MonthTokens — the workspace's calendar-month spend
@@ -207,7 +207,7 @@ func (e *EmbedReindexEstimator) priceWorkspaceRow(ctx context.Context, wsID ids.
 		}
 	}
 
-	monthly, err := e.budget.MonthlyTokenBudget(wsCtx, wsID)
+	monthly, err := e.budget.MonthlyTokenBudget(wsCtx)
 	if err != nil {
 		return Row{}, err
 	}
@@ -250,7 +250,6 @@ func sortedWorkspaceIDs(counts map[ids.WorkspaceID]int) []ids.WorkspaceID {
 // MonthTokens themselves (database.WithTx), keyed off the
 // workspace id this context now carries.
 func systemWorkspaceContext(ctx context.Context, wsID ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, wsID)
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: systemPrincipalID})
 }
 

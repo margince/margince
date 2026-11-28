@@ -59,7 +59,7 @@ func TestANewChannelInvitesWhoMaySeeTheDealUpToTheCap(t *testing.T) {
 	e.exec(t, `INSERT INTO app_user (email, display_name, is_agent) VALUES ('agent@chat.test', 'Agent', true)`)
 	e.seedRoles(t, roles)
 
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
 		Permissions: principal.Permissions{
 			RowScope: principal.RowScopeOwn,

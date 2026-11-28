@@ -22,7 +22,7 @@ import (
 // asCapturingConnector is who really reports a bounce: the mail connector
 // that read the delivery report out of the owner's mailbox.
 func (e *storeEnv) asCapturingConnector(owner ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",
 		UserID: owner, OnBehalfOf: owner,

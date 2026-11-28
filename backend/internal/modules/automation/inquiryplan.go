@@ -40,11 +40,10 @@ func (s *EffectClaimStore) FreezeInquiry(ctx context.Context, key string, choose
 	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
 		return InquiryPlan{}, err
 	}
-	workspace, err := s.db.Workspace(ctx)
+	_, err := s.db.Workspace(ctx)
 	if err != nil {
 		return InquiryPlan{}, err
 	}
-	ctx = principal.WithWorkspaceID(ctx, workspace.UUID)
 	var out InquiryPlan
 	run := func() error {
 		return database.WithSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {

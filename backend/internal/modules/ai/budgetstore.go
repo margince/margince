@@ -180,7 +180,11 @@ func (s *AdminStore) ReplaceBudget(ctx context.Context, change BudgetChange) (cr
 		if err != nil || !receipt.Changed {
 			return err
 		}
-		return storekit.EmitEvent(ctx, tx, receipt.AuditID, storekit.MustWorkspace(ctx), crmcontracts.InternalEventAiBudgetUpdated{
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return storekit.EmitEvent(ctx, tx, receipt.AuditID, installation, crmcontracts.InternalEventAiBudgetUpdated{
 			BeforeRevision: current.Revision, AfterRevision: out.Revision, TokensPerFullUser: change.Config.TokensPerFullUser, CompanyMonthlyTokens: change.Config.CompanyMonthlyTokens,
 		})
 	})

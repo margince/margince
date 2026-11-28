@@ -36,7 +36,7 @@ func newKeyedRouteFixture(t *testing.T) (*Registry, *keyedRoute, *countingCharge
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), WithIdempotency(&recordingClaims{}),
 		WithVolumeCharger(charger), WithRouteRetryKeys(map[string]bool{shareRecordVerb.Verb: true}))
 	RegisterRouteVerbs(r, []RouteVerb{shareRecordVerb}, route.run)
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeWrite),
 	})

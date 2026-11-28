@@ -15,7 +15,6 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/decision"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -103,15 +102,14 @@ func (r *Router) decideFirst(ctx context.Context, lc *logicalCall, b *binding, t
 	if b.decisions == nil {
 		return decisionTry{}, nil
 	}
-	rawWS, ok := principal.WorkspaceID(ctx)
-	if !ok {
+	wsID, err := r.meter.Workspace(ctx)
+	if err != nil {
 		return decisionTry{}, nil
 	}
-	wsID := ids.From[ids.WorkspaceKind](rawWS)
 	// The decision attempt reads the band once for itself; each ladder walk
 	// after it reads the band again, as every walk does.
 	order, _ := b.ladder(task)
-	ladder, _, budgetErr := r.applyBudget(ctx, task, wsID, order)
+	ladder, _, budgetErr := r.applyBudget(ctx, task, order)
 	switch {
 	case errors.Is(budgetErr, ErrBudgetDeferred):
 		return decisionTry{}, budgetErr
@@ -142,12 +140,11 @@ func (r *Router) DecideProbe(ctx context.Context, task Task, site string, dreq d
 	if b.decisions == nil {
 		return DecisionProbe{}, fmt.Errorf("ai: task %s: no decisions lane is bound", task)
 	}
-	rawWS, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return DecisionProbe{}, fmt.Errorf("ai: task %s outside workspace context", task)
+	if _, err := r.meter.Workspace(ctx); err != nil {
+		return DecisionProbe{}, fmt.Errorf("ai: task %s needs a live company: %w", task, err)
 	}
 	order, _ := b.ladder(task)
-	if _, _, err := r.applyBudget(ctx, task, ids.From[ids.WorkspaceKind](rawWS), order); err != nil {
+	if _, _, err := r.applyBudget(ctx, task, order); err != nil {
 		return DecisionProbe{}, err
 	}
 	lc := newLogicalCall()

@@ -57,11 +57,10 @@ func (a *PartnerActivation) HandleEvent(ctx context.Context, env events.Envelope
 		moved.PartnerAttribution == nil || *moved.PartnerAttribution != attributionSourced {
 		return nil
 	}
-	ws, err := InstallationDB(a.pool).Workspace(ctx)
+	_, err = InstallationDB(a.pool).Workspace(ctx)
 	if err != nil {
 		return err
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:partner_activation",

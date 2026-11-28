@@ -44,7 +44,7 @@ type pairEnv struct {
 func (e *pairEnv) run(t *testing.T) {
 	t.Helper()
 	store := assurance.NewStore(compose.InstallationDB(e.Pool))
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:assurance")
+	ctx := principal.SystemActing(context.Background(), "system:assurance")
 	if _, err := compose.AssuranceScanner(e.Pool, store).Scan(ctx, clocktest.Now(t)); err != nil {
 		t.Fatalf("the check: %v", err)
 	}
@@ -313,7 +313,7 @@ func (e *pairEnv) rescan(t *testing.T, deal ids.UUID) {
 	execSeed(t, integration.OwnerConn(t), `INSERT INTO assurance_input_change (subject_kind, subject_id, generation)
 		VALUES ('deal', $1, 1) ON CONFLICT (subject_kind, subject_id) DO UPDATE SET generation = assurance_input_change.generation + 1`, deal)
 	store := assurance.NewStore(compose.InstallationDB(e.Pool))
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:assurance")
+	ctx := principal.SystemActing(context.Background(), "system:assurance")
 	if _, err := compose.AssuranceScanner(e.Pool, store).ScanDeal(ctx, clocktest.Now(t), deal); err != nil {
 		t.Fatalf("the pass over one deal: %v", err)
 	}

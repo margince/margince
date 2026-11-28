@@ -45,7 +45,7 @@ func (m *capturedMail) Send(_ context.Context, to, subject, body string) error {
 var resetLinkToken = regexp.MustCompile(`token=([A-Za-z0-9_-]+)`)
 
 func (e *revocationEnv) wsOnlyCtx() context.Context {
-	return principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
+	return context.Background()
 }
 
 func TestPasswordResetFlowEndToEnd(t *testing.T) {
@@ -192,7 +192,7 @@ func TestOperatorResetPasswordRevokesPassportsToo(t *testing.T) {
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	if err := OperatorResetPassword(context.Background(), tx, e.admin.WorkspaceID, e.member.Email, "operator recovery password"); err != nil {
+	if err := OperatorResetPassword(context.Background(), tx, e.member.Email, "operator recovery password"); err != nil {
 		t.Fatalf("OperatorResetPassword: %v", err)
 	}
 	if err := tx.Commit(context.Background()); err != nil {
@@ -244,7 +244,7 @@ func TestOperatorResetPasswordRevokesALiveOAuthGrantToo(t *testing.T) {
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	if err := OperatorResetPassword(context.Background(), tx, e.admin.WorkspaceID, e.member.Email, "operator recovery over a live connection"); err != nil {
+	if err := OperatorResetPassword(context.Background(), tx, e.member.Email, "operator recovery over a live connection"); err != nil {
 		t.Fatalf("OperatorResetPassword must not error for a user with a live OAuth connection: %v", err)
 	}
 	if err := tx.Commit(context.Background()); err != nil {
@@ -353,7 +353,7 @@ func TestOperatorResetPasswordRecoversTheAccount(t *testing.T) {
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(context.Background()) }()
 	const operatorPassword = "operator chosen password"
-	if err := OperatorResetPassword(context.Background(), tx, e.admin.WorkspaceID, e.member.Email, operatorPassword); err != nil {
+	if err := OperatorResetPassword(context.Background(), tx, e.member.Email, operatorPassword); err != nil {
 		t.Fatalf("OperatorResetPassword: %v", err)
 	}
 	if err := tx.Commit(context.Background()); err != nil {
@@ -381,7 +381,7 @@ func OperatorResetPasswordSmoke(ctx context.Context, e *revocationEnv, email str
 	}
 	//craft:ignore swallowed-errors error-path cleanup — the result under test is OperatorResetPassword's error
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	return OperatorResetPassword(context.Background(), tx, ids.From[ids.WorkspaceKind](e.admin.WorkspaceID.UUID), email, "irrelevant password!")
+	return OperatorResetPassword(context.Background(), tx, email, "irrelevant password!")
 }
 
 // TestAResetMailIsWrittenInTheInstallationsLanguage holds the language on the

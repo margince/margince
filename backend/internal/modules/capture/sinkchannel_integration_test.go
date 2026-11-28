@@ -216,7 +216,6 @@ func TestChannelRecordSkipsEveryMailDomainGate(t *testing.T) {
 // captured_by claims a connector other than the acting one — so a fixture on a
 // second transport needs the principal to move with it.
 func channelSinkContext(ctx context.Context, ws ids.UUID, connectorID string) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector,
 		ID:   connectorID,

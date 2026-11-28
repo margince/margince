@@ -322,7 +322,7 @@ func benchReaderCtx(ws ids.UUID, objects ...string) context.Context {
 	for _, object := range objects {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},

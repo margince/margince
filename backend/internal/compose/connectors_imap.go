@@ -31,8 +31,7 @@ const codeConnectorStoreFailed = "connector_store_failed"
 // as gmail, minus the OAuth ceremony.
 func (h connectorHandlers) connectIMAP(w http.ResponseWriter, r *http.Request) {
 	actor, ok := principal.Actor(r.Context())
-	_, hasWS := principal.WorkspaceID(r.Context())
-	if !ok || actor.Type != principal.PrincipalHuman || !hasWS {
+	if !ok || actor.Type != principal.PrincipalHuman {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnauthorized,
 			Code:   codeUnauthorized,

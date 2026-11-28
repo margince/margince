@@ -383,7 +383,7 @@ func TestAnOwnScopedCallerConfirmsOwnContactsAndOnlySuggestsColleagues(t *testin
 // asContactReadOnly is the same member, granted to READ contacts but not edit
 // them. A confirm edits a contact, so this caller must only ever suggest.
 func (e *dedupeEnv) asContactReadOnly() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -131,10 +130,7 @@ func TestACompletedPullCanRecoverAFailureFromItsStartingSnapshot(t *testing.T) {
 func endCaptureSyncSession(ctx context.Context, t *testing.T, connection ids.UUID) {
 	t.Helper()
 	owner, _ := setupCaptureDB(t)
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		t.Fatal("workspace missing")
-	}
+	ws := tenantOf(t, ctx)
 	key := "capture:sync:" + ws.String() + ":" + connection.String()
 	var killed int
 	err := owner.QueryRow(ctx, `

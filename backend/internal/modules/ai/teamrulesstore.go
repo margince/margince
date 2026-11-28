@@ -90,11 +90,15 @@ func teamRulesTx(ctx context.Context, tx pgx.Tx) (crmcontracts.AiTeamRules, erro
 		savedAt time.Time
 		editor  *string
 	)
+	installation, err := storekit.Workspace(ctx, tx)
+	if err != nil {
+		return crmcontracts.AiTeamRules{}, err
+	}
 	err = tx.QueryRow(ctx, `
 		SELECT a.occurred_at, `+auditattribution.ActorNameColumn+`
 		FROM audit_log a`+auditattribution.ActorNameJoins+`
 		WHERE a.entity_type = $1 AND a.entity_id = $2
-		ORDER BY a.id DESC LIMIT 1`, teamRulesObject, storekit.MustWorkspace(ctx)).Scan(&savedAt, &editor)
+		ORDER BY a.id DESC LIMIT 1`, teamRulesObject, installation).Scan(&savedAt, &editor)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, nil
 	}

@@ -307,7 +307,10 @@ func (s *Store) ApplyDeepReadTx(ctx context.Context, tx pgx.Tx, in DeepReadPropo
 		return err
 	}
 
-	wsID := workspaceID(ctx)
+	wsID, err := workspaceID(ctx, tx)
+	if err != nil {
+		return err
+	}
 	// The target is a KNOWN row; row-scope is re-checked here so a
 	// leaked company id buys nothing (existence-hiding 404).
 	//

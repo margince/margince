@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The defect this whole change is about: a sender the classifier cleared, and
@@ -228,7 +227,7 @@ func TestTheReconcilingPassLeavesARealButNonContactSenderHeld(t *testing.T) {
 
 			engine := NewCounterpartyVerdictEngine(e.Pool, nil, CaptureConfig{}, slog.Default())
 			if err := engine.WidenClearedSendersWorkspace(
-				principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+				context.Background()); err != nil {
 				t.Fatalf("the reconciling pass: %v", err)
 			}
 
@@ -252,7 +251,7 @@ func TestTheVerdictPassDrainsSendersClearedBeforeTheRelease(t *testing.T) {
 	settleDisposition(t, e, dispositionID, capture.PendingStatusReal, capture.KindContact)
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, nil, CaptureConfig{}, slog.Default())
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if err := engine.WidenClearedSendersWorkspace(wsCtx); err != nil {
 		t.Fatalf("the reconciling pass: %v", err)
 	}
@@ -286,7 +285,7 @@ func TestTheReconcilingPassStopsAtItsBudgetAndFinishesOnTheNextTick(t *testing.T
 	settleDisposition(t, e, dispositionID, capture.PendingStatusReal, capture.KindContact)
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, nil, CaptureConfig{}, slog.Default())
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if err := engine.WidenClearedSendersWorkspace(wsCtx); err != nil {
 		t.Fatalf("the first reconciling pass: %v", err)
 	}

@@ -52,7 +52,7 @@ func TestMailSharingOffHoldsNewMailToItsParticipants(t *testing.T) {
 	sharedOn := true
 	settingsStore := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	optInCtx := principal.WithCorrelationID(
-		principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
+		principal.WithActor(context.Background(),
 			principal.Principal{
 				Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 				SeatType: principal.SeatFull,
@@ -78,7 +78,7 @@ func TestMailSharingOffHoldsNewMailToItsParticipants(t *testing.T) {
 	}
 
 	// An admin switches sharing off through the real settings store.
-	adminCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	adminCtx := context.Background()
 	adminCtx = principal.WithActor(adminCtx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{

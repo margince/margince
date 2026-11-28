@@ -134,11 +134,7 @@ func mcpAgentInvoker(t *testing.T, agentToken string) func(tool, args string) (j
 	registry := compose.NewRegistry(pool, compose.SendPath{})
 	authSvc := identity.NewService(pool)
 	return func(tool, args string) (json.RawMessage, error) {
-		wsID, err := authSvc.InstallationWorkspace(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		ctx := principal.WithWorkspaceID(context.Background(), wsID.UUID)
+		ctx := context.Background()
 		agent, err := authSvc.AuthenticateAgent(ctx, agentToken)
 		if err != nil {
 			t.Fatal(err)
@@ -207,7 +203,7 @@ func automaticWork(t *testing.T, e *apptest.AppEnv) context.Context {
 	if err != nil {
 		t.Fatalf("reading the signed-in colleague: %v", err)
 	}
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:automatic", UserID: colleague, OnBehalfOf: colleague,
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),

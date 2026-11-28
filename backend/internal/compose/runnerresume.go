@@ -46,11 +46,10 @@ func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) e
 	approvalID := ids.From[ids.ApprovalKind](env.Entity.ID)
 	// The envelope carries no tenant (ADR-0091 §6): this consumer resolves the
 	// installation, exactly as the request paths beside it do.
-	ws, err := s.identity.InstallationWorkspace(ctx)
+	_, err := s.identity.InstallationWorkspace(ctx)
 	if err != nil {
 		return err
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	// The resume path's own actor, for the same reason Tick binds one: every
 	// terminal write below announces the occurrence to the AI-activity
 	// projection, and an announcement carries the write shape — a ledger row and

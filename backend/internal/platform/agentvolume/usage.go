@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // ErrUnanswerable is a usage read on a meter that counts nothing it could
@@ -73,13 +71,17 @@ type Holder struct {
 // Usage reads the running window of every holder in one round trip, each
 // against the allowance its own roles give. Like Release it names its subjects,
 // because the caller is the human looking at them and not the agents counted.
-func (m *Meter) Usage(ctx context.Context, ws ids.UUID, subjects []Holder) (map[string]Usage, error) {
+func (m *Meter) Usage(ctx context.Context, subjects []Holder) (map[string]Usage, error) {
 	if m.unbounded || m.rdb == nil {
 		return nil, ErrUnanswerable
 	}
 	out := make(map[string]Usage, len(subjects))
 	if len(subjects) == 0 {
 		return out, nil
+	}
+	ws, named := m.workspace(ctx)
+	if !named {
+		return nil, ErrUnanswerable
 	}
 	w := m.window(ctx)
 	keys := make([]string, 0, 2*len(usageCounters)*len(subjects))

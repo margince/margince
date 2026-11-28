@@ -82,7 +82,7 @@ type verdictCandidate struct {
 	prior    json.RawMessage
 }
 
-// RunWorkspace reads the due deals of the workspace bound in ctx. A spent
+// RunWorkspace reads the due deals of the installation's workspace. A spent
 // model budget ends the pass cleanly: the deals still differ the next night.
 func (p dealVerdictPass) RunWorkspace(ctx context.Context) error {
 	if p.brain == nil {

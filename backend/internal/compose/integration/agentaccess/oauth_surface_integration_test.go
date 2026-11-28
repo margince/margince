@@ -92,11 +92,7 @@ func TestHostedMCPTransportSharesTheGovernedSurface(t *testing.T) {
 	authSvc := identity.NewService(pool)
 	registry := compose.NewRegistry(pool, compose.SendPath{})
 	authenticate := func(r *http.Request) (context.Context, error) {
-		wsID, err := authSvc.InstallationWorkspace(r.Context())
-		if err != nil {
-			return nil, err
-		}
-		ctx := principal.WithWorkspaceID(r.Context(), wsID.UUID)
+		ctx := r.Context()
 		agent, err := authSvc.AuthenticateAgent(ctx, strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
 		if err != nil {
 			return nil, err

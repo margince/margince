@@ -28,7 +28,7 @@ import (
 // which an all-scope reader's lens never does.
 // activityReaderAs is teamScopedActivityReader for a named seat.
 func (e *forecastEnv) activityReaderAs(seat ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat,
 		TeamIDs: []ids.UUID{e.Team1},
@@ -42,7 +42,7 @@ func (e *forecastEnv) activityReaderAs(seat ids.UUID) context.Context {
 }
 
 func (e *forecastEnv) teamScopedActivityReader() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		TeamIDs: []ids.UUID{e.Team1},

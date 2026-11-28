@@ -75,7 +75,7 @@ type Marks interface {
 
 // PullEnqueuer queues the chat_pull of one connection. It is unique by its
 // args, so ten notices while one pull waits make no second pull.
-type PullEnqueuer func(ctx context.Context, workspace, connection ids.UUID) error
+type PullEnqueuer func(ctx context.Context, connection ids.UUID) error
 
 // Receiver verifies Dispact's notices and acts on them.
 type RootNotices interface {
@@ -264,11 +264,7 @@ func (r *Receiver) act(ctx context.Context, connection ids.UUID, notice crmcontr
 				return crmcontracts.DispactChannelEventReceipt{}, err
 			}
 		}
-		ws, ok := principal.WorkspaceID(ctx)
-		if !ok {
-			return crmcontracts.DispactChannelEventReceipt{}, errors.New("chat links: a notice outside a workspace context")
-		}
-		if err := r.Pull(ctx, ws, connection); err != nil {
+		if err := r.Pull(ctx, connection); err != nil {
 			return crmcontracts.DispactChannelEventReceipt{}, fmt.Errorf("%w: queueing the pull: %w", chatlinks.ErrEventsUnavailable, err)
 		}
 		return receipt(crmcontracts.DispactChannelEventReceiptStatusPullQueued), nil

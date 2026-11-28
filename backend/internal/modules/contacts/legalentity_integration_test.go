@@ -38,7 +38,7 @@ var entityAdmin = map[string]principal.ObjectGrant{
 var entityRep = map[string]principal.ObjectGrant{legalEntityObject: {Read: true}}
 
 func actingAs(e *promoteConsentEnv, role string, grants map[string]principal.ObjectGrant) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
 		Permissions: principal.Permissions{RoleKeys: []string{role}, Objects: grants, RowScope: principal.RowScopeAll},

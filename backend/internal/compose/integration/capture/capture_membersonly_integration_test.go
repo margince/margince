@@ -36,7 +36,7 @@ const colleaguePrivate = "b.private@home.example"
 // readsContent asks the content gate itself whether one seat reads the mail.
 func readsContent(t *testing.T, e *integration.SearchEnv, user, activityID ids.UUID) bool {
 	t.Helper()
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}},

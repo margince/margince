@@ -149,7 +149,7 @@ func (e *transcriptEnv) readAt(t *testing.T, brain completer, now func() time.Ti
 	// so what the reader may see is what the rep who asked may see.
 	e.GrantRole(t, e.Rep1, "rep")
 	reader := &transcriptProposeWorker{users: identity.NewService(e.Pool)}
-	worker, live, err := reader.readerFor(principal.WithWorkspaceID(context.Background(), e.WS),
+	worker, live, err := reader.readerFor(context.Background(),
 		"human:"+e.Rep1.String(), started.ID)
 	if err != nil || !live {
 		t.Fatalf("binding the reader for Rep1: live=%t err=%v", live, err)
@@ -457,7 +457,7 @@ func TestAnActivityThatCarriesNoTranscriptCannotBeRead(t *testing.T) {
 func (e *transcriptEnv) wsString(t *testing.T, sql string, args ...any) string {
 	t.Helper()
 	var out string
-	if err := e.DB().Tx(principal.WithWorkspaceID(context.Background(), e.WS), func(tx pgx.Tx) error {
+	if err := e.DB().Tx(context.Background(), func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), sql, args...).Scan(&out)
 	}); err != nil {
 		t.Fatalf("reading %q: %v", sql, err)

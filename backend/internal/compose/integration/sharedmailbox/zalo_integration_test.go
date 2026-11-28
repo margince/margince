@@ -56,7 +56,7 @@ func (s *sharedMailboxSuite) zaloSeat(t *testing.T, posture string) ids.UUID {
 
 func (s *sharedMailboxSuite) fileZalo(t *testing.T, seat ids.UUID) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), s.e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: zalo.CapturedBy,

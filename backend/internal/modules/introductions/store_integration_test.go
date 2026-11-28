@@ -109,7 +109,7 @@ func setupIntro(t *testing.T) *introEnv {
 // admits them to the surface; which PARTY they are on a given ask is the row's
 // own check, which is the thing most of this file is about.
 func (e *introEnv) asUser(u ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + u.String(), UserID: u,
 		Permissions: principal.Permissions{
@@ -406,7 +406,7 @@ func TestAnAskCannotNameAContactThatIsGoneOrErased(t *testing.T) {
 // design, because an ask between two colleagues is not readable by anybody the
 // consumer could pretend to be.
 func (e *introEnv) asCapture() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, "system:intro-advance")
 }
 

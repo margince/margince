@@ -18,7 +18,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // seedSettledClaim plants one recorded response whose created_at is ageOffset
@@ -47,7 +46,7 @@ func TestIdempotencyRetentionPurgesSnapshotsPastTheReplayWindow(t *testing.T) {
 	seedSettledClaim(t, e, "fresh-claim", "1 hour")
 
 	sweeper := NewIdempotencyRetentionSweeper(e.Pool, slog.New(slog.DiscardHandler))
-	if err := sweeper.SweepWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if err := sweeper.SweepWorkspace(context.Background()); err != nil {
 		t.Fatalf("SweepWorkspace: %v", err)
 	}
 
@@ -61,7 +60,7 @@ func TestIdempotencyRetentionPurgesSnapshotsPastTheReplayWindow(t *testing.T) {
 	}
 
 	t.Run("a second pass is a no-op", func(t *testing.T) {
-		if err := sweeper.SweepWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if err := sweeper.SweepWorkspace(context.Background()); err != nil {
 			t.Fatalf("SweepWorkspace: %v", err)
 		}
 		if !claimExists(t, e, "fresh-claim") {

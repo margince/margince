@@ -8,8 +8,6 @@ package capture
 import (
 	"context"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A colleague's meeting whose guest list Google withholds from the owner's copy
@@ -34,7 +32,7 @@ func TestAColleaguesMeetingWithAHiddenGuestListIsCaptured(t *testing.T) {
 	ownHidden["guestsCanSeeOtherGuests"] = false
 
 	connID := connectStubbedCalendar(t, env, []map[string]any{hidden, omitted, shown, ownHidden})
-	if err := env.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), env.e.WS), connID); err != nil {
+	if err := env.registry.SyncOnce(context.Background(), connID); err != nil {
 		t.Fatalf("SyncOnce: %v", err)
 	}
 

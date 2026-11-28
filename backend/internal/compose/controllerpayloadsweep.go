@@ -259,7 +259,7 @@ func addControllerPayloadSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobR
 	worker := newControllerPayloadSweepWorker(
 		identity.NewService(pool),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
-		controllerPayloads{v: cfg.ControllerVault},
+		controllerPayloads{v: cfg.ControllerVault, pool: pool},
 		activities.NewStore(db).WithMeetingVault(cfg.ControllerVault),
 		receiptAlarm{db: db},
 		consent.NewStore(db),

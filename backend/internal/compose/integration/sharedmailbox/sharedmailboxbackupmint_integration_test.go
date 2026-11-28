@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -58,7 +57,7 @@ func (everyoneIsAContact) Complete(_ context.Context, req model.Request) (model.
 func (s *sharedMailboxSuite) judgeEveryone(t *testing.T) {
 	t.Helper()
 	engine := compose.NewCounterpartyVerdictEngine(s.e.Pool, everyoneIsAContact{}, compose.CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), s.e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -39,7 +40,7 @@ func tellWebsiteLeadOwner(ctx context.Context, db *database.DB, formID, source i
 		if err != nil || owner == nil {
 			return err
 		}
-		seat, live, err := seatContext(bound, identity.NewService(db.Pool()), noticeWorkspace(bound), *owner)
+		seat, live, err := seatContext(bound, identity.NewService(db.Pool()), *owner)
 		if err != nil || !live {
 			return err
 		}

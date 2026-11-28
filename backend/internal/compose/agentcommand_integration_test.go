@@ -212,7 +212,7 @@ var archiveRepPerms = func() principal.Permissions {
 // and report a schema complaint where this test means to report a refusal.
 func scopedArchiveAgent(t *testing.T, e *integration.Env) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:scoped-archive", SeatType: principal.SeatFull,

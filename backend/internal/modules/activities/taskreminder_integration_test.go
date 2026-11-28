@@ -61,7 +61,7 @@ func writeReminderCase(ctx context.Context, t *testing.T, store *Store, e *sendE
 
 // asArchiver is the rep holding the delete grant archiving asks for.
 func asArchiver(e *sendEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

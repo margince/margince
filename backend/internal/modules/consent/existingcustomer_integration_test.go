@@ -47,7 +47,7 @@ var customerRoute = sync.OnceValue(func() string {
 
 // consentAdminCtx is a signed-in admin who may configure consent.
 func (e *resolveEnv) consentAdminCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,

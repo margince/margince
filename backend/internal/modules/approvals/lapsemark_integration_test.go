@@ -44,7 +44,7 @@ func (e *stagingEnv) lapsed(t *testing.T) ids.ApprovalID {
 // so a test calling it as nobody would be exercising the guard rather than the
 // pass — see TestOnlyTheExpirySweepMayMarkLapsedRedemptions for that half.
 func (e *stagingEnv) sweeping() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: ExpiryActor,

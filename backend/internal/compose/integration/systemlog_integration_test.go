@@ -27,7 +27,7 @@ import (
 // connectorCtx binds a connector principal acting for a granting human —
 // the capture-skip shape (the harness seeds no connector helper).
 func connectorCtx(e *Env, onBehalf ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type:       principal.PrincipalConnector,
@@ -59,7 +59,7 @@ func TestLogSystem_writesConnectorRowWithDerivedActor(t *testing.T) {
 		entityAbsent               bool
 		detailJSON                 []byte
 	)
-	rowCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	rowCtx := context.Background()
 	if err := database.WithTx(rowCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT actor_type, actor_id, on_behalf_of, action, detail,

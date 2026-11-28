@@ -118,7 +118,7 @@ func TestARescopeOfAMailWidenedAgainLeavesItsSignatureFields(t *testing.T) {
 func TestANarrowingWaitsForTheSignatureWriterInsteadOfDeadlocking(t *testing.T) {
 	e := integration.Setup(t)
 	contact, mail := signedAndNarrowed(t, e)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	writer, err := e.Pool.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)

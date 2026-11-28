@@ -89,14 +89,14 @@ func TestEveryClassifiedTargetTypeRequiresReadOnItsOwnType(t *testing.T) {
 	target := ids.NewV7()
 	for _, targetType := range ClassifiedTargetTypes() {
 		t.Run(targetType, func(t *testing.T) {
-			ctx := principal.WithWorkspaceID(principal.WithActor(context.Background(), principal.Principal{
+			ctx := principal.WithActor(context.Background(), principal.Principal{
 				Type:   principal.PrincipalHuman,
 				UserID: ids.NewV7(),
 				Permissions: principal.Permissions{
 					Objects:  map[string]principal.ObjectGrant{targetType: {Create: true, Update: true, Delete: true}},
 					RowScope: principal.RowScopeAll,
 				},
-			}), target)
+			})
 			for _, shape := range []struct {
 				name     string
 				targetID *ids.UUID

@@ -154,9 +154,9 @@ func memberConnectedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.U
 // demotion binds from the next record. An archived, suspended or gone member
 // answers ErrNotFound and lands nothing. The pool-built resolver is why the
 // runtime binding needs no entry for it.
-func liveMemberPrincipal(ctx context.Context, pool *pgxpool.Pool, workspace, member ids.UUID) (principal.Principal, error) {
+func liveMemberPrincipal(ctx context.Context, pool *pgxpool.Pool, member ids.UUID) (principal.Principal, error) {
 	if pool == nil {
 		return principal.Principal{}, errExtensionRuntimeUnwired
 	}
-	return authz.MemberPrincipal(ctx, identity.NewService(pool), workspace, member)
+	return authz.MemberPrincipal(ctx, identity.NewService(pool), member)
 }

@@ -197,7 +197,7 @@ func (e *sendEnv) store(linker UnsubscribeLinker) *Store {
 // as binds an authenticated rep at the given row scope. Sending is a human
 // act: the delivery's sending identity is derived from this principal.
 func (e *sendEnv) as(scope principal.RowScope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
@@ -234,7 +234,7 @@ func (e *sendEnv) seedAnchor(t *testing.T, sourceID, threadKey string) ids.Activ
 // readOnly binds the same rep with the anchor readable but no create grant —
 // the caller who may look at the conversation and may not answer it.
 func (e *sendEnv) readOnly() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

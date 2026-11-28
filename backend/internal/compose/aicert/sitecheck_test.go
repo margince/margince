@@ -734,7 +734,7 @@ func importPath(file *ast.File, name string) string {
 func TestAChangedSiteCheckMovesOnlyTheGraderThird(t *testing.T) {
 	sc := testScenario("basic", wideBands)
 	stamp := func() string {
-		stamps, err := ScenarioStamps(wsContext(t), []Scenario{sc}, testCensus(t))
+		stamps, err := ScenarioStamps(t.Context(), []Scenario{sc}, testCensus(t))
 		if err != nil {
 			t.Fatalf("stamping: %v", err)
 		}

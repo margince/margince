@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -35,7 +34,7 @@ import (
 // sender 555 (the numbers normalize_test.go uses). Returns the job's ids.
 func telegramIngestFixture(t *testing.T, e *integration.Env) (connID, rawID ids.UUID) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	connID = ids.NewV7()
 	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
@@ -90,7 +89,7 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 
 	// Read back under the SAME workspace the args named — if the worker had
 	// resolved the wrong tenant (or none), this activity would not be here.
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	var id ids.UUID
 	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT id FROM activity WHERE source_system = 'telegram'`).Scan(&id)

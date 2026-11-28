@@ -388,7 +388,7 @@ func TestNotificationCentreRefusesACursorItNeverMinted(t *testing.T) {
 // asAgentFor is an agent principal carrying the seat's user id — the case a
 // user-id-only check would admit.
 func (e *noticeEnv) asAgentFor(u ids.UserID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:planner", UserID: u.UUID,
 	})

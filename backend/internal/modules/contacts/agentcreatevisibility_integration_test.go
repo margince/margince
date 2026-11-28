@@ -99,7 +99,7 @@ func TestAColleagueCanReadTheContactAnAgentCreated(t *testing.T) {
 // asAgent is `as` with the principal a tool call arrives under: an agent acting
 // on one human's behalf, carrying that human's own grants.
 func (e *privacyEnv) asAgent(user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:tools", UserID: user, OnBehalfOf: user,

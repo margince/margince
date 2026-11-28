@@ -32,7 +32,7 @@ func (*stepRecorder) PromptWindow() int { return 0 }
 // Only the MCP listing leaves those out.
 func TestTheRunnersStepSchemaNamesARareActionsArgument(t *testing.T) {
 	registry := servedSurface()
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:loop", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull,
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
 	})

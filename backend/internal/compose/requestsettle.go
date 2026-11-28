@@ -93,7 +93,7 @@ func NewRequestSettler(pool *pgxpool.Pool, brain completer, now func() time.Time
 	}
 }
 
-// RunWorkspace judges up to cap answered requests in the workspace bound in ctx.
+// RunWorkspace judges up to cap answered requests in the installation's workspace.
 //
 // A budget stop, or no provider bound, ends the pass cleanly: what is judged is
 // committed and the rest is simply still unjudged, which the next cycle reads

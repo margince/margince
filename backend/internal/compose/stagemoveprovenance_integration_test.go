@@ -37,7 +37,7 @@ func (f *stageCohortFixture) importer(t *testing.T) context.Context {
 	t.Helper()
 	run := f.env.seedID(t, importRunSeedSQL)
 	all := principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), f.env.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + f.env.Rep1.String(), UserID: f.env.Rep1, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{

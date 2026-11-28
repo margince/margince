@@ -317,7 +317,7 @@ func mcpResult(t *testing.T, method string, views *apps.Provider) json.RawMessag
 // beside the negotiated `_meta`.
 func mcpCall(t *testing.T, method, extraParams, name string, views *apps.Provider) json.RawMessage {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	caller := principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:published-surface", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(mcpInfoScopes()...), SeatType: principal.SeatFull,

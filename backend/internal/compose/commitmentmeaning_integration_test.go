@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestCommitmentMeaningControlsTheRealWriterAndSurvivesReplay(t *testing.T) {
@@ -58,7 +57,7 @@ func TestCommitmentMeaningControlsTheRealWriterAndSurvivesReplay(t *testing.T) {
 				Seat: &e.Rep1, Confidence: 1, Meaning: meaning,
 				Locator: commitmentLocator(sourceID, claimKindOurs, e.Rep1.String(), body),
 			}
-			ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+			ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 			dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 			want := meaning.withheldOutcome()
 			if state == "open" {

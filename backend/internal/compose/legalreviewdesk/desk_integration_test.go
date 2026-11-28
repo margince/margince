@@ -68,7 +68,7 @@ func (d deskEnv) grant(t *testing.T, user ids.UUID, permissions string) {
 }
 
 func (d deskEnv) ctx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), d.e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 }

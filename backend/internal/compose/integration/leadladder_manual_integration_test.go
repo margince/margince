@@ -83,7 +83,7 @@ func TestManualMeetingClimbsTheLeadLadder(t *testing.T) {
 	}
 	// The workflow runner drives Apply as the system, exactly as the relay
 	// does in production.
-	sysCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	sysCtx := context.Background()
 	sysCtx = principal.WithCorrelationID(sysCtx, ids.NewV7())
 	sysCtx = principal.WithActor(sysCtx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 	eff, err := ladder.Plan(sysCtx, ev)
@@ -158,7 +158,7 @@ func TestManualNoteMarksTheLeadContacted(t *testing.T) {
 	if ladder == nil {
 		t.Fatal("lead_status_ladder is not among the registered lead workflows")
 	}
-	sysCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	sysCtx := context.Background()
 	sysCtx = principal.WithCorrelationID(sysCtx, ids.NewV7())
 	sysCtx = principal.WithActor(sysCtx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 	ev := workflow.Event{

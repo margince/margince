@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestLegacyCapturedMailUsesItsOriginalDateInsteadOfArrival(t *testing.T) {
@@ -27,7 +26,7 @@ func TestLegacyCapturedMailUsesItsOriginalDateInsteadOfArrival(t *testing.T) {
 	asOf := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	e.WsExec(t, `UPDATE capture_import SET source_occurred_at=NULL WHERE activity_id=$1`, source)
 	e.WsExec(t, `UPDATE activity SET occurred_at=$2 WHERE id=$1`, source, asOf)
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	c := Commitment{
 		Meaning: openCommitmentMeaning("", ""),

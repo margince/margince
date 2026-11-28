@@ -19,7 +19,7 @@ func certifyGeminiAt(t *testing.T, level string) Record {
 	candidateFake := ai.NewFakeClient().Script("the widget is blue", "the widget is blue", "the widget is blue")
 	judgeFake := ai.NewFakeClient().Script(scoreJSON(90), scoreJSON(90), scoreJSON(90))
 	candidate := ai.ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite-preview", ThinkingLevel: level}
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		candidate, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(),
 		&certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithHarnessClient("gemini", candidateFake)},
@@ -82,7 +82,7 @@ func TestARecordNamesTheSitesThatRanAtTheContractsLevel(t *testing.T) {
 	}
 	candidateFake := ai.NewFakeClient().Script("{}", "{}", "{}")
 	candidate := ai.ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
-	rec, err := certifyTask(wsContext(t), ai.TaskColdStart, siteRead, census,
+	rec, err := certifyTask(t.Context(), ai.TaskColdStart, siteRead, census,
 		candidate, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileCloudFrontier, 3, quietLogger(),
 		&certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithHarnessClient("gemini", candidateFake)},

@@ -113,11 +113,11 @@ func archiveRequestFor(as context.Context, contact ids.UUID) *http.Request {
 // this stands in for it, with the same two answers.
 type repSeat struct{ e *integration.Env }
 
-func (s repSeat) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (s repSeat) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: archiveRepPerms, TeamIDs: []ids.UUID{s.e.Team1}}, nil
 }
 
-func (repSeat) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (repSeat) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -150,6 +150,6 @@ func archiveRegistry(e *integration.Env) *agents.Registry {
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (s repSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, s.EffectiveRBAC, s.SeatType)
+func (s repSeat) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, s.EffectiveRBAC, s.SeatType)
 }

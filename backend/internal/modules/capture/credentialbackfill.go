@@ -74,7 +74,7 @@ func (r *Registry) BackfillCredentials(ctx context.Context) (int, error) {
 	// a human's move, and the ledger tells a relocation apart from a connect.
 	// A bound actor is also storekit.LogSystem's precondition: it refuses
 	// rather than guessing.
-	wsCtx := principal.WithWorkspaceID(ctx, wsID)
+	wsCtx := ctx
 	wsCtx = principal.SystemActing(wsCtx, CredentialBackfillActor)
 	return r.backfillWorkspace(wsCtx, ids.From[ids.WorkspaceKind](wsID))
 }

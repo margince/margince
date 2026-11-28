@@ -47,7 +47,7 @@ func repCtx(ws, user ids.UUID) context.Context {
 }
 
 func exceptionCtx(ws, user ids.UUID, role string, grant principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
@@ -66,7 +66,7 @@ func exceptionCtx(ws, user ids.UUID, role string, grant principal.ObjectGrant) c
 // without an explicit type check an integration would mint a row saying that
 // contact decided to send a refused message.
 func connectorCtx(ws, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:mailsync",
@@ -83,7 +83,7 @@ func connectorCtx(ws, user ids.UUID) context.Context {
 // agentCtx is an agent acting under a director's own grants, on no passport:
 // automatic work with no user who asked it.
 func agentCtx(ws, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:overnight", UserID: user,

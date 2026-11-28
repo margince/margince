@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // scriptedSource answers whatever the test last set, and counts the reads.
@@ -26,7 +25,7 @@ func (s *scriptedSource) Policy(context.Context) (Policy, error) {
 }
 
 func sourcedMeter(src PolicySource, at *time.Time) *Meter {
-	return NewWithClock(nil, Limits{}, DefaultWindow, func() time.Time { return *at }).WithPolicySource(src)
+	return NewWithClock(nil, Limits{}, DefaultWindow, func() time.Time { return *at }).WithCompany(testCompany).WithPolicySource(src)
 }
 
 func TestTheMeterReadsItsSourceAtMostOncePerRefresh(t *testing.T) {
@@ -89,7 +88,7 @@ func TestAReadingQuotesTheLiveAllowanceAndLength(t *testing.T) {
 	src := &scriptedSource{policy: Policy{Limits: Limits{Writes: 10}, Window: WindowPlan{Length: 6 * time.Hour}}}
 	meter := sourcedMeter(src, &at)
 
-	reading := meter.Read(principal.WithWorkspaceID(humanCtx(t), ids.NewV7()), Writes)
+	reading := meter.Read(humanCtx(t), Writes)
 
 	if reading.Allowance != 10 || reading.Window != 6*time.Hour {
 		t.Errorf("the reading quotes %d over %v, want 10 over 6h", reading.Allowance, reading.Window)
@@ -135,7 +134,7 @@ func TestAFailedReadIsRetriedSoonerThanARefresh(t *testing.T) {
 func TestACancelledCallStillReadsThePolicy(t *testing.T) {
 	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
 	src := &cancelAwareSource{policy: Policy{Limits: Limits{Writes: 10}, Window: WindowPlan{Length: DefaultWindow}}}
-	meter := NewWithClock(nil, Limits{}, DefaultWindow, func() time.Time { return at }).WithPolicySource(src)
+	meter := NewWithClock(nil, Limits{}, DefaultWindow, func() time.Time { return at }).WithCompany(testCompany).WithPolicySource(src)
 	ctx, cancel := context.WithCancel(inWorkspace(t))
 	cancel()
 
@@ -201,10 +200,15 @@ func (s *forgettingSource) Policy(context.Context) (Policy, error) {
 	return answer, nil
 }
 
+// theCompany is the one company every test meter names in its counter keys.
+var theCompany = ids.New[ids.WorkspaceKind]().UUID
+
+func testCompany(context.Context) (ids.UUID, error) { return theCompany, nil }
+
 // inWorkspace is a call bound to a workspace, which a settings read needs.
 func inWorkspace(t *testing.T) context.Context {
 	t.Helper()
-	return principal.WithWorkspaceID(t.Context(), ids.NewV7())
+	return t.Context()
 }
 
 // A call bound to no workspace cannot read the settings. It must not count as
@@ -213,12 +217,14 @@ func TestACallWithNoWorkspaceLeavesThePolicyAlone(t *testing.T) {
 	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
 	src := &scriptedSource{policy: Policy{Limits: Limits{Writes: 10}, Window: WindowPlan{Length: DefaultWindow}}}
 	meter := sourcedMeter(src, &at)
+	meter.company = nil
 
 	meter.window(t.Context())
 
 	if src.reads != 0 {
-		t.Fatalf("a call with no workspace read the source %d times", src.reads)
+		t.Fatalf("a call with no company read the source %d times", src.reads)
 	}
+	meter.company = testCompany
 	if got := meter.window(inWorkspace(t)).limits.Writes; got != 10 {
 		t.Errorf("the next bound call judges by %d writes, want the 10 the source answers", got)
 	}

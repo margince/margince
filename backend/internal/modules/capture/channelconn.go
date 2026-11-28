@@ -210,10 +210,11 @@ func (s *ChannelStore) Connect(ctx context.Context, req ConnectRequest) (Channel
 	if err := checkEventsSecret(check, req.EventsSecret); err != nil {
 		return ChannelConnection{}, err
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ChannelConnection{}, errors.New("capture: channel connect called outside a workspace context")
+	company, err := s.db.Workspace(ctx)
+	if err != nil {
+		return ChannelConnection{}, err
 	}
+	ws := company.UUID
 	bot, err := check.Confirm(ctx, address, req.BotToken)
 	if err != nil {
 		return ChannelConnection{}, err

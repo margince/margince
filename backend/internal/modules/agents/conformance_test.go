@@ -77,7 +77,7 @@ func dispatchWith(t *testing.T, tool mcp.Tool, log *strings.Builder) *Dispatcher
 // caller every rendering test here dispatches as. (precedence_test.go's
 // argument-less agentCtx is fixed at the write scope.)
 func scopedAgentCtx(scopes ...principal.Scope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:conformance", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull, Permissions: everyRecordedGrant(),
 		Scopes: principal.NewScopeSet(scopes...),

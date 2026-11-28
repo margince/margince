@@ -37,7 +37,7 @@ func settleClaimHTTP(t *testing.T, e *transcriptEnv, claim ids.UUID, outcome str
 
 func assertPromiseProjectionHTTP(t *testing.T, e *transcriptEnv, approval ids.UUID, want int) {
 	t.Helper()
-	authority, _, err := identity.NewService(e.Pool).EffectiveAuthority(e.Admin(), e.WS, e.Rep2)
+	authority, _, err := identity.NewService(e.Pool).EffectiveAuthority(e.Admin(), e.Rep2)
 	if err != nil {
 		t.Fatal(err)
 	}

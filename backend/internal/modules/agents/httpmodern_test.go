@@ -39,7 +39,7 @@ func modernServer(t *testing.T) *httptest.Server {
 	})
 	h := NewHTTPHandler(registry,
 		func(r *http.Request) (context.Context, error) {
-			return principal.WithActor(principal.WithWorkspaceID(r.Context(), ids.NewV7()),
+			return principal.WithActor(r.Context(),
 				principal.Principal{
 					Type: principal.PrincipalAgent, ID: "agent:modern", OnBehalfOf: ids.NewV7(),
 					Scopes: principal.NewScopeSet(principal.ScopeRead),

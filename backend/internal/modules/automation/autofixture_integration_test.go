@@ -111,7 +111,7 @@ func (fx *autoFixture) count(t *testing.T, sql string, args ...any) int {
 // humanCtx binds a human principal with read/write on the automation
 // object and read on the record tables the preview ranges over.
 func (fx *autoFixture) humanCtx(user ids.UUID, scope principal.RowScope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), fx.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type:   principal.PrincipalHuman,

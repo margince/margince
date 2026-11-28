@@ -89,7 +89,7 @@ func TestComposedApprovalServiceStillReleasesAStepUp(t *testing.T) {
 	}
 	ctx := principal.WithActor(sightContext(e), live.Principal())
 	at := clocktest.Now(t)
-	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, func() time.Time { return at })
+	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, func() time.Time { return at }).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))
 	if err := meter.Consume(ctx, agentvolume.Writes, 1); err != nil {
 		t.Fatal(err)
 	}

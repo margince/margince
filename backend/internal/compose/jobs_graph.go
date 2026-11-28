@@ -76,7 +76,7 @@ func (w *replySettledWorker) Work(ctx context.Context, _ *river.Job[ReplySettled
 }
 
 func (w *replySettledWorker) stampWorkspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.WithActor(principal.WithWorkspaceID(ctx, workspace), principal.Principal{
+	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:reply_settled_stamp",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})

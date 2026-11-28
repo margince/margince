@@ -385,7 +385,7 @@ func newCaptureEnvConfigured(t *testing.T, now time.Time, cfg compose.CaptureCon
 		t.Fatalf("Connect: %v", err)
 	}
 	connectFixtureSharedMailbox(t, e, registry)
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	// pull drives one sync with the connector configured exactly as this call
 	// says — every field set, so a batch never inherits the previous one's
 	// attestations or deal filings.

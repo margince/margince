@@ -171,9 +171,9 @@ Has no outside imports, so seam signatures do not pull in a UUID library.
 - **Use it when:** you make or parse any record id.
 
 ### `shared/kernel/principal`: who is acting in a request
-The tenant key, the acting principal and the trace ids on the context. Read them only through the typed
+The acting principal and the trace ids on the context. Read them only through the typed
 functions here (any other context key is not allowed).
-- Read and set: `WithActor`/`Actor`, `WithWorkspaceID`/`WorkspaceID`, `WithCorrelationID`/`CorrelationID`, `WithCausationEvent`/`CausationEvent`.
+- Read and set: `WithActor`/`Actor`, `WithCorrelationID`/`CorrelationID`, `WithCausationEvent`/`CausationEvent`.
 - `type Principal { Type, ID, UserID, TeamIDs, PassportID, OnBehalfOf, Scopes, SeatType, Permissions }`.
 - Value sets: `PrincipalType` (`Human`/`Agent`/`Connector`/`System`), `Scope` (`Read`/`Draft`/`Write`/`Send`/`Enrich`).
 - More value sets: `SeatType` (`Full`/`Read`, `.CanMutate()`), `Action` (`Create`/`Read`/`Update`/`Delete`), `RowScope` (`Own`/`Team`/`All`).

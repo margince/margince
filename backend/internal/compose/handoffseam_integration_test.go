@@ -70,7 +70,7 @@ func seedHandoffScene(t *testing.T, e *integration.Env, dealCount int) handoffSc
 	due := time.Now().UTC().Add(-24 * time.Hour)
 	onProject := activities.ActivityLinkInput{EntityType: "project", EntityID: scene.project.UUID}
 	scene.human = logProjectTask(admin, t, e.Activities, "Send the revised SOW", due, onProject)
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:time-scan")
+	system := principal.SystemActing(context.Background(), "system:time-scan")
 	scene.reminder = logProjectTask(system, t, e.Activities, "Check in on the quiet project", due, onProject)
 	return scene
 }

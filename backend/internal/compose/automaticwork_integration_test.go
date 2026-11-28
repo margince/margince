@@ -64,7 +64,7 @@ func (f *workFixture) promiseTask(t *testing.T, assignee ids.UUID) ids.ActivityI
 // files one for the seat the message was addressed to.
 func (f *workFixture) replyReminder(t *testing.T, assignee ids.UUID) ids.ActivityID {
 	t.Helper()
-	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), f.e.WS), ids.NewV7())
+	base := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx := principal.WithActor(base, principal.Principal{
 		Type: principal.PrincipalSystem, ID: activities.OwedVerdictCapturedBy,
 	})

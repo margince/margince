@@ -11,8 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -49,7 +47,7 @@ func TestTheProbeEmbedderReportsTheBindingsOwnIdentity(t *testing.T) {
 	if !strings.HasSuffix(identity, fmt.Sprintf("@%d", dims)) {
 		t.Errorf("identity %q does not name the width %d it embeds at", identity, dims)
 	}
-	res, err := embedder.Embed(principal.WithWorkspaceID(t.Context(), ids.NewV7()),
+	res, err := embedder.Embed(t.Context(),
 		model.EmbedRequest{Inputs: []string{"how can I create a project"}, Dimensions: dims})
 	if err != nil {
 		t.Fatalf("the bound lane must embed: %v", err)

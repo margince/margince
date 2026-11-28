@@ -43,7 +43,7 @@ func (s *InquiryService) Apply(ctx context.Context, ex Executors, ev workflow.Ev
 	if err != nil {
 		return workflow.RunResult{}, err
 	}
-	admit, err := ownerContext(ctx, ex.Authority, ev.WorkspaceID, ev.OwnerID)
+	admit, err := ownerContext(ctx, ex.Authority, ev.OwnerID)
 	if err != nil {
 		return workflow.RunResult{}, err
 	}
@@ -116,7 +116,7 @@ func (s *InquiryService) applyTask(ctx context.Context, ex Executors, effect wor
 }
 
 func (s *InquiryService) choose(ctx context.Context, ex Executors, ev workflow.Event, policy crmcontracts.WebsiteInquiryPolicy, receipt inquiryReceipt) (InquiryPlan, error) {
-	admit, err := ownerContext(ctx, ex.Authority, ev.WorkspaceID, ev.OwnerID)
+	admit, err := ownerContext(ctx, ex.Authority, ev.OwnerID)
 	if err != nil {
 		return InquiryPlan{}, err
 	}

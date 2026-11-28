@@ -8,8 +8,6 @@ import (
 	"log/slog"
 	"sync"
 	"time"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Policy is the allowances an installation set and the window they are counted
@@ -75,7 +73,7 @@ func (m *Meter) policy(ctx context.Context) Policy {
 	}
 	// A call bound to no workspace cannot read the settings. Asking would count
 	// as a failed read and push every other call onto the defaults.
-	if _, bound := principal.WorkspaceID(ctx); !bound {
+	if _, bound := m.workspace(ctx); !bound {
 		m.cache.mu.Lock()
 		defer m.cache.mu.Unlock()
 		return m.cache.heldOr(m.fallback)

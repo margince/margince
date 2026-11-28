@@ -25,7 +25,7 @@ import (
 // colleagueCtx is the colleague of meetingCtx's rep, who reads only what an
 // audience lets them.
 func colleagueCtx(e *sendEnv) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.other.String(), UserID: e.other,
 		Permissions: principal.Permissions{
@@ -39,7 +39,7 @@ func colleagueCtx(e *sendEnv) context.Context {
 // sweepTranscripts runs one pass of the sweep as the system, as its job does.
 func sweepTranscripts(t *testing.T, e *sendEnv) int {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:transcript-audience")
+	ctx := principal.SystemActing(context.Background(), "system:transcript-audience")
 	var page DriftedPage
 	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error

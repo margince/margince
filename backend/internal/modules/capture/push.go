@@ -12,7 +12,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // BumpDueByMailbox routes a provider push notification onto the sweep: the
@@ -46,9 +45,8 @@ func BumpDueByMailboxes(ctx context.Context, pool *pgxpool.Pool, provider string
 	}
 
 	var hits []DueConnection
-	wsCtx := principal.WithWorkspaceID(ctx, wsID)
 	ws := ids.From[ids.WorkspaceKind](wsID)
-	err = database.WithTx(wsCtx, pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		matched, err := makeDueNowTx(ctx, tx,
 			`c.provider = @pushed_provider AND c.status IN ('connected','error') AND c.sync_cursor->>'email' = ANY(@emails)`,
 			pgx.NamedArgs{"pushed_provider": provider, "emails": emails})

@@ -61,11 +61,11 @@ func ReplayErasureSuppressions(
 	if journal == nil {
 		return ErasureReplay{}, ErrReplayNeedsObjectStore
 	}
-	workspace, err := InstallationDB(pool).Workspace(ctx)
+	_, err := InstallationDB(pool).Workspace(ctx)
 	if err != nil {
 		return ErasureReplay{}, fmt.Errorf("replaying erasures: %w", err)
 	}
-	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace.UUID), erasureReplayActor)
+	ctx = principal.SystemActing(ctx, erasureReplayActor)
 	eraser := ComposedEraser(pool, blob).WithJournalStore(journal)
 
 	var replay ErasureReplay

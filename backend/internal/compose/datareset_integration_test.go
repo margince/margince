@@ -566,10 +566,10 @@ func TestResetKeepsTheDeploymentCredentialsSealedBeforeIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sealing the credential under test: %v", err)
 	}
-	if err := settings.Set(bootCtx(context.Background(), e.WS, secretSealActor), NewSettingsStore(e.Pool), identity.LicenseTokenRef, string(sealed)); err != nil {
+	if err := settings.Set(bootCtx(context.Background(), secretSealActor), NewSettingsStore(e.Pool), identity.LicenseTokenRef, string(sealed)); err != nil {
 		t.Fatalf("recording the credential under test: %v", err)
 	}
-	ref, err := settings.Get(bootCtx(context.Background(), e.WS, secretSealActor), NewSettingsStore(e.Pool), identity.LicenseTokenRef)
+	ref, err := settings.Get(bootCtx(context.Background(), secretSealActor), NewSettingsStore(e.Pool), identity.LicenseTokenRef)
 	if err != nil {
 		t.Fatalf("reading the recorded ref: %v", err)
 	}
@@ -585,7 +585,7 @@ func TestResetKeepsTheDeploymentCredentialsSealedBeforeIt(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	after, err := settings.Get(bootCtx(context.Background(), e.WS, secretSealActor), NewSettingsStore(e.Pool), identity.LicenseTokenRef)
+	after, err := settings.Get(bootCtx(context.Background(), secretSealActor), NewSettingsStore(e.Pool), identity.LicenseTokenRef)
 	if err != nil {
 		t.Fatalf("reading the ref after the reset: %v", err)
 	}

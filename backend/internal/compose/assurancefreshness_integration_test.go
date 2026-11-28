@@ -339,7 +339,7 @@ func (e *freshnessEnv) scanner(subjects assurance.SubjectsFunc) *assurance.Scann
 }
 
 func (e *freshnessEnv) passCtx() context.Context {
-	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), assuranceActor)
+	return principal.SystemActing(context.Background(), assuranceActor)
 }
 
 // An installation upgraded from before the tracking has runs that recorded

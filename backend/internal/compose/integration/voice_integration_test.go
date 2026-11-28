@@ -389,7 +389,7 @@ func TestVoiceProfileIsInvisibleAcrossTenants(t *testing.T) {
 		userB); err != nil {
 		t.Fatal(err)
 	}
-	ctxB := principal.WithCorrelationID(principal.WithWorkspaceID(ctx, wsB), ids.NewV7())
+	ctxB := principal.WithCorrelationID(ctx, ids.NewV7())
 	ctxB = principal.WithActor(ctxB, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + userB.String(), UserID: userB,
 		Permissions: principal.Permissions{

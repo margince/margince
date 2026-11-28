@@ -462,6 +462,5 @@ func seatContext(t *testing.T, e *apptest.AppEnv, user string) context.Context {
 	if err != nil {
 		t.Fatalf("resolving seat %s: %v", user, err)
 	}
-	ctx = principal.WithWorkspaceID(ctx, apptest.InstallationWorkspaceUUID(ctx, t, e.Owner))
 	return principal.WithActor(principal.WithCorrelationID(ctx, ids.NewV7()), actor)
 }

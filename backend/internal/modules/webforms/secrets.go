@@ -12,7 +12,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // serverSecretPrefix marks a secret this installation minted, so one pasted
@@ -37,12 +36,14 @@ func mintSigningSecret() (string, error) {
 	return serverSecretPrefix + base64.RawURLEncoding.EncodeToString(buf[:]), nil
 }
 
-func workspaceOf(ctx context.Context) (ids.WorkspaceID, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ids.WorkspaceID{}, fmt.Errorf("this request is bound to no workspace: %w", apperrors.ErrPermissionDenied)
+// workspaceOf names the company a signing secret is sealed under. A request
+// with no live company is refused, as one with no standing is.
+func (s *Store) workspaceOf(ctx context.Context) (ids.WorkspaceID, error) {
+	ws, err := s.db.Workspace(ctx)
+	if err != nil {
+		return ids.WorkspaceID{}, fmt.Errorf("this installation has no live company: %w", apperrors.ErrPermissionDenied)
 	}
-	return ids.From[ids.WorkspaceKind](ws), nil
+	return ws, nil
 }
 
 // storeSecret seals the secret a signed sender needs and answers its ref. A
@@ -68,7 +69,7 @@ func (s *Store) storeSecret(ctx context.Context, sender string, pasted *string) 
 	} else {
 		secret = *pasted
 	}
-	ws, err := workspaceOf(ctx)
+	ws, err := s.workspaceOf(ctx)
 	if err != nil {
 		return nil, "", err
 	}
@@ -88,7 +89,7 @@ func (s *Store) openSecret(ctx context.Context, f Form) ([]byte, error) {
 	if f.SecretRef == nil || s.vault == nil {
 		return nil, errUnverified
 	}
-	ws, err := workspaceOf(ctx)
+	ws, err := s.workspaceOf(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -101,9 +102,10 @@ func (s *Store) dropSecret(ctx context.Context, ref *string, lifecycle string) {
 	if ref == nil {
 		return
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
+	ws, err := s.db.Workspace(ctx)
+	if err != nil {
+		s.log.WarnContext(ctx, "a signing secret was not destroyed, because no live company could be named", "err", err)
 		return
 	}
-	keyvault.DeleteDetached(ctx, s.vault, s.log, ws, keyvault.Ref(*ref), lifecycle)
+	keyvault.DeleteDetached(ctx, s.vault, s.log, ws.UUID, keyvault.Ref(*ref), lifecycle)
 }

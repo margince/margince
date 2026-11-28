@@ -57,11 +57,11 @@ import (
 // failure during owner-scoped fan-out.
 type failingResolver struct{ err error }
 
-func (f failingResolver) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (f failingResolver) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{}, f.err
 }
 
-func (f failingResolver) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (f failingResolver) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return "", f.err
 }
 
@@ -805,7 +805,7 @@ func TestWebhookRetryThenDeadLetterThenReplay(t *testing.T) {
 	// netguard-guarded client, which refuses 127.0.0.1 by design — the same
 	// seam the delivery tests use).
 	sysCtx := principal.WithActor(
-		principal.WithWorkspaceID(context.Background(), we.wsID),
+		context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system"},
 	)
 	replayed, err := deliverer.Replay(sysCtx, mustParseUUID(t, subID), mustParseUUID(t, deliveryID))

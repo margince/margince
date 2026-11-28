@@ -77,7 +77,11 @@ func seedSeat(ctx context.Context, t *testing.T, db *database.DB, email, status 
 // it, not the seat whose mailbox held the copy. Nobody attested it.
 func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
 	colleague := seedSeat(ctx, t, db, "sam@acme.com", "invited")
 
@@ -117,7 +121,11 @@ func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
 // punycode spelling sent. Both spellings are one mailbox.
 func TestAColleaguesLoginInEitherSpellingIsTheSender(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com", "bücher.example")
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
 	colleague := seedSeat(ctx, t, db, "sam@bücher.example", "invited")
 	copied := colleagueCopy("colleague-idna", "Sam@xn--bcher-kva.example")
@@ -136,7 +144,11 @@ func TestAColleaguesLoginInEitherSpellingIsTheSender(t *testing.T) {
 // address at the own domain, stays the inbound mail capture always filed.
 func TestOnlyALiveSeatsAddressIsAColleague(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
 	gone := seedSeat(ctx, t, db, "gone@acme.com", "deactivated")
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
@@ -163,7 +175,11 @@ func TestOnlyALiveSeatsAddressIsAColleague(t *testing.T) {
 // colleague wrote to. The counterparty is the first outside recipient.
 func TestAColleaguesCoAuthorIsNotTheCustomer(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
 	seedSeat(ctx, t, db, "sam@acme.com", "invited")
 	rec := colleagueCopy("co-authored-1", "sam@acme.com")
@@ -183,7 +199,11 @@ func TestAColleaguesCoAuthorIsNotTheCustomer(t *testing.T) {
 // participants. They are withheld, and the first of them is still the customer.
 func TestAColleaguesMailToAListIsStillOurs(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
 	seedSeat(ctx, t, db, "sam@acme.com", "invited")
 	rec := colleagueCopy("list-1", "sam@acme.com")
@@ -207,7 +227,11 @@ func TestAColleaguesMailToAListIsStillOurs(t *testing.T) {
 // and the copy stays the inbound mail capture always filed.
 func TestAnUnauthenticatedColleagueIsNotTrusted(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
 	seedSeat(ctx, t, db, "sam@acme.com", "invited")
 
@@ -236,7 +260,11 @@ func TestAnUnauthenticatedColleagueIsNotTrusted(t *testing.T) {
 // so no reader credits it to the other side. Invited seats count.
 func TestAColleaguesInvitationIsCreditedToTheColleague(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
 	colleague := seedSeat(ctx, t, db, "sam@acme.com", "invited")
 	rec := colleagueCopy("invite-1", "sam@acme.com")

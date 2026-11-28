@@ -30,7 +30,7 @@ func initiativeManager(e *forecastEnv) context.Context {
 // initiativeEditor holds the manager's grants except withheld, an object the
 // editor's role may not read.
 func initiativeEditor(e *forecastEnv, withheld string) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	grants := map[string]principal.ObjectGrant{}
 	for _, object := range []string{"sales_initiative", "report_definition", "installation_settings", "deal", "pipeline", "lead", "company", "product", "activity"} {
 		if object != withheld {

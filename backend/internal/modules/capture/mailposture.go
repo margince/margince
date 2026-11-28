@@ -109,7 +109,11 @@ func (r *Registry) SetMailPosture(
 		// Audit-only, like every other capture-configuration change beside it:
 		// the closed public-event catalog carries no type for a posture, and
 		// inventing one would put a mailbox's own setting on the outbound bus.
-		if _, err := storekit.Audit(ctx, tx, "update", captureSettingsObject, storekit.MustWorkspace(ctx),
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if _, err := storekit.Audit(ctx, tx, "update", captureSettingsObject, installation,
 			mailPostureImage(name, before), mailPostureImage(name, posture)); err != nil {
 			return err
 		}

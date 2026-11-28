@@ -21,7 +21,7 @@ import (
 // custom_field grant so the pre-database refusal paths can be proven
 // without a pool: every refusal under test fires before any SQL runs.
 func ctxAs(g principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(),

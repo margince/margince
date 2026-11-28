@@ -19,7 +19,7 @@ import (
 const keyNamedSource = "pipedrive"
 
 func keyNameRepairer(e *Env) context.Context {
-	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:deal_key_names")
+	return principal.SystemActing(context.Background(), "system:deal_key_names")
 }
 
 // keyNamedFixture is one workspace's pipeline and open stage, so every deal a

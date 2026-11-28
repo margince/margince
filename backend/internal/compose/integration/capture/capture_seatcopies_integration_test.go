@@ -201,7 +201,7 @@ func fileUnderProject(t *testing.T, e *integration.SearchEnv) ids.ProjectID {
 
 // seatWriter is Rep1 allowed to create the records these tests file mail under.
 func seatWriter(e *integration.SearchEnv) context.Context {
-	return principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7()),
+	return principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull,
 			Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
@@ -216,7 +216,7 @@ func seatWriter(e *integration.SearchEnv) context.Context {
 // projectReader is readerCtx with the records a project page reads.
 func projectReader(e *integration.SearchEnv, user ids.UUID) context.Context {
 	read := principal.ObjectGrant{Read: true}
-	return principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7()),
+	return principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
 			Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{

@@ -55,7 +55,7 @@ func (v *viabilityEnv) refuses(t *testing.T, reply ids.UUID) {
 // behind it as the reader the pass assesses with gives them.
 func (v *viabilityEnv) receiptOf(t *testing.T, deal ids.UUID) (outcome, reasons string) {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), v.WS), assuranceActor)
+	ctx := principal.SystemActing(context.Background(), assuranceActor)
 	var codes []string
 	if err := database.WithTx(ctx, v.Pool, func(tx pgx.Tx) error {
 		subjects, err := assuranceSubjects(ctx, tx, v.now, AssuranceCoverage(ctx, tx, v.now), []ids.UUID{deal})

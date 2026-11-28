@@ -20,7 +20,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ReapWithdrawnCredentials destroys the vaulted secret of every connection
@@ -34,10 +33,6 @@ import (
 // simply does not match — so a run that dies halfway costs nothing but the
 // work it had not reached, and the next one finishes it.
 func (r *Registry) ReapWithdrawnCredentials(ctx context.Context, userID ids.UserID) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("capture: reaping withdrawn credentials without a workspace in context")
-	}
 	// Every statement below runs on the post-commit cleanup budget, detached
 	// from the caller, the way Disconnect's own phases 2 and 3 are: the
 	// withdrawal has already committed, so a client that hangs up the moment
@@ -47,6 +42,11 @@ func (r *Registry) ReapWithdrawnCredentials(ctx context.Context, userID ids.User
 	// clear would leave.
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), keyvault.CleanupTimeout)
 	defer cancel()
+	company, err := r.db.Workspace(ctx)
+	if err != nil {
+		return err
+	}
+	ws := company.UUID
 	type stranded struct {
 		provider string
 		ref      string

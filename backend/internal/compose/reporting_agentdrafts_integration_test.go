@@ -33,7 +33,7 @@ import (
 // context holds them, with a full seat.
 type fixtureSeats map[ids.UUID]principal.Principal
 
-func (s fixtureSeats) EffectiveRBAC(_ context.Context, _, human ids.UUID) (authz.RBAC, error) {
+func (s fixtureSeats) EffectiveRBAC(_ context.Context, human ids.UUID) (authz.RBAC, error) {
 	held, ok := s[human]
 	if !ok {
 		return authz.RBAC{}, apperrors.ErrNotFound
@@ -41,14 +41,14 @@ func (s fixtureSeats) EffectiveRBAC(_ context.Context, _, human ids.UUID) (authz
 	return authz.RBAC{Permissions: held.Permissions, TeamIDs: held.TeamIDs}, nil
 }
 
-func (fixtureSeats) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (fixtureSeats) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (s fixtureSeats) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, s.EffectiveRBAC, s.SeatType)
+func (s fixtureSeats) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, s.EffectiveRBAC, s.SeatType)
 }
 
 // agentDrafts is the drafts fixture with draft_report and the router that

@@ -14,7 +14,7 @@ import (
 )
 
 func scopedCtx(scope principal.Scope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(), Scopes: principal.NewScopeSet(scope),

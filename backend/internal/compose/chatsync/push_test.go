@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -119,7 +118,7 @@ func newPushEnv(t *testing.T) *pushEnv {
 	e.receiver = &Receiver{
 		Bots:  fakeEventBots{bot: capture.LiveBot{ConnectionID: e.conn, TeamID: pushTeam}, secret: pushSecret},
 		Links: e.links, Replays: e.replays, Marks: e.marks, Now: func() time.Time { return e.now }, Log: slog.Default(),
-		Pull: func(_ context.Context, _, connection ids.UUID) error {
+		Pull: func(_ context.Context, connection ids.UUID) error {
 			if e.failPulls > 0 {
 				e.failPulls--
 				return errors.New("queue down")
@@ -146,7 +145,7 @@ func notice(kind, team, slug string) string {
 }
 
 func (e *pushEnv) receive(d chatlinks.Delivery) (crmcontracts.DispactChannelEventReceipt, error) {
-	return e.receiver.Receive(principal.WithWorkspaceID(context.Background(), ids.NewV7()), d)
+	return e.receiver.Receive(context.Background(), d)
 }
 
 func statusOf(r crmcontracts.DispactChannelEventReceipt) string {

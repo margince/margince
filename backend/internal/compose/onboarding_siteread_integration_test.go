@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type failingRunTransparency struct{ err error }
@@ -52,7 +51,7 @@ func onboardingDraft(t *testing.T, e *integration.Env) contacts.SiteRead {
 
 func finishOnboardingDraft(t *testing.T, e *integration.Env, read contacts.SiteRead) contacts.SiteRead {
 	t.Helper()
-	if _, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), SiteDeepReadArgs{
+	if _, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
 		SiteReadID: read.ID, RequestedBy: read.RequestedBy,
 	}), read.ID, 10*time.Minute); err != nil {
 		t.Fatalf("begin onboarding read: %v", err)
@@ -76,7 +75,7 @@ func finishOnboardingDraft(t *testing.T, e *integration.Env, read contacts.SiteR
 	if err != nil {
 		t.Fatal(err)
 	}
-	workerCtx := deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), SiteDeepReadArgs{SiteReadID: read.ID})
+	workerCtx := deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{SiteReadID: read.ID})
 	stopped := "page_cap"
 	if err := e.Contacts.FinishSiteRead(workerCtx, read.ID, contacts.FinishSiteReadInput{
 		Status: "partial", FactCount: len(fields) + len(facts), ProfileFields: fields,
@@ -658,7 +657,7 @@ func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("start onboarding read: %v", err)
 	}
-	if _, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), SiteDeepReadArgs{
+	if _, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
 		SiteReadID: read.ID, RequestedBy: read.RequestedBy,
 	}), read.ID, 10*time.Minute); err != nil {
 		t.Fatalf("begin onboarding read: %v", err)
@@ -674,7 +673,7 @@ func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := e.Contacts.FinishSiteRead(deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), SiteDeepReadArgs{
+	if err := e.Contacts.FinishSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
 		SiteReadID: read.ID,
 	}), read.ID, contacts.FinishSiteReadInput{
 		Status: "done", FactCount: len(fields), ProfileFields: fields,

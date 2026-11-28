@@ -131,7 +131,7 @@ func TestOneSeatsOwnImportAndCaptureAreOneMessage(t *testing.T) {
 // seatCtx is one colleague acting, with authority to log and read activities.
 func seatCtx(e *factsEnv, userID ids.UUID) context.Context {
 	return principal.WithActor(
-		principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()),
+		principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + userID.String(), UserID: userID,
 			Permissions: principal.Permissions{

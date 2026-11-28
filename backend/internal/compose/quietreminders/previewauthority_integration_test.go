@@ -51,7 +51,7 @@ func TestQuietPreviewIntersectsTheCallerAndCurrentAuthorizer(t *testing.T) {
 		t.Fatalf("caller-only candidates=%+v, %v", callerPage, err)
 	}
 	authority := identity.NewService(e.Pool)
-	rbac, err := authority.EffectiveRBAC(e.Admin(), e.WS, e.Rep1)
+	rbac, err := authority.EffectiveRBAC(e.Admin(), e.Rep1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestQuietPreviewIntersectsTheCallerAndCurrentAuthorizer(t *testing.T) {
 	if err != nil || ownerPage.Total != 2 {
 		t.Fatalf("authorizer-only candidates=%+v, %v", ownerPage, err)
 	}
-	callerRBAC, err := authority.EffectiveRBAC(e.Admin(), e.WS, e.AdminUser)
+	callerRBAC, err := authority.EffectiveRBAC(e.Admin(), e.AdminUser)
 	if err != nil {
 		t.Fatal(err)
 	}

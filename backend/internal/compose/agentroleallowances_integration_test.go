@@ -83,7 +83,8 @@ func TestARoleValueAnAdminSavedBindsThatRolesAgents(t *testing.T) {
 	h := allowanceHandlers(t, e, wallClock(t))
 	at := clocktest.Now(t)
 	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow,
-		func() time.Time { return at }).WithPolicySource(NewAgentAllowanceSource(e.Pool))
+		func() time.Time { return at }).WithCompany(agentvolume.FixedCompany(ids.UUID{1})).
+		WithPolicySource(NewAgentAllowanceSource(e.Pool))
 	h.afterSave = meter.ForgetPolicy
 
 	code, saved := patchAllowances(installationAdminCtx(e), t, h, `{"agent_role_allowances":[`+
@@ -203,7 +204,7 @@ func TestOnlyAnAdministratorsOwnSessionSetsRoleValues(t *testing.T) {
 	h := allowanceHandlers(t, e, wallClock(t))
 	body := `{"agent_role_allowances":[{"role_key":"rep","agent_calls_per_window":20000}]}`
 
-	reader := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	reader := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(), SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
@@ -214,7 +215,7 @@ func TestOnlyAnAdministratorsOwnSessionSetsRoleValues(t *testing.T) {
 		t.Errorf("a User raising their role's allowance → %d, want 403", code)
 	}
 
-	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	agent := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(), PassportID: ids.NewV7(),
 		OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
@@ -229,7 +230,7 @@ func TestOnlyAnAdministratorsOwnSessionSetsRoleValues(t *testing.T) {
 
 // roledAgent is a call by an agent whose granting human holds roles.
 func roledAgent(e *integration.Env, roles ...string) context.Context {
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	return principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(), PassportID: ids.NewV7(),
 		Permissions: principal.Permissions{RoleKeys: roles},
 	})

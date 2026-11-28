@@ -38,7 +38,7 @@ type slippingApp struct {
 // days, quiet three weeks, and touched yesterday.
 func newSlippingApp(t *testing.T, slug string) *slippingApp {
 	t.Helper()
-	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow)
+	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))
 	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
 		return []compose.Option{
 			compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"), compose.WithAgentVolume(meter),

@@ -112,7 +112,7 @@ func seedAttributionProject(t *testing.T, e *Env, key string) ids.UUID {
 
 // mailboxContext is the connector principal a mail sync captures under.
 func mailboxContext(e *Env, scope principal.RowScope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: ids.NewV7(), SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{

@@ -86,7 +86,7 @@ func setupScan(t *testing.T) *scanEnv {
 }
 
 func (e *scanEnv) as() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
@@ -668,7 +668,7 @@ func (e *scanEnv) statusOf(t *testing.T, dealID string) string {
 // readOnly is the same rep without the forecast UPDATE grant: they may look at
 // the queue and may not change what is in it.
 func (e *scanEnv) readOnly() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

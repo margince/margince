@@ -55,7 +55,7 @@ func TestARefusedDownloadClosesTheDocumentItOpened(t *testing.T) {
 			t.Errorf("revoking the buyer's seat: %v", err)
 		}
 	}}
-	ctx := dealrooms.WithSession(principal.WithWorkspaceID(context.Background(), e.WS), sess)
+	ctx := dealrooms.WithSession(context.Background(), sess)
 	ctx = principal.WithActor(ctx, dealrooms.BuyerPrincipal(sess.ParticipantID))
 	w := httptest.NewRecorder()
 

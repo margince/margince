@@ -95,7 +95,7 @@ func (r listRule) expand(ctx context.Context, resolver authz.Resolver, ev workfl
 	if pause != nil || err != nil || list.Version != check.DefinitionVersion || ev.OwnerID.IsZero() {
 		return nil, pause, err
 	}
-	owner, err := ownerContext(ctx, resolver, ev.WorkspaceID, ev.OwnerID)
+	owner, err := ownerContext(ctx, resolver, ev.OwnerID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, nil, nil
 	}

@@ -51,10 +51,9 @@ func (w *aiBudgetResumeWorker) Work(ctx context.Context, _ *river.Job[AIBudgetRe
 }
 
 func (w *aiBudgetResumeWorker) resumeWorkspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.WithWorkspaceID(ctx, workspace)
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:ai-budget-resume"})
 	db := InstallationDB(w.pool)
-	total, err := NewSeatBudget(w.pool).MonthlyTokenBudget(ctx, ids.From[ids.WorkspaceKind](workspace))
+	total, err := NewSeatBudget(w.pool).MonthlyTokenBudget(ctx)
 	if err != nil {
 		return err
 	}

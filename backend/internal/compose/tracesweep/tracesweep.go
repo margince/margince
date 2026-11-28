@@ -45,7 +45,7 @@ const actorID = "system:capture-trace-sweep"
 // diagnostic trace goes. The handle needs no live workspace, because the sweep
 // must still delete the traces of an archived one.
 func Workspace(ctx context.Context, pool *pgxpool.Pool, workspace ids.UUID, window time.Duration, purge Destroyer) error {
-	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), actorID)
+	wsCtx := principal.SystemActing(ctx, actorID)
 	db := database.NewAcrossWorkspaces(pool)
 	if _, err := capture.NewTraceStore(db).SweepOlderThan(wsCtx, window); err != nil {
 		return err

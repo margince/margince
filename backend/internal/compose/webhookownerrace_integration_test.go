@@ -34,8 +34,8 @@ type afterFirstAuthorization struct {
 }
 
 // AdmittedAuthority is the read the fan-out authorizes an owner with.
-func (r *afterFirstAuthorization) AdmittedAuthority(ctx context.Context, ws, user, passport ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	rbac, seat, err := r.Resolver.AdmittedAuthority(ctx, ws, user, passport)
+func (r *afterFirstAuthorization) AdmittedAuthority(ctx context.Context, user, passport ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	rbac, seat, err := r.Resolver.AdmittedAuthority(ctx, user, passport)
 	r.once.Do(r.then)
 	return rbac, seat, err
 }

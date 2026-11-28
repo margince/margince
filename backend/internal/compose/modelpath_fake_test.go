@@ -16,8 +16,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // fakeModelPath builds a ModelPath over fake via the router — never a
@@ -40,5 +38,5 @@ func fakeModelPath(t *testing.T, fake *ai.FakeClient) ModelPath {
 // NewLocalModelPath's meter and cache are in-memory, not a real
 // workspace row).
 func fakeWorkspaceCtx() context.Context {
-	return principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	return context.Background()
 }

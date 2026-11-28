@@ -39,7 +39,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestTimeScannerFiresOnceAndAnOpenReminderHoldsTheRecordUntilItIsAnswered(t *testing.T) {
@@ -82,7 +81,7 @@ func TestTimeScannerFiresOnceAndAnOpenReminderHoldsTheRecordUntilItIsAnswered(t 
 	scanner := compose.NewTimeScannerWithClock(e.DB(), now, quiet)
 
 	// Pass 1: the deal is stale, so the reminder fires exactly once.
-	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := scanner.ScanWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("first scan: %v", err)
 	}
 	if got := reminderTaskCount(t, e, dealID); got != 1 {
@@ -100,7 +99,7 @@ func TestTimeScannerFiresOnceAndAnOpenReminderHoldsTheRecordUntilItIsAnswered(t 
 	// (Were the key ev.ID-based, this pass would mint a fresh key and add
 	// a SECOND reminder task + run — which is exactly why the candidate
 	// must still be present here for the assertion to have teeth.)
-	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := scanner.ScanWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("second scan: %v", err)
 	}
 	if got := reminderTaskCount(t, e, dealID); got != 1 {
@@ -121,7 +120,7 @@ func TestTimeScannerFiresOnceAndAnOpenReminderHoldsTheRecordUntilItIsAnswered(t 
 	secondTouch := scanNow.AddDate(0, 0, -8)
 	seedGenuineTouch(t, owner, e.WS, dealID, "call", secondTouch)
 
-	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := scanner.ScanWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("third scan (after a new genuine touch): %v", err)
 	}
 	if got := reminderTaskCount(t, e, dealID); got != 1 {
@@ -136,7 +135,7 @@ func TestTimeScannerFiresOnceAndAnOpenReminderHoldsTheRecordUntilItIsAnswered(t 
 	// this half, "held while open" would be indistinguishable from "never asked
 	// twice", and an account would go dark after its first reminder.
 	completeOpenTasksOnDeal(t, e, dealID)
-	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := scanner.ScanWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("fourth scan (after the reminder was answered): %v", err)
 	}
 	if got := reminderTaskCount(t, e, dealID); got != 2 {

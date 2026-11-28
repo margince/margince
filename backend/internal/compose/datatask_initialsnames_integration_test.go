@@ -73,7 +73,7 @@ func verdictCreatesFromStoredMails(t *testing.T, e *integration.Env, email strin
 			first = id
 		}
 	}
-	verdictCtx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), verdictActor)
+	verdictCtx := principal.SystemActing(context.Background(), verdictActor)
 	if err := database.WithTx(verdictCtx, e.Pool, func(tx pgx.Tx) error {
 		_, err := createCounterpartyRecords(verdictCtx, tx, e.Contacts, nil, counterpartyCreation{
 			Email: email, Domain: email[strings.IndexByte(email, '@')+1:],

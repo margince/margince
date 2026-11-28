@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // offerMoneyImage is one side of an offer update's audit images: the three
@@ -50,7 +49,7 @@ type offerMoneyImage struct {
 // the transaction that minted it — occurred_at alone ties.
 func latestOfferUpdateAudit(t *testing.T, e *Env, offerID ids.OfferID) (before, after *offerMoneyImage, evidence map[string]any) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT before, after, evidence FROM audit_log

@@ -15,7 +15,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ListAgentUsageByUser implements (GET /ai/agent-usage): how much of their
@@ -31,8 +30,7 @@ func (h Handlers) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	ws, bound := principal.WorkspaceID(r.Context())
-	if h.passportUsage == nil || !bound {
+	if h.passportUsage == nil {
 		httperr.ServiceUnavailable(w, r, "Agent usage cannot be read on this server. Try again shortly.")
 		return
 	}
@@ -42,7 +40,7 @@ func (h Handlers) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
 			subjects = append(subjects, agentvolume.Holder{Subject: subject, Roles: holder.RoleKeys()})
 		}
 	}
-	usage, err := h.passportUsage.Usage(r.Context(), ws, subjects)
+	usage, err := h.passportUsage.Usage(r.Context(), subjects)
 	if err != nil {
 		slog.WarnContext(r.Context(), "agent usage is not answered; the agent counters could not be read", "err", err)
 		if errors.Is(err, agentvolume.ErrUnanswerable) {

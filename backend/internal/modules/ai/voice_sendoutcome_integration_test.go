@@ -188,7 +188,7 @@ func (e *sendOutcomeEnv) seedDraft(t *testing.T, opts draftOptions) draftFixture
 	}
 
 	callCtx := principal.WithCorrelationID(
-		principal.WithActor(principal.WithWorkspaceID(ctx, workspace), actor),
+		principal.WithActor(withFixtureWorkspace(ctx, workspace), actor),
 		ids.NewV7(),
 	)
 	return draftFixture{workspace: workspace, profile: profile, signal: signal, draftRef: draftRef, actor: actor, ctx: callCtx}
@@ -218,11 +218,19 @@ func (e *sendOutcomeEnv) seedUser(t *testing.T, label string) ids.UUID {
 // store has to bind.
 func workspaceOf(ctx context.Context, t *testing.T) ids.UUID {
 	t.Helper()
-	ws, ok := principal.WorkspaceID(ctx)
+	ws, ok := ctx.Value(fixtureWorkspaceKey{}).(ids.UUID)
 	if !ok {
 		t.Fatal("the fixture context carries no workspace")
 	}
 	return ws
+}
+
+// fixtureWorkspaceKey carries the tenant a fixture minted, for the suites that
+// seed a workspace of their own per test. Production code never reads it.
+type fixtureWorkspaceKey struct{}
+
+func withFixtureWorkspace(ctx context.Context, ws ids.UUID) context.Context {
+	return context.WithValue(ctx, fixtureWorkspaceKey{}, ws)
 }
 
 // record runs the method the way task 3's send path will: inside a

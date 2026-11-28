@@ -31,7 +31,7 @@ import (
 func roomWriter(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
 	admin := readerByEmail(t, e, "ada@example.com")
-	ctx := principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool))
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + admin.String(), UserID: admin,

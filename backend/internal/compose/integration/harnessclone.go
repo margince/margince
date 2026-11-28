@@ -15,7 +15,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // CloneActivity copies an activity the product writer wrote, count times in one
@@ -31,7 +30,7 @@ func (e *Env) CloneActivity(t *testing.T, template ids.ActivityID, count int, va
 	for i := range copies {
 		copies[i] = ids.NewV7()
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := cloneRows(ctx, tx, "activity", "id", template.UUID, copies, vary); err != nil {
 			return err

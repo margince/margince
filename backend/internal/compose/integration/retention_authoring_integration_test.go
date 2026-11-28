@@ -49,7 +49,7 @@ import (
 // retention_policy grant. The object is admin/ops-only on every verb including
 // read, so a grant of {} is the posture manager/rep/read_only actually hold.
 func retentionAdminCtx(ws ids.UUID, grant principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),

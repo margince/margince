@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
@@ -22,11 +21,7 @@ import (
 
 // Context acts as the host, with the authority their seat holds now.
 func Context(ctx context.Context, seats *identity.Service, host ids.UserID) (context.Context, error) {
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, apperrors.ErrPermissionDenied
-	}
-	member, err := authz.MemberPrincipal(ctx, seats, workspace, host.UUID)
+	member, err := authz.MemberPrincipal(ctx, seats, host.UUID)
 	if err != nil {
 		return nil, err
 	}

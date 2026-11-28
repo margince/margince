@@ -18,7 +18,7 @@ import (
 
 func TestASecondRunningPassIsRefused(t *testing.T) {
 	e := setupCloseDate(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.SystemActing(ctx, closeDateSweepActor)
 
 	open := `INSERT INTO close_date_run (as_of, status, captured_by)
@@ -39,7 +39,7 @@ func TestASecondRunningPassIsRefused(t *testing.T) {
 func TestTheSweepStandsDownWhenAnotherWorkerOwnsThePass(t *testing.T) {
 	e := setupCloseDate(t)
 	e.seedSweepDeal(t, "Overdue and open", e.early, nil, new(-9), 3)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.SystemActing(ctx, closeDateSweepActor)
 
 	if _, err := e.owner.Exec(ctx, `

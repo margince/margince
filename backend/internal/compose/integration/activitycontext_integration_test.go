@@ -419,7 +419,7 @@ func (e *SearchEnv) readerOf(objects ...string) context.Context {
 	for _, object := range objects {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},
@@ -565,7 +565,7 @@ func TestAnEventOutsideTheCallersScopeIsNotFound(t *testing.T) {
 func (e *SearchEnv) teamRepWhoReadsProjects(user, team ids.UUID) context.Context {
 	grants := searchReadGrants()
 	grants["project"] = principal.ObjectGrant{Read: true}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		TeamIDs:     []ids.UUID{team},

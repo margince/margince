@@ -41,7 +41,7 @@ import (
 // showIndividualPerformance writes the switch as an admin's settings change does.
 func (e *forecastEnv) showIndividualPerformance(t *testing.T, on bool) {
 	t.Helper()
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:settings-admin", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}},
@@ -154,7 +154,7 @@ func TestIndividualPerformanceOffRefusesAFilterOrScopeNamingAColleague(t *testin
 func TestIndividualPerformanceOffRefusesAGroupingByMeetingHost(t *testing.T) {
 	e := setupForecast(t)
 	e.addMembers(t, e.Team2, "third@forecast.test")
-	reader := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	reader := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
@@ -491,7 +491,7 @@ func TestIndividualPerformanceOffWithholdsATwoMemberTeamsMovement(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	writer := principal.WithCorrelationID(principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:movement-fixture"), ids.NewV7())
+	writer := principal.WithCorrelationID(principal.SystemActing(context.Background(), "system:movement-fixture"), ids.NewV7())
 	store := deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).SetClock(now)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	closeDate := time.Date(2026, 9, 25, 0, 0, 0, 0, time.UTC)

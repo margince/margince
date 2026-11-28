@@ -20,7 +20,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // writeWatchedConn runs onWrite before each write to the wire, TLS records
@@ -45,7 +44,7 @@ func (c writeWatchedConn) Read(p []byte) (int, error) {
 // blocked by the check's hold; it commits only after the hold ends.
 func TestAnErasureThatStartsAfterTheCheckWaitsUntilTheRequestIsWritten(t *testing.T) {
 	e := setupContractVis(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	sub, deliveries := e.seedDeliveries(t, 1)
 	subject := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `UPDATE webhook_delivery SET entity_type = 'contact', entity_id = $2 WHERE id = $1`,

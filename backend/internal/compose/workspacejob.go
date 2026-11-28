@@ -10,29 +10,22 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// bindInstallation is the one decision about which workspace a job runs in.
-// River runs it as worker middleware around every job (installationBinding),
-// so no worker binds its own.
+// bindInstallation is the one decision whether a job may run: the installation
+// has one live company. River runs it as worker middleware around every
+// job (installationBinding), so no worker checks for itself.
 //
-// It looks the workspace up on every call and keeps nothing between jobs: a
+// It looks the company up on every call and keeps nothing between jobs: a
 // cached answer would outlive a change of the installation's company. It fails
-// when no workspace is live, and the job then does not run.
-//
-// Some stores still read the workspace off the context, as an audit entity id,
-// a blob key or an advisory-lock name. Without the binding those would carry a
-// zero id with nothing to fail on.
+// when no company is live, and the job then does not run. The context comes back
+// unchanged, because a store that names the company asks its own handle.
 func bindInstallation(ctx context.Context, pool *pgxpool.Pool) (context.Context, error) {
-	ws, err := identity.NewService(pool).InstallationWorkspace(ctx)
-	if err != nil {
+	if _, err := identity.NewService(pool).InstallationWorkspace(ctx); err != nil {
 		return nil, err
 	}
-	return principal.WithWorkspaceID(ctx, ws.UUID), nil
+	return ctx, nil
 }
 
 // everyWorkspaceKinds are the jobs that clean up data in every workspace row,
@@ -62,14 +55,4 @@ func installationBinding(pool *pgxpool.Pool) jobs.BindWorkspace {
 		}
 		return bindInstallation(ctx, pool)
 	}
-}
-
-// boundWorkspace reads the workspace installationJobCtx bound, for a worker
-// that hands it to a store which still takes one.
-func boundWorkspace(ctx context.Context) (ids.UUID, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ids.UUID{}, database.ErrNoWorkspace
-	}
-	return ws, nil
 }

@@ -452,7 +452,7 @@ func TestReportingTeamLeadRevisesLedTeamTarget(t *testing.T) {
 // reportingLeadSeat is a team lead's grid: team row scope, the team-lead grant
 // and targets to set, a member of Team1 only.
 func reportingLeadSeat(e *forecastEnv, lead ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	grants := map[string]principal.ObjectGrant{"sales_target": {Read: true, Create: true, Update: true}, "team_lead": {Read: true, Create: true}}
 	for _, object := range []string{"report_definition", "reporting_framework", "deal", "pipeline", "installation_settings", "activity"} {
@@ -464,7 +464,7 @@ func reportingLeadSeat(e *forecastEnv, lead ids.UUID) context.Context {
 // reportingRepSeat is Rep1 on a rep's grid: own row scope, a member of Team1,
 // and targets to read but not to set.
 func reportingRepSeat(e *forecastEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	grants := map[string]principal.ObjectGrant{}
 	for _, object := range []string{"report_definition", "reporting_framework", "sales_target", "deal", "pipeline", "installation_settings", "activity"} {

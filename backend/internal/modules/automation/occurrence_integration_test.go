@@ -29,7 +29,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -102,7 +101,7 @@ func TestClockTriggerFiresAfterEarlierNonMatchingPasses(t *testing.T) {
 	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil) // nil resolver: these fixtures carry no owner_id, so the match-time gate skips before ever touching it
 	instanceID := fx.seedAutomation(t, "clock_first_firing")
 	entity := datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()}
-	runCtx := principal.WithWorkspaceID(context.Background(), fx.ws)
+	runCtx := context.Background()
 
 	h := &scriptedClockWorkflow{name: "clock_first_firing", anchor: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
 	key := runKey(h, workflow.Event{AutomationID: instanceID.UUID})
@@ -146,7 +145,7 @@ func TestClockTriggerAtMostOnceOnAnUnchangedAnchor(t *testing.T) {
 	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil) // nil resolver: these fixtures carry no owner_id, so the match-time gate skips before ever touching it
 	instanceID := fx.seedAutomation(t, "clock_at_most_once")
 	entity := datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()}
-	runCtx := principal.WithWorkspaceID(context.Background(), fx.ws)
+	runCtx := context.Background()
 
 	h := &scriptedClockWorkflow{
 		name:    "clock_at_most_once",
@@ -181,7 +180,7 @@ func TestClockTriggerRearmsWhenTheAnchorMoves(t *testing.T) {
 	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil) // nil resolver: these fixtures carry no owner_id, so the match-time gate skips before ever touching it
 	instanceID := fx.seedAutomation(t, "clock_rearm")
 	entity := datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()}
-	runCtx := principal.WithWorkspaceID(context.Background(), fx.ws)
+	runCtx := context.Background()
 
 	h := &scriptedClockWorkflow{
 		name:    "clock_rearm",

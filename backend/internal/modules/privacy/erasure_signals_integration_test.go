@@ -41,7 +41,6 @@ func TestErasingAContactWithholdsTheKeptEvidenceOfTheirSignals(t *testing.T) {
 		 VALUES ($1, 'risk', 'web', 'contact', $2, 'resolved', 'info', 'Quiet',
 		         '[{"snippet":"Hedda wrote she is leaving"}]'::jsonb, 'open', now(), 'manual', 'test')`, signal, subject)
 
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

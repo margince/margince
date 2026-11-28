@@ -50,7 +50,7 @@ func setupScout(t *testing.T) *scoutEnv {
 
 // system is the scout's own principal on this workspace.
 func (e *scoutEnv) system() context.Context {
-	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:deal-scout")
+	return principal.SystemActing(context.Background(), "system:deal-scout")
 }
 
 // pass runs one scout pass at the env's clock.
@@ -143,7 +143,7 @@ func (e *scoutEnv) signal(t *testing.T, kind string, company, cited ids.UUID, at
 	if len(buyers) > 0 {
 		buyer, role = &buyers[0], "buyer"
 	}
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:signal-scan")
+	ctx := principal.SystemActing(context.Background(), "agent:signal-scan")
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind: kind, CompanyID: company, Summary: kind + " on the account", Severity: "info",

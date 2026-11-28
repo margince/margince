@@ -33,7 +33,7 @@ type Sweep struct {
 // drifted transcript, so a guest taken off a meeting loses its transcript
 // within one cadence however many drifted. The job's timeout bounds the pass.
 func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "system:transcript-audience")
+	ctx = principal.SystemActing(ctx, "system:transcript-audience")
 	var after ids.ActivityID
 	for {
 		var page activities.DriftedPage

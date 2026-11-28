@@ -177,7 +177,7 @@ func TestATaskCutOffOnEveryAttemptIsRecordedNotAborted(t *testing.T) {
 	// Left unscripted: a cut-off answer is never sent to the judge.
 	judge := ai.NewFakeClient()
 
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
 		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
@@ -222,7 +222,7 @@ func candidateFailingEveryCall(t *testing.T, cause error) *ai.FakeClient {
 // certifyAgainst certifies the one-scenario summarize task on scripted fakes.
 func certifyAgainst(t *testing.T, candidate, judge *ai.FakeClient) (Record, error) {
 	t.Helper()
-	return certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+	return certifyTask(t.Context(), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
 		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},

@@ -66,7 +66,7 @@ func TestStageTxStampsUserIDFromTheAuthenticatedPrincipalNeverFromInput(t *testi
 // writing anything, not proceed with a zero-value or borrowed identity.
 func TestStageTxFailsClosedWithoutAnAuthenticatedActor(t *testing.T) {
 	e := setupStore(t)
-	noActor := principal.WithWorkspaceID(context.Background(), e.ws)
+	noActor := context.Background()
 	in := e.baseInput(e.activity, "msg-no-actor@example.com")
 	err := e.store.db.Tx(noActor, func(tx pgx.Tx) error {
 		_, err := e.store.StageTx(noActor, tx, in)
@@ -96,7 +96,7 @@ func TestStageTxFailsClosedWithoutAnAuthenticatedActor(t *testing.T) {
 // so StageTx must refuse rather than write a zero-value user_id.
 func TestStageTxRefusesASystemPrincipalWithNoAppUserIdentity(t *testing.T) {
 	e := setupStore(t)
-	systemCtx := principal.WithWorkspaceID(context.Background(), e.ws)
+	systemCtx := context.Background()
 	systemCtx = principal.WithActor(systemCtx, principal.Principal{Type: principal.PrincipalSystem})
 	err := e.store.db.Tx(systemCtx, func(tx pgx.Tx) error {
 		_, err := e.store.StageTx(systemCtx, tx, e.baseInput(e.activity, "msg-system@example.com"))

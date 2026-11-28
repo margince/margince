@@ -24,9 +24,8 @@ import (
 func runMeetingRosterTasks(t *testing.T, e *integration.SearchEnv) {
 	t.Helper()
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	inWorkspace := func(ctx context.Context) (context.Context, error) { return principal.WithWorkspaceID(ctx, e.WS), nil }
 	engine, err := datatask.New(e.Pool, []datatask.Task{
-		meetingrosters.GraphGuestsDataTask(identity.NewService(e.Pool), inWorkspace), meetingrosters.BirthRostersDataTask(),
+		meetingrosters.GraphGuestsDataTask(identity.NewService(e.Pool)), meetingrosters.BirthRostersDataTask(),
 	}, "test", func() time.Time { return captureNow }, func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
 	if err != nil {
 		t.Fatal(err)

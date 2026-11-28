@@ -50,7 +50,7 @@ func (w *captureClassifyWorker) Work(ctx context.Context, _ *river.Job[CaptureCl
 }
 
 func (w *captureClassifyWorker) classifyWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	// The workspace binding stopped being enough when this pass began writing a
 	// reply verdict beside the label. SetCaptureLabel carries no gate, so a bare
 	// workspace context served for as long as labelling was all this did;
@@ -105,13 +105,12 @@ func (w *captureEnrichWorker) Work(ctx context.Context, job *river.Job[CaptureEn
 }
 
 func (w *captureEnrichWorker) enrichWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	filled, err := w.enricher.RunWorkspace(wsCtx)
+	filled, err := w.enricher.RunWorkspace(ctx)
 	if err != nil {
 		return err
 	}
 	if filled {
-		w.enqueueContinuation(wsCtx, workspace)
+		w.enqueueContinuation(ctx, workspace)
 	}
 	return nil
 }
@@ -173,8 +172,7 @@ func (w *companyNamePromotionWorker) Work(ctx context.Context, _ *river.Job[Comp
 // companyNamePromotionWorkspaceWorker runs one workspace's pass: a database-only
 // walk over the company_name evidence the enrich job collects.
 func (w *companyNamePromotionWorker) promoteWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	return jobs.FaultContext(ctx, w.promoter.RunWorkspace(wsCtx, workspace))
+	return jobs.FaultContext(ctx, w.promoter.RunWorkspace(ctx, workspace))
 }
 
 // CounterpartyVerdictArgs runs one counterparty-verdict pass (ADR-0072/A118 §4).
@@ -209,7 +207,7 @@ func (w *counterpartyVerdictWorker) Work(ctx context.Context, _ *river.Job[Count
 }
 
 func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	// Owner decisions and address rules settle without a model.
 	// Noise retention still applies when model classification is disabled.
 	if err := w.engine.RunWorkspace(wsCtx, 0); err != nil {

@@ -31,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // routerFixture is the real meter, the real consumer, and one correlation id
@@ -284,7 +283,7 @@ func TestACallTheRouterCannotAnnounceIsStillTraced(t *testing.T) {
 	e := Setup(t)
 	// A workspace-bound context with no actor: storekit has no principal to
 	// stamp the ledger row from, so the announcement cannot be made at all.
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	meter := ai.NewCallMeter(e.DB()).WithLogger(testLogger(t))
 	corr := ids.NewV7()
 	if err := meter.Record(ctx, []ai.Call{{

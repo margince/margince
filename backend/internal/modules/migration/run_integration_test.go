@@ -101,7 +101,7 @@ func testWorkspaceCtx(t *testing.T, grants map[string]principal.ObjectGrant) (co
 	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 
-	opCtx := principal.WithWorkspaceID(context.Background(), ws)
+	opCtx := context.Background()
 	opCtx = principal.WithCorrelationID(opCtx, ids.NewV7())
 	opCtx = principal.WithActor(opCtx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user.UUID,

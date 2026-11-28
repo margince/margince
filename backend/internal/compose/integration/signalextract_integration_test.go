@@ -148,7 +148,7 @@ func extractPassStats(t *testing.T, e *Env, brain *scriptedBrain) compose.Extrac
 // signalScanCtx is the product's own pass, as the job binds it. A pass run as
 // an admin would pass gates the job never faces and fail ones it always passes.
 func signalScanCtx(e *Env) context.Context {
-	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:signal-scan")
+	return principal.SystemActing(context.Background(), "agent:signal-scan")
 }
 
 // reply builds the model answer for one event on the given message.

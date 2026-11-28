@@ -58,6 +58,12 @@ type Store struct {
 	reg  *Registry
 }
 
+// WorkspaceOf names the installation's one live company, which every row s
+// holds belongs to. It fails while no company is live.
+func WorkspaceOf(ctx context.Context, s *Store) (ids.WorkspaceID, error) {
+	return database.ProvenWorkspace(ctx, s.pool)
+}
+
 // New builds the store over the pool and the assembled registry.
 func New(pool *pgxpool.Pool, reg *Registry) *Store { return &Store{pool: pool, reg: reg} }
 
@@ -80,16 +86,10 @@ func (s *Store) RawStored(ctx context.Context, key string) (json.RawMessage, boo
 	if err := RequireRead(ctx, def); err != nil {
 		return nil, false, err
 	}
-	// `setting` carries no RLS, so the workspace buys this read nothing
-	// directly. It still rides WithTx because the write path must, and its audit
-	// row is stamped with the workspace. A settings read with no workspace bound
-	// is a caller that has not authenticated, which the gate above should be
-	// judging.
-
-	// A hit opens no transaction, so the workspace is checked here. A hit and a
+	// A hit opens no transaction, so a live company is checked here. A hit and a
 	// miss then refuse alike.
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return nil, false, fmt.Errorf("settings: reading %s: %w", key, database.ErrNoWorkspace)
+	if _, err := database.ProvenWorkspace(ctx, s.pool); err != nil {
+		return nil, false, fmt.Errorf("settings: reading %s: %w", key, err)
 	}
 	read := func() (json.RawMessage, bool, error) {
 		var raw json.RawMessage
@@ -233,7 +233,11 @@ func (s *Store) SetRawTxReceipt(ctx context.Context, tx pgx.Tx, key string, next
 		// Through the entry's own image, so a setting holding the address of a
 		// secret is redacted here rather than at each writer — there is only one
 		// writer today, and the next one would not know to.
-		auditID, err := storekit.Audit(ctx, tx, def.AuditVerb(), def.Object(), storekit.MustWorkspace(ctx),
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return WriteReceipt{}, fmt.Errorf("settings: auditing %s: %w", key, err)
+		}
+		auditID, err := storekit.Audit(ctx, tx, def.AuditVerb(), def.Object(), installation,
 			map[string]any{key: def.AuditImage(canonical)},
 			map[string]any{key: def.AuditImage(next)})
 		if err != nil {

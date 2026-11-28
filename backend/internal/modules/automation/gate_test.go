@@ -33,12 +33,12 @@ type fakeAuthzResolver struct {
 	seatCalls int
 }
 
-func (f *fakeAuthzResolver) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (f *fakeAuthzResolver) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	f.calls++
 	return f.rbac, f.err
 }
 
-func (f *fakeAuthzResolver) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (f *fakeAuthzResolver) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	f.seatCalls++
 	return f.seat, f.seatErr
 }
@@ -329,6 +329,6 @@ func TestCheckOwnerPermissionSeatTransientErrorSurfacesForRetry(t *testing.T) {
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (f *fakeAuthzResolver) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, f.EffectiveRBAC, f.SeatType)
+func (f *fakeAuthzResolver) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, f.EffectiveRBAC, f.SeatType)
 }

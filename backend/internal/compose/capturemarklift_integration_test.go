@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // markedVendor lands a vendor_pitch verdict for sender, so the contact carries
@@ -72,7 +71,7 @@ func sendFiled(t *testing.T, e *integration.Env, sourceID, address, thread, body
 func liftMarks(t *testing.T, e *integration.Env) {
 	t.Helper()
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.LiftVendorMarksWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if err := engine.LiftVendorMarksWorkspace(context.Background()); err != nil {
 		t.Fatalf("lifting vendor marks: %v", err)
 	}
 }
@@ -207,7 +206,7 @@ func TestAnAddressThatMovedAwayLeavesTheOldContactsMark(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("moving the address away: %v", err)
 	}
-	err := database.WithTx(principal.WithWorkspaceID(e.Admin(), e.WS), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return liftVendorMarkTx(e.Admin(), tx, newCounterpartyStore(e.Pool), ids.From[ids.ContactKind](oldID), sender)
 	})
 	if err != nil {

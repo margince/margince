@@ -65,7 +65,7 @@ func TestADealRoomsPartsReadBackOnTheSeam(t *testing.T) {
 // roomReader is a seller who may read every deal room.
 func roomReader(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool))
+	ctx := context.Background()
 	user := ids.NewV7()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

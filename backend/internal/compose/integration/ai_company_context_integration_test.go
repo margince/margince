@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -137,7 +136,7 @@ func TestPolicyNoneTraceCarriesEmptyCompanyContext(t *testing.T) {
 	}
 	var scopes []string
 	var fingerprint string
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	err = database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(wsCtx, `
 			SELECT context_scopes, context_fingerprint

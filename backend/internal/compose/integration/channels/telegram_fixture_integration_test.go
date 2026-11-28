@@ -289,7 +289,7 @@ func (c *telegramEnv) adminCtx(t *testing.T) context.Context {
 	if err != nil {
 		t.Fatalf("parsing the admin id: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), c.workspaceID(t))
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + c.admin, UserID: user,
 		SeatType: principal.SeatFull,
@@ -311,7 +311,7 @@ func (c *telegramEnv) adminCtx(t *testing.T) context.Context {
 // happens to belong to the caller.
 func (c *telegramEnv) strangerRepCtx(t *testing.T, objects map[string]principal.ObjectGrant) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), c.workspaceID(t))
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:stranger", UserID: ids.NewV7(),
 		SeatType: principal.SeatFull,

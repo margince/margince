@@ -104,7 +104,7 @@ func setupRenewalPrivacy(t *testing.T, confidence float64) renewalPrivacyFixture
 		Evidence:        approvals.Evidence{SourceType: "activity", SourceID: messages[0], Snippet: "I will send pricing."},
 		RenewalEvidence: &approvals.Evidence{SourceType: "activity", SourceID: messages[1], Snippet: "I will send the confidential enterprise pricing tomorrow."},
 	}
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	var task ids.UUID
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -328,7 +328,7 @@ func TestRefusedRenewalPreservesTheClaimAndItsEvidence(t *testing.T) {
 				Summary: "Send pricing next Friday", Quote: "I will send pricing.", Seat: &f.e.Rep1, PromisedTo: &f.contact,
 				Confidence: 0.75, Locator: "private-renewal", DueDate: "2026-10-23",
 			}
-			ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), f.e.WS), "human:"+f.e.Rep1.String(), ids.NewV7())
+			ctx := withTranscriptReader(context.Background(), "human:"+f.e.Rep1.String(), ids.NewV7())
 			dispatcher := NewCommitmentDispatcher(f.e.Pool, approvals.NewService(f.e.DB()))
 			if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 				_, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
@@ -439,7 +439,7 @@ func assertHeldRenewalRefused(t *testing.T, f renewalPrivacyFixture, before stri
 	c.AsOf, c.DueDate, c.Summary = at.Add(time.Hour), "2026-10-25", "Send revised confidential pricing"
 	c.ReadMessages = append(c.ReadMessages, renewal)
 	c.RenewalEvidence = &approvals.Evidence{SourceType: "activity", SourceID: renewal, Snippet: body}
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), f.e.WS), "human:"+f.e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+f.e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(f.e.Pool, approvals.NewService(f.e.DB()))
 	if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())

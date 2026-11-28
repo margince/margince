@@ -212,7 +212,7 @@ func TestAPromiseInRoutinePrivateMailIsNeverFiled(t *testing.T) {
 	limited := seedConversation(t, e, company, "thread-routine", at.Add(time.Minute), "participants")
 	e.WsExec(t, `UPDATE activity SET audience_reason = 'posture' WHERE id = $1`, limited)
 
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), signalScanActor)
+	ctx := principal.SystemActing(context.Background(), signalScanActor)
 	x := NewSignalExtractor(e.Pool, nil, func() time.Time { return traceReadClock }, slog.Default())
 	for key, source := range cited {
 		thread := settledThread{Key: key, Messages: []threadMessage{{ID: source, Body: "Happy to continue."}}}

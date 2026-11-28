@@ -29,7 +29,7 @@ import (
 // agentCtxAs binds an agent principal with a chosen actor id, which is what
 // scopes a claim: a real passport call carries "agent:<passport_id>".
 func agentCtxAs(e *integration.Env, actorID string) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: actorID, SeatType: principal.SeatFull,
@@ -220,7 +220,7 @@ func TestAClaimWithNoPrincipalIsRefused(t *testing.T) {
 		name string
 		ctx  context.Context
 	}{
-		{name: "no actor at all", ctx: principal.WithWorkspaceID(context.Background(), e.WS)},
+		{name: "no actor at all", ctx: context.Background()},
 		{name: "an actor with no id", ctx: agentCtxAs(e, "")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

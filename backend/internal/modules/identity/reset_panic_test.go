@@ -16,9 +16,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestRequestPasswordResetRecoversAPanicInTheSendGoroutine(t *testing.T) {
@@ -30,7 +27,7 @@ func TestRequestPasswordResetRecoversAPanicInTheSendGoroutine(t *testing.T) {
 	done := make(chan struct{})
 	h.resetSendStarted = func() { close(done) }
 
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/forgot-password",
 		strings.NewReader(`{"email":"a@b.test"}`)).WithContext(ctx)

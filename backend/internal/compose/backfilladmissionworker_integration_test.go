@@ -18,13 +18,12 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAnAdmissionWorkerPreservesTheSharedSessionBudgetSnooze(t *testing.T) {
 	b := setupBackfillWire(t)
 	runID := strandedBackfill(t, b)
-	ctx := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
+	ctx := backfillWorkContext(context.Background(), t, b)
 	if err := b.registry.DispatchBackfills(ctx, backfillScheduler(), false); err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +52,7 @@ func TestAnAdmissionWorkerPreservesTheSharedSessionBudgetSnooze(t *testing.T) {
 func TestARecoveredRunningJobGetsANewExecutionWithoutDuplicatingTheSuccessor(t *testing.T) {
 	b := setupBackfillWire(t)
 	runID := strandedBackfill(t, b)
-	ctx := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
+	ctx := backfillWorkContext(context.Background(), t, b)
 	if err := b.registry.DispatchBackfills(ctx, backfillScheduler(), false); err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +96,7 @@ func TestARecoveredRunningJobGetsANewExecutionWithoutDuplicatingTheSuccessor(t *
 func TestALegacyRunningImportEntersTheAdmissionBudget(t *testing.T) {
 	b := setupBackfillWire(t)
 	runID := strandedBackfill(t, b)
-	ctx := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
+	ctx := backfillWorkContext(context.Background(), t, b)
 	args := []any{runID}
 	if _, err := b.env.Pool.Exec(ctx, fmt.Sprintf(`UPDATE capture_backfill SET status='running' WHERE id=$%d`, len(args)), args...); err != nil {
 		t.Fatal(err)

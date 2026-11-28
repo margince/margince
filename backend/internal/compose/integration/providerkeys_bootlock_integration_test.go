@@ -47,8 +47,7 @@ func keyEnviron() []string {
 // and the routing path read settings.
 func installationCtx(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
-	ws := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
-	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), ws), "test-provider-keys")
+	return principal.SystemActing(context.Background(), "test-provider-keys")
 }
 
 func secretsHeld(t *testing.T, vault keyvault.Vault) int {
@@ -73,11 +72,7 @@ func vaultRows(t *testing.T, e *apptest.AppEnv) int {
 // in vault, its ref in the setting's row.
 func sealedEarlier(ctx context.Context, t *testing.T, e *apptest.AppEnv, vault keyvault.Vault, s *config.Setting[string], key string) string {
 	t.Helper()
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		t.Fatal("no workspace to seal under")
-	}
-	ref, err := vault.Put(ctx, ids.From[ids.WorkspaceKind](ws), []byte(key))
+	ref, err := vault.Put(ctx, ids.From[ids.WorkspaceKind](apptest.InstallationWorkspaceUUID(ctx, t, e.Pool)), []byte(key))
 	if err != nil {
 		t.Fatalf("sealing the earlier key: %v", err)
 	}
@@ -279,7 +274,7 @@ func TestARefusedSecretSaveRetiresItsBlobAndKeepsTheOld(t *testing.T) {
 	e := Setup(t)
 	vault := keyvault.NewMemory()
 	cfg := compose.WithVault(configtest.StoredOver(t, e.Pool, []config.Any{frozenSecret}), vault, discard())
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "test-frozen-secret")
+	ctx := principal.SystemActing(context.Background(), "test-frozen-secret")
 	frozenSecretFrozen.Store(false)
 	t.Cleanup(func() { frozenSecretFrozen.Store(false) })
 

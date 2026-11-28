@@ -218,11 +218,10 @@ func (r approvalPreviewReader) creationAuthority(ctx context.Context, approval c
 	if actor.Type != principal.PrincipalHuman && actor.Type != principal.PrincipalAgent {
 		return actor, apperrors.ErrInvalidArgument
 	}
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok || approval.TargetEntityType == nil {
+	if approval.TargetEntityType == nil {
 		return actor, apperrors.ErrInvalidArgument
 	}
-	rbac, seat, err := identity.NewService(r.db.Pool()).EffectiveAuthority(ctx, workspace, actor.UserID)
+	rbac, seat, err := identity.NewService(r.db.Pool()).EffectiveAuthority(ctx, actor.UserID)
 	if err != nil {
 		return principal.Principal{}, err
 	}

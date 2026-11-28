@@ -15,14 +15,14 @@ import (
 // readSeatResolver answers every member as a read seat holding the same grants.
 type readSeatResolver struct{ authz.Resolver }
 
-func (readSeatResolver) AdmittedAuthority(context.Context, ids.UUID, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func (readSeatResolver) AdmittedAuthority(context.Context, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authz.RBAC{TeamIDs: []ids.UUID{ids.NewV7()}}, principal.SeatRead, nil
 }
 
 func TestConnectorActingKeepsTheGrantingMembersSeatAndNamesThem(t *testing.T) {
 	t.Parallel()
 	member := ids.From[ids.UserKind](ids.NewV7())
-	ctx, err := connectorActing(principal.WithWorkspaceID(context.Background(), ids.NewV7()), readSeatResolver{}, "gmail", member)
+	ctx, err := connectorActing(context.Background(), readSeatResolver{}, "gmail", member)
 	if err != nil {
 		t.Fatalf("connectorActing: %v", err)
 	}

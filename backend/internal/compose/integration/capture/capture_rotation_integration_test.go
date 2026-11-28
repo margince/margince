@@ -127,7 +127,7 @@ func TestARotatedCredentialIsSealedAndTheOldOneRetired(t *testing.T) {
 		t.Fatal("the connection stored no credential ref to rotate")
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if err := registry.SyncOnce(wsCtx, connID); err != nil {
 		t.Fatalf("SyncOnce: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestARotationThatLosesToADisconnectLandsNowhere(t *testing.T) {
 		}
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if err := registry.SyncOnce(wsCtx, connID); err != nil {
 		t.Fatalf("SyncOnce over a disconnected connection: %v, want a clean return", err)
 	}
@@ -218,7 +218,7 @@ func TestARotationThatLosesToAReconnectLandsNowhere(t *testing.T) {
 		}
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if err := registry.SyncOnce(wsCtx, connID); err != nil {
 		t.Fatalf("SyncOnce across a reconnect: %v, want a clean return", err)
 	}

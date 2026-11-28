@@ -25,7 +25,7 @@ import (
 // under the given condition — deal update is granted because the write arm is
 // what lifts an outside_write_authority mask on the rep's own rows.
 func (e *forecastEnv) maskedDealReader(cond principal.MaskCondition) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		TeamIDs: []ids.UUID{e.Team1},
@@ -153,7 +153,7 @@ func TestARevokedUpdateVerbKeepsTheMaskOnTheRepsOwnRows(t *testing.T) {
 	own := int64(100_000)
 	e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own)
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	rep := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		TeamIDs: []ids.UUID{e.Team1},

@@ -140,7 +140,7 @@ func (d *digestEnv) seatCtx(user ids.UUID) context.Context {
 // engineCtx is who really raises a notice: a system flow inside a correlation
 // scope, with no human in the call at all.
 func (d *digestEnv) engineCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), d.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:automation",
 	})

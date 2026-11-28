@@ -61,7 +61,7 @@ func (h connectorHandlers) ConnectExtOauth(w http.ResponseWriter, r *http.Reques
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
-	actor, ws, ok := signedInHuman(w, r)
+	actor, ok := signedInHuman(w, r)
 	if !ok {
 		return
 	}
@@ -81,7 +81,7 @@ func (h connectorHandlers) ConnectExtOauth(w http.ResponseWriter, r *http.Reques
 	flow := extOAuthStateProvider(provider)
 	nonce := setCSRFNonce(w, csrfCookieName(flow), extOAuthPathPrefix)
 	state := h.signer.sign(connectState{
-		Workspace: ws, User: actor.UserID, Provider: flow, Nonce: nonce, Version: stateVersionNamespacedCSRF,
+		User: actor.UserID, Provider: flow, Nonce: nonce, Version: stateVersionNamespacedCSRF,
 	}, time.Now().Add(connectStateTTL))
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ExtOAuthConnectResponse{
 		AuthorizeUrl: client.AuthCodeURL(state, h.extCallbackURL(provider)),

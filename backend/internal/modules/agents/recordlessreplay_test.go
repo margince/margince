@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -41,7 +40,7 @@ func (r *norecordReader) Read(context.Context, datasource.EntityRef) (datasource
 func tagWriter(t *testing.T, grants map[string]principal.ObjectGrant) context.Context {
 	t.Helper()
 	return principal.WithActor(
-		principal.WithWorkspaceID(context.Background(), ids.NewV7()),
+		context.Background(),
 		principal.Principal{
 			Type: principal.PrincipalAgent, ID: "agent:tools",
 			Permissions: principal.Permissions{

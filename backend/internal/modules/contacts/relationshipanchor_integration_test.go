@@ -166,7 +166,7 @@ func setupEdgeAnchor(t *testing.T) *edgeAnchorEnv {
 // only thing that ever differs between an admission and a refusal below is who
 // owns the anchor row.
 func (e *edgeAnchorEnv) as(user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

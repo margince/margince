@@ -52,7 +52,7 @@ import (
 // one-object helper beside it cannot express "installation_settings but not
 // authentication_policy", which is the pair this split turns on.
 func (e *SearchEnv) authPolicyCtx(grants map[string]principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
@@ -151,7 +151,7 @@ func TestRequireSSORoundTripsThroughThePolicy(t *testing.T) {
 
 	// The login-path gates read each on an anonymous context, the way the login
 	// flow does.
-	loginCtx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	loginCtx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	enforced, err := store.SSOEnforced(loginCtx)
 	if err != nil {
 		t.Fatalf("the login gate's SSO read: %v", err)

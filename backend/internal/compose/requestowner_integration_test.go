@@ -19,7 +19,7 @@ import (
 func proposePassAsTheJob(t *testing.T, e *integration.Env) int {
 	t.Helper()
 	proposer := NewSignalProposer(e.Pool, NewApprovalsServiceWithEffects(e.Pool), slog.New(slog.DiscardHandler))
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), signalScanActor)
+	ctx := principal.SystemActing(context.Background(), signalScanActor)
 	staged, err := proposer.RunWorkspace(ctx)
 	if err != nil {
 		t.Fatalf("RunWorkspace: %v", err)

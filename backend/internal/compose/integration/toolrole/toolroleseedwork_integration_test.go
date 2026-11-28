@@ -30,8 +30,7 @@ import (
 // systemContext is a background pass's principal in the installation's
 // workspace: the scouts and notifiers that raise what a user then decides.
 func (s sweepSeed) systemContext(actor string) context.Context {
-	ws := apptest.InstallationWorkspaceUUID(context.Background(), s.t, s.e.Pool)
-	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), ws), actor)
+	return principal.SystemActing(context.Background(), actor)
 }
 
 // ownerScalar reads one value as the database owner, for an id no route lists.

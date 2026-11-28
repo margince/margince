@@ -248,7 +248,6 @@ func (f *channelFixture) withoutVault(t *testing.T) {
 // adminChannelContext binds the principal the HTTP middleware would: a human on
 // a full seat holding the admin grants for channel_connection.
 func adminChannelContext(ctx context.Context, ws, user ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type:     principal.PrincipalHuman,
 		ID:       "human:" + user.String(),

@@ -113,12 +113,9 @@ func TestAnUnclassifiedFaultLogsTheCauseAsAStructuredObject(t *testing.T) {
 	}
 }
 
-// TestAFaultLineNamesTheWorkspaceButLeavesTheCorrelationIDToTheHandler.
+// TestAFaultLineLeavesTheCorrelationIDToTheHandler.
 //
-// The workspace is attached by this seam because nothing else knows it — the
-// correlation handler reads the correlation id off the context and only that.
-//
-// The correlation id is NOT attached here, and that is the half worth a test.
+// The correlation id is not attached by this seam, and that is the half worth a test.
 // This seam used to attach it by hand because no process role installed its own
 // handler as the default, so a package-level call reached a bare one that
 // enriched nothing. Every serving role now installs a correlation-aware default
@@ -126,15 +123,11 @@ func TestAnUnclassifiedFaultLogsTheCauseAsAStructuredObject(t *testing.T) {
 // but WRONG: both halves would stamp the same key. So the assertion is absence
 // under a handler that is deliberately not correlation-aware — one stamper, and
 // it is the one every other package-level call in the tree already goes through.
-func TestAFaultLineNamesTheWorkspaceButLeavesTheCorrelationIDToTheHandler(t *testing.T) {
-	workspace := ids.NewV7()
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(t.Context(), workspace), ids.NewV7())
+func TestAFaultLineLeavesTheCorrelationIDToTheHandler(t *testing.T) {
+	ctx := principal.WithCorrelationID(t.Context(), ids.NewV7())
 
 	record := faultRecord(ctx, t, unitKind, errors.New("the socket closed early"))
 
-	if got := record["workspace_id"]; got != workspace.String() {
-		t.Fatalf("workspace_id = %v, want %q — nothing but this seam can put it on the line", got, workspace)
-	}
 	if _, stamped := record["correlation_id"]; stamped {
 		t.Fatal("this seam stamped correlation_id itself; the correlation handler owns that key, and two stampers write it twice")
 	}

@@ -48,7 +48,7 @@ func (w *forecastSnapshotSweepWorker) Work(ctx context.Context, _ *river.Job[For
 const forecastSnapshotActor = "system:forecast-snapshot"
 
 func (w *forecastSnapshotSweepWorker) snapshotWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	wsCtx = principal.SystemActing(wsCtx, forecastSnapshotActor)
 	return jobs.FaultContext(ctx, w.freeze(wsCtx, workspace))
 }

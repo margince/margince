@@ -27,8 +27,9 @@ import (
 	// migrate resolving the vanilla stub would report "schema is at head"
 	// over a database missing every extension's schema.
 	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/composition"
 	"golang.org/x/term"
+
+	"github.com/margince/margince/composition"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -390,11 +391,10 @@ func resetPassword(ctx context.Context, conn *pgx.Conn, email string, stdin io.R
 
 	// More than one active workspace is the same operator-led-migration
 	// refusal every process role gives.
-	wsID, err := singletonWorkspace(ctx, tx)
-	if err != nil {
+	if _, err := singletonWorkspace(ctx, tx); err != nil {
 		return err
 	}
-	if err := identity.OperatorResetPassword(ctx, tx, wsID, email, newPassword); err != nil {
+	if err := identity.OperatorResetPassword(ctx, tx, email, newPassword); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {

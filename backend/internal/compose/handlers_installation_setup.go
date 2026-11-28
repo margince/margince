@@ -77,9 +77,7 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 	// is outstanding, which is not the same as being entitled to read the model
 	// binding or the app. Same reasoning the connect transport resolves the
 	// credential under.
-	if ws, ok := principal.WorkspaceID(ctx); ok {
-		ctx = bootCtx(ctx, ws, installationSetupReadActor)
-	}
+	ctx = bootCtx(ctx, installationSetupReadActor)
 	steps, err := h.steps(ctx)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -163,7 +161,7 @@ func stepsComplete(steps []crmcontracts.InstallationSetupStep) bool {
 // takes the workspace the cookie session already bound.
 func (s *Server) firstRunAnswer(svc *identity.Service) func(context.Context) (bool, error) {
 	return func(ctx context.Context) (bool, error) {
-		wsID, err := svc.InstallationWorkspace(ctx)
+		_, err := svc.InstallationWorkspace(ctx)
 		if errors.Is(err, identity.ErrNotBootstrapped) {
 			// No company has been claimed yet (ADR-0105): the most "first
 			// run" an installation gets, and every other boot-time reader of
@@ -173,8 +171,7 @@ func (s *Server) firstRunAnswer(svc *identity.Service) func(context.Context) (bo
 		if err != nil {
 			return false, fmt.Errorf("resolving the installation for the first-run signal: %w", err)
 		}
-		readCtx := principal.SystemActing(
-			principal.WithWorkspaceID(ctx, wsID.UUID), installationSetupReadActor)
+		readCtx := principal.SystemActing(ctx, installationSetupReadActor)
 		steps, err := s.steps(readCtx)
 		if err != nil {
 			return false, err

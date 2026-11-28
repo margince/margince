@@ -169,7 +169,7 @@ func setup(t *testing.T) env {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return env{ctx: principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:summary-test",
 	}), pool: pool}

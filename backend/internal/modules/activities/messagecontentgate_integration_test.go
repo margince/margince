@@ -106,7 +106,7 @@ func (e *loadEnv) seedGateShape(t *testing.T, s gateShape, sources map[int]ids.U
 
 // readerAt is the rep holding every activity grant at one row scope.
 func (e *loadEnv) readerAt(scope principal.RowScope, kind principal.PrincipalType) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: kind, ID: principal.HumanIDPrefix + e.rep.String(), UserID: e.rep,
 		Permissions: principal.Permissions{

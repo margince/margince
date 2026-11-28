@@ -28,7 +28,7 @@ func TestOverlappingHistoryImportsKeepSharedWorkDeferredAndLiveWorkPrompt(t *tes
 	b.registry.WithBackfillAdmission(2, false)
 	first := strandedBackfill(t, b)
 	other, second := startSecondHistory(t, b)
-	dispatch := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
+	dispatch := backfillWorkContext(context.Background(), t, b)
 	if err := b.registry.DispatchBackfills(dispatch, backfillScheduler(), false); err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestOverlappingHistoryImportsKeepSharedWorkDeferredAndLiveWorkPrompt(t *tes
 		t.Fatal(err)
 	}
 	id := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
+	system := principal.SystemActing(context.Background(), "agent:enrich")
 	queue := func(run *ids.UUID) {
 		t.Helper()
 		if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{id}, run) }); err != nil {

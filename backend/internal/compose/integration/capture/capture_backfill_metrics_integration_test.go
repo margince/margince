@@ -13,7 +13,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -39,7 +38,7 @@ func pageSample(t *testing.T, result string) float64 {
 func TestEveryBackfillPageIsCountedUnderItsProviderByResult(t *testing.T) {
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{&connector.RateLimitedError{}})
-	jobCtx := capturemetrics.WithRun(principal.WithWorkspaceID(context.Background(), e.WS))
+	jobCtx := capturemetrics.WithRun(context.Background())
 	limitedBefore, okBefore := pageSample(t, "rate_limited"), pageSample(t, "ok")
 
 	if _, _, retryAfter, _ := registry.RunBackfillStep(jobCtx, runID); retryAfter <= 0 {

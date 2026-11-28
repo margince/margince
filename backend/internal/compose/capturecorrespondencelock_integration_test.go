@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Read and write, serialized.
@@ -41,7 +40,7 @@ import (
 // rather than when a machine is slow.
 func TestTheCorrespondenceGuardAndAnAttestedSendSerializeOnOneKey(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	const victim = "cfo@bigcorp.example"
 
 	held := make(chan struct{})
@@ -98,7 +97,7 @@ func TestTheCorrespondenceGuardAndAnAttestedSendSerializeOnOneKey(t *testing.T) 
 // nothing, which is the stale archive this pair exists to prevent.
 func TestTheCorrespondenceKeyIsOneKeyForBothSpellingsOfADomain(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	const unicodeSpelling = "cfo@b\u00fccher.example"
 	const punycodeSpelling = "cfo@xn--bcher-kva.example"
 

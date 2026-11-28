@@ -93,7 +93,7 @@ func checkOwnerCanReadSubject(ctx context.Context, db *database.DB, resolver aut
 	if ev.OwnerID == ids.Nil {
 		return checkOwnerlessSubject(ctx, db, ev)
 	}
-	ownerCtx, err := ownerContext(ctx, resolver, ev.WorkspaceID, ev.OwnerID)
+	ownerCtx, err := ownerContext(ctx, resolver, ev.OwnerID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// A gone, archived or suspended owner is a real denial, not an
 		// outage — the same honest hard case the object gate handles.
@@ -187,13 +187,13 @@ func checkOwnerlessSubject(ctx context.Context, db *database.DB, ev workflow.Eve
 // principal, for the questions only their own row scope answers: whether they
 // may read a message, and which of a list's changes they can see. A gone,
 // archived or suspended owner answers apperrors.ErrNotFound.
-func ownerContext(ctx context.Context, resolver authz.Resolver, workspace, owner ids.UUID) (context.Context, error) {
+func ownerContext(ctx context.Context, resolver authz.Resolver, owner ids.UUID) (context.Context, error) {
 	if resolver == nil {
 		// A composed engine always carries a resolver (compose/workflows.go);
 		// reaching here is a wiring bug, and it must not become a false "allow".
 		return nil, errors.New("automation: no authz.Resolver to resolve the owner's authority")
 	}
-	member, err := authz.MemberPrincipal(ctx, resolver, workspace, owner)
+	member, err := authz.MemberPrincipal(ctx, resolver, owner)
 	if err != nil {
 		return nil, err
 	}

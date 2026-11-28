@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // fieldHistoryEntryWire mirrors the contract's FieldHistoryEntry field by
@@ -130,7 +129,7 @@ func seedHumanFieldHistoryRow(t *testing.T, app *apptest.AppEnv, e *Env, entityI
 		t.Fatalf("reading the workspace's own seat: %v", err)
 	}
 	beforeJSON, afterJSON := auditImageJSON(t, before), auditImageJSON(t, after)
-	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
+	ctx := t.Context()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, action,
@@ -158,7 +157,7 @@ func seedAgentFieldHistoryRow(t *testing.T, e *Env, entityType string, entityID,
 		t.Fatalf("marshal evidence: %v", err)
 	}
 	rowID := ids.NewV7()
-	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
+	ctx := t.Context()
 	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, passport_id, action,

@@ -319,7 +319,7 @@ func humanWithScopes(e *integration.SearchEnv, user ids.UUID, scopes []principal
 	for _, s := range scopes {
 		scopeSet[s] = struct{}{}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
@@ -341,7 +341,7 @@ func humanWithScopes(e *integration.SearchEnv, user ids.UUID, scopes []principal
 // for every human (the resolver-integration line is compose's).
 type fakeAuthority struct{}
 
-func (fakeAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (fakeAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Create: true, Read: true},
@@ -352,7 +352,7 @@ func (fakeAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.R
 	}}, nil
 }
 
-func (fakeAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (fakeAuthority) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -372,6 +372,6 @@ func newTestCaptureRegistry(e *integration.SearchEnv, vault keyvault.Vault) *cap
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (r fakeAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r fakeAuthority) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }

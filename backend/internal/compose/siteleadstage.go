@@ -166,14 +166,10 @@ func (w *siteDeepReadWorker) probeCtx(ctx context.Context) (context.Context, err
 	if !ok {
 		return nil, errors.New("site deep read: no principal to scope the already-on-file probe to")
 	}
-	workspaceID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errors.New("site deep read: no workspace to scope the already-on-file probe to")
-	}
 	if actor.UserID.IsZero() {
 		return ctx, nil
 	}
-	member, err := authz.MemberPrincipal(ctx, w.authority, workspaceID, actor.UserID)
+	member, err := authz.MemberPrincipal(ctx, w.authority, actor.UserID)
 	if err != nil {
 		// A requester who has lost their grants since starting the read cannot
 		// lend any scope, so nothing is suppressed on their behalf.

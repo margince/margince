@@ -164,7 +164,7 @@ func TestDoneRefusesAnUnknownLaneAndAnAgent(t *testing.T) {
 	s := handledStore(e)
 	junk := []WorklistRowRef{{Source: "made_up", RowID: "x"}}
 	faulttest.AssertNamesField(t, s.MarkWorklistRowsDone(e.followUpReader(), junk), "rows[0].source")
-	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
+	agent := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:x", UserID: e.rep,
 		Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}},

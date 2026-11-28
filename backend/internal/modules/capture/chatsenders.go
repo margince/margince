@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -81,13 +80,14 @@ func (c ChatSenders) For(ctx context.Context, provider string, connection ids.UU
 		}
 		return c.Bot(ctx, provider)
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok || c.Vault == nil {
+	company, err := c.DB.Workspace(ctx)
+	if err != nil || c.Vault == nil {
 		return nil, nil, ErrChannelWiringIncomplete
 	}
+	ws := company.UUID
 	var sender connector.MessageSender
 	var auth connector.Auth
-	err := c.DB.Tx(ctx, func(tx pgx.Tx) error {
+	err = c.DB.Tx(ctx, func(tx pgx.Tx) error {
 		acct, err := liveChatAccountTx(ctx, tx, connection)
 		if err != nil {
 			return err

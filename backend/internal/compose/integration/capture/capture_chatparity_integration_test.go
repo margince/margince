@@ -40,7 +40,7 @@ func readersOf(t *testing.T, e *integration.SearchEnv, activity ids.UUID) []ids.
 	}
 	var readers []ids.UUID
 	for seat, teams := range seats {
-		ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+		ctx := context.Background()
 		ctx = principal.WithActor(ctx, principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, TeamIDs: teams,
 			SeatType: principal.SeatFull,
@@ -219,7 +219,7 @@ func chatFollowsContactSharing(t *testing.T, posture string, team bool) {
 // ownerOf is the member whose mail and chat the fixture holds, acting through
 // the contact and activity writers.
 func ownerOf(e *integration.SearchEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull,
@@ -235,7 +235,7 @@ func ownerOf(e *integration.SearchEnv) context.Context {
 // connectorSeatCtx is the connector principal the chat ingest runs as, acting
 // for the seat that owns the connection.
 func connectorSeatCtx(e *integration.SearchEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:telegram", UserID: e.Rep1, OnBehalfOf: e.Rep1,
@@ -253,7 +253,7 @@ func connectorSeatCtx(e *integration.SearchEnv) context.Context {
 // workspaceConnectorCtx is the connector principal the chat ingest runs as for a
 // company account: it acts for no member.
 func workspaceConnectorCtx(e *integration.SearchEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:telegram",

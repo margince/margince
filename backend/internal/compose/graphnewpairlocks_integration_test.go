@@ -41,7 +41,7 @@ func TestASecondGraphFoldNeverClaimsAnUnwrittenPair(t *testing.T) {
 				t.Fatal(err)
 			}
 			visible := logHistoryGraphMail(b.env.Admin(), t, b, written, at)
-			system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "system:graph_edge_reconcile")
+			system := principal.SystemActing(context.Background(), "system:graph_edge_reconcile")
 			ctx, cancel := context.WithTimeout(system, 10*time.Second)
 			defer cancel()
 			entered, release, done := make(chan struct{}), make(chan struct{}), make(chan struct{})

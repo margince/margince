@@ -45,7 +45,7 @@ func ConnectSharedMailbox(t *testing.T, registry *capture.Registry, ws ids.UUID,
 			admin.Scopes = principal.NewScopeSet(d.Scopes...)
 		}
 	}
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	id, err := registry.ConnectShared(principal.WithActor(ctx, admin), capture.SharedConnect{
 		Provider: box.Provider, Address: box.Address, ReaderTeam: box.ReaderTeam, Posture: box.Posture,
 		Auth: connector.Auth("shared-mailbox-token"),

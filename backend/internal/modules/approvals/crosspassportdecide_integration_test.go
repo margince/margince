@@ -42,7 +42,7 @@ func (e *stagingEnv) lentPassport(t *testing.T, human ids.UUID) context.Context 
 		passport, human, storekit.TokenHash(passport.String())); err != nil {
 		t.Fatalf("seeding the lent passport: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + human.String(),

@@ -42,7 +42,7 @@ func address(t *testing.T, e *channelConsentEnv, email string, primary bool) {
 
 func TestThePreferencePageNamesTheAddressTheLinkWentTo(t *testing.T) {
 	e := setupChannelConsent(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:public_preferences",
@@ -83,7 +83,7 @@ func TestThePreferencePageNamesTheAddressTheLinkWentTo(t *testing.T) {
 // primary is the honest fallback — and it is what the page always showed.
 func TestAPreferenceTokenWithNoAddressStillOpensThePage(t *testing.T) {
 	e := setupChannelConsent(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:public_preferences",
@@ -118,7 +118,7 @@ func TestAPreferenceTokenWithNoAddressStillOpensThePage(t *testing.T) {
 // the column.
 func TestEachAddressGetsItsOwnPreferenceToken(t *testing.T) {
 	e := setupChannelConsent(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:public_preferences",

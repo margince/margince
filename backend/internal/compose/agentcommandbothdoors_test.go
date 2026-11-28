@@ -616,7 +616,7 @@ func (bothDoorsComms) Availability(context.Context, *ids.UUID, time.Time, time.T
 // agentDoorCtx is a passport principal holding every cap, so admission turns on
 // the call's tier alone — which is the only thing this gate wants it to turn on.
 func agentDoorCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:both-doors", SeatType: principal.SeatFull,
 		OnBehalfOf: ids.NewV7(),

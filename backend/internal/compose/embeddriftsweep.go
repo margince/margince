@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The embed drift sweep (ADR-0069 §3a, SEARCH-AC-13): the at-least-once
@@ -102,10 +101,9 @@ func (w *embedDriftSweepWorker) Work(ctx context.Context, job *river.Job[EmbedDr
 // the workspace itself: the pass walks tenants, so the binding belongs to the
 // tenant's turn rather than to the row.
 func (w *embedDriftSweepWorker) sweepWorkspace(ctx context.Context, workspace ids.UUID, scope search.DriftScope) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	healed, err := w.store.SweepWorkspaceEmbeddingDrift(wsCtx, ids.From[ids.WorkspaceKind](workspace), w.embedder, scope)
+	healed, err := w.store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](workspace), w.embedder, scope)
 	if healed > 0 {
-		w.log.InfoContext(wsCtx, "embed drift sweep healed entities", "healed", healed)
+		w.log.InfoContext(ctx, "embed drift sweep healed entities", "healed", healed)
 	}
 	// The corpora are swept even when the entity pass healed nothing: the two
 	// hold their vectors in different tables and drift independently. A corpus
@@ -120,13 +118,13 @@ func (w *embedDriftSweepWorker) sweepWorkspace(ctx context.Context, workspace id
 	// Closed BEFORE the drift repair, because an abandoned document holds the
 	// whole corpus not_ready and the repair cannot lift that: readiness reads
 	// `running` as in-flight whatever the vectors say.
-	closed, aerr := w.corpora.SweepAbandonedIngests(wsCtx)
+	closed, aerr := w.corpora.SweepAbandonedIngests(ctx)
 	if closed > 0 {
-		w.log.InfoContext(wsCtx, "closed corpus ingests that stopped without finishing", "closed", closed)
+		w.log.InfoContext(ctx, "closed corpus ingests that stopped without finishing", "closed", closed)
 	}
-	repaired, cerr := w.corpora.SweepCorpusDrift(wsCtx, w.embedder)
+	repaired, cerr := w.corpora.SweepCorpusDrift(ctx, w.embedder)
 	if repaired > 0 {
-		w.log.InfoContext(wsCtx, "embed drift sweep re-embedded corpus passages", "repaired", repaired)
+		w.log.InfoContext(ctx, "embed drift sweep re-embedded corpus passages", "repaired", repaired)
 	}
 	// Every failure reaches River, and none of the three is allowed to hide the
 	// others. Logging one and returning nil would report the job as successful,

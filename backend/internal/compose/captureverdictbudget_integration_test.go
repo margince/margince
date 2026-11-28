@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -64,7 +63,7 @@ func TestAnEntirelyBorderlinePassStaysInsideItsCallBudget(t *testing.T) {
 	brain := borderlineBacklog(t, e, senders)
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), senders); err != nil {
+	if err := engine.RunWorkspace(context.Background(), senders); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -96,7 +95,7 @@ func TestASenderTheBudgetCouldNotPayForIsLeftForAHuman(t *testing.T) {
 	brain := borderlineBacklog(t, e, senders)
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), senders); err != nil {
+	if err := engine.RunWorkspace(context.Background(), senders); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -141,7 +140,7 @@ func TestAFailingModelStillSpendsTheVerdictPassCap(t *testing.T) {
 	brain := &unreadableVerdictBrain{}
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), passCap); err != nil {
+	if err := engine.RunWorkspace(context.Background(), passCap); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 

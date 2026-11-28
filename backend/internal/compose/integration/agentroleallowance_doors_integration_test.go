@@ -18,13 +18,14 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/redistest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // roleBoundDoors is the app under a live meter that reads the saved
 // allowances, as the API composes it, with the admin's passport on both doors.
 func roleBoundDoors(t *testing.T, slug string) *apptest.TwoDoors {
 	t.Helper()
-	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{}, time.Hour)
+	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{}, time.Hour).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))
 	sourced := func(s *compose.Server, pool *pgxpool.Pool) {
 		compose.WithAgentVolume(meter.WithPolicySource(compose.NewAgentAllowanceSource(pool)))(s, pool)
 	}
@@ -73,7 +74,7 @@ func TestARoleLimitBindsOneCountAcrossMCPAndRest(t *testing.T) {
 // A meter that cannot read its counter refuses an agent's REST read as a short
 // outage. It is never a limit reached that would last until the window rolls.
 func TestAnUnreachableCounterRefusesARestReadAsAShortWait(t *testing.T) {
-	e := apptest.SetupAppWithOptions(t, compose.WithAgentVolume(agentvolume.New(nil, agentvolume.Limits{}, time.Hour)))
+	e := apptest.SetupAppWithOptions(t, compose.WithAgentVolume(agentvolume.New(nil, agentvolume.Limits{}, time.Hour).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))))
 	apptest.BootstrapWorkspaceSession(t, e, "Unreachable Counter", "unreachable-counter@fable.test", "Admin")
 	bearer, _ := apptest.PassportWithID(t, e, "reading agent", "read")
 

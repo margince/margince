@@ -32,7 +32,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A token Telegram has stopped accepting parks the connection, and PARKING IT IS
@@ -210,7 +209,7 @@ func TestAConflictWithNoWebhookIsReportedAsARivalRatherThanAClear(t *testing.T) 
 func telegramConnectionStatus(t *testing.T, e *integration.Env, conn capture.ChannelConnection) string {
 	t.Helper()
 	var status string
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT status FROM channel_connection WHERE id = $1`, conn.ID).Scan(&status)
 	}); err != nil {
@@ -223,7 +222,7 @@ func telegramConnectionStatus(t *testing.T, e *integration.Env, conn capture.Cha
 func telegramConnectionBot(t *testing.T, e *integration.Env, conn capture.ChannelConnection) string {
 	t.Helper()
 	var bot string
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT channel_id FROM channel_connection WHERE id = $1`, conn.ID).Scan(&bot)
 	}); err != nil {

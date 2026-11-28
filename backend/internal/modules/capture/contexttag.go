@@ -120,7 +120,11 @@ func (r *Registry) SetContextTag(ctx context.Context, mb Mailbox, tagID *ids.UUI
 		// Audit-only, like every other capture-configuration change beside it:
 		// the closed public-event catalog carries no type for this, and
 		// inventing one would put a mailbox's own setting on the outbound bus.
-		_, err := storekit.Audit(ctx, tx, "update", captureSettingsObject, storekit.MustWorkspace(ctx),
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
+		_, err = storekit.Audit(ctx, tx, "update", captureSettingsObject, installation,
 			contextTagImage(name, before), contextTagImage(name, tagID))
 		return err
 	})

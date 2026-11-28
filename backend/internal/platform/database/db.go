@@ -284,8 +284,18 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 	// one workspace has not been reached through a bootstrapped install, and
 	// that is a fault the caller must see before any SQL runs.
 	if d.workspace != nil {
-		if _, err := d.workspace(ctx); err != nil {
+		pinned, err := d.workspace(ctx)
+		if err != nil {
 			return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
+		}
+		// A pinned handle answers WorkspaceTx with its own company, so a test
+		// database holding several live companies still names the pinned one.
+		body := fn
+		fn = func(tx pgx.Tx) error {
+			if _, err := Remember(tx, installationWorkspaceMemo, func() (ids.UUID, error) { return pinned.UUID, nil }); err != nil {
+				return err
+			}
+			return body(tx)
 		}
 	}
 	_, joined := snapshotOf(ctx)
@@ -293,9 +303,7 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 		body := fn
 		fn = func(tx pgx.Tx) error {
 			started := d.clock().UnixNano()
-			live, err := Remember(tx, "database:installation-workspace", func() (ids.UUID, error) {
-				return InstallationWorkspaceTx(ctx, tx)
-			})
+			live, err := WorkspaceTx(ctx, tx)
 			if err != nil {
 				stampProof(d.proven, proof{at: -d.clock().UnixNano()})
 				return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
@@ -305,7 +313,7 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 			if opened, ok := snapshotStart(ctx); joined && ok && opened.UnixNano() < started {
 				started = opened.UnixNano()
 			}
-			stampProof(d.proven, proof{at: started, company: ids.From[ids.WorkspaceKind](live)})
+			stampProof(d.proven, proof{at: started, company: live})
 			return body(tx)
 		}
 	}

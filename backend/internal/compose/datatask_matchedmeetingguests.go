@@ -25,7 +25,6 @@ import (
 // resolved onto, an import for instance, the guests the stored event lists.
 // meetingrosters.GraphGuestsDataTask does the same for Microsoft events.
 func matchedMeetingGuestsDataTask(pool *pgxpool.Pool) datatask.Task {
-	inWorkspace := installationContext(pool)
 	authority := identity.NewService(pool)
 	return datatask.Task{
 		ID: "core/1792998483_matched_meeting_guests", Version: 1,
@@ -35,29 +34,9 @@ func matchedMeetingGuestsDataTask(pool *pgxpool.Pool) datatask.Task {
 			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: estimateMatchedMeetingOriginals,
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-				ctx, err := inWorkspace(ctx)
-				if err != nil {
-					return datatask.BatchOut{}, err
-				}
 				return addMatchedMeetingGuestsBatch(ctx, tx, authority, in)
 			},
 		}},
-	}
-}
-
-// installationContext binds the installation's workspace on a data task's
-// system context. A seat's authority is resolved per workspace.
-func installationContext(pool *pgxpool.Pool) func(context.Context) (context.Context, error) {
-	db := InstallationDB(pool)
-	return func(ctx context.Context) (context.Context, error) {
-		if _, bound := principal.WorkspaceID(ctx); bound {
-			return ctx, nil
-		}
-		ws, err := db.Workspace(ctx)
-		if err != nil {
-			return ctx, err
-		}
-		return principal.WithWorkspaceID(ctx, ws.UUID), nil
 	}
 }
 

@@ -75,7 +75,7 @@ func seedSigner(t *testing.T, e *Env, name, email, body string) ids.UUID {
 func runSignaturePass(t *testing.T, e *Env, brain *signatureFieldsBrain) bool {
 	t.Helper()
 	enricher := compose.NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-	filled, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+	filled, err := enricher.RunWorkspace(context.Background())
 	if err != nil {
 		t.Fatalf("the signature pass: %v", err)
 	}

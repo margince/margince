@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestALimitedMessageLeavesTheInteractionGraph(t *testing.T) {
@@ -52,7 +51,7 @@ func TestALimitedMessageLeavesTheInteractionGraph(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
+	wsCtx := ctx
 	refold := func() {
 		t.Helper()
 		if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {

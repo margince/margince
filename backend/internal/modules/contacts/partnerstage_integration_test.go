@@ -28,7 +28,7 @@ import (
 
 // asStageAdmin is a seat that keeps the data model and runs partner programmes.
 func asStageAdmin(e *dedupeEnv, objects map[string]principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

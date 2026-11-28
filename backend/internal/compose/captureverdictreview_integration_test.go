@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The accept branch: a human says yes, and the records capture withheld are
@@ -189,7 +188,7 @@ func TestAnExhaustedDispositionIsRetiredRatherThanStranded(t *testing.T) {
 	spendAttempts(t, e, dispositionID, capture.PendingMaxAttempts)
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.ReconcileLedgerWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if err := engine.ReconcileLedgerWorkspace(context.Background()); err != nil {
 		t.Fatalf("reconciling the ledger: %v", err)
 	}
 
@@ -197,7 +196,7 @@ func TestAnExhaustedDispositionIsRetiredRatherThanStranded(t *testing.T) {
 		t.Fatalf("exhausted disposition = %q, want unsure — exhaustion must be terminal, not a dead end", got)
 	}
 	// And having reached `unsure`, it is now something a human can be offered.
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.StageReviewsWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
 	if n := countIn(t, e, `SELECT count(*) FROM approval WHERE kind = 'capture_counterparty'`); n != 0 {
@@ -226,7 +225,7 @@ func TestADeclinedReviewClosesTheDispositionInsteadOfReasking(t *testing.T) {
 		t.Fatalf("declining the proposal: %v", err)
 	}
 
-	if err := engine.ReconcileLedgerWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if err := engine.ReconcileLedgerWorkspace(context.Background()); err != nil {
 		t.Fatalf("reconciling the ledger: %v", err)
 	}
 	if got := dispositionStatus(t, e, dispositionID); got != capture.PendingStatusRejected {
@@ -278,7 +277,7 @@ func TestAnUnansweredReviewAgesOutAndTakesItsOfferWithIt(t *testing.T) {
 
 	// A window still open changes nothing: the question is young, and a
 	// workspace that took a weekend off must not lose it.
-	if err := engine.AgeOutStaleReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), capture.UnsureReviewWindow); err != nil {
+	if err := engine.AgeOutStaleReviewsWorkspace(context.Background(), capture.UnsureReviewWindow); err != nil {
 		t.Fatalf("ageing out reviews: %v", err)
 	}
 	if got := dispositionStatus(t, e, dispositionID); got != capture.PendingStatusUnsure {
@@ -294,7 +293,7 @@ func TestAnUnansweredReviewAgesOutAndTakesItsOfferWithIt(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("backdating the review: %v", err)
 	}
-	if err := engine.AgeOutStaleReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), capture.UnsureReviewWindow); err != nil {
+	if err := engine.AgeOutStaleReviewsWorkspace(context.Background(), capture.UnsureReviewWindow); err != nil {
 		t.Fatalf("ageing out reviews: %v", err)
 	}
 
@@ -350,7 +349,7 @@ func TestAgeingOutLosesToAHumanWhoDecidedFirst(t *testing.T) {
 		ids.From[ids.ApprovalKind](approvalID), true, nil); err != nil {
 		t.Fatalf("approving the proposal: %v", err)
 	}
-	if err := engine.AgeOutStaleReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), capture.UnsureReviewWindow); err != nil {
+	if err := engine.AgeOutStaleReviewsWorkspace(context.Background(), capture.UnsureReviewWindow); err != nil {
 		t.Fatalf("ageing out reviews: %v", err)
 	}
 

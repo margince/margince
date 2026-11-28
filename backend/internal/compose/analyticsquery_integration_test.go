@@ -54,7 +54,7 @@ func (e *forecastEnv) askAnalytics(
 // reportReaderCtx is a seat that may read the deal population and the forecast
 // transaction it runs in.
 func (e *forecastEnv) reportReaderCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:reader", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
@@ -154,7 +154,7 @@ func TestACallerWithoutThePopulationsGrantIsRefused(t *testing.T) {
 	// seat, so the population is refused. Without the second gate the query
 	// would run — which is why the executor asks it rather than trusting that
 	// an absent vocabulary is enough.
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:narrow", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
@@ -484,7 +484,7 @@ func TestAnExplanationCannotOutSeeTheNumberItExplains(t *testing.T) {
 // population that consulted only row scope answered a rep with the whole
 // installation's numbers.
 func (e *forecastEnv) ownLensRepCtx(user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:rep", UserID: user,
 		Permissions: principal.Permissions{
@@ -630,7 +630,7 @@ func TestATypedQueryNamingATeamExcludesAnUnownedRow(t *testing.T) {
 // foreign key to app_user — the synthetic id reportReaderCtx mints is fine for
 // asking a question and cannot be stored beside one.
 func (e *forecastEnv) wideLensCtx(user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:lead", UserID: user,
 		Permissions: principal.Permissions{
@@ -738,7 +738,7 @@ func (e *forecastEnv) deactivate(t *testing.T, user ids.UUID) {
 		UserID: ids.From[ids.UserKind](e.Rep3), WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
 		SeatType: "full", Roles: []string{"admin"}, Permissions: integration.AdminPerms,
 	}
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	if err := identity.NewService(e.Pool).DeactivateUser(ctx, admin,
 		identity.DeactivateUserInput{UserID: ids.From[ids.UserKind](user)}); err != nil {
 		t.Fatalf("deactivate %s: %v", user, err)

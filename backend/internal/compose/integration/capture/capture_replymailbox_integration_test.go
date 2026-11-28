@@ -32,7 +32,7 @@ import (
 
 // readerCtx is one seat asking a question about correspondence they may read.
 func readerCtx(e *integration.SearchEnv, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

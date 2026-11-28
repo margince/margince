@@ -455,7 +455,7 @@ func (e *assuranceJobEnv) runWithFindings(
 	t.Helper()
 	ctx := principal.WithCorrelationID(
 		principal.WithActor(
-			principal.WithWorkspaceID(context.Background(), e.WS),
+			context.Background(),
 			principal.Principal{Type: principal.PrincipalSystem, ID: assuranceActor}),
 		ids.NewV7())
 	return bundleRunFindings(ctx, bundleDeps{

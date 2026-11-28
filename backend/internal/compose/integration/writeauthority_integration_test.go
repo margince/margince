@@ -67,7 +67,7 @@ func seedSharedContact(t *testing.T, name string) sharedContactFixture {
 // leaving it out would make those refusals ambiguous — an object-grant miss and
 // a row-authority miss are both refusals, and only one of them is under test.
 func recordActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
@@ -264,7 +264,7 @@ func TestAReadShareOfALeadCannotScoreIt(t *testing.T) {
 
 // leadActor mints a human who may read and update leads at one row scope.
 func leadActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
@@ -442,7 +442,7 @@ func TestAReadShareOfADealCannotEditItsOffer(t *testing.T) {
 // scope — the grants an offer edit needs, and nothing else, so a refusal can
 // only come from the rule under test.
 func dealActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

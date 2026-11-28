@@ -48,11 +48,11 @@ import (
 // is the version compare rather than a missing grant.
 type adminSeat struct{}
 
-func (adminSeat) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (adminSeat) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: integration.AdminPerms}, nil
 }
 
-func (adminSeat) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (adminSeat) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -163,7 +163,7 @@ func dealStageAndClose(t *testing.T, e *integration.Env, deal ids.UUID) (string,
 // pinRaceAgent is a passport principal holding the write scope — the type the
 // tier gate governs, and the only one the pin is set for.
 func pinRaceAgent(e *integration.Env) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:pin-race", SeatType: principal.SeatFull,
@@ -178,6 +178,6 @@ func pinRaceAgent(e *integration.Env) context.Context {
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (r adminSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r adminSeat) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }

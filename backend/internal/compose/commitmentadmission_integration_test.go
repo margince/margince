@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestCommitmentAdmissionUsesCurrentEvidenceBeforeWriting(t *testing.T) {
@@ -73,7 +72,7 @@ func TestCommitmentAdmissionUsesCurrentEvidenceBeforeWriting(t *testing.T) {
 			c := Commitment{
 				Meaning: openCommitmentMeaning(test.due, body), AsOf: asOf, ReadMessages: []ids.UUID{sourceID}, Extractor: signalScanActor, SourceActivityID: sourceID, Summary: "Send the pricing", Quote: body, Seat: &e.Rep1, DueDate: test.due, Confidence: 0.95, Locator: commitmentLocator(sourceID, claimKindOurs, e.Rep1.String(), body), Body: body,
 			}
-			ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+			ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 			dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 			var taskID ids.UUID
 			for range 2 {
@@ -146,7 +145,7 @@ func TestCapturedMailWithoutASentDateDoesNotCreateFreshWork(t *testing.T) {
 	raw := threadMail(address, "undated@counterparty.test", "Sun, 18 Oct 2026 10:00:00 +0000", "")
 	raw = []byte(strings.ReplaceAll(string(raw), "Date: Sun, 18 Oct 2026 10:00:00 +0000\r\n", ""))
 	captureThreadMail(t, e, e.Rep1, raw)
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var source ids.UUID
@@ -187,7 +186,7 @@ func TestHistoricalPromiseRemainsSearchableWithoutBecomingCurrentWork(t *testing
 		Meaning: openCommitmentMeaning("2024-10-20", quote), AsOf: at.AddDate(2, 0, 0), Extractor: signalScanActor, SourceActivityID: sourceID, Summary: "Send pricing", Quote: quote, PromisedTo: &contactID, Seat: &e.Rep1, DueDate: "2024-10-20", Confidence: 0.95, Locator: commitmentLocator(sourceID, claimKindOurs, e.Rep1.String(), quote),
 	}
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 	for range 2 {
 		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
@@ -235,7 +234,7 @@ func TestProviderArrivalContradictionRemainsReviewable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	c := Commitment{
 		Meaning: openCommitmentMeaning("", ""),
@@ -299,7 +298,7 @@ func TestAdmissionDoesNotDemoteWatchedOrProposedCommitments(t *testing.T) {
 				c.Seat, c.PromisedTo = &e.Rep1, &contactID
 			}
 			dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
-			ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+			ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 			for pass := range 2 {
 				if pass == 1 {
 					c.AsOf = at.AddDate(0, 0, 40)
@@ -354,7 +353,7 @@ func TestCapturedSourceDateSurvivesOriginalRetention(t *testing.T) {
 				raw = []byte(strings.ReplaceAll(string(raw), "Date: Sun, 18 Oct 2026 10:00:00 +0000\r\n", ""))
 			}
 			captureThreadMail(t, e, e.Rep1, raw)
-			ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+			ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 			dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				var source ids.UUID

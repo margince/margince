@@ -212,7 +212,7 @@ func TestOneContactsConsentWritesDoNotInterleave(t *testing.T) {
 // publicPreferencesCtx is the principal the public middleware binds on this
 // surface: a system actor, because the caller holds a token rather than a seat.
 func publicPreferencesCtx(e *channelConsentEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:public_preferences",

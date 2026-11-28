@@ -26,7 +26,7 @@ func (e *forecastEnv) activityReader(objects ...string) context.Context {
 	for _, object := range objects {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},

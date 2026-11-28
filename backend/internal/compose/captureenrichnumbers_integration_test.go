@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -157,7 +156,7 @@ func TestAChangedNumberReplacesItsOwnCountryNotAnOmittedOne(t *testing.T) {
 func runEnrichPass(t *testing.T, e *integration.Env, brain *signatureScriptBrain) {
 	t.Helper()
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 }

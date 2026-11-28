@@ -107,7 +107,7 @@ func TestATravelSubjectOwesNoOutcomeUnlessItLinksADealLeadOrProject(t *testing.T
 
 // leadReaderCtx is meetingCtx with a read grant on leads.
 func leadReaderCtx(e *sendEnv) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
 		Permissions: principal.Permissions{

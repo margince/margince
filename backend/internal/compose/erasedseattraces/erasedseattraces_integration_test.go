@@ -132,7 +132,7 @@ func wipe(t *testing.T, e *integration.Env, seat ids.UUID, tombstone bool) {
 // ledger reads the task's run id and counters from the executor's own row.
 func ledger(t *testing.T, e *integration.Env) (run ids.UUID, scanned, changed, batches int64, status string) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT run_id, scanned, changed, batches, status FROM data_task_run
 			WHERE task_id = $1`, DataTask().ID).Scan(&run, &scanned, &changed, &batches, &status)

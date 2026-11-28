@@ -38,11 +38,7 @@ const (
 // actorID, carrying OnBehalfOf and the colleague's grants as they are now. A
 // colleague who left answers apperrors.ErrNotFound, and the caller does not act.
 func agentFor(ctx context.Context, users *identity.Service, colleague ids.UUID, actorID string) (context.Context, error) {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errors.New("compose: acting for a colleague outside a bound workspace")
-	}
-	member, err := authz.MemberPrincipal(ctx, users, wsID, colleague)
+	member, err := authz.MemberPrincipal(ctx, users, colleague)
 	if err != nil {
 		return nil, fmt.Errorf("compose: authority of the colleague to act for: %w", err)
 	}

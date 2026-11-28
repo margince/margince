@@ -31,13 +31,11 @@ import (
 // stubDispatcher answers one canned verdict and records what the worker asked
 // it about — the queue boundary the worker sits on, mocked; nothing else is.
 type stubDispatcher struct {
-	outcome   comms.Outcome
-	wait      time.Duration
-	err       error
-	calls     int
-	gotID     ids.UUID
-	gotWS     ids.UUID
-	sawWSBind bool
+	outcome comms.Outcome
+	wait    time.Duration
+	err     error
+	calls   int
+	gotID   ids.UUID
 	// The identity-reconcile inside RecordSent writes an audit row and an
 	// outbox event, so the scope the worker dispatches under has to carry an
 	// actor and a correlation id as well as the workspace.
@@ -49,7 +47,6 @@ type stubDispatcher struct {
 func (s *stubDispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (comms.Outcome, time.Duration, error) {
 	s.calls++
 	s.gotID = id
-	s.gotWS, s.sawWSBind = principal.WorkspaceID(ctx)
 	s.gotActor, s.sawActor = principal.Actor(ctx)
 	_, s.sawCorrelationID = principal.CorrelationID(ctx)
 	return s.outcome, s.wait, s.err
@@ -155,19 +152,14 @@ func TestSendEmailWorkerFailsARetryThatCarriesNoCause(t *testing.T) {
 	}
 }
 
-// Every comms_outbound read and transition the dispatcher makes predicates on
-// the bound workspace. Without the installation's workspace on the context, the
-// load finds nothing and the send never happens.
-func TestSendEmailWorkerBindsTheInstallationsWorkspaceAndTheJobsDelivery(t *testing.T) {
+// The worker hands the dispatcher the delivery its job names.
+func TestSendEmailWorkerDispatchesTheJobsDelivery(t *testing.T) {
 	ws, delivery := ids.NewV7(), ids.NewV7()
 	dispatcher := &stubDispatcher{outcome: comms.OutcomeSent}
 	worker := &commsSendWorker{dispatcher: dispatcher}
 
-	if err := worker.Work(principal.WithWorkspaceID(context.Background(), ws), sendJob(ws, delivery)); err != nil {
+	if err := worker.Work(context.Background(), sendJob(ws, delivery)); err != nil {
 		t.Fatalf("Work: %v", err)
-	}
-	if !dispatcher.sawWSBind || dispatcher.gotWS != ws {
-		t.Fatalf("dispatch ran under workspace %v (bound=%v), want %v", dispatcher.gotWS, dispatcher.sawWSBind, ws)
 	}
 	if dispatcher.gotID != delivery {
 		t.Fatalf("dispatched delivery %v, want %v", dispatcher.gotID, delivery)
@@ -322,7 +314,7 @@ type stubSeatType struct {
 	err  error
 }
 
-func (s stubSeatType) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (s stubSeatType) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return s.seat, s.err
 }
 
@@ -332,7 +324,7 @@ func (s stubSeatType) SeatType(context.Context, ids.UUID, ids.UUID) (principal.S
 // row" (dropping the CanMutate check), a live read seat comes back active and
 // this fails.
 func TestCommsSeatsActiveSeatChecksMutationCapabilityNotMereRowExistence(t *testing.T) {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	lookupDown := errors.New("identity store timeout")
 
 	for _, tc := range []struct {
@@ -380,21 +372,5 @@ func TestCommsSeatsActiveSeatChecksMutationCapabilityNotMereRowExistence(t *test
 				t.Fatalf("ActiveSeat error = %v, want nil", err)
 			}
 		})
-	}
-}
-
-// ActiveSeat must not be asked outside a bound workspace: it would otherwise
-// read identity's authority against no tenant at all, which the RLS GUC
-// contract has no answer for.
-func TestCommsSeatsActiveSeatRefusesWithNoWorkspaceBound(t *testing.T) {
-	s := commsSeats{authority: stubSeatType{seat: principal.SeatFull}}
-
-	active, _, err := s.ActiveSeat(context.Background(), ids.New[ids.UserKind]())
-
-	if err == nil {
-		t.Fatal("ActiveSeat with no workspace on the context returned nil error")
-	}
-	if active {
-		t.Fatal("ActiveSeat reported an active seat with no workspace bound to check it against")
 	}
 }

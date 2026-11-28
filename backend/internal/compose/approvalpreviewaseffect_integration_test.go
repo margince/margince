@@ -61,13 +61,13 @@ func (s *promotionSight) agentOn(passport ids.UUID) {
 }
 
 func sightContext(e *integration.Env) context.Context {
-	return principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	return principal.WithCorrelationID(context.Background(), ids.NewV7())
 }
 
 func storedMemberSeat(t *testing.T, e *integration.Env, user ids.UUID) context.Context {
 	t.Helper()
 	ctx := sightContext(e)
-	member, err := authz.MemberPrincipal(ctx, identity.NewService(e.Pool), e.WS, user)
+	member, err := authz.MemberPrincipal(ctx, identity.NewService(e.Pool), user)
 	if err != nil {
 		t.Fatal(err)
 	}

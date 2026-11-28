@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestTheWaitingListSaysWhatEachAddressWaitsOn(t *testing.T) {
@@ -158,7 +157,7 @@ func TestAnOwnersAnswerAboutAnUnsureSenderIsAppliedByTheNextPass(t *testing.T) {
 		t.Fatal("the review offer still asks a question its owner already answered")
 	}
 
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 	if got := dispositionStatus(t, e, dispositionID); got != capture.PendingStatusReal {

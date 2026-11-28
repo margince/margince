@@ -19,7 +19,7 @@ import (
 // error, which errors.Is tells apart.
 func TestEveryDigestDoorRefusesAnEmptyDigest(t *testing.T) {
 	store := NewStore(nil)
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalSystem, ID: OwedVerdictCapturedBy,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})

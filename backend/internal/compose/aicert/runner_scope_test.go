@@ -9,7 +9,6 @@ package aicert
 // this build's run does cover. A record carries the narrowest of them.
 
 import (
-	"context"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
@@ -42,7 +41,7 @@ func TestCertifyTaskRecordsTheNarrowestScopeItsSitesCover(t *testing.T) {
 				replies = append(replies, "the widget is blue and durable")
 				scores = append(scores, scoreJSON(90))
 			}
-			rec, err := certifyTask(wsContext(t), ai.TaskSummarize, scenarios, censusOfSites(t, tc.sites...),
+			rec, err := certifyTask(t.Context(), ai.TaskSummarize, scenarios, censusOfSites(t, tc.sites...),
 				ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 				ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 					candidateOpts: []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(replies...))},
@@ -58,15 +57,6 @@ func TestCertifyTaskRecordsTheNarrowestScopeItsSitesCover(t *testing.T) {
 	}
 }
 
-// wsContext mints the fixed DB-less workspace principal every router
-// call in this package's tests needs, mirroring ensureWorkspace's own
-// production behavior so a direct certifyTask call (bypassing Run,
-// which calls ensureWorkspace itself) still has one.
-func wsContext(t *testing.T) context.Context {
-	t.Helper()
-	return ensureWorkspace(context.Background())
-}
-
 // A site's KIND says the most a run of it could cover; the CASE says what this
 // build's run does cover. A one-shot site whose case makes one of the calls the
 // site makes would otherwise put full_invocation on the record on the strength
@@ -78,7 +68,7 @@ func TestCertifyTaskRecordsTheScopeTheCaseDeclares(t *testing.T) {
 	census.Register(site)
 	census.BindCase(site, narrowedCases{widgetCases{site: site}})
 
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize,
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize,
 		[]Scenario{testScenarioOnSite(site.Variant, site.Variant, wideBands)},
 		census, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{

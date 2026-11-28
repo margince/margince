@@ -119,7 +119,7 @@ func (e *requestEnv) read(t *testing.T, events ...map[string]any) int {
 		t.Fatal(err)
 	}
 	asked := 0
-	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:signal-scan")
+	pass := principal.SystemActing(context.Background(), "agent:signal-scan")
 	if _, err := compose.NewSignalExtractor(e.Pool, fixedReply{reply: string(reply), asked: &asked}, e.clock, slog.Default()).
 		RunWorkspace(pass, ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 		t.Fatalf("the signal pass: %v", err)
@@ -151,7 +151,7 @@ func (e *requestEnv) request(t *testing.T, company ids.UUID, kind, budget string
 // openScouted runs the scout pass and then the opener, as the job does.
 func (e *requestEnv) openScouted(t *testing.T) int {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:deal-scout")
+	ctx := principal.SystemActing(context.Background(), "system:deal-scout")
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := compose.RunDealScout(ctx, tx, e.now)
 		return err

@@ -99,7 +99,7 @@ func setupQualifying(t *testing.T) *qualifyingEnv {
 	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
 
-	opCtx := principal.WithWorkspaceID(context.Background(), e.ws)
+	opCtx := context.Background()
 	opCtx = principal.WithCorrelationID(opCtx, ids.NewV7())
 	e.ctx = principal.WithActor(opCtx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
@@ -344,7 +344,7 @@ func TestRecordingTheSameExchangeTwiceKeepsOneRow(t *testing.T) {
 
 func TestRecordingAnExchangeNeedsAuthorityOverTheSubject(t *testing.T) {
 	e := setupQualifying(t)
-	readOnly := principal.WithWorkspaceID(context.Background(), e.ws)
+	readOnly := context.Background()
 	readOnly = principal.WithCorrelationID(readOnly, ids.NewV7())
 	readOnly = principal.WithActor(readOnly, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,

@@ -37,7 +37,7 @@ func siteReadCompany(u ids.UUID) ids.CompanyID { return ids.From[ids.CompanyKind
 // projection and the announcement needs the actor and correlation that binding
 // stamps.
 func siteReadWorkerCtx(e *integration.Env) context.Context {
-	return withClaimedRequester(principal.WithWorkspaceID(context.Background(), e.WS), "", ids.Nil)
+	return withClaimedRequester(context.Background(), "", ids.Nil)
 }
 
 func TestSiteReadStartCreatesAQueuedDossierAndAReClickJoinsIt(t *testing.T) {

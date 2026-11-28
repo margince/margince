@@ -24,7 +24,7 @@ func TestAPaidReadingWaitsForItsComponentWithoutRepeatingTheModel(t *testing.T) 
 	const key, words = "busy-reading@customer.example", "We are pleased with our agreement."
 	o.customerSays(t, key, "", words, "", o.now.Add(-48*time.Hour))
 	brain := &askedBrain{}
-	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), o.e.WS), signalScanActor)
+	pass := principal.SystemActing(context.Background(), signalScanActor)
 	extractor := NewSignalExtractor(o.e.Pool, brain, func() time.Time { return o.now.Add(72 * time.Hour) }, slog.Default())
 	finished := make(chan error, 1)
 	if err := database.WithTx(pass, o.e.Pool, func(tx pgx.Tx) error {
@@ -57,7 +57,7 @@ func TestAReadingWhoseThreadMergedAwayIsDeclinedWithoutAFailedJob(t *testing.T) 
 	const oldKey, newKey = "reading-old@customer.example", "reading-new@customer.example"
 	o.customerSays(t, oldKey, "", "The old conversation.", "", o.now.Add(-48*time.Hour))
 	o.customerSays(t, newKey, "", "The surviving conversation.", "", o.now.Add(-49*time.Hour))
-	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), o.e.WS), signalScanActor)
+	pass := principal.SystemActing(context.Background(), signalScanActor)
 	if err := database.WithTx(pass, o.e.Pool, func(tx pgx.Tx) error { return mergeThreadsTx(pass, tx, oldKey, newKey) }); err != nil {
 		t.Fatal(err)
 	}

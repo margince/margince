@@ -26,7 +26,7 @@ const removedCorrespondent = "probe@demo-removed.example"
 // ownerDeskCtx is the mailbox owner in the app, with the contact grants the
 // waiting list's remove action needs.
 func ownerDeskCtx(e *integration.SearchEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(),
@@ -68,7 +68,7 @@ func removeTheOnlyWaitingContact(t *testing.T, e *integration.SearchEnv) {
 func answerEverySenderAsAContact(t *testing.T, e *integration.SearchEnv) {
 	t.Helper()
 	engine := compose.NewCounterpartyVerdictEngine(e.Pool, contactVerdict{}, compose.CaptureConfig{}, quietLog())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 }

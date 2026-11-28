@@ -138,7 +138,7 @@ func TestASavedRunEchoesTheScopeItWasAskedWith(t *testing.T) {
 // leadReaderCtx may read leads across the workspace, which is what labelling
 // them and measuring them both ask for.
 func (e *forecastEnv) leadReaderCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:lead-reader", UserID: e.Rep1,
 		Permissions: principal.Permissions{
@@ -258,7 +258,7 @@ func TestACitedCellNamesItsRecords(t *testing.T) {
 // companyReaderCtx is a real seat that may read deals and the companies they
 // belong to, and measure the whole workspace.
 func (e *forecastEnv) companyReaderCtx(user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:company-reader", UserID: user,
 		Permissions: principal.Permissions{

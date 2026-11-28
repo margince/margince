@@ -22,7 +22,7 @@ import (
 // writer, into blob, and returns its attachment id.
 func (e *Env) CaptureMailFile(t *testing.T, blob blobstore.Store, mail ids.UUID, filename, contentType string, body []byte) ids.UUID {
 	t.Helper()
-	ctx := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
+	ctx := principal.WithCorrelationID(principal.WithActor(context.Background(),
 		principal.Principal{
 			Type: principal.PrincipalConnector, ID: "connector:imap",
 			Permissions: principal.Permissions{

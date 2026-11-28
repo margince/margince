@@ -45,7 +45,7 @@ func TestAPhasesMoneyFoldsItsProjectsAsTheirRowsRead(t *testing.T) {
 	openDeal(project("Priced pursuit", "pursuing"), 400, "EUR")
 	openDeal(project("Unrated pursuit", "pursuing"), 200, "CHF")
 
-	reader := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	reader := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:project-reader", UserID: e.Rep1,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{

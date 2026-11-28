@@ -80,7 +80,7 @@ func partnerContact(t *testing.T, e *integration.SearchEnv, address string) ids.
 // guardAs reads the send guard's answer for business correspondence as one member.
 func guardAs(t *testing.T, e *integration.SearchEnv, user, contact ids.UUID) (verdict, reason string) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

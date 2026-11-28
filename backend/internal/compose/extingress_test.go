@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -100,7 +99,7 @@ func TestAUnitWithNoUserScopedSecretCanActForNobody(t *testing.T) {
 func ingestingRuntime(t *testing.T) *callRuntime {
 	t.Helper()
 	rt := unattendedRuntimeFor(
-		principal.WithWorkspaceID(context.Background(), ids.NewV7()),
+		context.Background(),
 		"probe-unit", "1.0.0", "job", extensionRuntimeBinding{
 			// A zero pool, which is what the port's own wiring check asks for:
 			// it answers "this role bound no pool" for a nil one, and every

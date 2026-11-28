@@ -13,7 +13,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -24,7 +23,7 @@ type History struct {
 	// Months maps the wire window onto months; false for a window not offered.
 	Months func(window string) (int, bool)
 	// Schedule runs one start with the enqueue that schedules its pager.
-	Schedule func(context.Context, ids.UUID, func(context.Context, capture.EnqueueBackfill) (capture.BackfillRun, error)) (capture.BackfillRun, error)
+	Schedule func(context.Context, func(context.Context, capture.EnqueueBackfill) (capture.BackfillRun, error)) (capture.BackfillRun, error)
 	// Refuse answers a start that opened no run.
 	Refuse func(http.ResponseWriter, *http.Request, error)
 	// Accepted renders a queued run.
@@ -42,15 +41,7 @@ func (h History) Start(w http.ResponseWriter, r *http.Request, id crmcontracts.I
 		h.Refuse(w, r, capture.ErrWindowInvalid)
 		return
 	}
-	ws, ok := principal.WorkspaceID(r.Context())
-	if !ok {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusInternalServerError, Code: "workspace_missing",
-			Detail: "The request carries no workspace context; nothing was started. Try again.",
-		})
-		return
-	}
-	run, err := h.Schedule(r.Context(), ws, func(ctx context.Context, enqueue capture.EnqueueBackfill) (capture.BackfillRun, error) {
+	run, err := h.Schedule(r.Context(), func(ctx context.Context, enqueue capture.EnqueueBackfill) (capture.BackfillRun, error) {
 		return h.Registry.StartSharedBackfill(ctx, ids.UUID(id), months, connector.BackfillEstimate{}, enqueue) // no estimate: counts only
 	})
 	switch {

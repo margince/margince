@@ -200,7 +200,7 @@ func logLinkedActivity(t *testing.T, e *sendEnv, links []ActivityLinkInput) ids.
 // linkWriterCtx carries the grants an activity with links needs: creating the
 // row, and attaching it to a contact, a deal and a company.
 func linkWriterCtx(e *sendEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

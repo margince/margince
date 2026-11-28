@@ -160,12 +160,11 @@ func (g *CommissionGen) reverse(ctx context.Context, deal ids.UUID, toStatus str
 	return nil
 }
 
-// accrualContext binds the workspace, the trace, and the system actor this
+// accrualContext binds the trace, and the system actor this
 // consumer runs as. A subscriber carries none of them: without this the first
 // governed call would fail for want of an actor, and the ledger row would carry
 // no correlation back to the win that caused it.
 func (g *CommissionGen) accrualContext(ctx context.Context, env events.Envelope, ws ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:commission_accrual",

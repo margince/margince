@@ -313,7 +313,7 @@ func (f *liveListFixture) pulseOf(ctx context.Context, t *testing.T) crmcontract
 
 func TestAutomaticWorkIsNotAVisit(t *testing.T) {
 	f := newLiveListFixture(t)
-	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), f.e.WS), principal.Principal{
+	agent := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", UserID: f.e.Rep1, TeamIDs: []ids.UUID{f.e.Team1},
 		Permissions: liveListReaderPerms(),
 	})

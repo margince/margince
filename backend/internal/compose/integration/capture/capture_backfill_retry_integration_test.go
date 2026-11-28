@@ -81,7 +81,7 @@ func startFlakyBackfill(t *testing.T, e *integration.SearchEnv, faults []error) 
 func TestBackfillSurvivesATransientProviderFault(t *testing.T) {
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{&connector.RateLimitedError{}})
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 
 	done, completed, retryAfter, err := registry.RunBackfillStep(wsCtx, runID)
 	if err == nil {
@@ -159,7 +159,7 @@ func TestABackfillPageWhoseJobContextDiedNeverWedgesTheRun(t *testing.T) {
 	// Each step runs on a fresh job context the page then kills, exactly as a
 	// River delivery whose timeout fires mid-page does.
 	step := func() (bool, time.Duration, error) {
-		jobCtx, killJob := context.WithCancel(principal.WithWorkspaceID(context.Background(), e.WS))
+		jobCtx, killJob := context.WithCancel(context.Background())
 		defer killJob()
 		fake.killJob = killJob
 		done, _, retryAfter, err := registry.RunBackfillStep(jobCtx, run.ID)
@@ -212,7 +212,7 @@ func TestABackfillPageWhoseJobContextDiedNeverWedgesTheRun(t *testing.T) {
 func TestBackfillEndsOnAFaultNoRetryCanFix(t *testing.T) {
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{connector.ErrAuthRejected})
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 
 	done, completed, retryAfter, err := registry.RunBackfillStep(wsCtx, runID)
 	if err == nil || completed {
@@ -261,7 +261,7 @@ func TestBackfillPageWithARefusedMessageCommitsAndMovesOn(t *testing.T) {
 		t.Fatalf("StartBackfill: %v", err)
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if done, _, _, err := registry.RunBackfillStep(wsCtx, run.ID); err != nil || done {
 		t.Fatalf("the page: done=%v err=%v, want a committed page of a live run", done, err)
 	}

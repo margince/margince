@@ -31,7 +31,7 @@ var companyCRUD = principal.ObjectGrant{Create: true, Read: true, Update: true, 
 // one row scope. The vocabulary grant rides along because the role picker
 // reads under it; nothing here exercises it.
 func (e *roleEnv) actingAs(user ids.UUID, grant principal.ObjectGrant, scope principal.RowScope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

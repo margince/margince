@@ -23,7 +23,7 @@ import (
 // member is a rep who may read, edit and archive every deal and project.
 func (e *flushEnv) member() context.Context {
 	grant := principal.ObjectGrant{Read: true, Update: true, Delete: true}
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
 		Permissions: principal.Permissions{

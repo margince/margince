@@ -21,6 +21,15 @@ import (
 // AgentAllowanceSource answers the meter with the allowances an admin saved.
 type AgentAllowanceSource struct{ pool *pgxpool.Pool }
 
+// AgentVolumeCompany names the installation's company for the volume meter's
+// counter keys. The meter fails closed for an agent while none is live.
+func AgentVolumeCompany(pool *pgxpool.Pool) agentvolume.Company {
+	return func(ctx context.Context) (ids.UUID, error) {
+		company, err := database.ProvenWorkspace(ctx, pool)
+		return company.UUID, err
+	}
+}
+
 // NewAgentAllowanceSource is the policy source cmd installs on the meter it
 // builds, so the admin's allowances bind every agent call.
 func NewAgentAllowanceSource(pool *pgxpool.Pool) AgentAllowanceSource {
@@ -50,7 +59,7 @@ type connectionReleaser struct {
 }
 
 func (r connectionReleaser) Release(
-	ctx context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64, length time.Duration,
+	ctx context.Context, passport ids.UUID, c agentvolume.Counter, bucket int64, length time.Duration,
 ) (bool, error) {
 	var connection ids.UUID
 	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
@@ -63,5 +72,5 @@ func (r connectionReleaser) Release(
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return false, fmt.Errorf("compose: finding the connection of passport %s: %w", passport, err)
 	}
-	return r.meter.Release(ctx, ws, agentvolume.SubjectOf(passport, connection), c, bucket, length)
+	return r.meter.Release(ctx, agentvolume.SubjectOf(passport, connection), c, bucket, length)
 }

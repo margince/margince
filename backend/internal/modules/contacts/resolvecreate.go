@@ -167,7 +167,10 @@ func createContact(ctx context.Context, tx pgx.Tx, s *Store, match ContactResolu
 	if err := checkSalutation(spec.Salutation); err != nil {
 		return ids.ContactID{}, err
 	}
-	wsID := workspaceID(ctx)
+	wsID, err := workspaceID(ctx, tx)
+	if err != nil {
+		return ids.ContactID{}, err
+	}
 	id := ids.New[ids.ContactKind]()
 	addr := addressColumns(spec.Address)
 	if err := storekit.RefuseUnknownSeat(ctx, tx, spec.Author); err != nil {

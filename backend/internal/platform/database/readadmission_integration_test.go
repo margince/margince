@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func readAdmissionPool(t *testing.T, connections int32) *pgxpool.Pool {
@@ -37,7 +36,7 @@ func readAdmissionPool(t *testing.T, connections int32) *pgxpool.Pool {
 func TestSnapshotsAndBoundedReadsShareCapacityBeforeBorrowing(t *testing.T) {
 	pool := readAdmissionPool(t, 4)
 	workspace := ids.NewV7()
-	ctx := principal.WithWorkspaceID(context.Background(), workspace)
+	ctx := context.Background()
 	entered := make(chan struct{}, 2)
 	release := make(chan struct{})
 	finished := make(chan error, 2)

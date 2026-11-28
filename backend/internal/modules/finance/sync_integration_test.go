@@ -149,7 +149,7 @@ func setupFinance(t *testing.T) *financeEnv {
 	// The compose integration lane proves the wired rate sheet and conversion.
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), euroOnlyRates())
 
-	opCtx := principal.WithWorkspaceID(context.Background(), e.ws)
+	opCtx := context.Background()
 	opCtx = principal.WithCorrelationID(opCtx, ids.NewV7())
 	// The sweep's own principal: a connector, on a schedule, with no human
 	// behind it — which is what makes every mirrored row say so.

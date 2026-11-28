@@ -35,7 +35,7 @@ const (
 
 // mailboxOwnerCtx is the connector principal that syncs the seat's mailbox.
 func mailboxOwnerCtx(e *integration.Env, owner ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",
@@ -53,7 +53,7 @@ func mailboxOwnerCtx(e *integration.Env, owner ids.UUID) context.Context {
 
 // seatCtx is the signed-in member: a full seat acting for themselves.
 func seatCtx(e *integration.Env, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
@@ -133,7 +133,7 @@ func unroutedCounts(mail capturemod.UnroutedMail) map[string]int {
 
 func sweepStrandedMail(t *testing.T, e *integration.Env) {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "link-reconcile")
+	ctx := principal.SystemActing(context.Background(), "link-reconcile")
 	if _, err := capturemod.NewPendingStore(compose.InstallationDB(e.Pool)).AdoptStrandedMail(ctx, activities.RecomputeAudienceTx, 200); err != nil {
 		t.Fatalf("stranded-mail sweep: %v", err)
 	}

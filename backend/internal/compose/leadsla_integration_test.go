@@ -65,7 +65,7 @@ func breachedLeadEvent(t *testing.T, e *integration.Env, owner *pgx.Conn) (ids.U
 		Entity:  datasource.EntityRef{Type: datasource.EntityLead, ID: lead},
 		Payload: payload,
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 	return lead, ev, deadline, ctx

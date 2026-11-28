@@ -85,7 +85,7 @@ func (w *weeklyGenerateWorker) measureOneWorkspace(ctx context.Context, workspac
 	if clock == nil {
 		clock = time.Now
 	}
-	return w.measureWorkspace(principal.WithWorkspaceID(ctx, workspace), workspace, clock().UTC())
+	return w.measureWorkspace(ctx, workspace, clock().UTC())
 }
 
 // measureWorkspace writes a review for every rep whose local Monday has
@@ -167,7 +167,7 @@ func (w *weeklyGenerateWorker) measureWorkspace(
 func (w *weeklyGenerateWorker) measureFor(
 	ctx context.Context, wsID, userID ids.UUID, now time.Time,
 ) (mailableReview, error) {
-	repPrincipal, err := authz.MemberPrincipal(ctx, w.users, wsID, userID)
+	repPrincipal, err := authz.MemberPrincipal(ctx, w.users, userID)
 	if err != nil {
 		return mailableReview{}, fmt.Errorf("resolving the rep's authority: %w", err)
 	}

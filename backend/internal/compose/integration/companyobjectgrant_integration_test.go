@@ -140,7 +140,7 @@ func signalActorWithout(e *SearchEnv, user ids.UUID, without ...string) context.
 		}
 		grants[o] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

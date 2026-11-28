@@ -29,6 +29,9 @@ var ErrNotBootstrapped = errors.New("database: installation not bootstrapped; no
 // every handle's Workspace. Nothing caches its answer, so an archived or
 // replaced company is seen on the next call.
 func InstallationWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, error) {
+	if pool == nil {
+		return ids.UUID{}, fmt.Errorf("%w: no pool was injected", ErrNoWorkspace)
+	}
 	// pool-exempt: installation lookup. This reads the live workspace before any transaction exists.
 	return installationFrom(ctx, pool)
 }
@@ -37,6 +40,36 @@ func InstallationWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, e
 // so the answer and the statements that follow it see one snapshot.
 func InstallationWorkspaceTx(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
 	return installationFrom(ctx, tx)
+}
+
+// ProvenWorkspace names the installation's one live company for a caller that
+// holds a pool and no handle. It answers from the proof every handle on pool
+// shares, so a read path that opens no transaction pays one lookup per
+// InstallationRecheck. It fails when no company is live, or more than one is.
+func ProvenWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.WorkspaceID, error) {
+	if pool == nil {
+		return ids.WorkspaceID{}, fmt.Errorf("%w: no pool was injected", ErrNoWorkspace)
+	}
+	return ForInstallation(pool).Workspace(ctx)
+}
+
+// installationWorkspaceMemo is the transaction-memo key of the live company.
+// Every reader in one transaction shares it.
+const installationWorkspaceMemo = "database:installation-workspace"
+
+// WorkspaceTx names the installation's one live company inside tx. A store
+// calls it for an audit entity id, a storage key or a job envelope.
+// A transaction on an installation handle has already answered, so the call
+// costs nothing there. Any other transaction looks it up once. It fails with
+// ErrNotBootstrapped when no company is live.
+func WorkspaceTx(ctx context.Context, tx pgx.Tx) (ids.WorkspaceID, error) {
+	live, err := Remember(tx, installationWorkspaceMemo, func() (ids.UUID, error) {
+		return InstallationWorkspaceTx(ctx, tx)
+	})
+	if err != nil {
+		return ids.WorkspaceID{}, err
+	}
+	return ids.From[ids.WorkspaceKind](live), nil
 }
 
 // LiveWorkspace returns the installation's one live workspace, or ok=false

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Throttle brakes the public intake, each ceiling escalating from a 429 with
@@ -216,11 +215,8 @@ const (
 
 // IntakeState answers formKey's state, the widest ceiling first: a block of the
 // whole installation or workspace pauses every form.
-func (t *Throttle) IntakeState(ctx context.Context, formKey string) IntakeState {
-	workspace := ""
-	if ws, ok := principal.WorkspaceID(ctx); ok {
-		workspace = ws.String()
-	}
+// workspace is the company's key, or empty while none can be named.
+func (t *Throttle) IntakeState(workspace, formKey string) IntakeState {
 	for _, level := range []struct {
 		esc *ratelimit.Escalator
 		key string

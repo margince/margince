@@ -147,7 +147,7 @@ func stageScopeMatches(ctx context.Context, ex Executors, ev workflow.Event) (bo
 	if ex.Provider == nil {
 		return false, errors.New("automation: stage lookup is not configured")
 	}
-	reader, err := ownerContext(ctx, ex.Authority, ev.WorkspaceID, ev.OwnerID)
+	reader, err := ownerContext(ctx, ex.Authority, ev.OwnerID)
 	if err != nil {
 		return false, err
 	}

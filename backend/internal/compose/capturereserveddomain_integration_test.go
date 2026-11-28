@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAReservedDomainSenderRaisesNoContactProposal(t *testing.T) {
@@ -65,7 +64,7 @@ func reviewQuestionThroughRealCapture(
 	}
 	brain := &scriptedVerdictBrain{confidence: map[string]float64{disposition.String(): 0.2}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, cfg, slog.Default())
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := engine.RunWorkspace(ctx, 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}

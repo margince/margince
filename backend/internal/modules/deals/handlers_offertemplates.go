@@ -160,7 +160,12 @@ func (h Handlers) RenderOffer(w http.ResponseWriter, r *http.Request, id crmcont
 	if ingredients.Offer.Version != nil {
 		preparedVersion = *ingredients.Offer.Version
 	}
-	key := fmt.Sprintf("offers/%s/%s/%d/%s.pdf", storekit.MustWorkspace(r.Context()), ids.UUID(id), revision, ids.NewV7())
+	installation, err := h.store.db.Workspace(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	key := fmt.Sprintf("offers/%s/%s/%d/%s.pdf", installation.UUID, ids.UUID(id), revision, ids.NewV7())
 	// Declared before the bytes exist. The reclaim below covers the refusals the
 	// store raises itself; this covers the ones it cannot classify, where the
 	// comment there is explicit that an orphan is the safer answer than deleting.

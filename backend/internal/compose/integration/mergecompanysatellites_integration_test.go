@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // seedMergePair creates two companies and returns their ids, source first.
@@ -70,7 +69,7 @@ func TestMergeCompany_enrichmentFollowsTheSurvivor(t *testing.T) {
 		t.Errorf("survivor holds %d facts, want 2 — the source's own plus the one it already had under the shared key", n)
 	}
 	var wording string
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT value FROM company_fact WHERE company_id = $1 AND value_key = 'shared key'`, tgt).Scan(&wording)

@@ -59,7 +59,7 @@ func refusingCatalogService() *Service {
 // as binds a principal holding exactly the company grant named.
 func as(read bool) context.Context {
 	user := ids.NewV7()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

@@ -113,7 +113,7 @@ func (e *concurrentIngestEnv) seedBuiltProfile(t *testing.T) (context.Context, i
 		},
 	}
 	callCtx := principal.WithCorrelationID(
-		principal.WithActor(principal.WithWorkspaceID(ctx, workspace), actor),
+		principal.WithActor(withFixtureWorkspace(ctx, workspace), actor),
 		ids.NewV7(),
 	)
 	return callCtx, profile

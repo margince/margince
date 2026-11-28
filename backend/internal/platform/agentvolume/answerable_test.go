@@ -13,7 +13,7 @@ import (
 // surface refuses while the pod reports healthy.
 func TestAMeterWithNoStoreReportsItselfUnanswerable(t *testing.T) {
 	t.Parallel()
-	reach := New(nil, Limits{}, time.Minute).Answerable()
+	reach := New(nil, Limits{}, time.Minute).WithCompany(testCompany).Answerable()
 	if !reach.Bound {
 		t.Error("a meter composed to bound agent reads reports no bound; an operator would read that as a role that never claimed to")
 	}

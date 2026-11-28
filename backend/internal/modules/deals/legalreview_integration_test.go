@@ -59,6 +59,13 @@ func (e *reviewEnv) OpenableDocuments(_ context.Context, attachmentIDs []ids.UUI
 func setupReviewEnv(t *testing.T) *reviewEnv {
 	t.Helper()
 	e := &reviewEnv{configEnv: setupConfigEnv(t), reviewer: ids.NewV7()}
+	// The settings write names the installation's one live company, so this
+	// suite's workspace is the only one live in the shared test database.
+	if _, err := e.owner.Exec(t.Context(),
+		`UPDATE workspace SET archived_at = now() WHERE id <> $1 AND archived_at IS NULL`, e.ws); err != nil {
+		t.Fatal(err)
+	}
+	database.ForgetInstallationProofs()
 	if _, err := e.owner.Exec(t.Context(),
 		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Lena Legal')`,
 		e.reviewer, "legal-"+e.reviewer.String()+"@config.test"); err != nil {
@@ -89,7 +96,7 @@ func (e *reviewEnv) asReviewer(grant principal.ObjectGrant) context.Context {
 }
 
 func humanWith(ws, user ids.UUID, objects map[string]principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
@@ -251,7 +258,7 @@ func TestOnlyAnotherSeatHoldingTheReviewGrantAnswers(t *testing.T) {
 		t.Fatalf("an update-only seat answered %v, want 403", err)
 	}
 
-	connector := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
+	connector := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:test", UserID: e.reviewer,
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{legalReviewEntity: decide}},
 	})

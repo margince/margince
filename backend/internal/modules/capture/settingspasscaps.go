@@ -82,7 +82,11 @@ var OwedClassifyPassCap = config.DefineStored(config.Spec[int]{
 // transaction of the write that changed it.
 func emitSettingChanged(key string) func(context.Context, pgx.Tx, ids.UUID) error {
 	return func(ctx context.Context, tx pgx.Tx, auditID ids.UUID) error {
-		return storekit.EmitEvent(ctx, tx, auditID, storekit.MustWorkspace(ctx),
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return storekit.EmitEvent(ctx, tx, auditID, installation,
 			crmcontracts.InternalEventCaptureSettingsUpdated{ChangedKeys: []string{key}})
 	}
 }

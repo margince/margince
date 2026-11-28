@@ -18,11 +18,11 @@ import (
 // successes — a release that silently did nothing would read, at the approval
 // screen, exactly like one that worked.
 func TestAHardStopCannotBeReleasedFromInsideItsOwnWindow(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
-	ws, passport := ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.PassportKind]().UUID
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
+	passport := ids.New[ids.PassportKind]().UUID
 
 	for _, c := range []Counter{Egress, Calls, Cost} {
-		applied, err := releaseIn(t, meter, ws, passport, c, meter.Bucket(t.Context()))
+		applied, err := releaseIn(t, meter, passport, c, meter.Bucket(t.Context()))
 		if err == nil {
 			t.Errorf("releasing %s was accepted; it is a hard stop the window alone ends", c)
 		}
@@ -38,11 +38,11 @@ func TestAHardStopCannotBeReleasedFromInsideItsOwnWindow(t *testing.T) {
 // it says so rather than claiming an effect it did not have.
 func TestAReleaseAnsweredAfterItsWindowRolledAppliesToNothingAndSaysSo(t *testing.T) {
 	now := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(nil, Limits{}, time.Hour, func() time.Time { return now })
+	meter := NewWithClock(nil, Limits{}, time.Hour, func() time.Time { return now }).WithCompany(testCompany)
 	staged := meter.Bucket(t.Context())
 	now = now.Add(2 * time.Hour)
 
-	applied, err := releaseIn(t, meter, ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.PassportKind]().UUID, Writes, staged)
+	applied, err := releaseIn(t, meter, ids.New[ids.PassportKind]().UUID, Writes, staged)
 	if err != nil {
 		t.Fatalf("releasing a window that has already rolled is not an error: %v", err)
 	}
@@ -57,9 +57,9 @@ func TestAReleaseAnsweredAfterItsWindowRolledAppliesToNothingAndSaysSo(t *testin
 // value a caller can supply — and honouring one would pre-authorize a window
 // nobody has looked at.
 func TestAReleaseCannotPreAuthorizeAWindowThatHasNotStarted(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 
-	applied, err := releaseIn(t, meter, ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.PassportKind]().UUID, Writes, meter.Bucket(t.Context())+1)
+	applied, err := releaseIn(t, meter, ids.New[ids.PassportKind]().UUID, Writes, meter.Bucket(t.Context())+1)
 
 	if err == nil {
 		t.Fatal("a release into a future window was accepted; it pre-authorizes a window nobody has seen")
@@ -75,18 +75,19 @@ func TestAReleaseCannotPreAuthorizeAWindowThatHasNotStarted(t *testing.T) {
 // would widen a window no agent owns, and the agent that was refused would stay
 // refused with an approval that reads as granted.
 func TestAReleaseWithNoSubjectIsAWiringFaultRatherThanAQuietNoOp(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
-	ws, passport := ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.PassportKind]().UUID
+	passport := ids.New[ids.PassportKind]().UUID
 
 	for _, c := range []struct {
-		name         string
-		ws, passport ids.UUID
+		name     string
+		meter    *Meter
+		passport ids.UUID
+		want     string
 	}{
-		{"no workspace", ids.UUID{}, passport},
-		{"no passport", ws, ids.UUID{}},
+		{"no company", New(nil, Limits{}, DefaultWindow), passport, "needs a live company"},
+		{"no passport", New(nil, Limits{}, DefaultWindow).WithCompany(testCompany), ids.UUID{}, "needs a passport or connection"},
 	} {
-		_, err := releaseIn(t, meter, c.ws, c.passport, Writes, meter.Bucket(t.Context()))
-		if err == nil || !strings.Contains(err.Error(), "needs both a workspace and a passport") {
+		_, err := releaseIn(t, c.meter, c.passport, Writes, c.meter.Bucket(t.Context()))
+		if err == nil || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("%s: released anyway (%v)", c.name, err)
 		}
 	}
@@ -97,13 +98,13 @@ func TestAReleaseWithNoSubjectIsAWiringFaultRatherThanAQuietNoOp(t *testing.T) {
 // release as applied, because the decision path prints that answer to the human
 // who just pressed approve.
 func TestAReleaseReportsItselfUnappliedWhenThereIsNoCounterToWiden(t *testing.T) {
-	ws, passport := ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.PassportKind]().UUID
+	passport := ids.New[ids.PassportKind]().UUID
 
 	for name, meter := range map[string]*Meter{
-		"declared no bound":        Unmetered(),
-		"cannot reach its counter": New(nil, Limits{}, DefaultWindow),
+		"declared no bound":        Unmetered().WithCompany(testCompany),
+		"cannot reach its counter": New(nil, Limits{}, DefaultWindow).WithCompany(testCompany),
 	} {
-		applied, err := releaseIn(t, meter, ws, passport, Writes, meter.Bucket(t.Context()))
+		applied, err := releaseIn(t, meter, passport, Writes, meter.Bucket(t.Context()))
 		if err != nil {
 			t.Errorf("%s: releasing failed rather than reporting no effect: %v", name, err)
 		}
@@ -118,7 +119,7 @@ func TestAReleaseReportsItselfUnappliedWhenThereIsNoCounterToWiden(t *testing.T)
 // continuation would make the second confirmation the last one anyone is ever
 // asked for.
 func TestOneReleaseGrantsOneMoreAllowanceAndNotAnUnboundedOne(t *testing.T) {
-	meter := New(nil, Limits{Writes: 100}, DefaultWindow)
+	meter := New(nil, Limits{Writes: 100}, DefaultWindow).WithCompany(testCompany)
 
 	for released, want := range map[int]int{0: 100, 1: 200, 3: 400} {
 		if got := meter.window(t.Context()).effectiveLimit(Writes, released); got != want {
@@ -131,9 +132,9 @@ func TestOneReleaseGrantsOneMoreAllowanceAndNotAnUnboundedOne(t *testing.T) {
 }
 
 // releaseIn releases a user-minted passport's counter in the length in force.
-func releaseIn(t *testing.T, m *Meter, ws, passport ids.UUID, c Counter, bucket int64) (bool, error) {
+func releaseIn(t *testing.T, m *Meter, passport ids.UUID, c Counter, bucket int64) (bool, error) {
 	t.Helper()
-	return m.Release(t.Context(), ws, SubjectOf(passport, ids.UUID{}), c, bucket, m.window(t.Context()).length)
+	return m.Release(t.Context(), SubjectOf(passport, ids.UUID{}), c, bucket, m.window(t.Context()).length)
 }
 
 // A release staged under one window length names a bucket of that length. After
@@ -142,10 +143,10 @@ func releaseIn(t *testing.T, m *Meter, ws, passport ids.UUID, c Counter, bucket 
 // ahead, which the length in force would refuse as a window not yet started.
 // Only the length check answers "nothing" here.
 func TestAReleaseStagedUnderAnotherLengthAppliesToNothing(t *testing.T) {
-	meter := NewWithClock(nil, Limits{}, DefaultWindow, func() time.Time { return time.Date(2026, 3, 4, 12, 0, 0, 0, time.UTC) })
-	ws, subject := ids.New[ids.WorkspaceKind]().UUID, SubjectOf(ids.New[ids.PassportKind]().UUID, ids.UUID{})
+	meter := NewWithClock(nil, Limits{}, DefaultWindow, func() time.Time { return time.Date(2026, 3, 4, 12, 0, 0, 0, time.UTC) }).WithCompany(testCompany)
+	subject := SubjectOf(ids.New[ids.PassportKind]().UUID, ids.UUID{})
 
-	applied, err := meter.Release(t.Context(), ws, subject, Writes, meter.Bucket(t.Context())+1, 12*time.Hour)
+	applied, err := meter.Release(t.Context(), subject, Writes, meter.Bucket(t.Context())+1, 12*time.Hour)
 
 	if err != nil || applied {
 		t.Errorf("a release under a 12h length in a 24h window → applied=%v err=%v, want nothing", applied, err)

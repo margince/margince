@@ -113,7 +113,7 @@ func TestAnExpiredEditAccessRequestTellsTheColleagueWhoAsked(t *testing.T) {
 	request := ask(t, e, "project", project)
 	e.WsExec(t, `UPDATE approval SET expires_at = now() - interval '1 minute' WHERE id = $1`, request.ApprovalID)
 
-	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), approvals.ExpiryActor)
+	sweep := principal.SystemActing(context.Background(), approvals.ExpiryActor)
 	if _, err := editaccess.RegisterExpiry(compose.NewApprovalsService(e.DB())).ExpireDue(sweep); err != nil {
 		t.Fatalf("sweeping: %v", err)
 	}

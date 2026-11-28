@@ -37,7 +37,7 @@ func searchReader(objects ...string) context.Context {
 	for _, object := range objects {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+	return principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:search",
 		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},
 		Scopes:      principal.NewScopeSet(principal.ScopeRead),

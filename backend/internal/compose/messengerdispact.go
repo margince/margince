@@ -19,7 +19,7 @@ import (
 
 // ConnectDispactParticipant verifies personal identity before sealing a Dispact token.
 func (s Server) ConnectDispactParticipant(w http.ResponseWriter, r *http.Request) {
-	if _, _, ok := signedInHuman(w, r); !ok {
+	if _, ok := signedInHuman(w, r); !ok {
 		return
 	}
 	if !auth.SeatAdmitsWrites(r.Context()) {

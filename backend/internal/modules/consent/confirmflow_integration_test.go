@@ -37,7 +37,7 @@ import (
 func getConfirmPage(t *testing.T, e *channelConsentEnv, token string) map[string]any {
 	t.Helper()
 	h := NewHandlers(database.BindTo(e.store.db.Pool(), ids.From[ids.WorkspaceKind](e.ws)))
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:public_confirm",
@@ -201,7 +201,7 @@ func TestAConfirmedGrantRecordsWhereTheAnswerCameFrom(t *testing.T) {
 	link := issueLink(t, e)
 
 	h := NewHandlers(database.BindTo(e.store.db.Pool(), ids.From[ids.WorkspaceKind](e.ws)))
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:public_confirm"})
 	body := `{"marketing_choice":"granted","marketing_wording":"News from time to time, roughly once a month."}`

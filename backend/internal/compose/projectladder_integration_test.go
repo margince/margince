@@ -66,7 +66,7 @@ func seedLadderAccount(t *testing.T, e *integration.Env) ladderAccount {
 	}); err != nil {
 		t.Fatalf("seeding the employment: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",

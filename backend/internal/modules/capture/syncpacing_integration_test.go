@@ -154,7 +154,7 @@ func setMailSyncSeconds(ctx context.Context, t *testing.T, ws ids.WorkspaceID, s
 	_, pool := setupCaptureDB(t)
 	store, _ := captureSettingsStore(t, pool)
 	save := func(ctx context.Context, value int) error {
-		admin := principal.WithWorkspaceID(ctx, ws.UUID)
+		admin := ctx
 		admin = principal.WithCorrelationID(admin, ids.NewV7())
 		admin = principal.WithActor(admin, principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),

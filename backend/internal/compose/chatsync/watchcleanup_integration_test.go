@@ -27,7 +27,7 @@ func TestDisconnectedWatchCleanupRetainsLostResponseLeaseAndDestroysExpiredSecre
 	}
 	e.exec(t, `UPDATE channel_connection SET provider='teams',channel_id='tenant/team',address=NULL WHERE id=$1`, connection)
 	e.exec(t, `UPDATE chat_link SET provider='teams',channel_slug='team/channel' WHERE id=$1`, e.link)
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), chatLinksPrincipal)
+	ctx := principal.WithActor(context.Background(), chatLinksPrincipal)
 	vault := keyvault.NewMemory()
 	e.store.WithVault(func() keyvault.Vault { return vault })
 	links, err := e.store.PullLinks(ctx, connection)

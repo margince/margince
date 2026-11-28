@@ -36,7 +36,7 @@ var adminGrant = principal.ObjectGrant{Create: true, Read: true, Update: true}
 // to whoever added it, and a fabricated author would fail the foreign key that
 // keeps that attribution honest.
 func listAdminCtx(ws, user ids.UUID, grant principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

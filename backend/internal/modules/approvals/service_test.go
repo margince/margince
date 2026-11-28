@@ -512,42 +512,6 @@ func TestKindHasDecisionGrantsMatchesTheMap(t *testing.T) {
 	}
 }
 
-// A rate-refresh proposal targets the workspace itself and is decidable ONLY
-// in the workspace it names: a foreign or absent workspace context must not see
-// or decide it. This is the tenant-isolation floor for the fx_rate /
-// ai_model_rate branch of targetVisible, which touches no tx (the nil tx here
-// is never dereferenced) — the sheet's read grant is held throughout, so the
-// workspace comparison is what each case measures.
-func TestRateProposalDecidableOnlyForOwningWorkspace(t *testing.T) {
-	ws := ids.NewV7()
-	other := ids.NewV7()
-	for _, targetType := range []string{"fx_rate", "ai_model_rate"} {
-		tt := targetType
-		a := row{TargetType: &tt, TargetID: &ws}
-		reader := humanCtx(grants(map[string]principal.ObjectGrant{tt: {Read: true}}))
-		cases := []struct {
-			name string
-			ctx  context.Context
-			want bool
-		}{
-			{"owning workspace", principal.WithWorkspaceID(reader, ws), true},
-			{"foreign workspace", principal.WithWorkspaceID(reader, other), false},
-			{"no workspace context", reader, false},
-		}
-		for _, c := range cases {
-			t.Run(targetType+"/"+c.name, func(t *testing.T) {
-				got, err := targetVisible(c.ctx, nil, a.TargetType, a.TargetID)
-				if err != nil {
-					t.Fatalf("targetVisible: %v", err)
-				}
-				if got != c.want {
-					t.Errorf("decidable = %v, want %v", got, c.want)
-				}
-			})
-		}
-	}
-}
-
 // The four shapes a staged target can carry, and the reason each answers as it
 // does. This is the rule the inbox, the single read and the decision all run on
 // (decidable → targetVisible), so a shape answered wrong is either an authority

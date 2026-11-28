@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -34,11 +33,7 @@ func TestAHandlingCutoverRefusesAnIntakeWithoutAcknowledgingOrLosingIt(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	workspace, err := e.DB().Workspace(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := principal.WithWorkspaceID(t.Context(), workspace.UUID)
+	ctx := t.Context()
 	body := url.Values{"email": {"waiting@visitor.example"}, "message": {"Please call me"}, "_mrg_id": {"stable-request-01"}}
 	held, err := e.DB().WithWorkLease(ctx, provenance.WebFormSource, id, slog.New(slog.DiscardHandler), func(context.Context) error {
 		answer := browserPost(t, e, form.FormKey, body, siteOrigin)
@@ -77,11 +72,7 @@ func TestPostsSentTogetherAreAllAccepted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	workspace, err := e.DB().Workspace(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := principal.WithWorkspaceID(t.Context(), workspace.UUID)
+	ctx := t.Context()
 	emails := []string{"together-1@visitor.example", "together-2@visitor.example", "together-3@visitor.example"}
 	posts := make(chan postResult, len(emails))
 	held, err := e.DB().WithWorkLease(ctx, provenance.WebFormSource, id, slog.New(slog.DiscardHandler), func(context.Context) error {
@@ -196,11 +187,7 @@ func TestLegacyLeadHandlersWaitForTheAcceptedWebsiteNote(t *testing.T) {
 	if err := json.Unmarshal(raw, &event); err != nil {
 		t.Fatal(err)
 	}
-	workspace, err := e.DB().Workspace(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := principal.WithWorkspaceID(t.Context(), workspace.UUID)
+	ctx := t.Context()
 	id, err := ids.Parse(form.ID)
 	if err != nil {
 		t.Fatal(err)

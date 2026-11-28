@@ -458,11 +458,10 @@ func applyAddListMember(ctx context.Context, ex Executors, action workflow.Actio
 		return action, fmt.Errorf("automation: reading the Shortlist to add to: %w", err)
 	}
 	actor, ok := principal.Actor(ctx)
-	workspace, inWorkspace := principal.WorkspaceID(ctx)
-	if !ok || !inWorkspace || actor.OnBehalfOf.IsZero() {
+	if !ok || actor.OnBehalfOf.IsZero() {
 		return action, errors.New("automation: a Shortlist is changed only on a rule owner's behalf")
 	}
-	admit, err := ownerContext(ctx, ex.Authority, workspace, actor.OnBehalfOf)
+	admit, err := ownerContext(ctx, ex.Authority, actor.OnBehalfOf)
 	if err != nil {
 		return action, err
 	}

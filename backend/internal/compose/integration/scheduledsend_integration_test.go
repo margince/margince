@@ -98,7 +98,7 @@ func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) 
 // principal that walks past the gates they are supposed to exercise.
 func (p *preflightEnv) privacyAdmin(t *testing.T) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), p.workspaceID(t))
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + p.user,

@@ -284,7 +284,7 @@ func TestTheStoreRefusesABindingTheFileLoaderWouldHaveRefused(t *testing.T) {
 // adminRoutingCtx is an admin holding the ai_routing grant the seeded role
 // carries — read and update, no create or delete, which is what a setting has.
 func (e *SearchEnv) adminRoutingCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),

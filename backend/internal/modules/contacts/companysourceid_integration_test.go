@@ -103,7 +103,7 @@ func TestACreateOverAHiddenHoldersOutsideIDAnswersTheSameConflict(t *testing.T) 
 		t.Fatalf("make the company capture-private: %v", err)
 	}
 	strangerID := ids.NewV7()
-	stranger := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
+	stranger := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + strangerID.String(), UserID: strangerID,
 		Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"company": {Create: true, Read: true}},

@@ -23,7 +23,7 @@ import (
 
 // diagnosticsReader is a human allowed to read the call trace in one workspace.
 func diagnosticsReader(ws ids.UUID) context.Context {
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), ws), principal.Principal{
+	return principal.WithActor(withTestCompany(context.Background()), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:decision-trace-test",
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"fixture"},

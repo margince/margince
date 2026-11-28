@@ -111,7 +111,7 @@ func TestDecisionSummaryRefusesAReaderWithoutTheDiagnosticsGrant(t *testing.T) {
 	ws, ctx := env.seedWorkspace(context.Background(), t)
 	recordDecisionOutcomes(ctx, t, NewCallMeter(env.dbFor(ws)))
 
-	stranger := principal.WithActor(principal.WithWorkspaceID(context.Background(), ws), principal.Principal{
+	stranger := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:no-diagnostics",
 		Permissions: principal.Permissions{RoleKeys: []string{"fixture"}},
 	})

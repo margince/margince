@@ -164,7 +164,7 @@ func TestABouncedMessageIsNotReportedAsSent(t *testing.T) {
 	}
 
 	reporter := principal.WithCorrelationID(
-		principal.WithActor(principal.WithWorkspaceID(context.Background(), d.WS),
+		principal.WithActor(context.Background(),
 			principal.Principal{
 				Type: principal.PrincipalConnector, ID: "connector:gmail",
 				UserID: d.Rep1, OnBehalfOf: d.Rep1,

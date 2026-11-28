@@ -117,7 +117,7 @@ func TestBackfillProgressIsVisibleWhileThePageRuns(t *testing.T) {
 		seen = append(seen, *run)
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if _, _, _, err := registry.RunBackfillStep(wsCtx, runID); err != nil {
 		t.Fatalf("page 1: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestBackfillProgressIsPacedRatherThanWrittenPerMessage(t *testing.T) {
 		}
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if _, _, _, err := registry.RunBackfillStep(wsCtx, runID); err != nil {
 		t.Fatalf("page 1: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestBackfillProgressDiesWithTheFailedPage(t *testing.T) {
 	e := integration.SetupSearch(t)
 	prov := &reportingConnector{pagedConnector: &pagedConnector{messages: 20, pageSize: 10}, failAfter: 4}
 	registry, grantCtx, runID := startReportingBackfill(t, e, prov, 0)
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 
 	done, _, retryAfter, err := registry.RunBackfillStep(wsCtx, runID)
 	if err == nil {
@@ -245,7 +245,7 @@ func TestBackfillProgressIsFencedByTheConnectionGeneration(t *testing.T) {
 		}
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if _, _, _, err := registry.RunBackfillStep(wsCtx, runID); err != nil {
 		t.Fatalf("the superseded page's step: %v", err)
 	}
@@ -281,7 +281,7 @@ func TestCancelClearsTheLiveTallyAndTheRunningPageCannotWriteItBack(t *testing.T
 		}
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	done, completed, _, err := registry.RunBackfillStep(wsCtx, runID)
 	if err != nil {
 		t.Fatalf("the cancelled page's step: %v", err)

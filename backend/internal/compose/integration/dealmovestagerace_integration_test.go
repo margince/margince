@@ -163,7 +163,7 @@ func admitOpenToOpenMove(t *testing.T, e *Env) context.Context {
 			SourceStageSemantic: "open", TargetStageSemantic: "open", ObservedVersion: &version,
 		}, nil
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	// An agent principal, because the tier model governs one.
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -192,15 +192,15 @@ func admitOpenToOpenMove(t *testing.T, e *Env) context.Context {
 // the right call rather than a shortcut.
 type fullAuthority struct{}
 
-func (fullAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (fullAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: AdminPerms}, nil
 }
 
-func (fullAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (fullAuthority) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
-func (fullAuthority) AdmittedAuthority(context.Context, ids.UUID, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func (fullAuthority) AdmittedAuthority(context.Context, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authz.RBAC{Permissions: AdminPerms}, principal.SeatFull, nil
 }
 

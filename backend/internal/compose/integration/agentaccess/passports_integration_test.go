@@ -102,7 +102,7 @@ func (e *passportsEnv) identityFor(user ids.UUID, roles []string) identity.Ident
 }
 
 func (e *passportsEnv) ctx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:passports"})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
@@ -200,7 +200,7 @@ func TestRevocationReachesARunAlreadyInFlight(t *testing.T) {
 	passport := issued.ID.UUID
 
 	// The run starts. This is what every tool call asks from here on.
-	if _, _, err := e.svc.AdmittedAuthority(ctx, e.WS, e.alice, passport); err != nil {
+	if _, _, err := e.svc.AdmittedAuthority(ctx, e.alice, passport); err != nil {
 		t.Fatalf("a live passport was refused at admission: %v", err)
 	}
 
@@ -210,14 +210,14 @@ func TestRevocationReachesARunAlreadyInFlight(t *testing.T) {
 	}
 
 	// The next tool call.
-	if _, _, err := e.svc.AdmittedAuthority(ctx, e.WS, e.alice, passport); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, _, err := e.svc.AdmittedAuthority(ctx, e.alice, passport); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("admission after revocation answered %v, want not-found — the killed credential is still executing tools", err)
 	}
 	// And it is the PASSPORT that stopped it, not the human. Alice is
 	// untouched: her seat and her grants still resolve, so a check that had
 	// merely started refusing everything would fail here instead of passing
 	// for the wrong reason.
-	if _, err := e.svc.EffectiveRBAC(ctx, e.WS, e.alice); err != nil {
+	if _, err := e.svc.EffectiveRBAC(ctx, e.alice); err != nil {
 		t.Errorf("the granting human stopped resolving too (%v) — this case would pass whether or not revocation reached the passport", err)
 	}
 }
@@ -240,7 +240,7 @@ func TestAPassportRegrantedElsewhereStopsActingForTheHumanItLeft(t *testing.T) {
 	}
 	passport := issued.ID.UUID
 	// A run is in flight, carrying alice as the human it acts for.
-	if _, _, err := e.svc.AdmittedAuthority(ctx, e.WS, e.alice, passport); err != nil {
+	if _, _, err := e.svc.AdmittedAuthority(ctx, e.alice, passport); err != nil {
 		t.Fatalf("alice's own passport was refused: %v", err)
 	}
 
@@ -251,12 +251,12 @@ func TestAPassportRegrantedElsewhereStopsActingForTheHumanItLeft(t *testing.T) {
 		`UPDATE passport SET on_behalf_of = $2, granted_by = $2 WHERE id = $1`, passport, e.bob); err != nil {
 		t.Fatalf("re-granting the passport: %v", err)
 	}
-	if _, _, err := e.svc.AdmittedAuthority(ctx, e.WS, e.alice, passport); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, _, err := e.svc.AdmittedAuthority(ctx, e.alice, passport); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("admission answered %v after the passport was re-granted, want not-found — the run keeps acting on the authority of the human the credential left", err)
 	}
 	// And it answers for the human it now belongs to, so the case is about the
 	// PAIRING rather than the passport having stopped working.
-	if _, _, err := e.svc.AdmittedAuthority(ctx, e.WS, e.bob, passport); err != nil {
+	if _, _, err := e.svc.AdmittedAuthority(ctx, e.bob, passport); err != nil {
 		t.Errorf("the passport stopped working for the human it was re-granted to (%v) — this case would pass whether or not the pairing is checked", err)
 	}
 }
@@ -271,7 +271,7 @@ func TestAPassportRegrantedElsewhereStopsActingForTheHumanItLeft(t *testing.T) {
 // refused every call.
 func TestAPrincipalWithNoPassportIsAnsweredOnItsHumansAuthority(t *testing.T) {
 	e := setupPassports(t)
-	if _, _, err := e.svc.AdmittedAuthority(e.ctx(), e.WS, e.alice, ids.UUID{}); err != nil {
+	if _, _, err := e.svc.AdmittedAuthority(e.ctx(), e.alice, ids.UUID{}); err != nil {
 		t.Errorf("a principal holding no passport was refused (%v) — the extension tick and the auto-apply actor both hold none", err)
 	}
 }

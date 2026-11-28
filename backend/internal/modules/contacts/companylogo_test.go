@@ -26,7 +26,7 @@ import (
 func TestSetCompanyLogoRefusesAHalfResolvedWrite(t *testing.T) {
 	store := NewStore(nil)
 	rep := ids.NewV7()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + rep.String(), UserID: rep,
 		Permissions: principal.Permissions{

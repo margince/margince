@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // dailyEdgeBatch bounds one fold transaction, so a full-tier corpus does not
@@ -95,7 +94,7 @@ func seedDailyAICalls(t *testing.T, e *apptest.AppEnv, scale float64) int {
 			"cache_read_per_mtok": "0.3", "cache_write_per_mtok": "3.75",
 		}, http.StatusCreated, nil)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool))
+	ctx := context.Background()
 	calls, usage := ai.NewCallMeter(e.DB()), ai.NewMeter(e.DB())
 	n := max(len(dailyAITasks), int(float64(dailyAICallsAtTier)*scale))
 	for i := range n {

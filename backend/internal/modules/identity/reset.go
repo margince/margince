@@ -183,8 +183,11 @@ func (h Handlers) ResetPassword(w http.ResponseWriter, r *http.Request) {
 // either way (enumeration resistance); only the presence of an email in
 // an inbox may differ.
 func (s *Service) CreatePasswordReset(ctx context.Context, email string) (string, error) {
-	_, ok := workspaceFrom(ctx)
-	if !ok {
+	_, live, err := s.liveCompany(ctx)
+	if err != nil {
+		return "", err
+	}
+	if !live {
 		// Pre-bootstrap there is no account to reset; the neutral no-op
 		// answer is the same one an unknown address gets.
 		return "", nil
@@ -243,8 +246,11 @@ func (s *Service) CreatePasswordReset(ctx context.Context, email string) (string
 // account. Unknown, used, and expired tokens all answer
 // apperrors.ErrNotFound — the caller writes one neutral refusal.
 func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword string) error {
-	_, ok := workspaceFrom(ctx)
-	if !ok {
+	_, live, err := s.liveCompany(ctx)
+	if err != nil {
+		return err
+	}
+	if !live {
 		return apperrors.ErrNotFound
 	}
 	hash, err := password.Hash(newPassword)
@@ -371,16 +377,6 @@ func userActivatedPayload(userID ids.UserID) crmcontracts.PublicEventUserActivat
 	return crmcontracts.PublicEventUserActivated{UserId: openapi_types.UUID(userID.UUID)}
 }
 
-// workspaceFrom narrows the context's workspace binding to the typed id
-// the reset SQL needs.
-func workspaceFrom(ctx context.Context) (ids.WorkspaceID, bool) {
-	raw, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ids.WorkspaceID{}, false
-	}
-	return ids.From[ids.WorkspaceKind](raw), true
-}
-
 // OperatorResetPassword is the operator-only recovery path (A107/ADR-0061
 // §9.1): reset a named user's password directly against the database —
 // for installations without outbound email and for administrator
@@ -388,7 +384,7 @@ func workspaceFrom(ctx context.Context) (ids.WorkspaceID, bool) {
 // connection and the workspace GUC); ends every credential that could
 // still act as the account and writes the system_log evidence with an
 // operator provenance. Never exposed over HTTP.
-func OperatorResetPassword(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, email, newPassword string) error {
+func OperatorResetPassword(ctx context.Context, tx pgx.Tx, email, newPassword string) error {
 	// The same rule the HTTP routes hold, from the same function. Spelled by
 	// hand here it counted BYTES while saying "characters", so a short
 	// multi-byte password cleared a floor it was under — and it had no ceiling
@@ -452,7 +448,7 @@ func OperatorResetPassword(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID,
 	// Same cascade the HTTP redemption runs: an operator recovering a
 	// locked-out or compromised account must end every credential that
 	// could still act as it, not just the session.
-	if err := endCredentialAuthority(operatorCtx(ctx, wsID, userID), tx, userID, operatorResetRevokeReason); err != nil {
+	if err := endCredentialAuthority(operatorCtx(ctx, userID), tx, userID, operatorResetRevokeReason); err != nil {
 		return err
 	}
 	_, err = tx.Exec(ctx,
@@ -470,19 +466,13 @@ const (
 	operatorResetRevokeReason = "the account was recovered via an operator-issued password reset"
 )
 
-// operatorCtx binds the operator-driven system actor, the target workspace,
-// and a correlation id for the credential cascade OperatorResetPassword
-// triggers. The workspace binding supplies what storekit.AuditWithEvidence
-// reads off ctx rather than off the GUC the caller's transaction already
-// runs under — the wsID column value and the actor attribution — mirroring
-// the system_log row this function already writes by hand. The correlation
-// id is not optional: if the reset user holds a live OAuth grant, the
-// cascade's passport.revoked events go through storekit.Emit, which refuses
-// to stage an event with none bound, and an operator-driven call carries no
-// operation scope of its own the way an HTTP request or a bus consumer
-// would — one has to be minted here.
-func operatorCtx(ctx context.Context, wsID ids.WorkspaceID, userID ids.UserID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, wsID.UUID)
+// operatorCtx binds the operator-driven system actor and a correlation id for
+// the credential cascade OperatorResetPassword triggers. The correlation id is
+// not optional. If the reset user holds a live OAuth grant, the cascade's
+// passport.revoked events go through storekit.Emit, which refuses to stage an
+// event with none bound. An operator-driven call carries no operation scope of
+// its own, so one has to be minted here.
+func operatorCtx(ctx context.Context, userID ids.UserID) context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "operator-cli", UserID: userID.UUID,

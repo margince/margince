@@ -30,7 +30,7 @@ func TestAFallbackThePreflightCannotServeIsSkippedNotFatal(t *testing.T) {
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidates)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script("ready"))},
 	}
-	unservable, err := preflight(wsContext(t), cfg, []ai.Task{ai.TaskSummarize}, hooks, quietLogger())
+	unservable, err := preflight(t.Context(), cfg, []ai.Task{ai.TaskSummarize}, hooks, quietLogger())
 	if err != nil {
 		t.Fatalf("a fallback's failed probe stopped the run: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestAnAnsweringRungThePreflightCannotServeStopsTheRun(t *testing.T) {
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidates)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script("ready"))},
 	}
-	if _, err := preflight(wsContext(t), cfg, []ai.Task{ai.TaskSummarize}, hooks, quietLogger()); err == nil {
+	if _, err := preflight(t.Context(), cfg, []ai.Task{ai.TaskSummarize}, hooks, quietLogger()); err == nil {
 		t.Fatal("the answering rung failed its probe and the run went on")
 	}
 }

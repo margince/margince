@@ -72,7 +72,7 @@ func TestOnlyTheEvaluationPassReadsTheDataset(t *testing.T) {
 	if err := read(e.Admin()); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an admin seat read the evaluation dataset: %v", err)
 	}
-	other := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), forecastSnapshotActor)
+	other := principal.SystemActing(context.Background(), forecastSnapshotActor)
 	if err := read(other); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("another system pass read the evaluation dataset: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestAVintageOfOneSeatOrFewDealsIsLeftOut(t *testing.T) {
 	e := setupEvaluation(t)
 	e.WsExec(t, `UPDATE deal SET owner_id = $1`, e.Rep1)
 	e.freeze(t, e.second.AddDate(0, 0, 2))
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:settings-admin", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}},

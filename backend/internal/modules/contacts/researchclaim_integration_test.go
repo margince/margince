@@ -35,7 +35,7 @@ import (
 // because the caller lacks authority over it.
 func (e *dedupeEnv) asArchiver() context.Context {
 	other := e.otherRep
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + other.String(), UserID: other,

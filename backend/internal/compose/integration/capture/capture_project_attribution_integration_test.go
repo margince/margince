@@ -61,7 +61,7 @@ type seededProject struct {
 // would be a fixture writing what no production path writes.
 func newProjectSeeder(t *testing.T, e *integration.SearchEnv) projectSeeder {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,

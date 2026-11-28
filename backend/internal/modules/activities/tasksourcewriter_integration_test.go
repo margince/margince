@@ -19,7 +19,7 @@ func TestTheRealTaskWriterKeepsManualAgentAndRegisteredWork(t *testing.T) {
 	e := setupSend(t)
 	human := e.as(principal.RowScopeAll)
 	agent := e.asAgent(principal.RowScopeAll)
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:task-fixture")
+	system := principal.SystemActing(context.Background(), "system:task-fixture")
 	assignee := ids.From[ids.UserKind](e.rep)
 	store := e.store(nil)
 	asOf := time.Date(2026, time.March, 10, 9, 0, 0, 0, time.UTC)

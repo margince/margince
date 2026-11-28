@@ -33,7 +33,7 @@ import (
 
 // machineCtx is a background job's principal: the system, under a job name.
 func machineCtx(e *integration.Env) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test-import"})
 }

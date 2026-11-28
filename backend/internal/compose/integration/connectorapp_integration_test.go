@@ -37,7 +37,7 @@ const testClientID = "1234567890-abcdefghijklmnop.apps.googleusercontent.com"
 
 // captureCtx binds a human holding exactly the given capture_settings grant.
 func (e *SearchEnv) captureCtx(grant principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),

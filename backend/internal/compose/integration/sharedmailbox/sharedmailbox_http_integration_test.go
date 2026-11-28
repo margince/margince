@@ -202,7 +202,7 @@ func (s *sharedMailboxSuite) connect(t *testing.T, team ids.UUID) crmcontracts.S
 
 func (s *sharedMailboxSuite) sync(t *testing.T, connection ids.UUID) {
 	t.Helper()
-	if err := s.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), s.e.WS), connection); err != nil {
+	if err := s.registry.SyncOnce(context.Background(), connection); err != nil {
 		t.Fatalf("syncing %s: %v", connection, err)
 	}
 }
@@ -234,7 +234,7 @@ func TestOnlyASignedInAdminConnectsASharedMailbox(t *testing.T) {
 	for who, ctx := range map[string]context.Context{
 		"a rep":               e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms),
 		"the admin's agent":   e.AgentFor(t, e.AdminUser, nil, integration.AdminPerms),
-		"a signed-out caller": principal.WithWorkspaceID(context.Background(), e.WS),
+		"a signed-out caller": context.Background(),
 	} {
 		if rec := s.call(ctx, t, http.MethodPost, "/shared-mailboxes", connectBody(e.Team1, "app-secret")); rec.Code != http.StatusForbidden {
 			t.Errorf("%s connecting a shared mailbox got %d, want 403", who, rec.Code)

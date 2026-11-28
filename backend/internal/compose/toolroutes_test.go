@@ -89,7 +89,6 @@ func (d *slippingDoors) reset() {
 }
 
 func readingAgent(ctx context.Context) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:slipping", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
@@ -192,7 +191,7 @@ func TestTheSlippingRouteAsksTheToolAtTheWindowItNames(t *testing.T) {
 // any other route does, on their own RBAC at the store.
 func TestAHumanReadsTheSlippingRoute(t *testing.T) {
 	d := newSlippingDoors(t)
-	ctx := principal.WithActor(principal.WithWorkspaceID(t.Context(), ids.NewV7()),
+	ctx := principal.WithActor(t.Context(),
 		principal.Principal{Type: principal.PrincipalHuman, ID: "user:" + ids.NewV7().String()})
 
 	recorder := d.get(ctx, t, "/v1/deals/slipping")

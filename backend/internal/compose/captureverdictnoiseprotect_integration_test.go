@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // hiddenNoiseMail seeds one bulk message per sender, runs the verdict pass
@@ -36,7 +35,7 @@ func hiddenNoiseMail(t *testing.T, e *integration.Env, senders ...string) (*Coun
 		mail[sender] = id
 	}
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{verdicts: verdicts}, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 	for _, id := range mail {
@@ -47,7 +46,7 @@ func hiddenNoiseMail(t *testing.T, e *integration.Env, senders ...string) (*Coun
 
 func redactNoise(t *testing.T, e *integration.Env, engine *CounterpartyVerdictEngine, maxRows int) {
 	t.Helper()
-	if err := engine.RedactNoiseWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), capture.NoiseUndoWindow, maxRows); err != nil {
+	if err := engine.RedactNoiseWorkspace(context.Background(), capture.NoiseUndoWindow, maxRows); err != nil {
 		t.Fatalf("redaction sweep: %v", err)
 	}
 }

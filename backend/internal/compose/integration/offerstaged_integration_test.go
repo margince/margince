@@ -35,7 +35,7 @@ import (
 // Rep1's grants. The audit row is the only place offer_line_item's AI
 // provenance lands, as the table has no captured_by column.
 func agentOfferDraftCtx(e *Env) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:offer-drafting", UserID: e.Rep1, OnBehalfOf: e.Rep1,
@@ -225,7 +225,7 @@ func TestAddStagedOfferLinesUngroundedPriceIsTheHonestZeroSentinel(t *testing.T)
 	// revision-copy INSERT...SELECT, a future backfill, anything raw —
 	// is still bound. Insert straight past the Go store, at the SQL
 	// layer, to prove the database itself refuses the same bogus row.
-	rawCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	rawCtx := context.Background()
 	err = database.WithTx(rawCtx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(rawCtx,
 			`INSERT INTO offer_line_item

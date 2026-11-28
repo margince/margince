@@ -207,7 +207,7 @@ func TestCreateAndLinkOnASuppressedDomainGivesNoDomain(t *testing.T) {
 
 func TestAnAgentContactCreateResolvesItsEmployer(t *testing.T) {
 	e := setupDedupe(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:tools", UserID: e.rep, OnBehalfOf: e.rep,

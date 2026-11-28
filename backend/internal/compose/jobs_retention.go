@@ -16,7 +16,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // IdempotencyRetentionArgs schedules one purge of replay claims past the
@@ -43,5 +42,5 @@ func (w *idempotencyRetentionWorker) Work(ctx context.Context, _ *river.Job[Idem
 }
 
 func (w *idempotencyRetentionWorker) retainWorkspace(ctx context.Context, workspace ids.UUID) error {
-	return w.sweeper.SweepWorkspace(principal.WithWorkspaceID(ctx, workspace))
+	return w.sweeper.SweepWorkspace(ctx)
 }

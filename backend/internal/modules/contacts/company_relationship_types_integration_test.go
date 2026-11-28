@@ -32,7 +32,7 @@ import (
 // harness's default grant set is deliberately narrow, so a test that needs
 // more asks for it rather than the harness handing every test everything.
 func asAdmin(e *dedupeEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

@@ -29,14 +29,14 @@ import (
 // reads. A double that refuses still refuses: its EffectiveRBAC answers
 // not-found and that is the first read.
 func AdmittedFromPair(
-	ctx context.Context, ws, human ids.UUID,
-	rbacOf func(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error),
-	seatOf func(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error),
+	ctx context.Context, human ids.UUID,
+	rbacOf func(context.Context, ids.UUID) (authz.RBAC, error),
+	seatOf func(context.Context, ids.UUID) (principal.SeatType, error),
 ) (authz.RBAC, principal.SeatType, error) {
-	rbac, err := rbacOf(ctx, ws, human)
+	rbac, err := rbacOf(ctx, human)
 	if err != nil {
 		return authz.RBAC{}, "", err
 	}
-	seat, err := seatOf(ctx, ws, human)
+	seat, err := seatOf(ctx, human)
 	return rbac, seat, err
 }

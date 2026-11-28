@@ -75,7 +75,7 @@ func setupEvaluation(t *testing.T) *evaluationEnv {
 
 func evaluationQuarter(t *testing.T, e *integration.Env, at time.Time) forecasting.Period {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), forecastEvaluationActor)
+	ctx := principal.SystemActing(context.Background(), forecastEvaluationActor)
 	var period forecasting.Period
 	if err := newForecastStoreFor(e.Pool).InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var err error

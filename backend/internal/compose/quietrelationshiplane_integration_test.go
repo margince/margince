@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // quietLaneNow is the fixed read instant; every exchange is dated from it.
@@ -78,7 +77,7 @@ func insertQuietExchange(t *testing.T, owner *pgx.Conn, sender, copied, contact 
 // foldQuietExchanges folds mails into the projection through its real writer.
 func foldQuietExchanges(t *testing.T, e *integration.Env, folded []ids.UUID) {
 	t.Helper()
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, folded)
 	}); err != nil {
@@ -361,7 +360,7 @@ func TestAFutureMeetingIsNotATouch(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{meeting})
 	}); err != nil {

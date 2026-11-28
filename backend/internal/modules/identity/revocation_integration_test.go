@@ -204,7 +204,7 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	svc.installationDescribed = func(context.Context) (bool, error) { return true, nil }
 	// Login resolves the admin's full Identity (roles, permissions) the
 	// way the HTTP surface would.
-	admin, _, err := svc.Login(principal.WithWorkspaceID(ctx, wsID.UUID), adminEmail, bootstrapPassword, noDevice)
+	admin, _, err := svc.Login(ctx, adminEmail, bootstrapPassword, noDevice)
 	if err != nil {
 		t.Fatalf("admin login: %v", err)
 	}
@@ -234,7 +234,7 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 // them is a seat holding nothing — which admits the caller to no management
 // view and would pass an assertion about withholding for the wrong reason.
 func (e *revocationEnv) wsCtx(id Identity) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), id.WorkspaceID.UUID)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + id.UserID.String(), UserID: id.UserID.UUID,
 		TeamIDs: rawTeamIDs(id.Teams), SeatType: principal.SeatType(id.SeatType),
@@ -275,7 +275,7 @@ func (e *revocationEnv) identityEvents(t *testing.T, eventType string, entity id
 
 func TestDeactivateUserRevokesSessionsAndPassportsAndEmits(t *testing.T) {
 	e := setupRevocationEnv(t, "revoke-cascade")
-	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
+	ctx := context.Background()
 
 	_, login, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice)
 	if err != nil {
@@ -354,7 +354,7 @@ func TestDeactivateUserRevokesSessionsAndPassportsAndEmits(t *testing.T) {
 // cycle, with no cache to invalidate.
 func TestRevokedPassportRefusedOnNextCall(t *testing.T) {
 	e := setupRevocationEnv(t, "revoke-passport")
-	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
+	ctx := context.Background()
 
 	// The MEMBER grants this one. The env's admin comes from a configured
 	// bootstrap and therefore owes a password rotation, which is itself a live
@@ -445,7 +445,7 @@ func TestChangeUserRoleReplacesAssignmentAndEmits(t *testing.T) {
 
 func TestLoginLockoutEndToEnd(t *testing.T) {
 	e := setupRevocationEnv(t, "lockout")
-	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
+	ctx := context.Background()
 
 	// The injected clock starts at real time (the DB stamps updated_at
 	// with its own now()) and only ever moves forward.
@@ -511,7 +511,7 @@ func TestLoginLockoutEndToEnd(t *testing.T) {
 // wrong password from the owner's browser still counts.
 func TestALockedAccountStillAdmitsTheBrowserThatSignedInBefore(t *testing.T) {
 	e := setupRevocationEnv(t, "lockout-device")
-	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
+	ctx := context.Background()
 	var offset time.Duration
 	e.svc.now = func() time.Time { return time.Now().Add(offset) }
 
@@ -569,7 +569,7 @@ func TestALockedAccountStillAdmitsTheBrowserThatSignedInBefore(t *testing.T) {
 
 func TestNonActiveStatusesCannotLogIn(t *testing.T) {
 	e := setupRevocationEnv(t, "status-gate")
-	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
+	ctx := context.Background()
 
 	for _, status := range []string{"invited", "suspended", "deactivated"} {
 		t.Run(status, func(t *testing.T) {
@@ -605,7 +605,7 @@ func TestNonActiveStatusesCannotLogIn(t *testing.T) {
 // with no column quietly missing from it.
 func TestNoSeededRoleWithholdsAColumn(t *testing.T) {
 	e := setupRevocationEnv(t, "field-mask")
-	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
+	ctx := context.Background()
 	for _, role := range []string{"rep", "manager"} {
 		if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, role); err != nil {
 			t.Fatal(err)

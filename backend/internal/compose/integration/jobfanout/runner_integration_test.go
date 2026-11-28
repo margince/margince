@@ -184,7 +184,7 @@ func setupRunnerOn(t *testing.T, modelPath *compose.ModelPath) *runnerEnv {
 		// EnqueueJob with only a workspace bound would be testing a caller
 		// production does not have.
 		wsCtx: principal.WithActor(
-			principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), wsID), ids.NewV7()),
+			principal.WithCorrelationID(context.Background(), ids.NewV7()),
 			principal.Principal{Type: principal.PrincipalSystem, ID: "system:agent_scheduler"},
 		),
 		passportID: passportID,

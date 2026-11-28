@@ -59,7 +59,7 @@ func signalActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []
 	for _, o := range []string{"signal", "contact", "company", "deal", "lead", "relationship"} {
 		grants[o] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	// The HTTP layer mints one correlation id per request; the store's Emit
 	// needs it in scope to link the audit row and outbox envelope into one
 	// trace, so a direct store call in a test must bind it too.

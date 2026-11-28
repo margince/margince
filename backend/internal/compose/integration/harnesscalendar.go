@@ -37,7 +37,7 @@ func (e *Env) CalendarSink() *capture.Sink {
 // capture.Registry builds it: the acting connector is the named one, and
 // UserID is the seat whose calendar or mailbox it is.
 func (e *Env) ConnectorOwnerCtx(owner ids.UUID, connectorName string) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:" + connectorName,

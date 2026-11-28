@@ -44,7 +44,7 @@ func agentOf(t *testing.T, e *Env) principal.Principal {
 	return live.Principal()
 }
 
-func (e *Env) wsCtx() context.Context { return principal.WithWorkspaceID(context.Background(), e.WS) }
+func (e *Env) wsCtx() context.Context { return context.Background() }
 
 func humanOf(user ids.UUID) principal.Principal {
 	return principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user}

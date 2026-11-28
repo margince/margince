@@ -52,7 +52,7 @@ func TestHistorySignatureRequestsSurviveDelayedDeliveryAndCancellation(t *testin
 	if err := trigger.HandleEvent(context.Background(), event); err != nil {
 		t.Fatal(err)
 	}
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
+	system := principal.SystemActing(context.Background(), "agent:enrich")
 	store := newContactsStore(InstallationDB(b.env.Pool))
 	work, err := store.PendingSignatureWork(system, 100)
 	if err != nil || len(work) != 0 {
@@ -88,7 +88,7 @@ func TestHistoricalSignatureWorkCannotPostponeLiveMail(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
+	ctx := principal.SystemActing(context.Background(), "agent:enrich")
 	queue := func(deferred *ids.UUID) {
 		t.Helper()
 		if err := database.WithTx(ctx, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(ctx, tx, []ids.ContactID{id}, deferred) }); err != nil {
@@ -158,7 +158,7 @@ func TestHistoryArrivingDuringAFailedSignatureReadDoesNotEraseBackoff(t *testing
 		t.Fatal(err)
 	}
 	id := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
+	system := principal.SystemActing(context.Background(), "agent:enrich")
 	queue := func(run *ids.UUID) {
 		t.Helper()
 		if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{id}, run) }); err != nil {

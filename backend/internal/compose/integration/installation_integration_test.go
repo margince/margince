@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -271,6 +272,9 @@ func TestSecondActiveWorkspaceTurnsTheSurfaceUnavailable(t *testing.T) {
 		ids.NewV7()); err != nil {
 		t.Fatal(err)
 	}
+	// The row went in behind the pool's back, so the proof of the one company
+	// it held a moment ago no longer describes the database.
+	database.ForgetInstallationProofs()
 	fresh := httptest.NewServer(compose.New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(fresh.Close)
 

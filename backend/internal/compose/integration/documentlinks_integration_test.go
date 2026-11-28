@@ -29,7 +29,7 @@ const slidesLink = "https://docs.google.com/presentation/d/abc123/edit?usp=shari
 // twice, as a replayed pull would.
 func captureMailLink(t *testing.T, e *Env, mail ids.UUID, system, address, text string) ids.UUID {
 	t.Helper()
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:imap",
 		Permissions: principal.Permissions{

@@ -102,7 +102,7 @@ func TestTheRepairTranslatesOnlyTheStagesTheProductSeeded(t *testing.T) {
 }
 
 func (e *configEnv) system() context.Context {
-	return principal.SystemActing(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()), "system:test")
+	return principal.SystemActing(principal.WithCorrelationID(context.Background(), ids.NewV7()), "system:test")
 }
 
 func (e *configEnv) renameStage(t *testing.T, id ids.StageID, name string) map[string]string {

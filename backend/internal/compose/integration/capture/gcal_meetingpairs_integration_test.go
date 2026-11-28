@@ -139,7 +139,7 @@ func (p *pairEnv) bookOrganizedBy(start time.Time, organizer string) {
 
 func (p *pairEnv) sync(t *testing.T, label string) {
 	t.Helper()
-	if err := p.env.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), p.env.e.WS), p.conns[label]); err != nil {
+	if err := p.env.registry.SyncOnce(context.Background(), p.conns[label]); err != nil {
 		t.Fatalf("SyncOnce %s: %v", label, err)
 	}
 }
@@ -234,7 +234,7 @@ func TestTwoSeatsFirstSyncsRacingFileOneMeeting(t *testing.T) {
 	for _, label := range []string{"a", "b"} {
 		done.Go(func() {
 			ready.Wait()
-			errs <- p.env.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), p.env.e.WS), p.conns[label])
+			errs <- p.env.registry.SyncOnce(context.Background(), p.conns[label])
 		})
 	}
 	ready.Done()

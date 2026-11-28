@@ -40,7 +40,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A poll persists what it collected and advances the cursor past it, in one
@@ -381,7 +380,7 @@ func TestAReplacementStillBumpsTheVersionOnAPolledConnection(t *testing.T) {
 // a hand-written value here could agree with this test and with nothing else.
 func suppressChannelAccount(t *testing.T, e *integration.Env, account string) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO erasure_suppression (kind, value_hash)

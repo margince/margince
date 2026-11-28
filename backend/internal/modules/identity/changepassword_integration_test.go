@@ -549,7 +549,7 @@ func TestAnOperatorResetHoldsTheSameLengthFloorAsEveryOtherRoute(t *testing.T) {
 	// so it accepted passwords the HTTP routes refuse.
 	e := setupRevocationEnv(t, "operator-reset-length")
 	err := withOperatorTx(t, e, func(tx pgx.Tx) error {
-		return OperatorResetPassword(context.Background(), tx, e.ws, e.member.Email, strings.Repeat("🔑", 11))
+		return OperatorResetPassword(context.Background(), tx, e.member.Email, strings.Repeat("🔑", 11))
 	})
 	var parseErr *values.ParseError
 	if !errors.As(err, &parseErr) || parseErr.Code != "length" {
@@ -565,7 +565,7 @@ func TestAnOperatorResetRefusesBlankAndEmailPasswords(t *testing.T) {
 	e := setupRevocationEnv(t, "operator-reset-weak")
 	for code, weak := range map[string]string{"blank": strings.Repeat(" ", 12), "email": e.member.Email} {
 		err := withOperatorTx(t, e, func(tx pgx.Tx) error {
-			return OperatorResetPassword(context.Background(), tx, e.ws, e.member.Email, weak)
+			return OperatorResetPassword(context.Background(), tx, e.member.Email, weak)
 		})
 		var parseErr *values.ParseError
 		if !errors.As(err, &parseErr) || parseErr.Code != code {
@@ -574,7 +574,7 @@ func TestAnOperatorResetRefusesBlankAndEmailPasswords(t *testing.T) {
 	}
 	// The operator types the address in another spelling than the one stored.
 	err := withOperatorTx(t, e, func(tx pgx.Tx) error {
-		return OperatorResetPassword(context.Background(), tx, e.ws, strings.ToUpper(e.member.Email), e.member.Email)
+		return OperatorResetPassword(context.Background(), tx, strings.ToUpper(e.member.Email), e.member.Email)
 	})
 	var parseErr *values.ParseError
 	if !errors.As(err, &parseErr) || parseErr.Code != "email" {
@@ -594,7 +594,7 @@ func TestAnOperatorResetRefusesAnAgentIdentity(t *testing.T) {
 	e := setupRevocationEnv(t, "operator-reset-agent")
 	_, agentEmail := seedAgentSeatIn(t, e)
 	err := withOperatorTx(t, e, func(tx pgx.Tx) error {
-		return OperatorResetPassword(context.Background(), tx, e.ws, agentEmail, "a password it cannot use")
+		return OperatorResetPassword(context.Background(), tx, agentEmail, "a password it cannot use")
 	})
 	if err == nil {
 		t.Fatal("an agent identity accepted a password reset; it is an identity, not an authority")
@@ -674,7 +674,7 @@ func TestAPassportStopsWorkingWhileItsHumanOwesARotation(t *testing.T) {
 func operatorReset(t *testing.T, e *revocationEnv, email, newPassword string) {
 	t.Helper()
 	if err := withOperatorTx(t, e, func(tx pgx.Tx) error {
-		return OperatorResetPassword(context.Background(), tx, e.ws, email, newPassword)
+		return OperatorResetPassword(context.Background(), tx, email, newPassword)
 	}); err != nil {
 		t.Fatalf("OperatorResetPassword(%s): %v", email, err)
 	}

@@ -28,7 +28,7 @@ import (
 // systemStore is the reaper's own view: the sweep runs under the system principal,
 // which is what the reference check demands.
 func systemStore(e *sendEnv) (*Store, context.Context) {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:stored-object-reap",
 	})

@@ -96,7 +96,7 @@ func (h messengerOAuthHandlers) messengerLanding(st connectState, outcome, provi
 
 // ConnectMessenger starts personal consent independently of shared channel installation.
 func (s Server) ConnectMessenger(w http.ResponseWriter, r *http.Request, provider crmcontracts.MessengerProvider) {
-	actor, ws, ok := signedInHuman(w, r)
+	actor, ok := signedInHuman(w, r)
 	if !ok {
 		return
 	}
@@ -114,7 +114,7 @@ func (s Server) ConnectMessenger(w http.ResponseWriter, r *http.Request, provide
 		httperr.ServiceUnavailable(w, r, "Set up this messaging provider's OAuth app in Settings before connecting your account.")
 		return
 	}
-	st := connectState{Workspace: ws, User: actor.UserID, Provider: "messenger:" + string(provider), Version: stateVersionNamespacedCSRF}
+	st := connectState{User: actor.UserID, Provider: "messenger:" + string(provider), Version: stateVersionNamespacedCSRF}
 	if r.ContentLength != 0 {
 		var in crmcontracts.MessengerConnectRequest
 		if !httperr.Decode(w, r, &in) {
@@ -204,7 +204,7 @@ func (s Server) MessengerOAuthCallback(w http.ResponseWriter, r *http.Request, p
 
 // GetMessengerSetup reports the consent prerequisites for a personal connection.
 func (s Server) GetMessengerSetup(w http.ResponseWriter, r *http.Request, provider crmcontracts.MessengerProvider) {
-	if _, _, ok := signedInHuman(w, r); !ok {
+	if _, ok := signedInHuman(w, r); !ok {
 		return
 	}
 	h := s.messengerOAuthHandlers

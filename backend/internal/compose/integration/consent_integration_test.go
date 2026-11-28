@@ -760,8 +760,7 @@ func TestADeadAddressRefusesTheNextSend(t *testing.T) {
 	// The address dies. Written through the real writer under the CONNECTOR
 	// principal that carries a delivery report in production, so the stop is
 	// captured by the same actor the observer runs as.
-	wsID := apptest.InstallationWorkspaceUUID(context.Background(), t, c.Pool)
-	reporter := principal.WithWorkspaceID(context.Background(), wsID)
+	reporter := context.Background()
 	reporter = principal.WithCorrelationID(reporter, ids.NewV7())
 	reporter = principal.WithActor(reporter, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",

@@ -91,7 +91,7 @@ func chargingRegistry(t *testing.T, tool mcp.Tool, opts ...chargeTestOption) (*R
 		r = NewRegistry(cfg.approvals, auth.NewGate(fullSeatAuthority{}))
 	}
 	r.Register(tool)
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(),

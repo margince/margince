@@ -25,7 +25,7 @@ func seamProvider() *Provider { return NewProvider(nil, Installation{}) }
 
 // readerOnly holds read on every catalog and offer object, and no delete.
 func readerOnly() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	user := ids.NewV7()
 	read := principal.ObjectGrant{Read: true}
 	return principal.WithActor(ctx, principal.Principal{
@@ -249,7 +249,7 @@ func TestAPriceIsStatedOnlyByAValue(t *testing.T) {
 
 // noCatalogGrant holds deal read and nothing on the catalog or offers.
 func noCatalogGrant() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	user := ids.NewV7()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

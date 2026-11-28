@@ -68,7 +68,7 @@ func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int
 	b := setupBackfillWire(t)
 	firstRun := strandedBackfill(t, b)
 	other, secondRun := startSecondHistory(t, b)
-	dispatch := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
+	dispatch := backfillWorkContext(context.Background(), t, b)
 	if err := b.registry.DispatchBackfills(dispatch, backfillScheduler(), false); err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int
 	oldSource := storekit.WithBatch(b.env.Admin(), secondRun)
 	blocker := logHistoryGraphMail(oldSource, t, b, blockers, clocktest.Now(t).Add(-72*time.Hour))
 	first := logHistoryGraphMail(oldSource, t, b, targets, clocktest.Now(t).Add(-48*time.Hour))
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "system:graph_edge_reconcile")
+	system := principal.SystemActing(context.Background(), "system:graph_edge_reconcile")
 	ctx, cancel := context.WithTimeout(system, 10*time.Second)
 	defer cancel()
 	commitBlocker := holdGraphRecompute(ctx, t, b.env.Pool, []ids.UUID{blocker})

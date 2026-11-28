@@ -8,6 +8,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/decision"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -24,6 +25,10 @@ func (m *ctxMeter) Record(ctx context.Context, u Usage) error {
 }
 
 func (m *ctxMeter) MonthTokens(context.Context) (int64, error) { return 0, nil }
+
+func (m *ctxMeter) Workspace(ctx context.Context) (ids.WorkspaceID, error) {
+	return lenientCompany(ctx)
+}
 
 // ctxSpender is the agent's share, refusing a canceled context the same way.
 type ctxSpender struct{ tokens int }

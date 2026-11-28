@@ -120,7 +120,7 @@ type healthCandidate struct {
 // RunWorkspace judges every in-flight project of one workspace, each in a
 // transaction of its own, so one project's failure leaves the others written.
 func (s *ProjectHealthScan) RunWorkspace(ctx context.Context, workspace ids.UUID) (ProjectHealthPass, error) {
-	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), projectHealthActor)
+	wsCtx := principal.SystemActing(ctx, projectHealthActor)
 	var candidates []healthCandidate
 	if err := database.WithTx(wsCtx, s.pool, func(tx pgx.Tx) error {
 		var err error

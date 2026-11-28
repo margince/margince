@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // dayTouchLead is a lead that wrote in at createdAt and a note a rep logged
@@ -53,7 +52,7 @@ func dayTouchLead(t *testing.T, e *integration.Env, owner *pgx.Conn, createdAt, 
 // scanSLAAt runs the production scan at now.
 func scanSLAAt(t *testing.T, e *integration.Env, now time.Time) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := scanLeadSLA(ctx, e.DB(), func() time.Time { return now }, slog.New(slog.DiscardHandler)); err != nil {
 		t.Fatalf("scan at %v: %v", now, err)
 	}

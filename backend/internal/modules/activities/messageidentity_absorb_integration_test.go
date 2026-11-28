@@ -577,7 +577,7 @@ func TestFilingUnderAProjectNeedsTheUpdateGrantNotJustCreate(t *testing.T) {
 	contact := e.seedContact(t, "Dieter")
 
 	createOnly := principal.WithActor(
-		principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()),
+		principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
 			Permissions: principal.Permissions{

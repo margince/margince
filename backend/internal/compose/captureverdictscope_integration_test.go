@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // An address the mailbox owner WROTE TO, which has never answered, becomes the
@@ -45,7 +44,7 @@ func TestAnAddressWeWroteToThatNeverAnsweredStaysTheOwners(t *testing.T) {
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -79,7 +78,7 @@ func TestAnAddressThatAnsweredUsIsTheWorkspacesContact(t *testing.T) {
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -132,7 +131,7 @@ func TestASenderOnAHeldThreadIsNotAnnouncedToTheWorkspace(t *testing.T) {
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -159,7 +158,7 @@ func TestASenderOnAClearedThreadIsTheWorkspacesContact(t *testing.T) {
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -221,7 +220,7 @@ func TestARestrictedMessageDoesNotAnnounceItsCounterparty(t *testing.T) {
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -263,7 +262,7 @@ func TestAMessageHeldWithoutAThreadVerdictStillWithholdsItsCounterparty(t *testi
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -290,7 +289,7 @@ func TestAWithheldContactIsMarkedOnTheLedgerTheOtherReadersConsult(t *testing.T)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -320,7 +319,7 @@ func TestAPublishedContactIsNotMarkedWithheld(t *testing.T) {
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -429,7 +428,7 @@ func TestAMessageWaitingForItsOwnVerdictIsNotAHold(t *testing.T) {
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 

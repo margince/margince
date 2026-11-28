@@ -81,17 +81,13 @@ func (r *TeamsGraphReceiver) Receive(ctx context.Context, d chatlinks.Delivery) 
 		}
 	}
 
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return crmcontracts.DispactChannelEventReceipt{}, chatlinks.ErrEventsUnavailable
-	}
 	queued := map[string]bool{}
 	for _, item := range checked {
 		key := item.watch.Connection.String()
 		if queued[key] {
 			continue
 		}
-		if err := r.Pull(ctx, workspace, item.watch.Connection); err != nil {
+		if err := r.Pull(ctx, item.watch.Connection); err != nil {
 			return crmcontracts.DispactChannelEventReceipt{}, err
 		}
 		queued[key] = true

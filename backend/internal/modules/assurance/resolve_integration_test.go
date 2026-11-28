@@ -23,7 +23,7 @@ import (
 // grant and own row scope. Every deal is visible to it, and only its own are
 // writable.
 func (e *scanEnv) asOwnScopeRep(user ids.UUID, deal principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

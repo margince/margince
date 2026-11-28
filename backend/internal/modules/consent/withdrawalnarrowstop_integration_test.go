@@ -155,7 +155,7 @@ func TestANarrowPressBindsOnlyItsOwnPurpose(t *testing.T) {
 	// subject that environment otherwise tests — so granting consent for a
 	// LEAD here needs its own context naming that object.
 	leadCtx := principal.WithActor(
-		principal.WithCorrelationID(principal.WithWorkspaceID(ctx, e.ws), ids.NewV7()),
+		principal.WithCorrelationID(ctx, ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
 			Permissions: principal.Permissions{

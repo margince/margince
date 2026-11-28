@@ -33,7 +33,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Two rules, and the read now holds both itself: a value_key duplicate is
@@ -235,7 +234,7 @@ func TestDeepReadFillsTheCompanysOwnIndustryAndSizeFromItsHomePage(t *testing.T)
 	}
 	worker, _ := newDeepReadTestWorker(e, site, brain)
 	_, args := startDeepRead(t, e, company)
-	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
+	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 

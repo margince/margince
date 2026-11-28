@@ -87,7 +87,7 @@ func TestABookingOnTheHostsLeadThroughThePublicPageClosesTheHostsTaskAndCancelRe
 	}
 	handler := activities.QuietReminderReopenWorkflows(activities.NewStore(b.e.DB()))[0]
 	wsID := apptest.InstallationWorkspaceUUID(context.Background(), t, b.e.Pool)
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), wsID), "system:test")
+	ctx := principal.SystemActing(context.Background(), "system:test")
 	canceled := crmcontracts.MeetingWasCanceled
 	payload, err := json.Marshal(crmcontracts.PublicEventActivityUpdated{ChangedFields: crmcontracts.PublicEventActivityChangedFields{MeetingStatus: &canceled}})
 	if err != nil {

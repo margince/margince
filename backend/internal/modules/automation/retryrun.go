@@ -154,7 +154,7 @@ func (e *WorkflowEngine) RetryRun(ctx context.Context, runID ids.UUID) (RetryOut
 	}
 	// The same context shape HandleEvent builds: a retry is the firing
 	// happening again, not a new kind of caller.
-	runCtx := principal.WithWorkspaceID(ctx, candidate.event.WorkspaceID)
+	runCtx := ctx
 	runCtx = principal.SystemActing(runCtx, systemActor)
 	runCtx = principal.WithCausationEvent(runCtx, candidate.event.ID)
 	stop, err := e.stopIfSetterLapsed(runCtx, candidate.event)

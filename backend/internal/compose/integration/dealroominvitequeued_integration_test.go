@@ -194,7 +194,7 @@ func TestARefusedInvitationShowsAsFailedOnTheRoster(t *testing.T) {
 // the authority the invitation send reads and stamps the invitation under.
 func roomSenderContext(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool))
+	ctx := context.Background()
 	user := ids.NewV7()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

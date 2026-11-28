@@ -26,7 +26,7 @@ import (
 // asClock is the sweep's own principal: the system actor whose name every
 // audit row it writes carries.
 func (e *introEnv) asClock() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, ExpiryActor)
 }
 
@@ -37,7 +37,7 @@ func (e *introEnv) asClock() context.Context {
 // attributed to ExpiryActor, and a caller who cannot present that id would be
 // closing introductions under a name that is not theirs.
 func (e *introEnv) asSomeOtherSystem() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, "system:something-else")
 }
 

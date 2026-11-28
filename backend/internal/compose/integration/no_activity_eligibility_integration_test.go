@@ -33,7 +33,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // eligibilityScanNow is the instant every suite in this file evaluates
@@ -294,7 +293,7 @@ func runEligibilityScan(t *testing.T, e *Env) {
 	connectCaughtUpMailbox(t, e, e.AdminUser)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	scanner := compose.NewTimeScannerWithClock(e.DB(), func() time.Time { return eligibilityScanNow }, quiet)
-	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := scanner.ScanWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("time-scan pass: %v", err)
 	}
 }

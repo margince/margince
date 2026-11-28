@@ -145,7 +145,7 @@ func TestATeamRequestMailNamesTheLinkAsItStandsWhenItLeaves(t *testing.T) {
 func TestATeamRequestTakenBackAfterItsClaimIsNotSent(t *testing.T) {
 	env := setupTeamRequestMail(t)
 	env.saveLink(t, "Intro call", env.e.Rep2)
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), env.e.WS),
+	ctx := principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: notificationMailActor})
 	attempt, claimed, err := env.worker.notices.ClaimEmailAttempt(ctx, env.requestNotice(t))
 	if err != nil || !claimed {
@@ -183,7 +183,7 @@ func TestATeamRequestOpenedAgainNamesTheCurrentTitle(t *testing.T) {
 func TestATeamRequestThatMovedAfterItsReadRefusesTheReservation(t *testing.T) {
 	env := setupTeamRequestMail(t)
 	env.saveLink(t, "Intro call", env.e.Rep2)
-	ctx := principal.WithWorkspaceID(context.Background(), env.e.WS)
+	ctx := context.Background()
 	now := func() time.Time { return clocktest.Now(t) }
 	refs := sendRefs{teamRequests: []teamRequestRef{{notice: env.requestNotice(t), page: env.link, member: ids.From[ids.UserKind](env.e.Rep2)}}}
 	var basis sendBasis
@@ -238,7 +238,7 @@ func TestEachTeamRequestMailReadsItsOwnTeamLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("making Rep1's second team link: %v", err)
 	}
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), env.e.WS),
+	ctx := principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: notificationMailActor})
 	claim := func(notice ids.UUID) notices.EmailAttempt {
 		attempt, claimed, err := env.worker.notices.ClaimEmailAttempt(ctx, notice)

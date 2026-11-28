@@ -399,7 +399,7 @@ func TestHistoryContinuationExcludesRunsFinishedAfterItsCutoff(t *testing.T) {
 func TestSystemHealthBreaksDownTheChangesHomeCannotPlace(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	ctx := principal.WithWorkspaceID(t.Context(), apptest.InstallationWorkspaceUUID(t.Context(), t, e.Pool))
+	ctx := t.Context()
 	ctx = principal.SystemActing(ctx, "catalog-sync")
 	store := deals.NewStore(e.DB(), installseam.Deals())
 	product, err := store.CreateProduct(ctx, deals.CreateProductInput{Name: "Support", UnitPriceMinor: 100, Currency: "EUR"})

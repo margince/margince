@@ -80,7 +80,6 @@ func (w *linkedInRematchWorker) Work(ctx context.Context, _ *river.Job[LinkedInR
 }
 
 func (w *linkedInRematchWorker) rematchOneWorkspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.WithWorkspaceID(ctx, workspace)
 	// Re-key BEFORE matching. A stale company key both misses its account and
 	// duplicates on the next import, and matching duplicates would double
 	// every reach count the matches feed.
@@ -114,7 +113,7 @@ func (w *linkedInRematchWorker) renormalizeWorkspace(ctx context.Context, ws ids
 	return nil
 }
 
-// systemContext binds the workspace, the trace and the maintenance principal
+// systemContext binds the trace and the maintenance principal
 // both passes run under, spelled once so they cannot diverge.
 //
 // The correlation id is bound HERE rather than at the job entry point because
@@ -125,7 +124,6 @@ func (w *linkedInRematchWorker) renormalizeWorkspace(ctx context.Context, ws ids
 // retry rebuilds the same context. A pass and a re-key are two operations and
 // carry a trace each.
 func (w *linkedInRematchWorker) systemContext(ctx context.Context, ws ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:linkedin_rematch",

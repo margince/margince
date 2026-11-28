@@ -5,7 +5,6 @@ package chatedge
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
@@ -14,7 +13,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -58,10 +56,11 @@ func (in *Inbox) Store(ctx context.Context, messages []Message) (stored, dropped
 	if len(messages) == 0 {
 		return 0, 0, nil
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return 0, 0, errors.New("chatedge: a delivery outside a workspace context")
+	company, err := in.DB.Workspace(ctx)
+	if err != nil {
+		return 0, 0, err
 	}
+	ws := company.UUID
 	err = in.DB.Tx(ctx, func(tx pgx.Tx) error {
 		stored, dropped = 0, 0
 		live, err := lockLive(ctx, tx, messages)

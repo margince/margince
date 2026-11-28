@@ -61,7 +61,7 @@ func mailboxFor(t *testing.T, e *integration.SearchEnv, user ids.UUID, label str
 	if err != nil {
 		t.Fatalf("connecting the second mailbox: %v", err)
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	return func(t *testing.T, raws ...[]byte) {
 		t.Helper()
 		conn.raws, conn.sent, conn.deals, conn.kinds = raws, nil, nil, nil
@@ -611,7 +611,7 @@ func TestTheWorkspaceMailSharingFloorSurvivesTheDerivation(t *testing.T) {
 // so the fixture exercises the value the sink actually reads.
 func setMailSharing(t *testing.T, e *integration.SearchEnv, on bool) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
@@ -645,7 +645,7 @@ func TestACapturedRowRefusesTheDirectWriteAndAManualWideningDoesNotStand(t *test
 	}
 
 	store := activities.NewStore(e.DB())
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,

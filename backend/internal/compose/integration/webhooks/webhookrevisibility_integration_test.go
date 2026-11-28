@@ -101,7 +101,7 @@ func TestAReplayStopsWhenTheSubjectLeavesTheOwnersSight(t *testing.T) {
 	// the caller's, or an operator-triggered replay would be the one path that
 	// sees everything.
 	sysCtx := principal.WithActor(
-		principal.WithWorkspaceID(context.Background(), we.wsID),
+		context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system"},
 	)
 	deliveryID := we.deliveryID(t, subID)
@@ -226,7 +226,7 @@ func TestARevocationHoldsAgainstALaterSweepAndReplay(t *testing.T) {
 	assertDeliveryStatus(t, we, subID, "visibility_revoked", 1)
 
 	sysCtx := principal.WithActor(
-		principal.WithWorkspaceID(context.Background(), we.wsID),
+		context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system"},
 	)
 	if _, err := deliverer.Replay(sysCtx, we.subUUID(t, subID), we.deliveryID(t, subID)); err != nil {

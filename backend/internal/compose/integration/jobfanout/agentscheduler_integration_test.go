@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // schedulerPassCtx is the scope the scheduler's workspace worker binds before
@@ -33,7 +32,7 @@ import (
 // passport and mints its own correlation id inside the pass, so a suite that
 // bound an actor here would be exercising provenance production never writes.
 func schedulerPassCtx(ws ids.UUID) context.Context {
-	return principal.WithWorkspaceID(context.Background(), ws)
+	return context.Background()
 }
 
 // afterEveryDueHour is a reading late enough on its own UTC day that every

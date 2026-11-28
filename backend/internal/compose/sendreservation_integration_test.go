@@ -52,14 +52,14 @@ func changeAfterRendering[P any](read sendReading[P], after int, change func()) 
 }
 
 func systemMailCtx(ws ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: notificationMailActor})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
 
 func liveSeatCtx(t *testing.T, e *integration.Env, seat ids.UUID) context.Context {
 	t.Helper()
-	ctx, live, err := seatContext(systemMailCtx(e.WS), identity.NewService(e.Pool), e.WS, seat)
+	ctx, live, err := seatContext(systemMailCtx(e.WS), identity.NewService(e.Pool), seat)
 	if err != nil || !live {
 		t.Fatalf("the seat's authority did not resolve: live=%v err=%v", live, err)
 	}

@@ -38,7 +38,7 @@ const unitCapturedBy = "connector:ext:memberchat"
 // unitSeatCtx is the connector principal a unit's ingest runs as: the unit's
 // connector identity wearing the member's permissions.
 func unitSeatCtx(e *integration.SearchEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: unitCapturedBy, UserID: e.Rep1, OnBehalfOf: e.Rep1,
@@ -127,7 +127,7 @@ func TestAUnitsChatMessageFollowsItsContactsSharingExactlyAsMailDoes(t *testing.
 
 	store := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx)
 	ownerCtx := func() context.Context {
-		ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+		ctx := context.Background()
 		ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 		return principal.WithActor(ctx, principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull,
@@ -226,7 +226,7 @@ func blobKeyOf(t *testing.T, e *integration.SearchEnv, activity ids.UUID) string
 
 // erasureCtx is an administrator who may delete the subject's records.
 func erasureCtx(e *integration.SearchEnv) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull,
 		Permissions: integration.AdminPerms,

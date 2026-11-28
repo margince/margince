@@ -63,13 +63,13 @@ func newSetterRig(t *testing.T) *setterRig {
 }
 
 func (r *setterRig) user() context.Context {
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), r.fx.ws), principal.Principal{
+	return principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + r.fx.rep1.String(), UserID: r.fx.rep1, SeatType: principal.SeatFull, Permissions: ruleAuthorGrants,
 	})
 }
 
 func (r *setterRig) agent() context.Context {
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), r.fx.ws), principal.Principal{
+	return principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:setter", UserID: r.fx.rep1, OnBehalfOf: r.fx.rep1, PassportID: r.passport,
 		SeatType: principal.SeatFull, Permissions: ruleAuthorGrants, Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
 	})

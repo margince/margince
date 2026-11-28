@@ -25,7 +25,7 @@ func TestARetriedPageKeepsTheCommittedCountAndSaysItIsRetrying(t *testing.T) {
 	e := integration.SetupSearch(t)
 	prov := &reportingConnector{pagedConnector: &pagedConnector{messages: 20, pageSize: 10}}
 	registry, grantCtx, runID := startReportingBackfill(t, e, prov, 0)
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	mailbox := capturemod.ProviderMailbox("gmail")
 	rep := ids.From[ids.UserKind](e.Rep1)
 
@@ -65,7 +65,7 @@ func TestARestartedScanIsReportedAsARestartNotAsLostWork(t *testing.T) {
 	e := integration.SetupSearch(t)
 	prov := &reportingConnector{pagedConnector: &pagedConnector{messages: 20, pageSize: 10}}
 	registry, grantCtx, runID := startReportingBackfill(t, e, prov, 0)
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	mailbox := capturemod.ProviderMailbox("gmail")
 	rep := ids.From[ids.UserKind](e.Rep1)
 
@@ -103,7 +103,7 @@ func TestARestartedScanIsReportedAsARestartNotAsLostWork(t *testing.T) {
 func TestContinuingAFailedRunKeepsItsRestartCount(t *testing.T) {
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{nil, connector.ErrCursorGone, nil, connector.ErrAuthRejected})
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
 	rep := ids.From[ids.UserKind](e.Rep1)
 	for range 4 {

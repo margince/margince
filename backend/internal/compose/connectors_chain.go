@@ -43,7 +43,7 @@ var errImportUnwired = errors.New("connector callback: no backfill engine is wir
 // opens. Compose wires both; a role without the backfill surface leaves them nil.
 type connectImport struct {
 	estimate func(ctx context.Context, mailbox capture.Mailbox, userID ids.UserID, months int) (capture.BackfillPreview, error)
-	begin    func(ctx context.Context, ws ids.UUID, mailbox capture.Mailbox, userID ids.UserID, months int, estimate connector.BackfillEstimate, startOver bool) (capture.BackfillRun, error)
+	begin    func(ctx context.Context, mailbox capture.Mailbox, userID ids.UserID, months int, estimate connector.BackfillEstimate, startOver bool) (capture.BackfillRun, error)
 }
 
 // startsOnItsOwn is the auto-import rule. A floor is not known to be under the
@@ -71,7 +71,7 @@ func (c connectImport) start(ctx context.Context, st connectState) (bool, error)
 	if !startsOnItsOwn(preview.BackfillEstimate) {
 		return false, nil
 	}
-	_, err = c.begin(ctx, st.Workspace, capture.Mailbox{Provider: st.Provider, ID: st.Connection}, userID, st.WindowMonths, preview.BackfillEstimate, false)
+	_, err = c.begin(ctx, capture.Mailbox{Provider: st.Provider, ID: st.Connection}, userID, st.WindowMonths, preview.BackfillEstimate, false)
 	return err == nil, err
 }
 
@@ -126,7 +126,7 @@ func (h connectorHandlers) chainAfterConnect(ctx context.Context, w http.Respons
 		http.Redirect(w, r, h.landingURL(outcomeError, st.ReturnTo, st.Then, held), http.StatusFound)
 		return
 	}
-	next := connectState{Workspace: st.Workspace, User: st.User, Provider: st.Then, ReturnTo: st.ReturnTo, WindowMonths: held}
+	next := connectState{User: st.User, Provider: st.Then, ReturnTo: st.ReturnTo, WindowMonths: held}
 	http.Redirect(w, r, h.mintConsent(w, app, next), http.StatusFound)
 }
 

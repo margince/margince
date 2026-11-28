@@ -21,30 +21,31 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// bootLedgerScope resolves the installation's workspace and binds the actor and
-// correlation scope a system_log write needs, answering whether the
-// installation is bootstrapped at all.
+// bootLedgerScope binds the actor and correlation scope a system_log write
+// needs, answering whether the installation is bootstrapped at all.
 //
 // A false second return is NOT an error: it is a pre-bootstrap installation, and
 // the caller decides what "not yet" means for its own fact. In that case the
 // returned context is the input one. A caller that ignores the flag therefore
-// binds no workspace, and a later read of it answers ErrNoWorkspace.
+// writes against no company, and the transaction answers ErrNoWorkspace.
 func bootLedgerScope(ctx context.Context, pool *pgxpool.Pool, actor string) (context.Context, bool, error) {
-	wsID, err := identity.NewService(pool).InstallationWorkspace(ctx)
+	_, err := identity.NewService(pool).InstallationWorkspace(ctx)
 	if errors.Is(err, identity.ErrNotBootstrapped) {
 		return ctx, false, nil
 	}
 	if err != nil {
 		return ctx, false, err
 	}
-	ctx = principal.WithWorkspaceID(ctx, wsID.UUID)
 	ctx = principal.SystemActing(ctx, actor)
 	return ctx, true, nil
 }
@@ -89,10 +90,10 @@ const bootLedgerLock = `
 // the reader treats "no marked row" the same way it treats "nothing recorded":
 // the comparison is disabled, which is the posture buildinfo already takes for
 // an unstamped binary.
-func installationMarker(ctx context.Context) string {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ""
+func installationMarker(ctx context.Context, tx pgx.Tx) (string, error) {
+	ws, err := storekit.Workspace(ctx, tx)
+	if err != nil {
+		return "", fmt.Errorf("compose: naming this installation in a boot observation: %w", err)
 	}
-	return wsID.String()
+	return ws.String(), nil
 }

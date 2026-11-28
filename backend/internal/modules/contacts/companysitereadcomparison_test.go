@@ -436,7 +436,7 @@ func TestSplitConfirmedProfileDoesNotGroundMixedOrAmbiguousLegalBlocks(t *testin
 }
 
 func TestApplyResolvedHumanFactsWritesAuditableValues(t *testing.T) {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	tx := &recordingSiteReadTx{}
 	edits := []resolvedHumanFact{
 		{
@@ -466,7 +466,7 @@ func TestApplyResolvedHumanFactsWritesAuditableValues(t *testing.T) {
 }
 
 func TestApplyResolvedHumanFactsReturnsDatabaseErrors(t *testing.T) {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	edit := []resolvedHumanFact{{
 		proposal: DeepReadFact{Category: "company", Field: "employee_range"},
 		value:    "51-200",

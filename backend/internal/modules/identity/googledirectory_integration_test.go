@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 const (
@@ -46,7 +47,7 @@ type memorySealer struct {
 
 func (m *memorySealer) sealer() config.Sealer {
 	return config.Sealer{
-		Seal: func(_ context.Context, plaintext string) (string, error) {
+		Seal: func(_ context.Context, _ ids.WorkspaceID, plaintext string) (string, error) {
 			m.mu.Lock()
 			defer m.mu.Unlock()
 			m.next++
@@ -54,7 +55,7 @@ func (m *memorySealer) sealer() config.Sealer {
 			m.sealed[ref] = plaintext
 			return ref, nil
 		},
-		Resolve: func(_ context.Context, ref string) (string, error) {
+		Resolve: func(_ context.Context, _ ids.WorkspaceID, ref string) (string, error) {
 			m.mu.Lock()
 			defer m.mu.Unlock()
 			if v, ok := m.sealed[ref]; ok {
@@ -62,7 +63,7 @@ func (m *memorySealer) sealer() config.Sealer {
 			}
 			return "", errors.New("no such ref")
 		},
-		Retire: func(_ context.Context, ref string) {
+		Retire: func(_ context.Context, _ ids.WorkspaceID, ref string) {
 			m.mu.Lock()
 			defer m.mu.Unlock()
 			delete(m.sealed, ref)

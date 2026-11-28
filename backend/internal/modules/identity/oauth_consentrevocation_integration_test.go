@@ -19,7 +19,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // signedInConsenter invites and signs in a seat. It returns the seat and its
@@ -28,7 +27,7 @@ func signedInConsenter(t *testing.T, e *revocationEnv) (Identity, string) {
 	t.Helper()
 	email := "consenter@" + e.slug + ".test"
 	id := inviteAndLogin(t, e, email, "Consenter")
-	_, session, err := e.svc.Login(principal.WithWorkspaceID(context.Background(), e.ws.UUID), email, seatNamePassword, noDevice)
+	_, session, err := e.svc.Login(context.Background(), email, seatNamePassword, noDevice)
 	if err != nil {
 		t.Fatalf("signing the consenter in: %v", err)
 	}

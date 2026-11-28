@@ -29,7 +29,7 @@ import (
 // somebody to widen the write gate to suit a fixture. The gate is right; the
 // fixture has to say who is writing.
 func asClassifier(e *loadEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:owed_verdict",

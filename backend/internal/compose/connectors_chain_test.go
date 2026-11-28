@@ -22,8 +22,7 @@ import (
 )
 
 var (
-	chainWorkspace = ids.MustParse("11111111-1111-1111-1111-111111111111")
-	chainUser      = ids.MustParse("22222222-2222-2222-2222-222222222222")
+	chainUser = ids.MustParse("22222222-2222-2222-2222-222222222222")
 )
 
 // connectWith drives the real ConnectConnector with a JSON body.
@@ -142,7 +141,7 @@ func TestChainAfterConnectAsksForTheCalendarInsteadOfLanding(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/v1/connectors/gmail/callback", nil)
 
 	h.chainAfterConnect(context.Background(), rec, req, connectState{
-		Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, Then: "gcal",
+		User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, Then: "gcal",
 	}, nil)
 
 	if rec.Code != http.StatusFound {
@@ -152,7 +151,7 @@ func TestChainAfterConnectAsksForTheCalendarInsteadOfLanding(t *testing.T) {
 	if got := u.Query().Get("redirect_uri"); got != "https://api.test/v1/connectors/gcal/callback" {
 		t.Errorf("redirect_uri = %q, want the gcal callback", got)
 	}
-	if st.Provider != "gcal" || st.Then != "" || st.ReturnTo != returnToSettings || st.User != chainUser || st.Workspace != chainWorkspace {
+	if st.Provider != "gcal" || st.Then != "" || st.ReturnTo != returnToSettings || st.User != chainUser {
 		t.Errorf("calendar state = %+v, want gcal for the same human, back to settings, ending the chain", st)
 	}
 	var nonce string
@@ -171,7 +170,7 @@ func TestChainAfterConnectWithNothingToChainLandsAsBefore(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	h.chainAfterConnect(context.Background(), rec, httptest.NewRequest(http.MethodGet, "/", nil),
-		connectState{Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings}, nil)
+		connectState{User: chainUser, Provider: "gmail", ReturnTo: returnToSettings}, nil)
 
 	if got, want := rec.Header().Get("Location"), "https://app.test/#/settings/connections/ok/gmail"; got != want {
 		t.Errorf("Location = %q, want %q", got, want)
@@ -186,7 +185,7 @@ func TestChainAfterConnectLandsTheCalendarsFailureWhenItsAppIsGone(t *testing.T)
 	rec := httptest.NewRecorder()
 
 	h.chainAfterConnect(context.Background(), rec, httptest.NewRequest(http.MethodGet, "/", nil),
-		connectState{Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, Then: "gcal"}, nil)
+		connectState{User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, Then: "gcal"}, nil)
 
 	if got, want := rec.Header().Get("Location"), "https://app.test/#/settings/connections/error/gcal"; got != want {
 		t.Errorf("Location = %q, want %q", got, want)
@@ -210,8 +209,8 @@ func (f *recordedImport) engine() connectImport {
 			}
 			return capture.BackfillPreview{BackfillEstimate: f.estimate}, f.estimateErr
 		},
-		begin: func(_ context.Context, ws ids.UUID, _ capture.Mailbox, userID ids.UserID, _ int, estimate connector.BackfillEstimate, startOver bool) (capture.BackfillRun, error) {
-			if ws != chainWorkspace || userID.UUID != chainUser || startOver {
+		begin: func(_ context.Context, _ capture.Mailbox, userID ids.UserID, _ int, estimate connector.BackfillEstimate, startOver bool) (capture.BackfillRun, error) {
+			if userID.UUID != chainUser || startOver {
 				return capture.BackfillRun{}, errors.New("began for the wrong mailbox, or over")
 			}
 			f.begun = append(f.begun, estimate)
@@ -243,7 +242,7 @@ func TestTheImportAskedForAtConnectStartsOnlyUnderTheCap(t *testing.T) {
 			rec := httptest.NewRecorder()
 
 			h.chainAfterConnect(context.Background(), rec, httptest.NewRequest(http.MethodGet, "/", nil), connectState{
-				Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, WindowMonths: 6,
+				User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, WindowMonths: 6,
 			}, nil)
 
 			if got, want := rec.Header().Get("Location"), "https://app.test/#/settings/connections/ok/gmail"+tc.query; got != want {
@@ -266,7 +265,7 @@ func TestTheImportWithNoEngineLandsPlain(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	h.chainAfterConnect(context.Background(), rec, httptest.NewRequest(http.MethodGet, "/", nil), connectState{
-		Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, WindowMonths: 6,
+		User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, WindowMonths: 6,
 	}, nil)
 
 	if got, want := rec.Header().Get("Location"), "https://app.test/#/settings/connections/ok/gmail"; got != want {
@@ -282,7 +281,7 @@ func TestAHeldImportRidesTheChainToTheCalendarsLanding(t *testing.T) {
 	h.importer = over.engine()
 	rec := httptest.NewRecorder()
 	h.chainAfterConnect(context.Background(), rec, httptest.NewRequest(http.MethodGet, "/", nil), connectState{
-		Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, Then: "gcal", WindowMonths: 6,
+		User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, Then: "gcal", WindowMonths: 6,
 	}, nil)
 	calendar, u := consentState(t, h, rec.Header().Get("Location"))
 	if calendar.WindowMonths != 6 {
@@ -304,7 +303,7 @@ func TestAHeldImportRidesTheChainToTheCalendarsLanding(t *testing.T) {
 func TestADeclinedMailConsentOffersNoImport(t *testing.T) {
 	h := wiredHandlers()
 	state := h.signer.sign(connectState{
-		Workspace: chainWorkspace, User: chainUser, Provider: "gmail", Nonce: "n",
+		User: chainUser, Provider: "gmail", Nonce: "n",
 		ReturnTo: returnToMeetings, WindowMonths: 6,
 	}, clocktest.Now(t).Add(time.Minute))
 	denied := "access_denied"
@@ -323,7 +322,7 @@ func TestADeclinedMailConsentOffersNoImport(t *testing.T) {
 func TestADeclinedMailConsentNeverAsksForItsCalendar(t *testing.T) {
 	h := wiredHandlers()
 	state := h.signer.sign(connectState{
-		Workspace: chainWorkspace, User: chainUser, Provider: "gmail", Nonce: "n",
+		User: chainUser, Provider: "gmail", Nonce: "n",
 		ReturnTo: returnToOnboarding, Then: "gcal",
 	}, clocktest.Now(t).Add(time.Minute))
 	denied := "access_denied"

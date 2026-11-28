@@ -13,7 +13,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const geminiNotes = "gemini-notes@google.com"
@@ -44,7 +43,7 @@ func (o *owedEnv) judgeAs(t *testing.T, kind string) *scriptedVerdictBrain {
 		 WHERE email = $1 AND status = 'pending'`, geminiNotes)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{pending: kind}}
 	engine := NewCounterpartyVerdictEngine(o.e.Pool, brain, CaptureConfig{}, slog.Default())
-	ctx := principal.WithWorkspaceID(context.Background(), o.e.WS)
+	ctx := context.Background()
 	if err := engine.RunWorkspace(ctx, 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}

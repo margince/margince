@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -102,7 +101,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 		{"field": "linkedin", "value": "linkedin.com/in/bob", "evidence_snippet": "linkedin.com/in/bob", "confidence": 0.9},
 	}}
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
@@ -143,7 +142,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 		// select them again — and asking would show the model the identical
 		// window and get the identical answer, nightly, forever.
 		before := brain.calls
-		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 			t.Fatalf("Run: %v", err)
 		}
 		if brain.calls != before {
@@ -175,7 +174,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 			t.Fatal(err)
 		}
 		before := brain.calls
-		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 			t.Fatalf("Run: %v", err)
 		}
 		if brain.calls == before {
@@ -197,7 +196,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 		// She is still a candidate — the company_name her signature may state is
 		// unanswered — so the pass reads her mail and the model returns the
 		// same title it returns for everyone. The human's answer survives it.
-		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 			t.Fatalf("Run: %v", err)
 		}
 		var title string
@@ -243,7 +242,7 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 	t.Run("garbage output fails the candidate, not the pass", func(t *testing.T) {
 		brain := &faultyEnrichBrain{garbage: true}
 		enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 			t.Fatalf("a per-candidate model failure must not fail the pass: %v", err)
 		}
 		if brain.calls == 0 {
@@ -258,7 +257,7 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 	t.Run("a budget stop ends the pass cleanly", func(t *testing.T) {
 		brain := &faultyEnrichBrain{err: ai.ErrBudgetDeferred}
 		enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 			t.Fatalf("a budget stop must not be an error: %v", err)
 		}
 		if brain.calls != 1 {
@@ -270,7 +269,7 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 		down := &ai.ProviderDownError{Provider: "acme", Health: model.HealthDown, RetryAfter: time.Now().Add(time.Hour)}
 		brain := &faultyEnrichBrain{err: down}
 		enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 			t.Fatalf("an outage must not be an error: %v", err)
 		}
 		if brain.calls != 1 {
@@ -328,7 +327,7 @@ func TestASignatureDoesNotOverwriteACorrectedField(t *testing.T) {
 		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
 	}}
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
@@ -386,7 +385,7 @@ func TestAFullPassAsksForAContinuation(t *testing.T) {
 			enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
 			enricher.limit = 2
 
-			filled, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+			filled, err := enricher.RunWorkspace(context.Background())
 			if err != nil {
 				t.Fatalf("Run: %v", err)
 			}
@@ -411,7 +410,7 @@ func TestABudgetStopAsksForNoContinuation(t *testing.T) {
 	enricher := NewCaptureEnricher(e.Pool, &budgetStoppedBrain{}, slog.New(slog.DiscardHandler))
 	enricher.limit = 2
 
-	filled, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+	filled, err := enricher.RunWorkspace(context.Background())
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -448,7 +447,7 @@ func TestAPassThatMovedNobodyAsksForNoContinuation(t *testing.T) {
 	enricher := NewCaptureEnricher(e.Pool, &unparseableBrain{}, slog.New(slog.DiscardHandler))
 	enricher.limit = 2
 
-	filled, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+	filled, err := enricher.RunWorkspace(context.Background())
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -508,7 +507,7 @@ func TestAPassStandsDownWhileAnotherHoldsTheInstallation(t *testing.T) {
 		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
 	}}
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-	filled, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+	filled, err := enricher.RunWorkspace(context.Background())
 	if err != nil {
 		t.Fatalf("the second pass returned an error, and standing down is not one: %v", err)
 	}
@@ -534,7 +533,7 @@ func TestThePassRunsWhenNobodyHoldsTheInstallation(t *testing.T) {
 		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
 	}}
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if brain.calls != 1 {
@@ -554,7 +553,7 @@ func TestThePassReleasesWhatItHeld(t *testing.T) {
 		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
 	}}
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if _, err := enricher.RunWorkspace(ctx); err != nil {
 		t.Fatalf("the first pass: %v", err)
 	}
@@ -647,7 +646,7 @@ func TestASignatureIsNotReadOffAMessageTheContactDidNotSend(t *testing.T) {
 		{"field": "address", "value": "Somestreet 7", "evidence_snippet": "Somestreet 7", "confidence": 1},
 	}}
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
@@ -695,7 +694,7 @@ func TestABackfilledSenderRowIsReadByItsAddressNotItsContactID(t *testing.T) {
 		{"field": "title", "value": "PARTNER MANAGER DACH", "evidence_snippet": "PARTNER MANAGER DACH", "confidence": 1},
 	}}
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
@@ -723,7 +722,7 @@ func TestAForeignSignatureUnderTheirOwnIsNotReadAsTheirs(t *testing.T) {
 		{"field": "title", "value": "HEAD OF NOTHING", "evidence_snippet": "HEAD OF NOTHING", "confidence": 1},
 	}}
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
@@ -756,7 +755,7 @@ func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	applyAsTheOlderPassDid(t, e, contact, activity)
 
 	enricher := NewCaptureEnricher(e.Pool, &signatureScriptBrain{}, slog.New(slog.DiscardHandler))
@@ -820,7 +819,7 @@ func TestARetractionLeavesATitleSomebodyChangedAfterwards(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	applyAsTheOlderPassDid(t, e, contact, activity)
 
 	// A human sees the wrong title and types the right one. UpdateContact writes

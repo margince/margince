@@ -113,7 +113,7 @@ func (e *linkEnv) seat(user ids.UUID, all bool, grants map[string]principal.Obje
 	if all {
 		rowScope = principal.RowScopeAll
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{RoleKeys: []string{"rep"}, Objects: grants, RowScope: rowScope},
