@@ -65,6 +65,6 @@ func WithRunnerReadFailureForTest(fail loopfault.Failure) RunnerOption {
 
 // InstallationBindingForTest is the worker middleware the production client
 // runs, for a test that works a job through River's test worker.
-func InstallationBindingForTest(pool *pgxpool.Pool) rivertype.WorkerMiddleware {
+func InstallationBindingForTest(pool *pgxpool.Pool) rivertype.Plugin {
 	return jobs.WorkerBinding(installationBinding(pool))
 }

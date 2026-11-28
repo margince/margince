@@ -154,7 +154,7 @@ func riverClient(t *testing.T, e *apptest.AppEnv) *river.Client[pgx.Tx] {
 
 func riverConfig(pool *pgxpool.Pool) *river.Config {
 	return &river.Config{
-		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
-		WorkerMiddleware: []rivertype.WorkerMiddleware{compose.InstallationBindingForTest(pool)},
+		Logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Plugins: []rivertype.Plugin{compose.InstallationBindingForTest(pool)},
 	}
 }

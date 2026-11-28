@@ -98,23 +98,6 @@ type Config struct {
 	BindWorkspace BindWorkspace
 }
 
-// BindWorkspace binds the installation's workspace onto the context one job
-// runs under. It receives the job row so a kind that owes work to workspaces
-// no company is live in (the cleanups that reach archived data) can opt out.
-type BindWorkspace func(ctx context.Context, job *rivertype.JobRow) (context.Context, error)
-
-// WorkerBinding is the River worker middleware that runs the binding. A test
-// that works a job through River's test worker installs it the same way.
-func WorkerBinding(bind BindWorkspace) rivertype.WorkerMiddleware {
-	return river.WorkerMiddlewareFunc(func(ctx context.Context, job *rivertype.JobRow, doInner func(context.Context) error) error {
-		bound, err := bind(ctx, job)
-		if err != nil {
-			return FaultContext(ctx, err)
-		}
-		return doInner(bound)
-	})
-}
-
 // Runner wraps a River client bound to the shared pool. The zero value is
 // not usable — construct with New.
 type Runner struct {
@@ -170,7 +153,7 @@ func riverConfig(cfg Config, log *slog.Logger) *river.Config {
 		Logger:            log,
 		ReindexerSchedule: river.NeverSchedule(),
 		TestOnly:          cfg.TestOnly,
-		WorkerMiddleware:  []rivertype.WorkerMiddleware{WorkerBinding(cfg.BindWorkspace)},
+		Plugins:           []rivertype.Plugin{WorkerBinding(cfg.BindWorkspace)},
 	}
 	if cfg.TestOnly {
 		config.FetchCooldown, config.FetchPollInterval = testFetchInterval, testFetchInterval
