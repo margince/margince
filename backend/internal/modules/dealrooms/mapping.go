@@ -10,6 +10,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -213,7 +214,7 @@ func listInput(params crmcontracts.ListDealRoomsParams) ListRoomsInput {
 		in.State = &s
 	}
 	if params.ParticipantEmail != nil {
-		email := strings.ToLower(strings.TrimSpace(string(*params.ParticipantEmail)))
+		email := correspondence.Fold(string(*params.ParticipantEmail))
 		in.ParticipantEmail = &email
 	}
 	return in

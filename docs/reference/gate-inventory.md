@@ -145,6 +145,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `homerepairreasons_test.go` | H3 | Home repair labels cover the reasons emitted by its canonical classifiers and reviewed projections. |
 | `humanonlyenforcement_test.go` | H1 | The declaration reaches the thing that enforces it. |
 | `idempotencymap_test.go` | H3 | The contract decides which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must list the same operations. |
+| `identifiercase_test.go` | H3 | The SQL mapping is generated from Go rather than a server's locale tables. |
 | `identifierfields_test.go` | H3 | A provider's match rules are checked against IdentifierFields(), so that list has to name every field a contact actually carries. |
 | `identifierspellingparity_test.go` | H3 | The characters drop\_hidden\_characters removes in the database are the ones values.IdentifierText drops in Go. |
 | `inboundsigningrecipe_test.go` | H3 | The signing scope is one invariant spelled on both sides of a wire. |
@@ -387,6 +388,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `historyfieldlabels_test.go` | H2 | Every field name the History tab can print has a word for it. |
 | `humanonlypending_test.go` | H1 | An agent may do what its user may do in the app, unless security says no. Every human-only operation a signed-in user reaches says why in the contract, as x-human-only-reason: security, covered by another tool, or pending, which tools/gen-agentpolicy requires. |
 | `humanonlytransport_test.go` | H1 | A human-only operation says so at the transport, not only in the gate. |
+| `identifierfold_test.go` | H2 | _(no doc comment)_ |
+| `identifierrepair_test.go` | H2 | _(no doc comment)_ |
 | `ifmatchversion_test.go` | H2 | Every route taking `If-Match` is checked for a read that publishes the record's version, with the routes having none ratified by name. |
 | `importedeventconsumers_test.go` | H3 | Every consumer of a stream an import writes has decided what it does with an imported event. |
 | `insertattemptcaps_test.go` | H2 | An insert that names no MaxAttempts still has a retry ladder: River's default of 25, on attempt-to-the-fourth backoff, which reaches days. |

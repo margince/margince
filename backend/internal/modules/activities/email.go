@@ -14,12 +14,12 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/deliveryrepeat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -379,7 +379,7 @@ func ToRecipients(recipients, cc, bcc []string) []string {
 }
 
 func normalizeAddress(addr string) string {
-	return strings.ToLower(strings.TrimSpace(addr))
+	return correspondence.Fold(addr)
 }
 
 // primaryCounterparty picks the one address `activity.counterparty_email`

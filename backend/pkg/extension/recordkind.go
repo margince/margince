@@ -35,6 +35,8 @@ type RecordKindField struct {
 	// list. A filter then offers them as a choice instead of a text box, and
 	// refuses a value outside them. Empty means free text.
 	Options []string
+	// Reportable allows a deal report to group by this field through a record picker.
+	Reportable bool
 }
 
 // RecordKindDeclaration is one kind of record a unit adds beside core's own. It

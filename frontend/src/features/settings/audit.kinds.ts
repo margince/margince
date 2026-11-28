@@ -5,6 +5,7 @@ import type { MessageKey } from "../../i18n/en";
 
 // The words for each record type an audit row names, by its wire value.
 export const AUDIT_KIND_LABEL: Readonly<Record<string, MessageKey>> = {
+  company_domain_disposition: "audit.kind.company_domain_disposition",
   chat_bot_delivery: "audit.kind.chat_bot_delivery",
   chat_channel_watch: "audit.kind.chat_channel_watch",
   chat_member_grant: "audit.kind.chat_member_grant",

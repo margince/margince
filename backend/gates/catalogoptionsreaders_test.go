@@ -59,6 +59,7 @@ const fieldcatalogPort = "github.com/margince/margince/backend/internal/shared/p
 // the point of the gate, not a workaround for it: state why the values reach a
 // caller and which grant that caller had to hold.
 var catalogOptionsReaders = map[string]string{
+	"internal/compose/reportjoin": "uses only a record picker target kind as schema; never returns Options; both record grants, row scopes and administrator reporting opt-ins govern the joined values",
 	// Owns the column. It writes the jsonb (marshalOptions) and reads it back
 	// (unmarshalOptions), and its own list surface is `custom_field:read`.
 	"internal/modules/customfields": "the catalogue itself",

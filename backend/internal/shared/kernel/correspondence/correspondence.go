@@ -82,3 +82,7 @@ func BaseAddress(address string) (string, bool) {
 	base += "@" + domain
 	return base, base != folded
 }
+
+// FoldSQL compares legacy rows with the same spelling as Fold. The expression
+// comes from the calling store's fixed SQL, never from a request.
+func FoldSQL(expression string) string { return "fold_identifier(" + expression + ")" }

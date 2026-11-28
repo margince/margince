@@ -70,6 +70,7 @@ function mount(
     stakeholder?: boolean;
     seatCurrent?: boolean;
     replyContactId?: string;
+    beforeContextRead?: (path: string) => Promise<void>;
   } = {},
 ) {
   const params = new URLSearchParams();
@@ -87,6 +88,9 @@ function mount(
     vi.fn(async (request: Request) => {
       const path = new URL(request.url).pathname;
       paths.push(path);
+      if (path.endsWith("/360") || path.includes("/activities/")) {
+        await context.beforeContextRead?.(path);
+      }
       let body: unknown;
       if (path === "/v1/me") {
         body = meFixture({
@@ -493,9 +497,57 @@ it.each([
       screen.getByRole("button", { name: "Review email · 2 times" }),
     );
     const composer = await screen.findByRole("dialog", { name: "Compose" });
-    expect(composer.getAttribute("data-reason")).toBe(reason);
+    await waitFor(() =>
+      expect(composer.getAttribute("data-reason")).toBe(reason),
+    );
     expect(composer.getAttribute("data-entity-type")).toBe(entityType);
     expect(composer.getAttribute("data-entity-id")).toBe(entityId);
+  },
+);
+
+it.each([
+  { dealId: "d-2", reason: "active_deal_followup", path: "/360" },
+  {
+    replyActivityId: "mail-1",
+    reason: "requested_followup",
+    path: "/activities/mail-1",
+  },
+])(
+  "waits for booking context before opening the composer: %j",
+  async (context) => {
+    const user = userEvent.setup();
+    let release = () => {};
+    const loaded = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mount(
+      true,
+      30,
+      () => bookingSlots,
+      bookingHours,
+      {},
+      {
+        ...context,
+        beforeContextRead: async (path) => {
+          if (path.endsWith(context.path)) await loaded;
+        },
+      },
+    );
+    for (const slot of bookingSlots) {
+      await user.click(
+        await screen.findByRole("button", { name: slotName(slot.start) }),
+      );
+    }
+    const review = screen.getByRole("button", {
+      name: "Review email · 2 times",
+    });
+    expect(review).toHaveProperty("disabled", true);
+    expect(screen.queryByRole("dialog", { name: "Compose" })).toBeNull();
+    release();
+    await waitFor(() => expect(review).toHaveProperty("disabled", false));
+    await user.click(review);
+    const composer = await screen.findByRole("dialog", { name: "Compose" });
+    expect(composer.getAttribute("data-reason")).toBe(context.reason);
   },
 );
 

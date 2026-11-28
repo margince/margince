@@ -3,7 +3,11 @@
 
 package mailmap
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+)
 
 // icalLine is one unfolded iCalendar content line: NAME;PARAM=VALUE:VALUE.
 type icalLine struct {
@@ -102,5 +106,5 @@ func icalAddress(value string) string {
 	if len(value) > len("mailto:") && strings.EqualFold(value[:len("mailto:")], "mailto:") {
 		value = value[len("mailto:"):]
 	}
-	return strings.ToLower(strings.TrimSpace(value))
+	return correspondence.Fold(value)
 }

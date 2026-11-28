@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -179,7 +180,7 @@ func loweredCardEmails(entry contacts.VCardEntry) string {
 	seen := map[string]bool{}
 	emails := make([]string, 0, len(entry.Emails))
 	for _, email := range entry.Emails {
-		v := strings.ToLower(strings.TrimSpace(email.Value))
+		v := correspondence.Fold(email.Value)
 		if v == "" || seen[v] {
 			continue
 		}
