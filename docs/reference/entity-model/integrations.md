@@ -132,7 +132,7 @@ The 5 tables owned by `integrations`, as the migrations build them. [Back to the
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `contact_id` | `contact` | deleting the parent deletes this row |
+| `contact_id` | `contact` | the parent cannot be deleted while this row points at it |
 | `requested_by` | `app_user` | deleting the parent keeps this row and clears the link |
 
 **Rules**

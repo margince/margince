@@ -464,7 +464,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `consent_text_version_id` | `consent_text_version` | the parent cannot be deleted while this row points at it |
-| `contact_id` | `contact` | deleting the parent deletes this row |
+| `contact_id` | `contact` | the parent cannot be deleted while this row points at it |
 | `lead_id` | `lead` | the parent cannot be deleted while this row points at it |
 | `purpose_id` | `consent_purpose` | the parent cannot be deleted while this row points at it |
 | `subject_request_id` | `consent_qualifying_event` | deleting the parent keeps this row and clears the link |
@@ -548,8 +548,8 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `contact_id` | `contact` | deleting the parent deletes this row |
-| `lead_id` | `lead` | deleting the parent deletes this row |
+| `contact_id` | `contact` | the parent cannot be deleted while this row points at it |
+| `lead_id` | `lead` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 

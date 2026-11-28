@@ -730,7 +730,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `contact_id` | `contact` | deleting the parent deletes this row |
+| `contact_id` | `contact` | the parent cannot be deleted while this row points at it |
 | `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
 
 **Rules**
