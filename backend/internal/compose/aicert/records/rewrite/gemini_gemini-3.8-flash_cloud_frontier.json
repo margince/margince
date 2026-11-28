@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "pa4b69d6c5af916b59206efe0f270b5c8",
+  "prompt_version": "pcb38ab08b2134894194bd46e2dc15cd0",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 12,
@@ -17,36 +17,36 @@
   "context_applied": false,
   "context_scopes": null,
   "context_owed": 0,
-  "judge_score_p50": 91,
+  "judge_score_p50": 93,
   "judge_score_min": 80,
-  "latency_p50": 3299,
-  "latency_p95": 5799,
-  "mean_tokens": 974,
-  "mean_tokens_in": 883,
-  "mean_tokens_out": 91,
+  "latency_p50": 2371,
+  "latency_p95": 7045,
+  "mean_tokens": 1023,
+  "mean_tokens_in": 939,
+  "mean_tokens_out": 84,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 1003,
+  "est_cost_microusd": 1019,
   "judge_served_model": "claude-sonnet-5-5",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
   "wire_rule": "gemini-wire-5",
   "thinking_level": "low",
-  "ran_at": "2026-11-26T07:18:46Z",
+  "ran_at": "2026-11-27T16:15:18Z",
   "scenarios": [
     {
       "scenario": "rewrite_email_shorter_keeps_the_ask",
       "site": "rewrite",
-      "stamp": "64ad9017a663350358ad6b562b915edbbdd1e43a0d8c78ab0bd36f21f9b9bf116086467838c491000763145077a80f958fd0e6233c8a843de7135a52d3282c9edef5b0749ce87174c9fc8b0baa1467a5e463c949a7713e85665e7af0bdf62588",
+      "stamp": "64ad9017a663350358ad6b562b915edbbdd1e43a0d8c78ab0bd36f21f9b9bf1186e6fd47202780757f5eac2590fc76db3a319878dce820054dcafb2748673a65045eaef66b708d21e5d95980d49c9363c57dfa3dc24e5bfe13d736f72a5d3b5a",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
         95,
-        93,
-        96
+        80,
+        95
       ],
       "bands": {
         "certified_min": 80,
@@ -68,9 +68,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        90,
-        92,
-        91
+        93,
+        88,
+        93
       ],
       "bands": {
         "certified_min": 80,
@@ -92,8 +92,8 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        80,
-        93,
+        95,
+        92,
         93
       ],
       "bands": {
@@ -117,7 +117,7 @@
       "passed": 3,
       "judge_scores": [
         89,
-        91,
+        93,
         90
       ],
       "bands": {

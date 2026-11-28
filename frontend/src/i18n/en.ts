@@ -3076,6 +3076,9 @@ export const en = {
   "shell.shortcuts.singleKeyOff": "Single-key shortcuts are off",
   "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
   "shell.more": "More",
+  "shell.embedSignInBody":
+    "Sign in to Margince in a browser tab. Then come back here and select Retry.",
+  "shell.embedOpen": "Open Margince",
   "shell.unknownPage": "Not found",
   "shell.unavailableForRole": "Not available for your role.",
   "shell.unknownAddress": "This address does not lead anywhere in Margince.",
@@ -4467,7 +4470,7 @@ export const en = {
   "standing.sources.model_one": "Margince · {count} source",
   "standing.sources.model_other": "Margince · {count} sources",
   "standing.ring.rated": "{rated} of {total} rated",
-  "standing.ring.noInteractions": "No interactions yet",
+  "standing.ring.noInteractions": "No shared interactions yet",
   "standing.ring.strength": "Relationship strength {score} of 100, {band}",
   "standing.ring.score": "Score {score} of 100",
   "standing.ladder.position": "Stage {n} of {total}",
@@ -13671,6 +13674,37 @@ export const en = {
   // uses. Unlike the mail providers, the connection stays editable in
   // place: replacing the token goes through PATCH, never a disconnect.
   "connectors.provTelegram": "Telegram",
+  "connectors.business.whatsapp": "WhatsApp Business",
+  "connectors.business.zalo": "Zalo Official Account",
+  "connectors.business.connect": "Connect account",
+  "connectors.business.done": "Done",
+  "connectors.business.intro":
+    "Customer messages appear in History. Replies stay in the provider’s app.",
+  "connectors.business.empty":
+    "No account connected. Connect an account to receive customer messages.",
+  "connectors.business.connectHelp":
+    "Enter the account’s credentials and choose the team that reads its messages.",
+  "connectors.business.wabaId": "WhatsApp Business Account ID",
+  "connectors.business.phoneNumberId": "Phone number ID",
+  "connectors.business.phone": "Display phone number",
+  "connectors.business.oaId": "Official Account ID",
+  "connectors.business.appId": "App ID",
+  "connectors.business.name": "Account name",
+  "connectors.business.accessToken": "Access token",
+  "connectors.business.refreshToken": "Refresh token",
+  "connectors.business.appSecret": "App secret",
+  "connectors.business.oaSecretKey": "Official Account secret key",
+  "connectors.business.verifyToken": "Webhook verification token",
+  "connectors.business.verifyHelp":
+    "Copy this token into Meta’s webhook settings before closing. It appears only once.",
+  "connectors.business.tokenDiscard":
+    "The verification token appears only once. Close without copying it?",
+  "connectors.business.reauth": "Needs reconnection",
+  "connectors.business.reauthHelp":
+    "Access expired. Disconnect the account and connect it again with fresh credentials.",
+  "connectors.business.disconnectTitle": "Disconnect {name}?",
+  "connectors.business.disconnectHelp":
+    "Disconnecting stops new messages and removes the saved credentials. Existing History stays. A new connection starts Held.",
   "connectors.telegramTitle": "Telegram bot",
   "connectors.telegramSub":
     "One bot receives and sends messages for the whole company.",
@@ -15933,7 +15967,7 @@ export const en = {
   "settings.part.integrations.contact": "Contact data",
   "settings.part.integrations.accounting": "Accounting",
   "settings.part.integrations.webhooks": "Webhooks",
-  "settings.part.integrations.telegram": "Messaging providers",
+  "settings.part.integrations.telegram": "Messaging accounts",
   "settings.part.integrations.sharedMailboxes": "Shared mailboxes",
   "sharedMailboxes.title": "Shared mailboxes",
   "sharedMailboxes.intro":
@@ -20849,7 +20883,7 @@ export const en = {
   "standing.ofOpen_other": "of {count} open",
   "standing.open_one": "{count} open",
   "standing.open_other": "{count} open",
-  "contact.standing.dim.exchange": "Exchange",
+  "contact.standing.dim.exchange": "Shared exchange",
   "contact.standing.dim.exchangeValue": "{in} in · {out} out",
   "contact.standing.dim.window": "Last 90 days",
   "contact.standing.dim.reach": "Reach",
@@ -24577,7 +24611,7 @@ export const en = {
     "The project is on day {day} of {total}, and no task is overdue.",
   "contact.verdict.nothingOwed": "Nothing is owed on either side.",
   "contact.verdict.noExchange":
-    "No exchange with this contact is recorded yet.",
+    "No exchange with this contact is shared with everyone yet.",
   "contactCase.title": "Possible duplicates",
   "contactCase.intro":
     "Tick the contacts that are the same person. Then choose which one stays and who owns it.",

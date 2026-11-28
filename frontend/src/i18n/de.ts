@@ -3194,6 +3194,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.singleKeyOffHint":
     "Aktiviere sie unter Einstellungen → Nutzerkonto.",
   "shell.more": "Mehr",
+  "shell.embedSignInBody":
+    "Melde dich in einem Browser-Tab bei Margince an. Komm dann hierher zurück und wähle Erneut versuchen.",
+  "shell.embedOpen": "Margince öffnen",
   "shell.unknownPage": "Nicht gefunden",
   "shell.unavailableForRole": "Für deine Rolle nicht verfügbar.",
   "shell.unknownAddress": "Diese Adresse führt in Margince nirgendwohin.",
@@ -4539,7 +4542,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.sources.model_one": "Margince · {count} Quelle",
   "standing.sources.model_other": "Margince · {count} Quellen",
   "standing.ring.rated": "{rated} von {total} bewertet",
-  "standing.ring.noInteractions": "Noch kein Austausch",
+  "standing.ring.noInteractions": "Noch kein geteilter Austausch",
   "standing.ring.strength": "Beziehungsstärke {score} von 100, {band}",
   "standing.ring.score": "Score {score} von 100",
   "standing.ladder.position": "Phase {n} von {total}",
@@ -13765,6 +13768,37 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // vor Ort bearbeitbar: das Ersetzen des Tokens läuft über PATCH, nie über
   // ein Trennen.
   "connectors.provTelegram": "Telegram",
+  "connectors.business.whatsapp": "WhatsApp Business",
+  "connectors.business.zalo": "Zalo OA",
+  "connectors.business.connect": "Konto verbinden",
+  "connectors.business.done": "Fertig",
+  "connectors.business.intro":
+    "Kundennachrichten erscheinen im Verlauf. Antworten erfolgen in der App des Anbieters.",
+  "connectors.business.empty":
+    "Kein Konto verbunden. Konto verbinden, um Kundennachrichten zu empfangen.",
+  "connectors.business.connectHelp":
+    "Zugangsdaten des Kontos eingeben und das Team wählen, das seine Nachrichten liest.",
+  "connectors.business.wabaId": "WhatsApp Business-Konto-ID",
+  "connectors.business.phoneNumberId": "Rufnummern-ID",
+  "connectors.business.phone": "Angezeigte Rufnummer",
+  "connectors.business.oaId": "OA-ID",
+  "connectors.business.appId": "App-ID",
+  "connectors.business.name": "Kontoname",
+  "connectors.business.accessToken": "Zugriffstoken",
+  "connectors.business.refreshToken": "Erneuerungstoken",
+  "connectors.business.appSecret": "App-Geheimnis",
+  "connectors.business.oaSecretKey": "OA-Geheimschlüssel",
+  "connectors.business.verifyToken": "Webhook-Prüftoken",
+  "connectors.business.verifyHelp":
+    "Dieses Token vor dem Schließen in die Webhook-Einstellungen von Meta kopieren. Es erscheint nur einmal.",
+  "connectors.business.tokenDiscard":
+    "Das Prüftoken erscheint nur einmal. Ohne Kopieren schließen?",
+  "connectors.business.reauth": "Erneut verbinden",
+  "connectors.business.reauthHelp":
+    "Zugriff abgelaufen. Konto trennen und mit neuen Zugangsdaten erneut verbinden.",
+  "connectors.business.disconnectTitle": "{name} trennen?",
+  "connectors.business.disconnectHelp":
+    "Beim Trennen werden keine neuen Nachrichten empfangen und die gespeicherten Zugangsdaten entfernt. Der Verlauf bleibt. Eine neue Verbindung beginnt mit Zurückgehalten.",
   "connectors.telegramTitle": "Telegram-Bot",
   "connectors.telegramSub":
     "Ein Bot empfängt und sendet Nachrichten für das gesamte Unternehmen.",
@@ -16038,7 +16072,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.contact": "Kontaktdaten",
   "settings.part.integrations.accounting": "Buchhaltung",
   "settings.part.integrations.webhooks": "Webhooks",
-  "settings.part.integrations.telegram": "Messaging-Anbieter",
+  "settings.part.integrations.telegram": "Nachrichtenkonten",
   "settings.part.integrations.sharedMailboxes": "Gemeinsame Postfächer",
   "sharedMailboxes.title": "Gemeinsame Postfächer",
   "sharedMailboxes.intro":
@@ -21126,7 +21160,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.ofOpen_other": "von {count} offenen",
   "standing.open_one": "{count} offen",
   "standing.open_other": "{count} offen",
-  "contact.standing.dim.exchange": "Austausch",
+  "contact.standing.dim.exchange": "Geteilter Austausch",
   "contact.standing.dim.exchangeValue": "{in} rein · {out} raus",
   "contact.standing.dim.window": "Letzte 90 Tage",
   "contact.standing.dim.reach": "Reichweite",
@@ -24985,7 +25019,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Projekt ist an Tag {day} von {total}, und keine Aufgabe ist überfällig.",
   "contact.verdict.nothingOwed": "Auf keiner Seite steht etwas aus.",
   "contact.verdict.noExchange":
-    "Mit diesem Kontakt ist noch kein Austausch erfasst.",
+    "Mit diesem Kontakt ist noch kein Austausch für alle sichtbar.",
   "contactCase.title": "Mögliche Duplikate",
   "contactCase.intro":
     "Markiere die Kontakte, die dieselbe Person sind. Wähle dann, welcher Kontakt bleibt und wer verantwortlich ist.",

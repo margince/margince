@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/strength_handlers.go backend/internal/modules/contacts/strength.go backend/internal/modules/contacts/strengthaccount.go backend/api/crm.yaml backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/activities/provensender.go backend/internal/modules/consent/qualifyingground.go backend/internal/compose/provensenders backend/internal/modules/activities/relinkparticipants.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go backend/internal/modules/search/graphnewpairs.go backend/internal/modules/search/graphworklocks.go backend/internal/modules/search/graphworkqueue.go backend/internal/modules/search/graphedgetargets.go -->
+<!-- describes: backend/internal/compose/strength_handlers.go backend/internal/modules/contacts/strength.go backend/internal/modules/contacts/strengthaccount.go backend/api/crm.yaml backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/activities/provensender.go backend/internal/modules/consent/qualifyingground.go backend/internal/compose/provensenders backend/internal/modules/activities/relinkparticipants.go backend/internal/modules/contacts/participant.go backend/internal/modules/contacts/ensureheld.go backend/internal/modules/contacts/cohortpromote.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go backend/internal/modules/search/graphnewpairs.go backend/internal/modules/search/graphworklocks.go backend/internal/modules/search/graphworkqueue.go backend/internal/modules/search/graphedgetargets.go -->
 # The relationship graph: participants, the interaction edge & deal coverage
 
 Margince answers the question *is this account cold* from the real parties to each conversation. It
@@ -8,7 +8,7 @@ records the parties. The table **`graph_interaction_edge`** folds them into one 
 contact). The
 coverage read turns that into named risk findings on a deal, and a user can open each one to see why.
 
-The data comes from two places. Captured mail and calls logged by hand make *participants*; see
+The data comes from two places. Captured messages and calls logged by hand make *participants*; see
 [capture-connectors.md](capture-connectors.md) for the capture side. A member's own LinkedIn export
 makes *ghosts*, a second tier that never becomes a contact; see
 [The second tier: an imported LinkedIn network](#the-second-tier-an-imported-linkedin-network). Most of
@@ -45,13 +45,14 @@ more than the human who uses it ([agent-surface.md](agent-surface.md)).
 Two write sources fill one participant table; one projection folds it; two surfaces read the fold.
 
 ```text
-captured mail / calendar          hand-logged call or meeting
+captured messages / calendar     hand-logged call or meeting
  (capture, in the ingest tx)            (activities)
         │                                   │
         ▼                                   ▼
    activity_participant  ── one row per party per role
-        │   user_id = ours · contact_id = a contact · address = never became one
-        │   (contacts promotes address → contact_id at the link chokepoint)
+        │   user_id = ours · contact_id = a contact
+        │   address / channel_user_id = captured identity
+        │   (contacts binds eligible identities at the link chokepoint)
         ▼
    graph_interaction_edge  ── the PROJECTION: one row per (user, contact)
         │   counts + exact moments; no id, no audit, no event —
@@ -72,49 +73,45 @@ captured mail / calendar          hand-logged call or meeting
 ## Participants: who is in the conversation
 
 `activity_link` records which **records** an activity is about. It has no user arm, so it cannot say
-which of *our* team members is in the conversation. `activity_participant` is a row per party, with
-three identity arms that do different jobs:
+which of *our* team members is in the conversation. `activity_participant` records a party in a role.
+The [participant schema](../reference/entity-model/activities.md#activity_participant) sets out the
+identity columns, roles and uniqueness rule.
 
-| Arm | What it means |
-|---|---|
-| `user_id` | **Our** side: the arm the interaction edge is keyed on. |
-| `contact_id` | A known counterparty, already a contact. |
-| `address` | A party who is not a record. Kept, not dropped, because an attendee nobody matched is a fact about the meeting. Each writer stores it in lower case, so one address is one row in whatever case it was written. |
-
-A row must name someone (`activity_participant_identity` CHECK), and the set of roles is closed in the
-database (`from`, `to`, `cc`, `attendee`, `organizer`). An index allows one row per
-`(activity_id, role, user_id, contact_id, address)` and counts the NULL arms as the same value. So the
-rule also binds rows with only an address, and every write does nothing, at no cost, on
-replay.
+The user arm anchors the interaction edge; a contact arm names the counterparty. Captured addresses
+and channel accounts keep the party's identity before a contact exists. The link binds that row
+when a contact becomes known. A channel match requires an activity already linked to the contact
+and an identity that is not archived for the same provider and channel account. If another contact holds that account,
+the participant stays unresolved.
 
 ### Why capture must write it in the ingest transaction
 
-The mailbox owner is known **only from the connector principal**. `capture_connection` is one per
+For personal mail, the mailbox owner is known from the connector principal. `capture_connection` is one per
 user per provider, so the registry stamps the human who granted it on the principal that runs the
 sync. By the time any other module sees the activity, its `captured_by` reads `connector:gmail`. The
 human behind it can no longer be known. That is the agreed reason `capture` writes a table
 `activities` owns. `backend/gates/tableownershipwaivers_test.go` carries it word for word, and a waiver with
 no reason, or an out-of-date one, fails the gate.
 
-Capture writes the counterparty as an **address**, not a contact. The tier gate that creates contacts
+Capture records the counterparty by address or channel account before a contact exists. The tier gate that creates contacts
 runs *after* that transaction commits. For a sender on the stop list it never runs at all. Direction
 decides the roles and nothing else: our user is `from` on outbound and `to` on inbound. That lets the
 fold tell a real exchange from many sends nobody answered.
 
 ### Which module writes which arm
 
-Four modules touch the table, and each agreement in the table-owner gate states its own reason:
+The table-owner gate records why each module writes participants:
 
 | Module | What it writes | Why it, and not the owner |
 |---|---|---|
 | `activities` | **Owner.** The path for calls logged by hand: the human who logged it plus the contacts they linked, with the same roles from direction that capture stamps. A received one names its sender as [below](#who-sent-a-received-message). | — |
 | `capture` | Both arms of a captured message, in the ingest transaction. | The connector principal is the only place the mailbox owner is known. |
-| `contacts` | Turns the address arm into a `contact_id` at `linkActivityToContact`. | That is the one chokepoint every `ensure` path reaches, **and** the one that has already checked the contact against a merge. Naming the party is the same write, on the same row, in the same transaction as the link. |
+| `contacts` | Binds email and eligible channel participants when a contact is linked. An answer can supply a held forward's missing author. | Resolving contact redirects and identity links belongs to contacts. Binding and linking commit together. |
 | `privacy` | Erasure deletes rows whose only identity is the subject. It sets the subject's arms to NULL on rows that also name one of our users. | The address arm exists for a party who is not a record. So it lives through the `contact_email` delete and would keep an erased address open to read and to a new match. |
 
-One party gets one row. `nameContactAmongParticipants` **updates** the address row and does not add a
-second. It leaves the row alone if a contact row for the same `(activity, role)` already exists. In
-that case it is a second address for a party already recorded, not a second party.
+Linking updates an existing participant and leaves it alone when the same contact is already
+recorded in that activity and role. A colleague's answer can supply a held forward's missing
+author. `EnsureHeldChannelCounterparty` records that author under the held activity lock before it names and
+links the contact. An activity that is no longer held gets none of those writes.
 
 ### Who sent a received message
 
@@ -164,6 +161,9 @@ part of the next run.
 
 The `participant_backfill` dispatcher runs per workspace every `24h`. One run writes 25 transactions
 of 500 activities and then stops. A workspace with nothing left stops at the first empty batch.
+
+The contact link reconciler also reads captures named only by a channel account. It uses the same
+checks as live capture, so a contact can bind older messages without an email match.
 
 **What it does not get back:** reading raw `From`/`To`/attendee headers out of the stored originals. That pass
 reads message bodies and needs its own rules to match addresses. When it fails, it puts a meeting on

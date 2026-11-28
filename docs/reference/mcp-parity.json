@@ -11,18 +11,18 @@
       "covered": 59,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 1010,
+      "web_app_calls": 1018,
       "web_app_calls_open": 790,
       "web_app_calls_ask_first": 111,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 174,
+      "web_app_calls_security": 182,
       "web_app_calls_covered": 45,
       "parity_signed_in_percent": 77.3,
-      "parity_web_app_percent": 78.2
+      "parity_web_app_percent": 77.6
     },
     "open_with_no_web_app_call_found": 96,
-    "parity_web_app_counting_covered_percent": 82.6,
-    "parity_web_app_once_pending_is_open_percent": 82.6
+    "parity_web_app_counting_covered_percent": 82,
+    "parity_web_app_once_pending_is_open_percent": 82
   },
   "web_app_scan": {
     "computed_calls_no_path_was_found_for": []
@@ -769,14 +769,14 @@
       "covered": 19,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 88,
+      "web_app_calls": 96,
       "web_app_calls_open": 45,
       "web_app_calls_ask_first": 11,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 24,
+      "web_app_calls_security": 32,
       "web_app_calls_covered": 19,
       "parity_signed_in_percent": 47,
-      "parity_web_app_percent": 51.1,
+      "parity_web_app_percent": 46.8,
       "areas": [
         {
           "key": "capture_triage",
@@ -809,14 +809,14 @@
           "covered": 19,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 59,
+          "web_app_calls": 67,
           "web_app_calls_open": 20,
           "web_app_calls_ask_first": 7,
           "web_app_calls_pending": 0,
-          "web_app_calls_security": 20,
+          "web_app_calls_security": 28,
           "web_app_calls_covered": 19,
           "parity_signed_in_percent": 30.4,
-          "parity_web_app_percent": 33.8
+          "parity_web_app_percent": 29.8
         },
         {
           "key": "finance_source",
@@ -6475,7 +6475,8 @@
       ],
       "group": "capture",
       "area": "connectors",
-      "state": "security"
+      "state": "security",
+      "web_app": "direct"
     },
     {
       "method": "POST",
@@ -6486,7 +6487,8 @@
       ],
       "group": "capture",
       "area": "connectors",
-      "state": "security"
+      "state": "security",
+      "web_app": "direct"
     },
     {
       "method": "DELETE",
@@ -6497,7 +6499,8 @@
       ],
       "group": "capture",
       "area": "connectors",
-      "state": "security"
+      "state": "security",
+      "web_app": "inferred"
     },
     {
       "method": "PATCH",
@@ -6508,7 +6511,8 @@
       ],
       "group": "capture",
       "area": "connectors",
-      "state": "security"
+      "state": "security",
+      "web_app": "inferred"
     },
     {
       "method": "GET",
@@ -6519,7 +6523,8 @@
       ],
       "group": "capture",
       "area": "connectors",
-      "state": "security"
+      "state": "security",
+      "web_app": "direct"
     },
     {
       "method": "POST",
@@ -6530,7 +6535,8 @@
       ],
       "group": "capture",
       "area": "connectors",
-      "state": "security"
+      "state": "security",
+      "web_app": "direct"
     },
     {
       "method": "DELETE",
@@ -6541,7 +6547,8 @@
       ],
       "group": "capture",
       "area": "connectors",
-      "state": "security"
+      "state": "security",
+      "web_app": "inferred"
     },
     {
       "method": "PATCH",
@@ -6552,7 +6559,8 @@
       ],
       "group": "capture",
       "area": "connectors",
-      "state": "security"
+      "state": "security",
+      "web_app": "inferred"
     },
     {
       "method": "DELETE",

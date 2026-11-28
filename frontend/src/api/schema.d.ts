@@ -36961,7 +36961,9 @@ export interface components {
             /**
              * @description Per-channel reachability (design §6.6), derived from `contact_channel_identity`.
              *     Exposes `{provider, reachable, since}` only — the channel account id (an opaque
-             *     third-party identifier) stays out of this broad read; a governed surface owns it.
+             *     third-party identifier) stays out of this projection. A validated phone-based WhatsApp
+             *     identity named by a retained provider original can fill the contact's phone set,
+             *     which follows the contact's visibility. Opaque or business-scoped IDs do not.
              *     A blocked identity still appears here, with `reachable: false`, so the record keeps
              *     showing that a conversation exists even when a reply cannot currently be delivered.
              */

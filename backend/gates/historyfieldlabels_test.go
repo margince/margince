@@ -144,6 +144,7 @@ func labelFindings(emitted map[string]string, contract, synthetic map[string]boo
 // sharedHistoryWords ratifies each hand-built key that a contract column
 // already claims.
 var sharedHistoryWords = gatekit.Waive(map[string]string{
+	"phones":              "the contact's complete phone array, assembled by recordContactSetChange in the same shape as the contract field",
 	"address_city":        "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
 	"address_country":     "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
 	"address_line1":       "the merge and name-fill writers name the same stored contact column that the record editor and History label name",

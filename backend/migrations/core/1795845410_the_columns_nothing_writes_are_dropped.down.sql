@@ -57,7 +57,6 @@ ALTER TABLE role_assignment
         REFERENCES team(id) ON DELETE CASCADE NOT VALID;
 
 ALTER TABLE contact_acquisition_evidence ADD COLUMN purpose_claimed text;
-ALTER TABLE finance_external_customer ADD COLUMN archived_at timestamptz;
 ALTER TABLE conversation_claim
     ADD COLUMN corrected_by_user_id uuid,
     ADD CONSTRAINT conversation_claim_corrector_fkey FOREIGN KEY (corrected_by_user_id)

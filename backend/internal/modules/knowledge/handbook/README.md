@@ -67,6 +67,7 @@ Records, deals and mail in Margince, by page:
 - An extension suggested a record for a message. What do I do? → [Suggested links](suggested-links.md)
 - How do I link a deal to another deal, a company or a contact? → [Links between records](deal-links.md)
 - How do I merge two deals that are one opportunity? → [Merging two deals](merging-deals.md)
+- What works with Dispact, Slack and Teams? → [What you can do with messaging apps](messaging-apps.md)
 - How do I message the colleagues on a record? → [Messenger on a record](messenger.md)
 - How do I give a company, deal or project a channel in the team chat? → [Team chat channels](chat-channels.md)
 - How do I confirm my own chat account? → [Your chat accounts](chat-accounts.md)
@@ -181,8 +182,8 @@ Records, deals and mail in Margince, by page:
   why they are never added up. Why a status is never guessed from a date.
   Renewing and cancelling, what counts as a signed win, and the finance mirror.
 - [Your chat accounts](chat-accounts.md): confirm your own account so a customer message you pass on is filed for the customer
-- [Team chat channels](chat-channels.md): a private Dispact channel for a deal
-  or project, what Margince posts there, and why private mail never reaches it.
+- [Messaging apps](messaging-apps.md): supported actions, setup and limits for Dispact, Slack and Teams
+- [Team chat channels](chat-channels.md): link a work channel to a company, deal or project.
 - [Deal Rooms](deal-rooms.md): the page for one deal that the buyer sees. What
   a room holds, the five states, and why Close is not a freeze. Personal
   one-time links, what a buyer never sees, and what an agent may not touch.

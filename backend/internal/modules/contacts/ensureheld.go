@@ -33,13 +33,10 @@ func (s *Store) EnsureHeldChannelCounterparty(ctx context.Context, in EnsureChan
 		if err := storekit.LockSubjectKeys(ctx, tx, channelKeysOf(in.Identity), correspondingEmails(in.CorroboratingEmail)); err != nil {
 			return err
 		}
-		held, err := lockHeldForward(ctx, tx, in.ActivityID)
-		if err != nil {
+		if err := stampHeldChannelAuthor(ctx, tx, in); err != nil {
 			return err
 		}
-		if !held {
-			return ErrActivityNotHeld
-		}
+		var err error
 		res, err = s.ensureChannelCounterpartyTx(ctx, tx, in)
 		return err
 	})
@@ -47,6 +44,30 @@ func (s *Store) EnsureHeldChannelCounterparty(ctx context.Context, in EnsureChan
 		return EnsureChannelCounterpartyResult{}, err
 	}
 	return res, nil
+}
+
+// The answer supplies the author's account only after the forward was captured.
+func stampHeldChannelAuthor(ctx context.Context, tx pgx.Tx, in EnsureChannelCounterpartyInput) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, in.ActivityID.UUID); err != nil {
+		return err
+	}
+	held, err := lockHeldForward(ctx, tx, in.ActivityID)
+	if err != nil {
+		return err
+	}
+	if !held {
+		return ErrActivityNotHeld
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, channel_user_id, role)
+		SELECT a.id, @account, 'from' FROM activity a
+		 WHERE a.id = @held_activity_id AND `+pendingforward.Predicate("a")+`
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant p
+		        WHERE p.activity_id = a.id AND p.role = 'from')
+		ON CONFLICT DO NOTHING`, pgx.NamedArgs{"held_activity_id": in.ActivityID, "account": in.Identity.ChannelUserID})
+	if err != nil {
+		return fmt.Errorf("recording the author of the forwarded message: %w", err)
+	}
+	return nil
 }
 
 // lockHeldForward locks the activity row and says it is still a forward held

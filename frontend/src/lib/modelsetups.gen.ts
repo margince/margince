@@ -118,9 +118,11 @@ export const MODEL_SETUPS = {
       profile: "cloud_frontier",
       task_ladders: {
         agent_loop: ["premium", "cheap_cloud"],
+        draft_reply: ["premium", "cheap_cloud"],
         growth_fit: ["premium", "cheap_cloud"],
         nl_search: ["premium", "cheap_cloud"],
         rewrite: ["premium", "cheap_cloud"],
+        summarize: ["premium", "cheap_cloud"],
         voice_build: ["premium", "cheap_cloud"],
       },
       tiers: {
@@ -161,9 +163,11 @@ export const MODEL_SETUPS = {
       },
       task_ladders: {
         agent_loop: ["premium", "cheap_cloud"],
+        draft_reply: ["premium", "cheap_cloud"],
         growth_fit: ["premium", "cheap_cloud"],
         nl_search: ["premium", "cheap_cloud"],
         rewrite: ["premium", "cheap_cloud"],
+        summarize: ["premium", "cheap_cloud"],
         voice_build: ["premium", "cheap_cloud"],
       },
       tiers: {

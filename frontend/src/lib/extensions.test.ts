@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   composedExtensions,
-  EXTENSION_SCREEN,
   type ExtensionDescriptor,
   extensionRbacObject,
   extensionTitle,
@@ -10,6 +9,7 @@ import {
   unitCopyPrefix,
   unitsForSecretScope,
 } from "./extensions";
+import { EXTENSION_SCREEN } from "./extensionscreen";
 import { parseHash } from "./router";
 
 // A unit's copy as gen-composition merges it, so a title resolves as it would composed.

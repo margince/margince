@@ -6547,7 +6547,6 @@ public.finance_external_customer.version bigint NOT NULL gen=- def=1
 public.finance_external_customer_connection_id_extern_key CREATE UNIQUE INDEX finance_external_customer_connection_id_extern_key ON public.finance_external_customer USING btree (connection_id, external_customer_id)
 public.finance_external_customer_pkey CREATE UNIQUE INDEX finance_external_customer_pkey ON public.finance_external_customer USING btree (id)
 public.finance_invoice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.finance_invoice.archived_at timestamp with time zone gen=- def=-
 public.finance_invoice.captured_by text NOT NULL gen=- def=-
 public.finance_invoice.company_id uuid NOT NULL gen=- def=-
 public.finance_invoice.connection_id uuid NOT NULL gen=- def=-
@@ -6609,7 +6608,6 @@ public.finance_invoice_owner_key CREATE UNIQUE INDEX finance_invoice_owner_key O
 public.finance_invoice_pkey CREATE UNIQUE INDEX finance_invoice_pkey ON public.finance_invoice USING btree (id)
 public.finance_payment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.finance_payment.amount_minor bigint NOT NULL gen=- def=-
-public.finance_payment.archived_at timestamp with time zone gen=- def=-
 public.finance_payment.captured_by text NOT NULL gen=- def=-
 public.finance_payment.company_id uuid NOT NULL gen=- def=-
 public.finance_payment.connection_id uuid NOT NULL gen=- def=-
@@ -7062,6 +7060,7 @@ public.idx_aparticipant_address_to_lowercase CREATE INDEX idx_aparticipant_addre
 public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)
 public.idx_aparticipant_one_roster_seat CREATE INDEX idx_aparticipant_one_roster_seat ON public.activity_participant USING btree (id) WHERE (roster_seat IS NOT NULL)
 public.idx_aparticipant_sender_domain_reversed CREATE INDEX idx_aparticipant_sender_domain_reversed ON public.activity_participant USING btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from'::text) AND (address_domain_folded IS NOT NULL))
+public.idx_aparticipant_unresolved_channel CREATE INDEX idx_aparticipant_unresolved_channel ON public.activity_participant USING btree (channel_user_id, activity_id, id) WHERE ((channel_user_id IS NOT NULL) AND (contact_id IS NULL) AND (user_id IS NULL) AND (NOT past_party_cap))
 public.idx_aparticipant_user CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL)
 public.idx_aparticipant_waiting_address_time CREATE INDEX idx_aparticipant_waiting_address_time ON public.activity_participant USING btree (lower(address), domain_evidence_at DESC) WHERE ((role = 'to'::text) AND (address IS NOT NULL))
 public.idx_app_user_live CREATE INDEX idx_app_user_live ON public.app_user USING btree (created_at, id) WHERE (archived_at IS NULL)

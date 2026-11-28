@@ -284,6 +284,8 @@ export const SETTINGS_SECTIONS = {
       "channelProfile.distribution",
       "channelInstall.title",
       "connectors.telegramTitle",
+      "connectors.business.whatsapp",
+      "connectors.business.zalo",
       "connectors.bot.dispactTitle",
     ],
     "shared-mailboxes": [
@@ -471,30 +473,3 @@ export function settingsSectionTab(
     tabKeys(page, entry).includes(key),
   )?.[0];
 }
-
-// The company-context card's names, drawn where `companyContextShown` says.
-export const COMPANY_CONTEXT_SECTIONS: readonly MessageKey[] = [
-  "settings.brandTitle",
-  "settings.companyContextTitle",
-  "settings.companySourceTitle",
-  "ob.field.display_name",
-  "ob.field.offer_summary",
-  "ob.field.icp",
-  "settings.companyPositioning",
-  "ob.field.value_proposition",
-  "ob.field.usp",
-  "ob.field.customer_pains",
-  "ob.field.desired_outcomes",
-  "ob.field.buying_center",
-  "ob.field.buying_intents",
-  "ob.field.common_objections",
-  "ob.field.sales_motion",
-  "settings.companyIdentity",
-  "ob.field.legal_name",
-  "ob.field.registered_address",
-  "ob.field.register_vat",
-  "ob.field.industry",
-  "ob.field.history",
-  "settings.companyWebsite",
-  "settings.companyRefreshRow",
-];

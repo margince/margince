@@ -14,15 +14,13 @@ import {
   type SettingsPageId,
 } from "../../lib/settingscatalog";
 import { settingsHref } from "../../lib/settingsrouting";
+import { COMPANY_CONTEXT_SECTIONS } from "./companycontextsections";
 import {
   matchesConfigurationFilter,
   type SettingName,
 } from "./configurationentries";
 import { matchedTab, tabAliases } from "./settingssearchtabs";
-import {
-  COMPANY_CONTEXT_SECTIONS,
-  settingsSectionKeys,
-} from "./settingssections";
+import { settingsSectionKeys } from "./settingssections";
 
 /**
  * Finding a setting by the word a reader already has for it.

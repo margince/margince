@@ -12,7 +12,6 @@ ALTER TABLE communication_review
     DROP CONSTRAINT communication_review_supersession_shape,
     DROP COLUMN superseded_by;
 ALTER TABLE conversation_claim DROP COLUMN corrected_by_user_id;
-ALTER TABLE finance_external_customer DROP COLUMN archived_at;
 ALTER TABLE contact_acquisition_evidence DROP COLUMN purpose_claimed;
 
 ALTER TABLE role_assignment DROP COLUMN team_id;
