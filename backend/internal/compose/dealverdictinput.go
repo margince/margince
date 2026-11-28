@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
@@ -123,7 +124,7 @@ func readVerdictDeal(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVe
 func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	rows, err := tx.Query(ctx, `
 		SELECT a.id::text, a.kind, coalesce(`+activities.WriterSideSQL("a", "true")+`, ''), a.occurred_at, coalesce(a.subject, ''),
-		       left(coalesce(a.body, ''), $2), greatest(a.created_at, l.created_at), greatest(a.updated_at, l.created_at),
+		       left(coalesce((`+meetingoutcome.RecordBodySQL("a")+`), ''), $2), greatest(a.created_at, l.created_at), greatest(a.updated_at, l.created_at),
  EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id=a.id AND p.role='from' AND `+auth.ParticipantStandsSQL("p", "a")+`
  AND (p.user_id IS NOT NULL OR EXISTS (SELECT 1 FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "p.address", "p.address_domain_folded")+` AND `+workforce.CaptureSeatSQL("u")+`)))
 		  FROM activity_link l JOIN activity a ON a.id = l.activity_id

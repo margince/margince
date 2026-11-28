@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -41,7 +42,7 @@ import (
 // the pass in the refs the request showed each activity, stage and criterion by.
 func dealVerdictRefs(lane completer) completer {
 	return inRefs{inner: lane, shown: []shownBy{
-		{key: "activity_id", query: `SELECT left(body, 40) FROM activity WHERE id = $1`},
+		{key: "activity_id", query: `SELECT left(` + meetingoutcome.RecordBodySQL("a") + `, 40) FROM activity a WHERE id = $1`},
 		{key: "stage_id", query: `SELECT 'Later stage: ' || name || ' (' FROM stage WHERE id = $1`},
 		{key: "criterion_id", query: `SELECT ': ' || label || ' (criterion_id' FROM stage_exit_criterion WHERE id = $1`},
 	}}

@@ -160,7 +160,15 @@ const ACCEPTED_TRANSCRIPT_EXTENSION = ".txt";
 /** TranscriptUploadField reads a transcript file into the body as text. */
 export function TranscriptUploadField({
   onText,
-}: Readonly<{ onText: (text: string) => void }>) {
+  onFile,
+  disabled,
+  onReadingChange,
+}: Readonly<{
+  onText: (text: string) => void;
+  onFile?: (file: File) => void;
+  disabled?: boolean;
+  onReadingChange?: (reading: boolean) => void;
+}>) {
   const t = useT();
   const [fileError, setFileError] = useState<string | null>(null);
   return (
@@ -170,6 +178,7 @@ export function TranscriptUploadField({
           {...control}
           type="file"
           accept={ACCEPTED_TRANSCRIPT_EXTENSION}
+          disabled={disabled}
           onChange={async (event) => {
             const file = event.target.files?.[0];
             event.target.value = "";
@@ -182,12 +191,16 @@ export function TranscriptUploadField({
               setFileError(t("log.transcriptUploadRejected"));
               return;
             }
+            onReadingChange?.(true);
             try {
               const text = await file.text();
               setFileError(null);
               onText(text);
+              onFile?.(file);
             } catch {
               setFileError(t("log.transcriptUploadFailed"));
+            } finally {
+              onReadingChange?.(false);
             }
           }}
         />

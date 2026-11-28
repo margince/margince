@@ -3024,6 +3024,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.invitation_status": "Einladungsstatus",
   "history.field.attendees": "Eingeladene Teilnehmende",
   "history.field.proposal_status": "Status des Terminvorschlags",
+  "history.field.meeting_notes": "Interne Notizen zum Termin",
   "history.field.meeting_status": "Ergebnis des Termins",
   "history.field.meeting_intent": "Terminbeginn (Ortszeit)",
   "history.field.candidate_company_key": "Zugeordnetes Unternehmen",
@@ -8616,7 +8617,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.recordOfMeetingRecorded":
     "{subject} ist schon als stattgefunden erfasst. Erneutes Speichern ergänzt nur, was nicht gespeichert wurde.",
   "log.recordOfMeetingManaged":
-    "Betreff und Notizen gehören zur Kalendereinladung. Deine Notizen werden hier als Notiz gespeichert, und der Termin wird als stattgefunden markiert.",
+    "Titel und Beschreibung bleiben in der Kalendereinladung. Deine internen Notizen werden an diesem Termin gespeichert, und es wird als stattgefunden markiert.",
   "log.recordOfMeetingTranscript":
     "Das Transkript wird als eigener Eintrag gespeichert, und der Termin wird als stattgefunden markiert.",
   "log.asTranscript": "Dieser Text ist ein Transkript",
@@ -23398,7 +23399,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingReading": "Termin wird geladen…",
   "worklist.verb.meetingWhatHappened": "Was passiert ist",
   "worklist.verb.meetingBodyHint":
-    "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
+    "Besprochenes und nächste Schritte. Notizen bleiben in Margince.",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Nicht erschienen",
   "worklist.verb.meetingCanceled": "Hat nicht stattgefunden",
@@ -23415,8 +23416,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingCanceledFor": "Hat nicht stattgefunden: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "Die Kalendereinladung führt diesen Termin. Sage ihn über die Einladung ab.",
+  "meeting.transcripts": "Notizen und Transkripte",
+  "meeting.readOnly":
+    "Du kannst diesen Termin lesen, aber mit deinen Zugriffsrechten nicht bearbeiten.",
+  "meeting.transcriptText": "Transkripttext",
+  "meeting.transcriptFileRetry":
+    "Das Transkript ist gespeichert. Die Originaldatei wurde nicht angehängt. Speichere erneut, um den Upload zu wiederholen.",
+  "meeting.internalNotes": "Interne Notizen zum Termin",
+  "meeting.internalNotesHelp":
+    "Wer den Inhalt dieses Termins lesen darf, kann diese Notizen sehen. Sie werden nicht zur Kalendereinladung hinzugefügt.",
   "worklist.verb.meetingCalendarManaged":
-    "Betreff, Notizen und Datum folgen der Kalendereinladung. Hier wird nur das Ergebnis gespeichert.",
+    "Titel und Datum folgen der Kalendereinladung. Notizen bleiben in Margince.",
   "worklist.verb.retry": "Erneut ausf\u00fchren",
   "worklist.verb.retryStarted": "Regel wird erneut ausgeführt…",
   "worklist.verb.retryFailed":

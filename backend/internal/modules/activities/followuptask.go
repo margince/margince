@@ -19,6 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
+const fieldFollowUpTask = "follow_up_task"
+
 type followUpFieldError struct{ Field, Message string }
 
 func (e *followUpFieldError) Error() string { return e.Message }
@@ -56,10 +58,10 @@ func followUpTaskInput(task crmcontracts.ActivityFollowUpTask, source string) (L
 func validateFollowUpShape(in LogActivityInput) error {
 	if in.FollowUpTask != nil {
 		if in.Kind != string(crmcontracts.ActivityKindMeeting) && in.Kind != string(crmcontracts.ActivityKindCall) && in.Kind != string(crmcontracts.ActivityKindNote) {
-			return &followUpFieldError{Field: "follow_up_task", Message: "Only a meeting, call or note can create a follow-up task."}
+			return &followUpFieldError{Field: fieldFollowUpTask, Message: "Only a meeting, call or note can create a follow-up task."}
 		}
 		if in.FollowUpTask.Kind != string(crmcontracts.ActivityKindTask) {
-			return &followUpFieldError{Field: "follow_up_task", Message: "A follow-up must be a task."}
+			return &followUpFieldError{Field: fieldFollowUpTask, Message: "A follow-up must be a task."}
 		}
 	}
 	if in.SourceActivityID == nil {
@@ -172,10 +174,10 @@ func preparePatchedTaskSource(ctx context.Context, tx pgx.Tx, current crmcontrac
 
 func admitOutcomeFollowUp(ctx context.Context, current crmcontracts.Activity, in UpdateActivityInput) error {
 	if current.Kind != crmcontracts.ActivityKindMeeting || in.MeetingStatus == nil || *in.MeetingStatus != meetingoutcome.Held {
-		return &followUpFieldError{Field: "follow_up_task", Message: "Add a next step while marking a meeting held."}
+		return &followUpFieldError{Field: fieldFollowUpTask, Message: "Add a next step while marking a meeting held."}
 	}
 	if current.MeetingStatus != nil && string(*current.MeetingStatus) == meetingoutcome.Held {
-		return &followUpFieldError{Field: "follow_up_task", Message: "This meeting is already held. Add another task from the meeting instead."}
+		return &followUpFieldError{Field: fieldFollowUpTask, Message: "This meeting is already held. Add another task from the meeting instead."}
 	}
 	return auth.Require(ctx, "activity", principal.ActionCreate)
 }

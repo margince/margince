@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 )
 
 // splitFoldedOccurrencesBatch settles each meeting-copy fold the page names.
@@ -236,8 +237,8 @@ func withSlots(ctx context.Context, tx pgx.Tx, fold occurrenceFold) (occurrenceF
 func foldSplitRefusal(ctx context.Context, tx pgx.Tx, fold occurrenceFold) ([]ids.UUID, string, error) {
 	var worked bool
 	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1
-		                  AND actor_type = 'human' AND occurred_at >= $2)`,
+		SELECT EXISTS (SELECT 1 FROM audit_log worked WHERE worked.entity_type = 'activity' AND worked.entity_id = $1
+		                  AND `+meetingoutcome.UserWorkSQL("worked")+` AND worked.occurred_at >= $2)`,
 		fold.survivor.meeting, fold.foldedAt).Scan(&worked); err != nil {
 		return nil, "", fmt.Errorf("compose: reading whether a colleague changed a folded meeting: %w", err)
 	}

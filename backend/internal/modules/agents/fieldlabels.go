@@ -26,6 +26,7 @@ import (
 //nolint:goconst,dupl // one row per wire field per language is the table's shape; the census holds the languages in step
 var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 	textlang.English: {
+		"meeting_notes":                "Internal meeting notes",
 		"task_type":                    "Task type",
 		"ai_assisted":                  "AI-assisted",
 		"extension_relationship_types": "Extension relationship types",
@@ -128,6 +129,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"win_probability":              "Probability",
 	},
 	textlang.German: {
+		"meeting_notes":                "Interne Notizen zum Termin",
 		"extension_relationship_types": "Erweiterungs-Beziehungstypen",
 		"task_type":                    "Aufgabentyp",
 		"ai_assisted":                  "KI-gestützt",
@@ -230,6 +232,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"win_probability":              "Abschlusschance",
 	},
 	textlang.Vietnamese: {
+		"meeting_notes":                "Ghi chú nội bộ của cuộc họp",
 		"deal_filing":                  "Gắn vào giao dịch",
 		"acquisition_source":           "Nguồn tiếp cận",
 		"active":                       "Đang hoạt động",

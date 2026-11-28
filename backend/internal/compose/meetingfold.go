@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 )
 
 // foldMeetingDuplicateTx retires duplicate onto survivor when retiring it loses
@@ -33,6 +34,9 @@ func foldMeetingDuplicateTx(
 ) (bool, error) {
 	live, err := lockFoldPair(ctx, tx, duplicate, survivor)
 	if err != nil || !live {
+		return false, err
+	}
+	if notes, err := activities.MeetingCopyHasInternalNotesTx(ctx, tx, duplicate); err != nil || notes {
 		return false, err
 	}
 	retirable, err := copyRetiresCleanly(ctx, tx, duplicate, survivor, seat, calendar)
@@ -87,7 +91,7 @@ const sameImporter = `(kept.user_id, kept.connection_id) IS NOT DISTINCT FROM (o
 //   - The seat still has the copy's calendar connected.
 //   - Every other importer of the copy imports the survivor with the same
 //     posture and verdict, and so does the seat where it has both.
-//   - No human changed the copy, and no booking stands behind it.
+//   - No member or agent changed the copy, and no booking stands behind it.
 //   - Every record the copy is filed under is the survivor's too.
 func copyRetiresCleanly(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID, seat ids.UUID, calendar string) (bool, error) {
 	var clean bool
@@ -105,7 +109,7 @@ func copyRetiresCleanly(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.
 		                   WHERE kept.activity_id = $2 AND kept.user_id = $3
 		                     AND NOT `+sameImportAccess+`)
 		   AND NOT EXISTS (SELECT 1 FROM audit_log worked
-		                    WHERE worked.entity_type = 'activity' AND worked.entity_id = $1 AND worked.actor_type = 'human')
+		                    WHERE worked.entity_type = 'activity' AND worked.entity_id = $1 AND `+meetingoutcome.UserWorkSQL("worked")+`)
 		   AND NOT EXISTS (SELECT 1 FROM meeting_invitation booked WHERE booked.activity_id = $1)
 		   AND NOT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = $1 AND NOT EXISTS (
 		         SELECT 1 FROM activity_link s WHERE s.activity_id = $2 AND s.entity_type = l.entity_type

@@ -32,10 +32,11 @@ type UpdateActivityInput struct {
 	// recordZone dates a stored instant made a day; the store sets it (WithRecordZone).
 	recordZone RecordZone
 	// Trail names what the audit trail calls this write; zero is an update.
-	Trail      storekit.AuditTrail
-	Subject    *string
-	Body       *string
-	OccurredAt *time.Time
+	Trail        storekit.AuditTrail
+	Subject      *string
+	Body         *string
+	MeetingNotes *string
+	OccurredAt   *time.Time
 	// OccurredPrecision nil with OccurredAt set means an instant: a new time is
 	// a known time. A day sent alone keeps the stored date, moved to its anchor.
 	OccurredPrecision *string
@@ -130,6 +131,7 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 	return map[string]any{
 		fieldSubject:           derefOrNil(a.Subject),
 		fieldBody:              derefOrNil(a.Body),
+		fieldMeetingNotes:      derefOrNil(a.MeetingNotes),
 		auditFieldOccurredAt:   a.OccurredAt,
 		fieldOccurredPrecision: string(a.OccurredPrecision),
 		fieldDurationSeconds:   derefOrNil(a.DurationSeconds),

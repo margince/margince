@@ -22,6 +22,9 @@ func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.A
 	if in.Subject != nil {
 		fields.Subject = in.Subject
 	}
+	if in.MeetingNotes != nil {
+		fields.MeetingNotes = new(true)
+	}
 	if in.Body != nil {
 		bodyTouched := true
 		fields.Body = &bodyTouched

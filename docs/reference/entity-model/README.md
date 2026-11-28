@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 368 |
-| Columns | 4489 |
+| Columns | 4490 |
 | Foreign keys | 642 |
 | Owning areas | 40 |
 
@@ -42,7 +42,7 @@ Ranked by how many foreign keys point at them.
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 52 | 154 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 93 | 52 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 94 | 52 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 50 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 50 | 50 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 53 | 31 |
@@ -142,7 +142,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 93 | 52 |
+| [`activity`](activities.md#activity) | activities | 94 | 52 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 13 | 0 |

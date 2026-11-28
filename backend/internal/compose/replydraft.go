@@ -149,7 +149,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		return activities.DraftResult{}, err
 	}
 	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
-	topic, body := stringValue(activity.Subject), stringValue(activity.Body)
+	topic, body := stringValue(activity.Subject), stringValue(activities.MeetingRecordBody(activity))
 	threaded := activity.Kind == crmcontracts.ActivityKindEmail && draftcore.FromThem(activity)
 	state := d.conversationState(ctx, activity)
 	envelope := d.envelope.Resolve(ctx, written, state)
@@ -359,7 +359,7 @@ func (d replyDrafter) languageInputs(ctx context.Context, anchor ids.UUID, steer
 		Salutation:   delivery.Salutation,
 		Addressee:    thread.addresseeEvidence(delivery.ContactID),
 		Stored:       activityLanguage(activity),
-		Body:         textlang.MessageOpening(stringValue(activity.Body), draftcore.LanguageEvidenceRunes),
+		Body:         textlang.MessageOpening(stringValue(activities.MeetingRecordBody(activity)), draftcore.LanguageEvidenceRunes),
 		Subject:      stringValue(activity.Subject),
 		Thread:       draftcore.LanguageEvidence(thread.evidence, delivery.ContactID),
 		Rewrite:      steering.RewriteOf,

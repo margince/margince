@@ -83,17 +83,28 @@ func admitRecordedMeeting(ctx context.Context, tx pgx.Tx, in *LogActivityInput) 
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if meeting.Kind != crmcontracts.ActivityKindMeeting || (!owesOutcome(meeting) && !in.keepRecordedOutcome) {
+	held := meeting.MeetingStatus != nil && *meeting.MeetingStatus == crmcontracts.ActivityMeetingStatusHeld && (meeting.SourceSystem == nil || *meeting.SourceSystem != transcriptSourceSystem)
+	if meeting.Kind != crmcontracts.ActivityKindMeeting || (!owesOutcome(meeting) && !held && !in.keepRecordedOutcome) {
 		return crmcontracts.Activity{}, &followUpFieldError{
 			Field:   fieldRecordsMeetingID,
-			Message: "Choose a meeting that still waits for its outcome.",
+			Message: "Choose a meeting that awaits its outcome or is marked held.",
 		}
 	}
+	if held && in.FollowUpTask != nil {
+		return crmcontracts.Activity{}, &followUpFieldError{Field: fieldFollowUpTask, Message: "This meeting is already held. Add the next step on the meeting instead."}
+	}
+	in.keepRecordedOutcome = in.keepRecordedOutcome || held
 	in.OccurredAt, in.OccurredPrecision, in.MeetingIntent = &meeting.OccurredAt, string(meeting.OccurredPrecision), nil
 	// The outcome is the meeting's; the transcript only records it.
 	in.MeetingStatus = nil
 	in.audienceOf = &id
-	in.Links = append(in.Links, linksOfKinds(meeting, filingKinds)...)
+	// A transcript opened directly on a meeting has no separately typed contacts.
+	// Keep the meeting's readable customer links as well as its filing links.
+	for _, link := range linksOfKinds(meeting, append([]string{linkEntityContact}, filingKinds...)) {
+		if !slices.Contains(in.Links, link) {
+			in.Links = append(in.Links, link)
+		}
+	}
 	return meeting, nil
 }
 

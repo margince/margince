@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 64,
-    "sites_best_current": 61,
+    "sites_best_current": 60,
     "sites_best_partial": 0,
-    "sites_best_stale": 3,
+    "sites_best_stale": 4,
     "sites_absent": 0,
     "scenarios": 356,
     "records": 469,
@@ -10717,7 +10717,7 @@
       "usable_with_care": 5,
       "not_reliable_yet": 0,
       "too_few_runs": 16,
-      "recheck_pending": 3,
+      "recheck_pending": 4,
       "judges": [
         "claude-sonnet-5-5"
       ],
@@ -10729,9 +10729,9 @@
             "env": "cloud_frontier"
           },
           "sites": 57,
-          "sites_current": 54,
+          "sites_current": 53,
           "sites_partial": 0,
-          "sites_stale": 3,
+          "sites_stale": 4,
           "runs": 1527,
           "passed": 1466,
           "reliability": 0.9600523903077931,
@@ -10755,9 +10755,9 @@
             "thinking_level": "low"
           },
           "sites": 54,
-          "sites_current": 52,
+          "sites_current": 51,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 3,
           "runs": 1044,
           "passed": 1041,
           "reliability": 0.9971264367816092,
@@ -11228,7 +11228,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 21,
           "passed": 21,
           "records": 2,
@@ -14525,9 +14525,9 @@
         "env": "cloud_frontier"
       },
       "sites": 60,
-      "sites_current": 54,
+      "sites_current": 53,
       "sites_partial": 0,
-      "sites_stale": 6,
+      "sites_stale": 7,
       "runs": 1686,
       "passed": 1608,
       "reliability": 0.9537366548042705,
@@ -14678,9 +14678,9 @@
         "thinking_level": "low"
       },
       "sites": 54,
-      "sites_current": 52,
+      "sites_current": 51,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 3,
       "runs": 1044,
       "passed": 1041,
       "reliability": 0.9971264367816092,
@@ -29869,24 +29869,8 @@
       "key": "nl_search/search_data_plan",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.8-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
-        },
-        "band": "certified",
-        "runs": 21,
-        "passed": 21,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.927459,
-          "upper": 1
-        },
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "search_data_counts_open_deals",
@@ -30034,10 +30018,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 7,
+          "scenarios_measured": 0,
           "scenarios_total": 7,
           "runs": 39,
           "passed": 28,
@@ -30054,7 +30038,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "7 scenarios it scored have changed since (the prompt this build sends and how a run is graded): search_data_counts_open_deals, search_data_counts_won_deals_in_a_period, search_data_eur_threshold, search_data_falls_back_for_a_handbook_question, search_data_german_threshold, search_data_jpy_threshold and 1 more",
+          "stale_cause": {
+            "prompt_changed": [
+              "search_data_counts_open_deals",
+              "search_data_counts_won_deals_in_a_period",
+              "search_data_eur_threshold",
+              "search_data_falls_back_for_a_handbook_question",
+              "search_data_german_threshold",
+              "search_data_jpy_threshold",
+              "search_data_vietnamese_threshold"
+            ],
+            "grader_changed": [
+              "search_data_counts_open_deals",
+              "search_data_counts_won_deals_in_a_period",
+              "search_data_eur_threshold",
+              "search_data_falls_back_for_a_handbook_question",
+              "search_data_german_threshold",
+              "search_data_jpy_threshold",
+              "search_data_vietnamese_threshold"
+            ]
+          }
         },
         {
           "binding": {
@@ -30063,10 +30067,10 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 7,
+          "scenarios_measured": 0,
           "scenarios_total": 7,
           "runs": 21,
           "passed": 21,
@@ -30083,7 +30087,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "7 scenarios it scored have changed since (the prompt this build sends and how a run is graded): search_data_counts_open_deals, search_data_counts_won_deals_in_a_period, search_data_eur_threshold, search_data_falls_back_for_a_handbook_question, search_data_german_threshold, search_data_jpy_threshold and 1 more",
+          "stale_cause": {
+            "prompt_changed": [
+              "search_data_counts_open_deals",
+              "search_data_counts_won_deals_in_a_period",
+              "search_data_eur_threshold",
+              "search_data_falls_back_for_a_handbook_question",
+              "search_data_german_threshold",
+              "search_data_jpy_threshold",
+              "search_data_vietnamese_threshold"
+            ],
+            "grader_changed": [
+              "search_data_counts_open_deals",
+              "search_data_counts_won_deals_in_a_period",
+              "search_data_eur_threshold",
+              "search_data_falls_back_for_a_handbook_question",
+              "search_data_german_threshold",
+              "search_data_jpy_threshold",
+              "search_data_vietnamese_threshold"
+            ]
+          }
         },
         {
           "binding": {

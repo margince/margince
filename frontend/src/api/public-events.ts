@@ -1108,6 +1108,8 @@ export interface components {
             restored?: boolean;
             /** @description The activity's new subject (absent when this update did not touch it). */
             subject?: string;
+            /** @description Internal meeting notes changed; the text is available only through the meeting's content access gate. */
+            meeting_notes?: boolean;
             /** @description Whether the body was touched (a presence flag, not the content — bodies can be large and are never echoed onto the wire). */
             body?: boolean;
             /**

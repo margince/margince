@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -14,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -40,6 +42,11 @@ const meetingCopyFoldedFromKey = "folded_from"
 func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) error {
 	if err := requireFoldActor(ctx, "retires a meeting copy"); err != nil {
 		return err
+	}
+	if notes, err := MeetingCopyHasInternalNotesTx(ctx, tx, duplicate); err != nil {
+		return err
+	} else if notes {
+		return fmt.Errorf("meeting copy has internal notes: %w", apperrors.ErrConflict)
 	}
 	if err := TransferIdentities(ctx, tx, duplicate, survivor); err != nil {
 		return err
@@ -73,6 +80,24 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	archived := crmcontracts.PublicEventActivityArchived{}
 	archived.Imported, archived.ImportRunId = storekit.ImportMark(ctx)
 	return storekit.EmitEvent(ctx, tx, auditID, duplicate.UUID, archived)
+}
+
+// MeetingCopyHasInternalNotesTx protects notes from every automatic copy retirement.
+// A cleared note is a recorded choice too, so every non-null value stays.
+func MeetingCopyHasInternalNotesTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool, error) {
+	if err := requireFoldActor(ctx, "checks a meeting copy"); err != nil {
+		return false, err
+	}
+	// Read legacy audit proof after taking the lock so a waited-out edit is visible.
+	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.IncludeArchived); err != nil {
+		return false, err
+	}
+	var notes bool
+	err := tx.QueryRow(ctx, `SELECT a.meeting_notes IS NOT NULL OR (`+meetingoutcome.RecordBodySQL("a")+`) IS NOT NULL FROM activity a WHERE a.id=$1`, id.UUID).Scan(&notes)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, apperrors.ErrNotFound
+	}
+	return notes, err
 }
 
 // requireFoldActor admits a system job or any connector sync to a write on a

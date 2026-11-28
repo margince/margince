@@ -302,7 +302,7 @@ describe("logging a meeting where one owes its outcome", () => {
     expect(patch?.body).toEqual({
       deal_filing: { record_type: "contact", record_id: "p1", skip: false },
       meeting_status: "held",
-      body: "Agenda: pricing\n\nThey agreed to the renewal.",
+      meeting_notes: "Agenda: pricing\n\nThey agreed to the renewal.",
     });
     expect(sent(captured, "POST /activities")).toHaveLength(0);
   });
@@ -322,7 +322,7 @@ describe("logging a meeting where one owes its outcome", () => {
     );
     expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toMatchObject({
       meeting_status: "held",
-      body: "Agenda: pricing\n\nThey agreed to renew.",
+      meeting_notes: "Agenda: pricing\n\nThey agreed to renew.",
       ai_assisted: true,
     });
   });
@@ -468,37 +468,21 @@ describe("logging a meeting where one owes its outcome", () => {
     );
   });
 
-  it("A calendar-managed meeting gets its status first, then a linked note", async () => {
+  it("records calendar meeting notes and outcome together without creating another activity", async () => {
     const captured: Captured[] = [];
     stubApi([booked({ calendar_managed: true })], captured);
     render();
     const user = await logMeeting();
-    expect(
-      await screen.findByText(en["log.recordOfMeetingManaged"]),
-    ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Log" }));
-
+    await screen.findByText(en["log.recordOfMeetingManaged"]);
+    await user.click(screen.getByRole("button", { name: en["log.save"] }));
     await waitFor(() =>
-      expect(sent(captured, "POST /activities")).toHaveLength(1),
+      expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1),
     );
-    const writes = captured.filter(
-      (entry) => entry.key !== "GET /me" && !entry.key.startsWith("GET"),
-    );
-    expect(writes.map((entry) => entry.key)).toEqual([
-      "PATCH /activities/m-1",
-      "POST /activities",
-    ]);
-    expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toEqual({
-      deal_filing: { record_type: "contact", record_id: "p1", skip: false },
+    expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toMatchObject({
       meeting_status: "held",
+      meeting_notes: "They agreed to the renewal.",
     });
-    const [note] = sent(captured, "POST /activities");
-    expect(note?.body).toMatchObject({
-      kind: "note",
-      body: "They agreed to the renewal.",
-      links: [{ entity_type: "contact", entity_id: "p1" }],
-    });
-    expect(note?.idempotencyKey).toMatch(/:note$/);
+    expect(sent(captured, "POST /activities")).toHaveLength(0);
   });
 
   it("A calendar-managed follow-up is a task whose source is the meeting", async () => {
@@ -511,17 +495,15 @@ describe("logging a meeting where one owes its outcome", () => {
     await user.click(screen.getByRole("button", { name: "Log" }));
 
     await waitFor(() =>
-      expect(sent(captured, "POST /activities")).toHaveLength(2),
+      expect(sent(captured, "POST /activities")).toHaveLength(1),
     );
-    const [note, task] = sent(captured, "POST /activities");
-    expect(note?.body).not.toHaveProperty("follow_up_task");
+    const [task] = sent(captured, "POST /activities");
     expect(task?.body).toMatchObject({
       kind: "task",
       subject: "Send revised quote",
       source_activity_id: "m-1",
     });
     expect(task?.idempotencyKey).toMatch(/:follow-up$/);
-    expect(task?.idempotencyKey).not.toBe(note?.idempotencyKey);
   });
 
   it("A calendar-managed meeting takes the picked files, not the note", async () => {
@@ -544,34 +526,35 @@ describe("logging a meeting where one owes its outcome", () => {
     expect(upload?.form?.get("entity_id")).toBe("m-1");
   });
 
-  it("A note that fails after the status is written is the only thing a retry sends", async () => {
+  it("retries calendar notes and outcome together after a refused write", async () => {
     const captured: Captured[] = [];
-    stubApi(
-      [booked({ calendar_managed: true })],
-      captured,
-      undefined,
-      failOnce("note"),
+    let attempts = 0;
+    stubApi([booked({ calendar_managed: true })], captured, () =>
+      ++attempts === 1
+        ? jsonResponse({ title: "Save failed", status: 500 }, 500)
+        : jsonResponse(booked({ meeting_status: "held" })),
     );
     render();
     const user = await logMeeting();
     await screen.findByText(QUESTION);
-    await user.click(screen.getByRole("button", { name: "Log" }));
-    expect(
-      await screen.findByText(/Quarterly review is already recorded as held/),
-    ).toBeTruthy();
-    expect(screen.queryByText(QUESTION)).toBeNull();
-
-    await user.click(screen.getByRole("button", { name: "Log" }));
+    await user.click(screen.getByRole("button", { name: en["log.save"] }));
     await waitFor(() =>
-      expect(screen.getByLabelText<HTMLInputElement>("Subject *").value).toBe(
-        "",
-      ),
+      expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1),
     );
-    expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1);
-    const [first, retry] = sent(captured, "POST /activities");
-    expect(retry?.idempotencyKey).toBe(first?.idempotencyKey);
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: en["log.save"] })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
+    await user.click(screen.getByRole("button", { name: en["log.save"] }));
+    await waitFor(() =>
+      expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(2),
+    );
+    const [first, retry] = sent(captured, "PATCH /activities/m-1");
     expect(retry?.body).toEqual(first?.body);
-    expect(retry?.body).toMatchObject({ kind: "note" });
+    expect(sent(captured, "POST /activities")).toHaveLength(0);
   });
 
   it("A follow-up that fails after the outcome is the only thing a retry sends", async () => {

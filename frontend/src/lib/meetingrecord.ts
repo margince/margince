@@ -23,3 +23,26 @@ export function recordsAnotherMeeting(
     row.meeting_status == null
   );
 }
+
+/** Internal notes take precedence; an empty string keeps a cleared legacy note empty. */
+export function meetingNotesText(
+  row: Pick<
+    Activity,
+    | "captured_by"
+    | "meeting_notes"
+    | "calendar_managed"
+    | "invitation_status"
+    | "source_system"
+    | "body"
+  >,
+): string {
+  return (
+    row.meeting_notes ??
+    (!row.calendar_managed &&
+    !row.invitation_status &&
+    !row.source_system &&
+    !row.captured_by?.startsWith("connector:")
+      ? (row.body ?? "")
+      : "")
+  );
+}

@@ -192,6 +192,7 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		DealFiling:   req.DealFiling,
 		Subject:      req.Subject,
 		Body:         req.Body,
+		MeetingNotes: req.MeetingNotes,
 		OccurredAt:   req.OccurredAt,
 		// Checked by the store, which also decides what a new time alone means.
 		OccurredPrecision: (*string)(req.OccurredPrecision),

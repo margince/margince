@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { StoryProviders } from "../testing/story-utils";
-import { TimelineBody } from "./timelinetext";
+import { MeetingNotesText, TimelineBody } from "./timelinetext";
 
 export default {
   title: "Components/Text and data display/Timeline body",
@@ -31,4 +31,12 @@ export const OriginalTask: StoryObj<typeof TimelineBody> = {
       }),
     ).not.toBeInTheDocument();
   },
+};
+
+export const CalendarInternalNotes: StoryObj<typeof TimelineBody> = {
+  render: () => (
+    <StoryProviders>
+      <MeetingNotesText notes="The buyer approved the renewal. Follow up on Friday." />
+    </StoryProviders>
+  ),
 };

@@ -1,5 +1,3 @@
-import { GeneratedText } from "../../design-system/generatedtext";
-import { displayedBody, displayedSubject } from "../../lib/systemdisplay";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -11,6 +9,7 @@ import {
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
+import { RecordMeetingOutcome } from "../../components/meetingoutcome";
 import { mostSpecificFirst, RecordLinks } from "../../components/recordlinks";
 import { TaskDetailDialog, useTaskUpdate } from "../../components/taskactions";
 import { writtenAsMarkdown } from "../../design-system/activitytimeline";
@@ -18,14 +17,17 @@ import { Badge, Button, Modal } from "../../design-system/atoms";
 import { CommitmentReview } from "../../design-system/commitmentreview";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Eyebrow } from "../../design-system/eyebrow";
+import { GeneratedText } from "../../design-system/generatedtext";
 import { Heading } from "../../design-system/heading";
 import { NoteMarkdown } from "../../design-system/markdown";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { Row } from "../../design-system/stack";
 import { SurfaceState } from "../../design-system/surfacestate";
 import {
   AiAssistedFlag,
   TIMELINE_KIND_LABEL,
 } from "../../design-system/timelineentry";
+import { MeetingNotesText } from "../../design-system/timelinetext";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatDue } from "../../format/format";
@@ -38,6 +40,7 @@ import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
+import { displayedBody, displayedSubject } from "../../lib/systemdisplay";
 import { ActivityFiles } from "../records/activityfiles";
 import { ActivityFollowUps } from "../records/activityfollowups";
 import { worklistKey } from "../worklist/worklist.queries";
@@ -185,6 +188,28 @@ function ActivityDetail({
   );
 }
 
+function MeetingRecordDetails({ activity }: Readonly<{ activity: Activity }>) {
+  if (activity.kind !== "meeting" || activity.content_state === "withheld")
+    return null;
+  return (
+    <>
+      {activity.meeting_notes && activity.meeting_notes !== activity.body && (
+        <MeetingNotesText notes={activity.meeting_notes} />
+      )}
+      <Row>
+        <RecordMeetingOutcome
+          activity={activity}
+          invalidateKeys={[
+            ["activity", activity.id],
+            ["activities"],
+            worklistKey,
+          ]}
+        />
+      </Row>
+    </>
+  );
+}
+
 function ActivityBody({
   activity,
   zone,
@@ -264,6 +289,7 @@ function ActivityBody({
         <CustomFieldLines activity={activity} />
       </div>
       {withheldOrBody(activity, filed, t)}
+      <MeetingRecordDetails activity={activity} />
       {activity.content_state !== "withheld" && (
         <>
           <Panel title={t("files.title")}>

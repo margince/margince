@@ -208,14 +208,14 @@ describe("MeetingOutcome", () => {
       version: 7,
       status: "held",
       subject: "Site visit",
-      body: "Agenda",
+      meeting_notes: "Agenda",
     });
     const patches = sent.filter((request) => request.method === "PATCH");
     expect(patches).toHaveLength(1);
     expect(patches[0]?.body).toEqual({
       meeting_status: "held",
       subject: "Site visit",
-      body: "Agenda",
+      meeting_notes: "Agenda",
     });
   });
   it("submits a typed next step through the same held outcome write", async () => {
@@ -309,7 +309,7 @@ describe("MeetingOutcome", () => {
     ).toBeTruthy();
     expect(
       sent.filter((request) => request.method === "PATCH").map((r) => r.body),
-    ).toEqual([{ meeting_status: "held", body: "Budget approved" }]);
+    ).toEqual([{ meeting_status: "held", meeting_notes: "Budget approved" }]);
   });
 
   it("says what Did not happen recorded and Undo writes the meeting back at the cancel's version", async () => {
@@ -493,7 +493,7 @@ describe("MeetingOutcome", () => {
         method: "PATCH",
         url: `/v1/activities/${MEETING_ID}`,
         ifMatch: "7",
-        body: { body: "Budget approved" },
+        body: { meeting_notes: "Budget approved" },
       },
     ]);
   });

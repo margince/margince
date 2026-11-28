@@ -158,3 +158,14 @@ export function TimelineBody({
     </ReaderRendering>
   );
 }
+
+/** Internal notes stay separate from the calendar description in every timeline. */
+export function MeetingNotesText({ notes }: Readonly<{ notes: string }>) {
+  const t = useT();
+  return (
+    <section>
+      <p className="t-caption">{t("meeting.internalNotes")}</p>
+      <NoteMarkdown source={notes} />
+    </section>
+  );
+}

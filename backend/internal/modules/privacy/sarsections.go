@@ -177,6 +177,7 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads, messages
 		       ` + sarContentDisclosed + ` AS content_disclosed,
 		       CASE WHEN ` + sarContentDisclosed + ` THEN a.subject END AS subject,
 		       CASE WHEN ` + sarContentDisclosed + ` THEN a.body END AS body,
+		       CASE WHEN ` + sarContentDisclosed + ` THEN a.meeting_notes END AS meeting_notes,
 		       CASE WHEN ` + sarContentDisclosed + ` THEN NULL
 		            ELSE substring(a.captured_by from '([0-9a-f-]{36})$')
 		       END AS withheld_from_mailbox_of

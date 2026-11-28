@@ -340,13 +340,18 @@ func verdictOnAMeeting(t *testing.T) (*dealVerdictEnv, time.Time) {
 		EntityType: "activity", NaturalKey: meetingKey,
 		Fields: capture.ActivityFields{
 			Kind: "meeting", Subject: "Board call", OccurredAt: v.now,
-			Body: "Meeting notes: the board agreed we sign on " + signing + " for 45,000 EUR a year.",
+			Body: "Calendar invitation from the board",
 		},
 		Links:  []datasource.EntityRef{{Type: "deal", ID: v.deal}},
 		Source: calendarSystem + ":" + calendarEvent, CapturedBy: "connector:" + calendarSystem,
 		Raw: []byte(`{"id":"` + calendarEvent + `"}`),
 	})
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := v.Activities.UpdateActivity(v.Admin(), ids.From[ids.ActivityKind](ref.ID), activities.UpdateActivityInput{
+		MeetingNotes: new("Meeting notes: the board agreed we sign on " + signing + " for 45,000 EUR a year."),
+	}); err != nil {
 		t.Fatal(err)
 	}
 	v.note = ref.ID.String()

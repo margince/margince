@@ -9576,7 +9576,7 @@ paths:
         - name: source_activity_id
           in: query
           schema: { type: string, format: uuid }
-          description: Tasks derived from this readable source activity, under current task visibility.
+          description: Tasks derived from this readable source activity, under current task visibility. With kind=meeting, returns the transcripts recording that readable meeting.
         - name: thread_key
           in: query
           schema: { type: string }
@@ -64208,6 +64208,9 @@ components:
             The kind says what sort of interaction happened; this says what carried it. They
             are separate axes, and reading one off the other is what ADR-0107 retired.
         subject: { type: [string, 'null'] }
+        meeting_notes:
+          type: [string, 'null']
+          description: Internal meeting notes, separate from the calendar description and from any transcript. Earlier rep-authored calendar notes are resolved here from their audit proof. Earlier rep-authored calendar notes are resolved here from their audit proof. Visible only with the meeting content. An empty string clears earlier notes.
         body: { type: [string, 'null'] }
         ai_assisted:
           type: boolean
@@ -65010,12 +65013,12 @@ components:
           format: uuid
           description: >-
             A meeting transcript only (`source_system: transcript`), without `source_activity_id`.
-            The open meeting this transcript records. In the same transaction the meeting is marked
+            The open or held meeting this transcript records. In the same transaction the meeting is marked
             held and gains the transcript's deal, project and lead links for each kind it has none of.
             The transcript takes the meeting's time and its deal, project and lead links, keeps no
             outcome of its own, and names the meeting in `source_activity_id`, so held counts count
             the meeting once. A meeting that is archived, missing or hidden from the caller answers 404.
-            A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`.
+            A live meeting marked canceled or no-show is refused with 422 on `records_meeting_id`. A held meeting keeps its existing outcome.
             A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
         follow_up_task:
           $ref: '#/components/schemas/ActivityFollowUpTask'
@@ -65638,6 +65641,10 @@ components:
             Requires activity create authority. A meeting already held cannot add another
             task through this outcome write.
         subject: { type: [string, 'null'], maxLength: 20000 }
+        meeting_notes:
+          type: [string, 'null']
+          maxLength: 20000
+          description: Internal meeting notes, separate from the calendar description and from any transcript. Visible only with the meeting content. An empty string clears earlier notes.
         body: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
         occurred_precision:
