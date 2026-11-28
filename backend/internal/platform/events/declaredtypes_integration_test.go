@@ -31,7 +31,7 @@ func TestAnUndeclaredTypeIsAckedWithoutADedupeMark(t *testing.T) {
 	seen := &collector{seen: map[ids.UUID]bool{}}
 	sub := NewSubscriber(e.rdb, kevents.Group{
 		Name: group, Streams: []string{stream}, Types: kevents.NewTypeSet("deal.stage_changed"),
-	}, Dedupe(e.rdb, group, seen.handle), testLogger())
+	}, seen.handle, testLogger())
 	sub.block = 100 * time.Millisecond
 
 	pending := func() int64 {

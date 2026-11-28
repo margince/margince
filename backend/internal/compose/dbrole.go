@@ -57,6 +57,7 @@ func AssertRuntimeRole(ctx context.Context, pool *pgxpool.Pool) error {
 	var role string
 	var super, bypass, ownsExtSchema bool
 	var ownsExt int
+	// pool-exempt: reads the runtime role from the catalog at boot; it touches no domain row.
 	if err := pool.QueryRow(ctx, runtimeRoleQuery).Scan(&role, &super, &bypass, &ownsExt, &ownsExtSchema); err != nil {
 		return fmt.Errorf("reading the runtime role's attributes: %w", err)
 	}

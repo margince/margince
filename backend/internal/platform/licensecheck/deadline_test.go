@@ -80,7 +80,7 @@ func TestAHungModuleStopsWhenItsDeadlinePasses(t *testing.T) {
 	if !inChild(t) {
 		return
 	}
-	_, err := check(expired(t), hangingModule, issuer, product, generation, "any-token")
+	_, err := compiled(t, hangingModule).check(expired(t), issuer, product, generation, "any-token")
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("err = %v, want the deadline named so a caller can tell a timeout apart", err)
 	}
@@ -101,7 +101,8 @@ func TestARecheckThatRunsOutOfBudgetKeepsThePosture(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWatcher: %v", err)
 	}
-	w.budget, w.module = 0, hangingModule
+	hung := compiled(t, hangingModule)
+	w.budget, w.module = 0, func() (*validator, error) { return hung, nil }
 	source.token = "any-token"
 	err = w.Recheck(t.Context())
 	if !errors.Is(err, context.DeadlineExceeded) {

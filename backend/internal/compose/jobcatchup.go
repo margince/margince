@@ -127,6 +127,7 @@ func (b *ScheduleBook) CatchUpFrom(lastRuns map[string]time.Time) {
 // rows are cleaned after a retention window, so a kind missing here counts as
 // overdue, which is the safe answer.
 func ReadLastRuns(ctx context.Context, pool *pgxpool.Pool) (map[string]time.Time, error) {
+	// pool-exempt: reads the job queue's own table, which no audit row describes.
 	rows, err := pool.Query(ctx,
 		`SELECT kind, max(attempted_at) FROM river_job WHERE attempted_at IS NOT NULL GROUP BY kind`)
 	if err != nil {

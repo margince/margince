@@ -17,10 +17,10 @@ package compose
 //
 // IDEMPOTENCY IS THE UNIQUE INDEX, not this handler and not the dedupe cache.
 // privacy_notice_case carries one row per acquisition_id and the writer says
-// ON CONFLICT DO NOTHING, so a redelivered contact.created finds the duty
-// already recorded and does nothing. events.Dedupe sits in front of that as a
-// cache, never as the guarantee — it marks AFTER the effect, so a crash in that
-// window replays, and replay has to be free.
+// ON CONFLICT DO NOTHING. A redelivered contact.created finds the duty
+// already recorded and does nothing. The subscriber's dedupe sits in front of
+// that as a cache, never as the guarantee. It marks after the effect, so a
+// crash in that window replays, and replay has to be free.
 
 import (
 	"context"

@@ -69,6 +69,7 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 		return crmcontracts.CustomField{}, err
 	}
 
+	// pool-exempt: DDL runs as the schema owner, so the owner pool opens the transaction; the catalog row and its audit row commit in it.
 	tx, err := s.schemaPool.Begin(ctx)
 	if err != nil {
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: begin schema tx: %w", err)

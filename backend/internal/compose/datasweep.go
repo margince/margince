@@ -369,6 +369,7 @@ func credentialHandleColumns(ctx context.Context, tx pgx.Tx) ([]handleColumn, er
 // pool (the ONE sanctioned ALTER TABLE chokepoint). DROP COLUMN CASCADE also
 // removes each column's generated cf_<slug>_check constraint.
 func dropResetCustomFieldColumns(ctx context.Context, schemaPool *pgxpool.Pool) error {
+	// pool-exempt: a catalog read as the schema owner, for the DDL below; no audit row describes either.
 	rows, err := schemaPool.Query(ctx, `
 		SELECT quote_ident(table_name), quote_ident(column_name)
 		FROM information_schema.columns
@@ -391,6 +392,7 @@ func dropResetCustomFieldColumns(ctx context.Context, schemaPool *pgxpool.Pool) 
 		return err
 	}
 	for _, c := range cols {
+		// pool-exempt: DDL as the schema owner; a column drop is not a row write and no audit row describes it.
 		if _, err := schemaPool.Exec(ctx, `ALTER TABLE `+c.table+` DROP COLUMN `+c.name+` CASCADE`); err != nil {
 			return err
 		}

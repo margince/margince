@@ -211,6 +211,7 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 	// DISCONNECTED without archiving is a grant they took back. The signature
 	// pass reads the same connection for its own switch, and this path writes
 	// contacts rather than filling a field, so it may not be the looser of the two.
+	// pool-exempt: decides whose authority the import runs under, before any principal exists; it writes nothing.
 	err := w.pool.QueryRow(ctx, `
 		SELECT cc.user_id, cc.provider
 		  FROM activity a

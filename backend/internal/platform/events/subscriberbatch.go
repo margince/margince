@@ -23,7 +23,7 @@ package events
 //   - a batch that fails is NOT left pending as a unit. Its entries go through
 //     the ordinary one-at-a-time handler at once, so one entry the batch cannot
 //     handle costs that entry its own retry and never holds the rest back;
-//   - the dedupe marks are the per-event marks Dedupe writes, so an event is
+//   - the dedupe marks are the per-event marks dedupe writes, so an event is
 //     absorbed as processed whichever of the two paths ran it.
 //
 // Coalescing costs nothing when the bus is quiet — a read that returns one
@@ -44,13 +44,14 @@ import (
 // to the per-entry Handler instead (see deliverAll).
 type BatchHandler func(ctx context.Context, envs []kevents.Envelope) error
 
-// WithBatch makes this subscriber deliver each read's entries to h in one call.
+// WithBatch makes this subscriber deliver each read's entries to h in one call,
+// behind dedupeBatch.
 // The per-entry handler stays in place and is still required: it is what a
 // single-entry read and a failed batch fall back to. A nil h is ignored, as a
 // non-positive WithMinIdle is.
 func (s *Subscriber) WithBatch(h BatchHandler) *Subscriber {
 	if h != nil {
-		s.batchHandler = h
+		s.batchHandler = dedupeBatch(s.rdb, s.group.Name, h)
 	}
 	return s
 }
@@ -87,12 +88,12 @@ func (s *Subscriber) deliverAll(ctx context.Context, stream string, entries []re
 	}
 }
 
-// DedupeBatch is Dedupe for a BatchHandler: events this group already
-// processed are dropped before next runs, and every event next handled is
-// marked processed only after it succeeded — the same run-THEN-mark order, for
-// the same reason Dedupe gives. The marks are Dedupe's own keys, so the two
-// wrappers recognise each other's work.
-func DedupeBatch(rdb *redis.Client, group string, next BatchHandler) BatchHandler {
+// dedupeBatch is dedupe for a BatchHandler. Events this group already
+// processed are dropped before next runs. Every event next handled is marked
+// processed only after it succeeded, in the order dedupe keeps and for its
+// reason. The marks are dedupe's own keys, so the two wrappers recognise each
+// other's work.
+func dedupeBatch(rdb *redis.Client, group string, next BatchHandler) BatchHandler {
 	return func(ctx context.Context, envs []kevents.Envelope) error {
 		checks := rdb.Pipeline()
 		seen := make([]*redis.IntCmd, len(envs))
@@ -117,8 +118,8 @@ func DedupeBatch(rdb *redis.Client, group string, next BatchHandler) BatchHandle
 		}
 
 		// A failed mark surfaces as a batch failure, so the entries take the
-		// per-entry path: each re-runs into its idempotent no-op and retries
-		// its own mark, as Dedupe does for one event.
+		// per-entry path. Each re-runs into its idempotent no-op and retries its
+		// own mark, as dedupe does for one event.
 		marks := rdb.Pipeline()
 		for _, env := range fresh {
 			marks.Set(ctx, dedupeKey(group, env), 1, DedupeTTL)

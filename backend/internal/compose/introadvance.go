@@ -44,7 +44,7 @@ package compose
 // the claim stays checkable. Sender authentication belongs to capture.
 //
 // Idempotency is the ask's own status: the UPDATE matches only `introduced` or
-// `name_dropped`. events.Dedupe in front is a cache, not the guarantee.
+// `name_dropped`. The subscriber's dedupe in front is a cache, not the guarantee.
 
 import (
 	"context"
@@ -204,6 +204,7 @@ func (a *IntroAdvance) firstAnswerSince(
 ) (ids.UUID, time.Time, error) {
 	var activityID ids.UUID
 	var occurredAt time.Time
+	// pool-exempt: a read that writes nothing; the asks it answers are written through the store's transaction.
 	err := a.pool.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		  FROM activity a
@@ -242,6 +243,7 @@ func (a *IntroAdvance) firstAnswerSince(
 func (a *IntroAdvance) inboundSenders(
 	ctx context.Context, activityID ids.UUID,
 ) ([]ids.UUID, time.Time, error) {
+	// pool-exempt: a read that writes nothing; the asks it answers are written through the store's transaction.
 	rows, err := a.pool.Query(ctx, `
 		SELECT p.contact_id, a.occurred_at
 		  FROM activity a

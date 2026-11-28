@@ -25,8 +25,8 @@ package compose
 //
 // Replay is handled by the ledger, not here: commission_entry.trigger_event_id
 // is unique, so a redelivered event fails its insert instead of paying twice.
-// The events.Dedupe wrapper is a cache in front of that, never the guarantee —
-// it marks AFTER the effect runs, so a crash in that window replays.
+// The subscriber's dedupe is a cache in front of that, never the guarantee.
+// It marks after the effect runs, so a crash in that window replays.
 
 import (
 	"context"

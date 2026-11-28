@@ -250,8 +250,8 @@ it. `captured_by` comes from the signed-in user or agent, never the request body
 The HTTP code makes one `correlation_id` for each request, and `Emit` links it to the audit row ID.
 So the domain change, audit entry and event of one request can be followed as one trace. Events
 always go out through the outbox (`platform/events.Relay`), and domain code never sends an XADD of
-its own. Event handlers run through `events.Dedupe`, because the bus may send an event more than
-once.
+its own. Event handlers run behind the dedupe that `events.NewSubscriber` applies, because the bus
+may send an event more than once.
 
 Every store entry point has an RBAC gate (`auth.Require`, `auth.EnsureVisible`, and the list scope
 filters in `platform/auth`). An object denial returns `apperrors.ErrPermissionDenied` (403). A

@@ -57,7 +57,7 @@ shape and the agent surface.
 - **Consent / privacy engines.** Default-deny outbound suppression bypassed; erasure
   (Art. 17) / SAR (Art. 15) / retention writers reaching outside the ratified
   cross-store seam; GoBD retention floor undercut.
-- **Idempotency & replay.** At-least-once bus consumers not wrapped in `events.Dedupe`;
+- **Idempotency & replay.** At-least-once bus consumers built outside `events.NewSubscriber`, which applies the dedupe;
   capture not idempotent on the source natural key; outbox emitted outside the tx.
 
 ## Output
