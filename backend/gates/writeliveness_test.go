@@ -116,6 +116,7 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:deleteArchivedClaim":           "reaches only an archived claim, on purpose: the data task deletes the duplicates the evidence index archived, and its DELETE names archived_at IS NOT NULL",
 	"internal/modules/privacy:redactSignals":                  "redacts archived signals on purpose: an archived signal about the erased contact holds the same free text and personal members a live one does",
 	"internal/modules/activities:StampSenderAuthenticationTx": "system-only repair of sender-authentication evidence from a retained original. Archiving a message does not change its sender authentication; restricted content is excluded explicitly",
 	"internal/modules/automation:claimStarterAuthorizer":      "UpdateAutomation holds a storekit.LiveOnly row lock before settleRuleOwner calls this claim, and retains it through the update transaction",
@@ -153,7 +154,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// write sets the retired state absolutely rather than deriving it from a
 	// pre-read, so a second attempt converges on the same row instead of racing.
 	"internal/modules/activities:archiveAbsorbedEcho": "folding a duplicate capture into its survivor, which takes the echo off the timeline. archived_at is coalesced so a row a noise disposition already hid keeps the instant its undo window is measured from — a filter here would refuse exactly that row",
-	"internal/modules/customfields:Retire":            "the catalog field's own retirement, which moves `status` and not archived_at; lockField holds the row from before the decision read, and a repeat converges on the same status",
 	"internal/modules/identity:UpdateTeam":            "the team's archive and restore arms are this function, so both directions have to reach a row on the far side of the transition. The row is held FOR UPDATE from before the state is read",
 
 	// The company column writers are deliberately NOT here. They used to be:
@@ -172,8 +172,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:touchChildSetParent":        "the aggregate bump after a child row was written or taken away. The subject of a bought-data revert may be archived, so re-taking liveness here would refuse the case the helper exists for; the callers lock and probe the row first",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, through lockActivityForWrite — two hops past what a per-function scan follows, and the same indirection updateguard ratifies for this function",
 	"internal/modules/deals:recomputeOfferTotals":          "every caller holds the offer row lock through visibleOfferLocked, except createOfferTx where the offer was inserted in the same transaction",
-	"internal/modules/customfields:Update":                 "runs under the catalog row lock lockField mints, and the field's own mutability is checked under it. custom_field is retired through `status`; nothing in the tree writes its archived_at",
-	"internal/modules/customfields:setOptionsInTx":         "runs under the catalog row lock lockPicklistField mints, plus the per-table advisory lock serializeSchemaChange takes, and the same status-not-archived_at retirement applies",
 	"internal/modules/contacts:recomputeUnderOverrideTx":   "the scoring pass refreshing the machine value beside a human override. Its subject comes from the recompute's own selection of live leads, and the CAS on score_computed is what makes a lost race write nothing",
 
 	// THE WRITE CANNOT REACH A RETIRED ROW, because of what it is rather than

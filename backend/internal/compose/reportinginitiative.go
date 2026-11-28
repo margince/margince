@@ -67,7 +67,7 @@ func reportingInitiativeContext(ctx context.Context, tx pgx.Tx, selection crmcon
 	if scope == "" {
 		scope = "TRUE"
 	}
-	err = tx.QueryRow(ctx, `SELECT name, launch_at FROM sales_initiative WHERE id = $1 AND archived_at IS NULL AND `+scope, args...).Scan(&name, &launch)
+	err = tx.QueryRow(ctx, `SELECT name, launch_at FROM sales_initiative WHERE id = $1 AND `+scope, args...).Scan(&name, &launch)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("the selected initiative does not exist: %w", apperrors.ErrNotFound)
 	}

@@ -5351,7 +5351,6 @@ public.currency_minor_digits.digits smallint NOT NULL gen=- def=-
 public.currency_minor_digits_pkey CREATE UNIQUE INDEX currency_minor_digits_pkey ON public.currency_minor_digits USING btree (currency)
 public.custom_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.custom_field.activity_kinds text[] gen=- def=-
-public.custom_field.archived_at timestamp with time zone gen=- def=-
 public.custom_field.column_name text NOT NULL gen=- def=-
 public.custom_field.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.custom_field.created_by uuid NOT NULL gen=- def=-
@@ -10516,7 +10515,6 @@ public.sales_goal_plan_revision.text_bound_insert CREATE TRIGGER text_bound_inse
 public.sales_goal_plan_revision.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sales_goal_plan_revision FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "origin": 20000, "reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"origin":20000,"reason":2000}')
 public.sales_goal_plan_revision_pkey CREATE UNIQUE INDEX sales_goal_plan_revision_pkey ON public.sales_goal_plan_revision USING btree (plan_id, revision)
 public.sales_initiative acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.sales_initiative.archived_at timestamp with time zone gen=- def=-
 public.sales_initiative.captured_by text NOT NULL gen=- def=-
 public.sales_initiative.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.sales_initiative.deadline date NOT NULL gen=- def=-
@@ -10531,7 +10529,7 @@ public.sales_initiative.objective_metric text NOT NULL gen=- def=-
 public.sales_initiative.owner_id uuid NOT NULL gen=- def=-
 public.sales_initiative.sales_initiative_live_has_launch CHECK (((status = 'draft'::text) OR (launch_at IS NOT NULL)))
 public.sales_initiative.sales_initiative_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT
-public.sales_initiative.sales_initiative_owner_id_retirement_guard CREATE TRIGGER sales_initiative_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.sales_initiative FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
+public.sales_initiative.sales_initiative_owner_id_retirement_guard CREATE TRIGGER sales_initiative_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.sales_initiative FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.sales_initiative.sales_initiative_pkey PRIMARY KEY (id)
 public.sales_initiative.sales_initiative_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'live'::text, 'ended'::text])))
 public.sales_initiative.sales_initiative_target_value_check CHECK (((target_value IS NULL) OR (target_value > 0)))
@@ -10601,7 +10599,7 @@ public.sales_initiative_revision.sales_initiative_revision_pkey PRIMARY KEY (ini
 public.sales_initiative_revision.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sales_initiative_revision FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"reason":2000}')
 public.sales_initiative_revision.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sales_initiative_revision FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"reason":2000}')
 public.sales_initiative_revision_pkey CREATE UNIQUE INDEX sales_initiative_revision_pkey ON public.sales_initiative_revision USING btree (initiative_id, revision)
-public.sales_initiative_status_idx CREATE INDEX sales_initiative_status_idx ON public.sales_initiative USING btree (status) WHERE (archived_at IS NULL)
+public.sales_initiative_status_idx CREATE INDEX sales_initiative_status_idx ON public.sales_initiative USING btree (status)
 public.sales_target acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sales_target.created_at timestamp with time zone NOT NULL gen=- def=-
 public.sales_target.id uuid NOT NULL gen=- def=uuidv7()

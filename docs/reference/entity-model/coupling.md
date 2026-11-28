@@ -28,13 +28,13 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [contacts](contacts.md) | 50 | 718 | 76 | 37 | 14 |
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
-| [customfields](customfields.md) | 1 | 20 | 0 | 1 | 0 |
+| [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 93 | 0 | 8 | 1 |
 | [deals](deals.md) | 26 | 379 | 26 | 18 | 2 |
 | [finance](finance.md) | 5 | 73 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 87 | 1 | 2 | 0 |
 | [identity](identity.md) | 22 | 213 | 155 | 7 | 5 |
-| [initiatives](initiatives.md) | 5 | 40 | 0 | 2 | 1 |
+| [initiatives](initiatives.md) | 5 | 39 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 59 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
 | [knowledge](knowledge.md) | 3 | 38 | 0 | 0 | 0 |

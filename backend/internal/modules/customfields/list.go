@@ -53,7 +53,13 @@ var catalogSortFields = map[string]storekit.SortField{
 	"currency":    storekit.Column(fieldcatalog.TypeText),
 	"created_at":  storekit.Column(storekit.KindTimestamp),
 	"updated_at":  storekit.Column(storekit.KindTimestamp),
-	"archived_at": storekit.Column(storekit.KindTimestamp),
+	"archived_at": {Kind: storekit.KindTimestamp, Expr: neverArchived},
+}
+
+// neverArchived orders the deprecated archived_at sort. No field is archived,
+// so the sort stays accepted and the page keeps the house order.
+func neverArchived(context.Context, func(any) int) (string, error) {
+	return "NULL::timestamptz", nil
 }
 
 // predicate renders the WHERE clause and its arguments after validating

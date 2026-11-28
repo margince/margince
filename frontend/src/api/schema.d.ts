@@ -55821,7 +55821,8 @@ export interface components {
             updated_at: string;
             /**
              * Format: date-time
-             * @description Base envelope field; stays null even when `status=retired`, because retiring is a status flip rather than an archive.
+             * @deprecated
+             * @description Never set; always null. A field is retired through `status`, never archived. Kept so existing clients keep compiling.
              */
             archived_at?: string | null;
             version?: components["schemas"]["RowVersion"];
