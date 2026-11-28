@@ -141,7 +141,7 @@ func (f dealRefileFixture) runPaged(t *testing.T, args CapturedDealRefileArgs, p
 		}
 		var result *rivertest.WorkResult
 		if row == nil {
-			result, err = worker.Work(t.Context(), t, tx, args, nil)
+			result, err = worker.Work(boundBackground(t), t, tx, args, nil)
 		} else {
 			result, err = worker.WorkJob(t.Context(), t, tx, row)
 		}
@@ -301,7 +301,7 @@ func TestTheRecoverySweepQueuesTheSameFiniteReconsideration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := worker.Work(t.Context(), t, tx, CapturedDealRefileSweepArgs{}, nil)
+	result, err := worker.Work(boundBackground(t), t, tx, CapturedDealRefileSweepArgs{}, nil)
 	if err != nil {
 		if rollback := tx.Rollback(t.Context()); rollback != nil {
 			t.Error(rollback)

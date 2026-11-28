@@ -106,7 +106,7 @@ func TestARunningAnnouncementDoesNotAbsorbALaterReturnToTheSameOwner(t *testing.
 		if args.ApprovalID != id.UUID || args.DeciderID != e.Rep1 {
 			continue
 		}
-		if err := production.Work(t.Context(), &river.Job[ApprovalOwnerNoticeArgs]{JobRow: row, Args: args}); err != nil {
+		if err := production.Work(boundBackground(t), &river.Job[ApprovalOwnerNoticeArgs]{JobRow: row, Args: args}); err != nil {
 			t.Fatal(err)
 		}
 		worked = true
@@ -144,7 +144,7 @@ func TestAnOwnerAnnouncementChecksExpiryAfterWaitingForTheRequest(t *testing.T) 
 			return err
 		}
 		go func() {
-			done <- worker.Work(t.Context(), &river.Job[ApprovalOwnerNoticeArgs]{Args: ApprovalOwnerNoticeArgs{ApprovalID: id.UUID, DeciderID: e.Rep2}})
+			done <- worker.Work(boundBackground(t), &river.Job[ApprovalOwnerNoticeArgs]{Args: ApprovalOwnerNoticeArgs{ApprovalID: id.UUID, DeciderID: e.Rep2}})
 		}()
 		waitForBackendBlockedBy(t, tx, backendPID(t, tx), done)
 		at.Store(expires.Add(time.Second).UnixNano())
@@ -200,7 +200,7 @@ func TestAnOwnerAnnouncementHoldsAuthorityWhileWaitingForTheRequest(t *testing.T
 			return err
 		}
 		go func() {
-			noticeDone <- worker.Work(t.Context(), &river.Job[ApprovalOwnerNoticeArgs]{Args: ApprovalOwnerNoticeArgs{ApprovalID: id.UUID, DeciderID: e.Rep2}})
+			noticeDone <- worker.Work(boundBackground(t), &river.Job[ApprovalOwnerNoticeArgs]{Args: ApprovalOwnerNoticeArgs{ApprovalID: id.UUID, DeciderID: e.Rep2}})
 		}()
 		waitForBackendBlockedBy(t, tx, backendPID(t, tx), noticeDone)
 		go func() {

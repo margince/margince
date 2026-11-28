@@ -414,7 +414,7 @@ func voiceStarterLanguage(t *testing.T, language, explanation string) {
 	env, build := seedVoiceBuild(t, quote, 2)
 	integration.SetBaseLanguage(env.e.Admin(), t, env.e.Pool, language)
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{judgeScore: 0.9, quote: quote}, slog.New(slog.DiscardHandler))
-	if err := worker.Work(t.Context(), voiceBuildJob(env, build)); err != nil {
+	if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 		t.Fatal(err)
 	}
 	finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)

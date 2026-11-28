@@ -110,7 +110,7 @@ func (b *backfillEnv) passFails(t *testing.T, brain completer) bool {
 		}
 		var result *rivertest.WorkResult
 		if row == nil {
-			result, err = worker.Work(t.Context(), t, tx, args, nil)
+			result, err = worker.Work(boundBackground(t), t, tx, args, nil)
 		} else {
 			result, err = worker.WorkJob(t.Context(), t, tx, row)
 		}

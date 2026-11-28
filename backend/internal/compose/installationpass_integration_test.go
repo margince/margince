@@ -98,7 +98,7 @@ func TestTheStoredObjectReapStillCleansAnArchivedWorkspace(t *testing.T) {
 	orphanedObject(t, e, blob, key)
 	archiveEveryWorkspace(t)
 
-	if err := reapWorkerOver(e, blob).Work(boundBackground(t), &river.Job[StoredObjectReapArgs]{}); err != nil {
+	if err := reapWorkerOver(e, blob).Work(context.Background(), &river.Job[StoredObjectReapArgs]{}); err != nil {
 		t.Fatalf("the reap: %v", err)
 	}
 	if !blob.deleted[key] {

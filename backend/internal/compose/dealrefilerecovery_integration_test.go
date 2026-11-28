@@ -45,7 +45,7 @@ func TestARefileRetriesCommittedActivitiesWhenItsQueueTransactionIsLost(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, workErr := worker.Work(t.Context(), t, tx, args, nil)
+	result, workErr := worker.Work(boundBackground(t), t, tx, args, nil)
 	if err := tx.Rollback(t.Context()); err != nil {
 		t.Fatal(err)
 	}
