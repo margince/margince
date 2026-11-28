@@ -29,9 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -46,34 +44,42 @@ var captureSeatID = ids.NewV7()
 // captureSeat answers the seat captureWorkspace granted the mailbox as.
 func captureSeat(context.Context) ids.UUID { return captureSeatID }
 
-// captureWorkspace seeds a workspace and returns a context bound to it under
-// the per-user mail connector principal the sync loop mints.
+// captureWorkspace returns a context bound to the installation integration.Setup
+// seeds, under the per-user mail connector principal the sync loop mints.
+//
+// Setup's reset clears the settings an earlier test in this package wrote, such
+// as an installation country.
 func captureWorkspace(t *testing.T) (context.Context, *database.DB, string) {
 	t.Helper()
+	ws := integration.Setup(t).WS
 	pool := integration.SchemaPool(t)
-	ws := ids.NewV7()
 	ctx := context.Background()
-	if _, err := pool.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
-		t.Fatalf("seed workspace: %v", err)
-	}
-	if err := storekit.RecordInstallationTx(ctx, pool, ws, clocktest.Now(t)); err != nil {
-		t.Fatalf("seed the installation: %v", err)
-	}
 	// The seat the mailbox is granted as. It has to be a real app_user: the
 	// audit trail carries on_behalf_of as a foreign key, so a principal naming
 	// a seat that does not exist fails the write rather than the read.
 	if _, err := pool.Exec(ctx, `
 		INSERT INTO app_user (id, email, display_name)
-		VALUES ($1, $2, 'Capture Seat')
-		ON CONFLICT (id) DO NOTHING`,
+		VALUES ($1, $2, 'Capture Seat')`,
 		captureSeatID, "capture-seat-"+captureSeatID.String()+"@fixture.example"); err != nil {
 		t.Fatalf("seed the capturing seat: %v", err)
 	}
 	ctx = asConnectorFor(principal.WithWorkspaceID(ctx, ws), "connector:imap", captureSeatID)
-	// The tag makes every source id unique to this run. The test database is
-	// shared and long-lived, so a fixed id would meet rows an earlier run of
-	// this same suite left behind and count them as this run's.
 	return principal.WithCorrelationID(ctx, ids.NewV7()), database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), ws.String()
+}
+
+// The offer drafter's fixture sets a country no pack in this binary answers,
+// and the personal-thread stripper fails on that country.
+func TestACaptureWorkspaceInheritsNoSettingAnEarlierTestWrote(t *testing.T) {
+	seedStandardTaxRate(t, integration.Setup(t), "19", "2020-01-01")
+	ctx, _, _ := captureWorkspace(t)
+	var countries int
+	if err := integration.SchemaPool(t).QueryRow(ctx,
+		`SELECT count(*) FROM setting WHERE key = 'installation.country'`).Scan(&countries); err != nil {
+		t.Fatalf("reading the installation country: %v", err)
+	}
+	if countries != 0 {
+		t.Fatalf("the capture workspace holds %d installation country rows, want none: an earlier test's setting reached it", countries)
+	}
 }
 
 // asConnector binds the capture principal one adapter's sync loop mints.
