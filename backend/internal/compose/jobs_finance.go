@@ -49,7 +49,7 @@ type financeSyncSweepWorker struct {
 }
 
 func (w *financeSyncSweepWorker) Work(ctx context.Context, _ *river.Job[FinanceSyncSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.syncWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.syncWorkspace))
 }
 
 // financeSweepPrincipal is who the scheduled mirror pass acts as.
@@ -175,23 +175,16 @@ func (w *financeSyncSweepWorker) providerFor(
 // FinanceSyncArgs runs one workspace's pass now, queued when an administrator
 // connects a source or asks for a sync.
 type FinanceSyncArgs struct {
-	Workspace ids.UUID `json:"workspace_id" river:"unique"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (FinanceSyncArgs) Kind() string { return "finance_sync" }
 
-// WorkspaceID binds the pass to its tenant (jobs.WorkspaceScoped).
-func (a FinanceSyncArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
 // financeSyncWorker is the sweep's per-workspace pass, run for one workspace.
 type financeSyncWorker struct{ sweep *financeSyncSweepWorker }
 
 func (w *financeSyncWorker) Work(ctx context.Context, job *river.Job[FinanceSyncArgs]) error {
-	if _, err := workspaceJobCtx(ctx, job.Args); err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	return jobs.FaultContext(ctx, w.sweep.syncWorkspace(ctx, job.Args.Workspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.sweep.pool, w.sweep.syncWorkspace))
 }
 
 // addFinanceJobs registers the sweep and the per-workspace pass, and hands

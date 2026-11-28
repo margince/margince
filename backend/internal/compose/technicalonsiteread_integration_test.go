@@ -54,7 +54,7 @@ func TestASiteReadAsksWhatTheCompanyPubliclyRuns(t *testing.T) {
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
 	_, args := startDeepRead(t, e, company)
 
-	ctx := rivertest.WorkContext(context.Background(), workClient(t, e))
+	ctx := rivertest.WorkContext(boundBackground(t), workClient(t, e))
 	if err := worker.run(ctx, args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
@@ -64,9 +64,9 @@ func TestASiteReadAsksWhatTheCompanyPubliclyRuns(t *testing.T) {
 	// wrong account while looking exactly like this one.
 	job := rivertest.RequireInserted(ctx, t, riverpgxv5.New(e.Pool),
 		TechnicalEnrichCompanyArgs{}, nil)
-	if job.Args.CompanyID != company || job.Args.Workspace != e.WS {
-		t.Fatalf("queued lookup = %+v, want the company this read was about (%s in %s)",
-			job.Args, company, e.WS)
+	if job.Args.CompanyID != company {
+		t.Fatalf("queued lookup = %+v, want the company this read was about (%s)",
+			job.Args, company)
 	}
 	if job.Queue != technicalLookupQueue {
 		t.Fatalf("queued on %q, want %q — the lookup's pacing is the queue's, not the crawl's",
@@ -82,7 +82,7 @@ func TestASiteReadWithNoCompanyQueuesNoLookup(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
-	ctx := rivertest.WorkContext(context.Background(), workClient(t, e))
+	ctx := rivertest.WorkContext(boundBackground(t), workClient(t, e))
 
 	// The triage lane's shape: a claim whose read is about a DOMAIN, with no
 	// account resolved behind it yet.
@@ -107,9 +107,9 @@ func TestALookupWithNoEnricherConfiguredRecordsWhatItCouldNotRead(t *testing.T) 
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	worker := &technicalEnrichWorker{pool: e.Pool, enricher: nil}
 
-	err := worker.Work(context.Background(), &river.Job[TechnicalEnrichCompanyArgs]{
+	err := worker.Work(boundBackground(t), &river.Job[TechnicalEnrichCompanyArgs]{
 		JobRow: &rivertype.JobRow{},
-		Args:   TechnicalEnrichCompanyArgs{Workspace: e.WS, CompanyID: company},
+		Args:   TechnicalEnrichCompanyArgs{CompanyID: company},
 	})
 	if err != nil {
 		t.Fatalf("a lookup this deployment cannot perform failed the job: %v", err)

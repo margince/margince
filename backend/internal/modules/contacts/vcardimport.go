@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -288,7 +289,7 @@ func vcardCandidate(entry VCardEntry) ContactCandidate {
 	// Every address the card states, not just the first: the exact tier checks
 	// them all, and a contact reachable two ways matches on either.
 	for _, email := range entry.Emails {
-		if v := strings.ToLower(strings.TrimSpace(email.Value)); v != "" {
+		if v := correspondence.Fold(email.Value); v != "" {
 			candidate.Emails = append(candidate.Emails, v)
 		}
 	}

@@ -14,14 +14,13 @@ import (
 )
 
 func TestOwnerAnnouncementsRefuseIncompleteScopeBeforeReadingRecords(t *testing.T) {
-	workspace, approval, decider := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	approval, decider := ids.NewV7(), ids.NewV7()
 	for _, tc := range []struct {
 		name string
 		args ApprovalOwnerNoticeArgs
 	}{
-		{"workspace", ApprovalOwnerNoticeArgs{ApprovalID: approval, DeciderID: decider}},
-		{"request", ApprovalOwnerNoticeArgs{Workspace: workspace, DeciderID: decider}},
-		{"recipient", ApprovalOwnerNoticeArgs{Workspace: workspace, ApprovalID: approval}},
+		{"request", ApprovalOwnerNoticeArgs{DeciderID: decider}},
+		{"recipient", ApprovalOwnerNoticeArgs{ApprovalID: approval}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			worker := approvalOwnerNoticeWorker{}

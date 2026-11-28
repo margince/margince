@@ -89,7 +89,7 @@ func newLinkReconcileWorker(pool *pgxpool.Pool, store *contacts.Store, cfg Captu
 // Work enqueues one pass per workspace, so a failure in one leaves the rest
 // swept.
 func (w *linkReconcileWorker) Work(ctx context.Context, _ *river.Job[LinkReconcileArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.reconcileLinksForWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.reconcileLinksForWorkspace))
 }
 
 // adoptStrandedPerTick bounds the stranded-mail adoption, on this job's usual

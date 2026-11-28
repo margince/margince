@@ -3,7 +3,11 @@
 
 package contacts
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+)
 
 // VCardContactName is the name a card's contact is created with. An approval
 // that shows a card shows this, so the decider sees the name that is written.
@@ -48,7 +52,7 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 	contact.Address = vcardRecordAddress(entry)
 	for i, email := range entry.Emails {
 		contact.Emails = append(contact.Emails, ContactEmailInput{
-			Email:     strings.ToLower(strings.TrimSpace(email.Value)),
+			Email:     correspondence.Fold(email.Value),
 			EmailType: email.Kind,
 			IsPrimary: i == 0,
 			Position:  i,

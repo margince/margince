@@ -136,13 +136,30 @@ func LiveSlotSQL(alias string) string {
 		prefix, prefix, prefix, prefix)
 }
 
-// EndedAtCompanySQL is whether this contact has an employment row at this
-// company that is no longer live. Every automatic writer asks it first, so a
-// link a user removed stays removed. It negates LiveSlotSQL, so both read
-// one definition of live. `contact` and `company` are SQL expressions.
+// EndedAtCompanySQL finds a user-ended link, not a historical role an import
+// supplied. Only the latest ending matters; a later provider correction must
+// not inherit an earlier user's decision. Agent actions use the user's authority.
 func EndedAtCompanySQL(contact, company string) string {
-	return sqlf("EXISTS (SELECT 1 FROM relationship gone WHERE gone.contact_id = %s AND gone.company_id = %s AND gone.kind = 'employment' AND NOT (%s))",
-		contact, company, LiveSlotSQL("gone"))
+	return sqlf(`EXISTS (
+ SELECT 1 FROM relationship gone
+ WHERE gone.contact_id = %s AND gone.company_id = %s
+   AND gone.kind = 'employment' AND NOT (%s)
+   AND (SELECT %s
+          FROM audit_log a
+         WHERE a.entity_type = 'relationship' AND a.entity_id = gone.id
+           AND (a.action = 'archive' OR (a.action = 'update' AND (
+             (a.after ->> 'ended_at' IS NOT NULL
+              AND a.after ->> 'ended_at' IS DISTINCT FROM a.before ->> 'ended_at')
+             OR (a.after ->> 'employment_status' IN ('former', 'unknown')
+                 AND a.after ->> 'employment_status' IS DISTINCT FROM a.before ->> 'employment_status'))))
+         ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1)
+)`, contact, company, LiveSlotSQL("gone"), UserDecisionSQL("a"))
+}
+
+// UserDecisionSQL distinguishes a user's action from provider evidence,
+// including when an MCP client carries that user's authority.
+func UserDecisionSQL(alias string) string {
+	return sqlf("(%[1]s.actor_type = 'human' OR (%[1]s.actor_type = 'agent' AND %[1]s.on_behalf_of IS NOT NULL)) AND NOT (COALESCE(%[1]s.evidence, '{}'::jsonb) ? 'run_id')", alias)
 }
 
 // CurrentPrimarySlotSQL is the other question about `is_current_primary`:

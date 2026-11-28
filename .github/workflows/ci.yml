@@ -275,6 +275,7 @@ jobs:
               - '.github/actions/frontend-cache-key/**'
               - '.github/actions/upload-artifact-retried/**'
               - 'docs/reference/ui-copy-style*.md'
+              - 'docs/reference/mcp-info.json'
               - 'docs/handbook/**'
               - 'backend/gates/marketingquestion_test.go'
               - 'backend/gates/testdata/servertrim.json'

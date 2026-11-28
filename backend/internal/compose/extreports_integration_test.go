@@ -5,11 +5,6 @@
 
 package compose
 
-// A registered count or breakdown meets the report engine. The kind's read
-// right admits it. A field mask excludes rows and says so. The group floor
-// withholds the smallest groups and the total. A multi-select custom field
-// splits a core population without counting a record twice.
-
 import (
 	"context"
 	"encoding/json"
@@ -23,10 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/reportfixture"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -37,24 +34,11 @@ const (
 	reportDemoObject = "ext_reportdemo_visit"
 )
 
-// registerVisitReports declares a visit kind with its table and the reports
-// over it, and any extra units beside it. Both registries are put back when
-// the test ends.
+// registerVisitReports restores both registries when the test ends.
 func registerVisitReports(t *testing.T, extra ...extension.Extension) {
 	t.Helper()
 	owner := integration.OwnerConn(t)
-	ctx := context.Background()
-	for _, stmt := range []string{
-		`CREATE SCHEMA IF NOT EXISTS ext`,
-		`GRANT USAGE ON SCHEMA ext TO margince_app`,
-		`DROP TABLE IF EXISTS ext.` + reportDemoTable,
-		`CREATE TABLE ext.` + reportDemoTable + ` (id uuid PRIMARY KEY DEFAULT uuidv7(), archived_at timestamptz, code text NOT NULL UNIQUE, site text, tier integer NOT NULL DEFAULT 2)`,
-		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.` + reportDemoTable + ` TO margince_app`,
-	} {
-		if _, err := owner.Exec(ctx, stmt); err != nil {
-			t.Fatalf("preparing the visit table (%s): %v", stmt, err)
-		}
-	}
+	reportfixture.PrepareTable(t)
 	unit := extension.Name("reportdemo")
 	kinds := []extension.RecordKindDeclaration{{
 		Kind: "visit", DisplayName: "Visit", Table: reportDemoTable,
@@ -83,34 +67,6 @@ func registerVisitReports(t *testing.T, extra ...extension.Extension) {
 	})
 }
 
-func seedVisits(t *testing.T, site string, live, archived int) {
-	t.Helper()
-	owner := integration.OwnerConn(t)
-	for i := range live + archived {
-		var archivedAt any
-		if i >= live {
-			archivedAt = "now()"
-		}
-		if _, err := owner.Exec(context.Background(),
-			`INSERT INTO ext.`+reportDemoTable+` (code, site, archived_at) VALUES ($1, $2, CASE WHEN $3::text IS NULL THEN NULL ELSE now() END)`,
-			fmt.Sprintf("%s-%d", site, i), site, archivedAt); err != nil {
-			t.Fatalf("seeding a visit: %v", err)
-		}
-	}
-}
-
-func visitReader(e *integration.Env, mask ...principal.FieldMask) context.Context {
-	return e.As(e.Rep1, nil, principal.Permissions{
-		Objects: map[string]principal.ObjectGrant{
-			reportDemoObject:        {Read: true},
-			"installation_settings": {Read: true},
-		},
-		// Team scope, because a seat that reads every row is exempt from masks.
-		RowScope:   principal.RowScopeTeam,
-		FieldMasks: mask,
-	})
-}
-
 func runRegisteredReport(ctx context.Context, t *testing.T, e *integration.Env, name string) extensionReportAnswer {
 	t.Helper()
 	engine := newReportEngine(e.Pool)
@@ -131,10 +87,10 @@ func runRegisteredReport(ctx context.Context, t *testing.T, e *integration.Env, 
 func TestARegisteredBreakdownCountsLiveRowsOfTheKind(t *testing.T) {
 	e := integration.Setup(t)
 	registerVisitReports(t)
-	seedVisits(t, "north", 6, 3)
-	seedVisits(t, "south", 7, 0)
+	reportfixture.SeedVisits(t, "north", 6, 3)
+	reportfixture.SeedVisits(t, "south", 7, 0)
 
-	answer := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_site")
+	answer := runRegisteredReport(reportfixture.Reader(e), t, e, "ext:reportdemo:by_site")
 	if answer.Withheld || answer.Total == nil || *answer.Total != 13 {
 		t.Fatalf("answer = %+v, want 13 live visits and nothing withheld (archived rows are not counted)", answer)
 	}
@@ -145,7 +101,7 @@ func TestARegisteredBreakdownCountsLiveRowsOfTheKind(t *testing.T) {
 	if counts["north"] != 6 || counts["south"] != 7 {
 		t.Errorf("groups = %v, want north=6 south=7", counts)
 	}
-	count := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:visits")
+	count := runRegisteredReport(reportfixture.Reader(e), t, e, "ext:reportdemo:visits")
 	if count.Total == nil || *count.Total != 13 {
 		t.Errorf("count = %+v, want 13", count)
 	}
@@ -154,7 +110,7 @@ func TestARegisteredBreakdownCountsLiveRowsOfTheKind(t *testing.T) {
 func TestAReaderWithoutTheKindsReadRightCannotRunItsReports(t *testing.T) {
 	e := integration.Setup(t)
 	registerVisitReports(t)
-	seedVisits(t, "north", 6, 0)
+	reportfixture.SeedVisits(t, "north", 6, 0)
 	ctx := e.As(e.Rep1, nil, principal.Permissions{RowScope: principal.RowScopeAll})
 
 	_, _, err := newReportEngine(e.Pool).runRegistered(ctx, registeredReports()[0], analyticsquery.DefaultFloor)
@@ -166,11 +122,11 @@ func TestAReaderWithoutTheKindsReadRightCannotRunItsReports(t *testing.T) {
 func TestTheFloorWithholdsTheSmallestGroupsAndTheTotal(t *testing.T) {
 	e := integration.Setup(t)
 	registerVisitReports(t)
-	seedVisits(t, "tiny", 1, 0)
-	seedVisits(t, "small", 5, 0)
-	seedVisits(t, "large", 9, 0)
+	reportfixture.SeedVisits(t, "tiny", 1, 0)
+	reportfixture.SeedVisits(t, "small", 5, 0)
+	reportfixture.SeedVisits(t, "large", 9, 0)
 
-	answer := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_site")
+	answer := runRegisteredReport(reportfixture.Reader(e), t, e, "ext:reportdemo:by_site")
 	if !answer.Withheld || answer.Total != nil {
 		t.Fatalf("withheld=%v total=%v, want the total withheld with the groups", answer.Withheld, answer.Total)
 	}
@@ -188,10 +144,10 @@ func TestTheFloorWithholdsTheSmallestGroupsAndTheTotal(t *testing.T) {
 func TestAFieldMaskExcludesTheKindsRowsAndCountsThem(t *testing.T) {
 	e := integration.Setup(t)
 	registerVisitReports(t)
-	seedVisits(t, "north", 6, 0)
-	seedVisits(t, "south", 7, 0)
+	reportfixture.SeedVisits(t, "north", 6, 0)
+	reportfixture.SeedVisits(t, "south", 7, 0)
 
-	masked := visitReader(e, principal.FieldMask{Object: reportDemoObject, Field: "site", Condition: principal.MaskAlways})
+	masked := reportfixture.Reader(e, principal.FieldMask{Object: reportDemoObject, Field: "site", Condition: principal.MaskAlways})
 	answer := runRegisteredReport(masked, t, e, "ext:reportdemo:by_site")
 	if answer.ExcludedByPermission == nil || *answer.ExcludedByPermission != 13 {
 		t.Fatalf("excluded_by_permission = %v, want 13", answer.ExcludedByPermission)
@@ -199,7 +155,7 @@ func TestAFieldMaskExcludesTheKindsRowsAndCountsThem(t *testing.T) {
 	if answer.Total == nil || *answer.Total != 0 || len(answer.Groups) != 0 {
 		t.Errorf("answer = %+v, want the masked rows out of every group and the total", answer)
 	}
-	open := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_site")
+	open := runRegisteredReport(reportfixture.Reader(e), t, e, "ext:reportdemo:by_site")
 	if open.ExcludedByPermission != nil {
 		t.Errorf("unmasked excluded_by_permission = %v, want none", *open.ExcludedByPermission)
 	}
@@ -208,9 +164,9 @@ func TestAFieldMaskExcludesTheKindsRowsAndCountsThem(t *testing.T) {
 func TestABreakdownByANonTextColumnKeepsItsKeys(t *testing.T) {
 	e := integration.Setup(t)
 	registerVisitReports(t)
-	seedVisits(t, "north", 6, 0)
+	reportfixture.SeedVisits(t, "north", 6, 0)
 
-	answer := extensionReportWire(runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_tier"))
+	answer := extensionReportWire(runRegisteredReport(reportfixture.Reader(e), t, e, "ext:reportdemo:by_tier"))
 	if len(answer.Groups) != 1 || answer.Groups[0].Key == nil || *answer.Groups[0].Key != "2" {
 		t.Fatalf("groups = %+v, want one group keyed \"2\": an integer column is text on the wire", answer.Groups)
 	}
@@ -279,7 +235,7 @@ func TestOneReportThatCannotRunLeavesTheOthersOnTheDirectory(t *testing.T) {
 		ReportCounts: []extension.ReportCount{{Name: "gone", Label: "Gone", Population: "gone"}},
 	}
 	registerVisitReports(t, broken)
-	seedVisits(t, "north", 6, 0)
+	reportfixture.SeedVisits(t, "north", 6, 0)
 	ctx := e.As(e.Rep1, nil, principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
 			reportDemoObject: {Read: true}, "ext_brokendemo_gone": {Read: true}, "installation_settings": {Read: true},
@@ -312,5 +268,75 @@ func TestOneReportThatCannotRunLeavesTheOthersOnTheDirectory(t *testing.T) {
 	}
 	if strings.Contains(rec.Body.String(), "ext_brokendemo_gone") {
 		t.Errorf("the answer names the failing table: %s", rec.Body.String())
+	}
+}
+
+type joinedVisitReport struct {
+	reportfixture.Fixture
+	report registeredReport
+}
+
+func prepareJoinedVisitReport(t *testing.T) joinedVisitReport {
+	t.Helper()
+	f := reportfixture.Prepare(t, func(t *testing.T) { registerVisitReports(t) })
+	return joinedVisitReport{Fixture: f, report: registeredReport{name: "ext:reportdemo:joined", unit: "reportdemo", kind: extReportBreakdown, population: "pipeline-current", by: *f.Field.ColumnName + ".site"}}
+}
+
+func (f joinedVisitReport) run(ctx context.Context, t *testing.T, floor analyticsquery.Floor) extensionReportAnswer {
+	t.Helper()
+	answer, ok, err := newReportEngine(f.E.Pool).runRegistered(ctx, f.report, floor)
+	if err != nil || !ok {
+		t.Fatalf("joined report: offered=%v err=%v", ok, err)
+	}
+	return answer
+}
+
+func TestAJoinedReportKeepsBothRowScopesAndOneDealPerRow(t *testing.T) {
+	f := prepareJoinedVisitReport(t)
+	for _, c := range []struct {
+		scope        principal.RowScope
+		north, south int
+	}{{principal.RowScopeOwn, 6, 0}, {principal.RowScopeTeam, 7, 2}, {principal.RowScopeAll, 8, 2}} {
+		answer := f.run(f.Reader(c.scope), t, analyticsquery.Floor(1))
+		counts := map[string]int{}
+		for _, g := range answer.Groups {
+			counts[fmt.Sprint(g.Key)] = g.Count
+		}
+		if counts["north"] != c.north || counts["south"] != c.south || counts["archived"] != 0 {
+			t.Fatalf("scope %s counts=%v", c.scope, counts)
+		}
+	}
+}
+
+func TestAJoinedReportNeedsBothOptInsAndTheKindsReadRight(t *testing.T) {
+	f := prepareJoinedVisitReport(t)
+	denied := f.E.As(f.E.Rep1, nil, principal.Permissions{Objects: map[string]principal.ObjectGrant{"deal": {Read: true}}, RowScope: principal.RowScopeAll})
+	if _, _, err := newReportEngine(f.E.Pool).runRegistered(denied, f.report, analyticsquery.Floor(1)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("missing kind read: %v", err)
+	}
+	no := false
+	if _, err := f.Catalog.Update(f.E.As(f.E.Rep1, nil, integration.CustomFieldAdminPerms), ids.UUID(f.Field.Id), customfields.FieldPatch{Reportable: &no}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok, err := newReportEngine(f.E.Pool).runRegistered(f.E.Admin(), f.report, analyticsquery.Floor(1)); err != nil || ok {
+		t.Fatalf("unreportable picker: offered=%v err=%v", ok, err)
+	}
+}
+
+func TestAJoinedReportKeepsTheFloorAndExtensionFieldMasks(t *testing.T) {
+	f := prepareJoinedVisitReport(t)
+	answer := f.run(f.Reader(principal.RowScopeAll), t, analyticsquery.DefaultFloor)
+	if !answer.Withheld || answer.Total != nil {
+		t.Fatal("a small joined group disclosed its total")
+	}
+	masked := f.E.As(f.E.Rep1, nil, principal.Permissions{Objects: map[string]principal.ObjectGrant{"deal": {Read: true}, reportDemoObject: {Read: true}, "installation_settings": {Read: true}}, RowScope: principal.RowScopeOwn, FieldMasks: []principal.FieldMask{{Object: reportDemoObject, Field: "site", Condition: principal.MaskAlways}}})
+	answer = f.run(masked, t, analyticsquery.Floor(1))
+	for _, g := range answer.Groups {
+		if g.Key != nil {
+			t.Fatalf("masked kind value escaped: %+v", g)
+		}
+	}
+	if answer.ExcludedByPermission == nil || *answer.ExcludedByPermission != 6 {
+		t.Fatalf("masked joined rows=%v, want 6", answer.ExcludedByPermission)
 	}
 }

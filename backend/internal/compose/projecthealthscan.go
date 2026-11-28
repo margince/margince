@@ -62,7 +62,7 @@ type projectHealthWorker struct {
 }
 
 func (w *projectHealthWorker) Work(ctx context.Context, _ *river.Job[ProjectHealthScanArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.scanWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.scanWorkspace))
 }
 
 func (w *projectHealthWorker) scanWorkspace(ctx context.Context, workspace ids.UUID) error {

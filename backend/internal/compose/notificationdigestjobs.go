@@ -95,7 +95,7 @@ func addNotificationDigestJobs(
 
 // Work fans the pass out over every live workspace (jobs.FleetWide).
 func (w *notificationDigestWorker) Work(ctx context.Context, _ *river.Job[NotificationDigestArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.digestOneWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.digestOneWorkspace))
 }
 
 func (w *notificationDigestWorker) digestOneWorkspace(ctx context.Context, workspace ids.UUID) error {

@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -284,7 +285,7 @@ func freshEditKeys(current crmcontracts.Contact, in UpdateContactInput) storekit
 	}
 	var keys storekit.IdentityKeys
 	for _, e := range in.Emails {
-		if !held[strings.ToLower(strings.TrimSpace(e.Email))] {
+		if !held[correspondence.Fold(e.Email)] {
 			keys.Emails = append(keys.Emails, e.Email)
 		}
 	}

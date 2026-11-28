@@ -21,7 +21,6 @@ package jobtest
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"testing"
 	"time"
@@ -46,53 +45,6 @@ const (
 	DispatchInterval = 2 * time.Second
 	DispatchGapBound = 3 * DispatchInterval
 )
-
-// recordWorkspaceJobOutcome files one workspace job's outcome under the tenant
-// its args name, reading the WIRE key rather than a decoded args struct — the
-// same `workspace_id` every per-workspace read of river_job selects.
-func recordWorkspaceJobOutcome(t *testing.T, into map[string]bool, ev *river.Event, kind string, completed bool) {
-	t.Helper()
-	if ev == nil || ev.Job == nil || ev.Job.Kind != kind {
-		return
-	}
-	var args struct {
-		Workspace string `json:"workspace_id"`
-	}
-	if err := json.Unmarshal(ev.Job.EncodedArgs, &args); err != nil {
-		t.Fatalf("decoding the %s args River persisted: %v", kind, err)
-	}
-	if args.Workspace == "" {
-		t.Fatalf("a %s row carries no workspace_id — the tenant it worked for is invisible to every per-workspace read of river_job", kind)
-	}
-	into[args.Workspace] = completed
-}
-
-// AwaitWorkspaceJobOutcomes collects one outcome per tenant until want distinct
-// workspaces have reported, or the deadline fires. No polling, no sleep.
-//
-// A tenant's LATEST report overwrites its earlier ones, and the wait ends the
-// moment want DISTINCT tenants have reported at all — so a tenant that fails an
-// attempt and then succeeds on a retry reads as succeeded if the retry lands
-// before the last tenant reports, and as failed if it lands after the wait is
-// over. Which one you get is a race, not a rule. Every suite using this plants
-// PERMANENT faults, so the first report is also the only one and the verdict is
-// determined; a suite that plants a RETRYABLE fault needs a different collector,
-// not a longer deadline.
-func AwaitWorkspaceJobOutcomes(ctx context.Context, t *testing.T, completed, failed <-chan *river.Event, kind string, want int) map[string]bool {
-	t.Helper()
-	outcomes := make(map[string]bool, want)
-	for len(outcomes) < want {
-		select {
-		case <-ctx.Done():
-			t.Fatalf("timed out with %d of %d %s outcomes: %v", len(outcomes), want, kind, ctx.Err())
-		case ev := <-completed:
-			recordWorkspaceJobOutcome(t, outcomes, ev, kind, true)
-		case ev := <-failed:
-			recordWorkspaceJobOutcome(t, outcomes, ev, kind, false)
-		}
-	}
-	return outcomes
-}
 
 // AwaitKindsCompleted blocks until every named kind has reported one
 // completion, or the deadline fires. No polling, no sleep.
@@ -211,12 +163,10 @@ func StartTestJobRunner(t *testing.T, pool *pgxpool.Pool, cfg compose.JobRunnerC
 // AwaitKindOutcome blocks until one row of the named kind reports either way,
 // and answers whether it succeeded. No polling, no sleep.
 //
-// The single-pass sibling of AwaitWorkspaceJobOutcomes, and it exists because a
-// collapsed pass has no tenant to key an outcome on (ADR-0103 §1): there is one
-// row, and the question is whether that row completed or failed. The same
-// caveat applies for the same reason — the FIRST report is taken, so a suite
-// planting a retryable fault would read the attempt rather than the verdict.
-// Every caller plants a permanent one.
+// There is one row per pass, and the question is whether that row completed or
+// failed. The first report is taken, so a suite planting a retryable fault
+// would read the attempt and not the verdict. Every caller plants a permanent
+// one.
 func AwaitKindOutcome(ctx context.Context, t *testing.T, completed, failed <-chan *river.Event, kind string) bool {
 	t.Helper()
 	for {

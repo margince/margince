@@ -254,7 +254,7 @@ func TestTheRekeyQueuesTheJournalExportThatRemovesUnkeyedNames(t *testing.T) {
 	useRootKey(t, "")
 	seedSuppressedEmail(t, resurrectedAddress)
 	unkeyedEntry := "erasure-suppression/email/" + storekit.SuppressionHash(resurrectedAddress)
-	if err := exporter.Work(t.Context(), nil); err != nil {
+	if err := exporter.Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := store.Get(t.Context(), unkeyedEntry); err != nil {
@@ -275,7 +275,7 @@ func TestTheRekeyQueuesTheJournalExportThatRemovesUnkeyedNames(t *testing.T) {
 		t.Fatalf("the finished re-key queued %d journal exports, want one", n)
 	}
 
-	if err := exporter.Work(t.Context(), nil); err != nil {
+	if err := exporter.Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := store.Get(t.Context(), unkeyedEntry); !errors.Is(err, blobstore.ErrNotFound) {

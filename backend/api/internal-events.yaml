@@ -15,6 +15,16 @@ info:
     coverage gate that walks the subscribable set.
 components:
   schemas:
+    InternalEventIdentifierSpellingChanged:
+      type: object
+      x-event-type: identifier.spelling_changed
+      x-entity-type: dynamic
+      description: A stored identifier was given its canonical spelling; no identity, ownership or consent changed.
+      required: [column]
+      properties:
+        column: { type: string, description: The email, address or domain column whose representation changed. }
+      additionalProperties: false
+
     InternalEventSdrHandoffCreated:
       type: object
       x-event-type: sdr_handoff.created

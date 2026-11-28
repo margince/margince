@@ -103,10 +103,7 @@ type privacyRetentionWorker struct {
 
 func (w *privacyRetentionWorker) Work(ctx context.Context, job *river.Job[PrivacyRetentionArgs]) error {
 	// Store writers still require the installation workspace.
-	passCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	passCtx := ctx
 	// Domain, audit and outbox rows name the system actor for this job.
 	passCtx = principal.SystemActing(passCtx, "system")
 	return jobs.FaultContext(ctx, w.runPass(ctx, passCtx, job))

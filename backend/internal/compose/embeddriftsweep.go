@@ -85,7 +85,7 @@ func (w *embedDriftSweepWorker) Work(ctx context.Context, job *river.Job[EmbedDr
 	}
 	started := time.Now()
 	scope := w.fullPass.Scope(started)
-	if err := runPerWorkspace(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
+	if err := runInstallationPass(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
 		return w.sweepWorkspace(ctx, workspace, scope)
 	}); err != nil {
 		return jobs.FaultContext(ctx, err)

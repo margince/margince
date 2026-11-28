@@ -38,11 +38,11 @@ type aiPriceSyncSweepWorker struct {
 }
 
 func (w *aiPriceSyncSweepWorker) Work(ctx context.Context, _ *river.Job[AIPriceSyncSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.syncWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.syncWorkspace))
 }
 
 // syncWorkspace is one workspace's turn; its failure is logged here and joined
-// by runPerWorkspace, so it does not stop the others.
+// by runInstallationPass, so it does not stop the others.
 func (w *aiPriceSyncSweepWorker) syncWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), aiPriceSyncActor)
 	if err := w.sync.RunScheduled(wsCtx); err != nil {

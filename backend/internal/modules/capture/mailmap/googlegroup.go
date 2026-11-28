@@ -9,6 +9,7 @@ import (
 
 	"github.com/emersion/go-message/mail"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -85,7 +86,7 @@ func isGoogleGroupsLink(link string) bool {
 // `asia.sales@ourco.example` is `<asia.sales.ourco.example>`.
 func groupNamesItself(address, listID string) bool {
 	id := strings.ToLower(strings.Trim(strings.TrimSpace(listID), "<>"))
-	address = strings.ToLower(strings.TrimSpace(address))
+	address = correspondence.Fold(address)
 	return id != "" && strings.Contains(address, "@") && id == strings.Replace(address, "@", ".", 1)
 }
 

@@ -61,10 +61,10 @@ func readDocumentFor(t *testing.T, env *integration.Env) (readID ids.UUID, calls
 	job := &river.Job[DocumentExtractArgs]{
 		JobRow: &rivertype.JobRow{Attempt: oneOffJobMaxAttempts, MaxAttempts: oneOffJobMaxAttempts},
 		Args: DocumentExtractArgs{
-			Workspace: env.WS, AttachmentID: ids.UUID(attachment.Id), ExtractionReadID: reading.ID, RequestedBy: requester,
+			AttachmentID: ids.UUID(attachment.Id), ExtractionReadID: reading.ID, RequestedBy: requester,
 		},
 	}
-	workErr = worker.Work(context.Background(), job)
+	workErr = worker.Work(boundBackground(t), job)
 	after, err = store.GetExtractionRead(env.Admin(), ids.UUID(attachment.Id), reading.ID)
 	if err != nil {
 		t.Fatal(err)

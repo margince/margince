@@ -51207,7 +51207,7 @@
     "lost":
      "lost",
     "lost_reason":
-     "Lý do thua",
+     "Lý do thất bại",
     "lost_reason_basis":
      "Bằng chứng cho lý do mất",
     "lost_reason_code":
@@ -62195,7 +62195,7 @@
     "merge_profile_field/text/logo_icon":
      "Biểu tượng công ty",
     "merge_profile_field/text/lost_reason":
-     "Lý do thua",
+     "Lý do thất bại",
     "merge_profile_field/text/lost_reason_basis":
      "Bằng chứng cho lý do mất",
     "merge_profile_field/text/lost_reason_code":
@@ -62877,7 +62877,7 @@
     "merge_profile_field/lifecycle/logo_icon":
      "Biểu tượng công ty",
     "merge_profile_field/lifecycle/lost_reason":
-     "Lý do thua",
+     "Lý do thất bại",
     "merge_profile_field/lifecycle/lost_reason_basis":
      "Bằng chứng cho lý do mất",
     "merge_profile_field/lifecycle/lost_reason_code":
@@ -69255,7 +69255,7 @@
     "state/boolean/true":
      "Có",
     "status/text/lost":
-     "Thua",
+     "Thất bại",
     "status/text/open":
      "Đang mở",
     "status/text/won":

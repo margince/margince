@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -167,15 +166,10 @@ func TestEveryPassLeavesAnOKReceiptForEachWorkspace(t *testing.T) {
 		t.Fatalf("the link reconcile: %v", err)
 	}
 
-	workspaces, err := database.LiveWorkspaces(ctx, e.Pool)
-	if err != nil {
-		t.Fatal(err)
-	}
 	for _, sweep := range capture.Sweeps() {
 		got := receiptsOf(t, e, sweep)
-		if len(got) != len(workspaces) {
-			t.Fatalf("%s left %d receipts over %d workspaces, want one per workspace turn",
-				sweep, len(got), len(workspaces))
+		if len(got) != 1 {
+			t.Fatalf("%s left %d receipts, want one for the pass", sweep, len(got))
 		}
 		if got[0].outcome != string(capture.SweepOK) || got[0].errorClass != "" || got[0].capHit {
 			t.Errorf("%s receipt = %+v, want a clean ok", sweep, got[0])
@@ -300,20 +294,21 @@ func (l *refusingFirstReceipt) RecordSweep(ctx context.Context, r capture.SweepR
 	return l.real.RecordSweep(ctx, r)
 }
 
-func TestAReceiptThatCannotBeWrittenIsReportedAndTheNextWorkspaceRuns(t *testing.T) {
+func TestAReceiptThatCannotBeWrittenIsReportedAndTheNextPassRuns(t *testing.T) {
 	e := integration.Setup(t)
 	w := newTestConfidentialityWorker(e)
 	w.receipts.ledger = &refusingFirstReceipt{real: capture.NewSweepLedger(InstallationDB(e.Pool))}
 
-	// Two turns through the fleet walk the job uses. An installation holds one
-	// workspace, so the same one stands in for the second.
-	err := runEach(context.Background(), e.Pool, []ids.UUID{e.WS, e.WS}, w.judgeWorkspace)
+	err := runInstallationPass(context.Background(), e.Pool, w.judgeWorkspace)
 	if !errors.Is(err, errReceiptRefused) {
-		t.Fatalf("the walk returned %v, want the refused receipt reported", err)
+		t.Fatalf("the pass returned %v, want the refused receipt reported", err)
+	}
+	if err := runInstallationPass(context.Background(), e.Pool, w.judgeWorkspace); err != nil {
+		t.Fatalf("the next pass: %v", err)
 	}
 	if got := receiptsOf(t, e, capture.SweepSettledThreadVerdicts); len(got) != 1 ||
 		got[0].outcome != string(capture.SweepOK) {
-		t.Errorf("receipts = %+v, want the second turn's ok — one refused receipt must not stop the walk", got)
+		t.Errorf("receipts = %+v, want the second pass's ok — one refused receipt must not stop the next pass", got)
 	}
 }
 

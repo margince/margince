@@ -30,19 +30,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// dispatcherKinds answers the untenanted kinds the job-health read admits:
-// every kind api/jobs.yaml declares FLEET-WIDE.
-//
-// river_job has no workspace column and so no RLS, which is why this arm
-// exists at all — a dispatcher's rows carry no workspace, and the scope has
-// to name them to admit them. Naming them by DERIVING the set is what keeps
-// the arm honest: the contract's `role: dispatcher` also generates the
-// `jobs.FleetWide` assertion each args type must satisfy, so a kind cannot
-// be a dispatcher in the tree and something else here without failing to
-// compile.
-//
-// It admits the kinds only. Which ROWS of those kinds are returned is the
-// read's own untenanted test, not this list's.
+// dispatcherKinds answers the kinds the job-health page marks fleet-wide:
+// every kind api/jobs.yaml declares fleet-wide. The set comes from the
+// declaration, which also generates the `jobs.FleetWide` assertion each args
+// type must satisfy.
 func dispatcherKinds() []string {
 	var kinds []string
 	for kind, spec := range jobs.Declared() {
@@ -113,9 +104,7 @@ func renderFailure(f jobs.Failure) renderedFailure {
 	return renderedFailure{Reason: jobs.UnvettedFailureReason}
 }
 
-// jobHealthReadTimeout bounds the scoped job read. cmd/migrate creates
-// river_job_workspace_arg over args->>'workspace_id', so the tenant arm is
-// indexed — the bound stays because the untenanted arm is not, and because a
+// jobHealthReadTimeout bounds the job-health read, which scans river_job: a
 // read that cannot finish inside this is a signal rather than something to wait
 // out.
 const jobHealthReadTimeout = 5 * time.Second
@@ -149,12 +138,10 @@ func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Bounded, for the same reason the exposition endpoint bounds its own
-	// job read: an unbounded one holds a request thread and a pool connection for
-	// as long as the read takes, and the untenanted arm of the scope is covered by
-	// no index. The budget is larger than the scrape's 2s
-	// because an operator waiting on a page tolerates more latency than a
-	// scrape interval does — but it is a budget, not the absence of one.
+	// Bounded, as the exposition endpoint bounds its own job read. An unbounded
+	// one holds a request thread and a pool connection while the read runs, and
+	// no index covers it. The budget is larger than the scrape's 2s, because an
+	// operator tolerates more latency than a scrape interval does.
 	ctx, cancel := context.WithTimeout(ctx, jobHealthReadTimeout)
 	defer cancel()
 

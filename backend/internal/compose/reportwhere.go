@@ -153,6 +153,13 @@ func specScopeClauses(ctx context.Context, spec reportSpec, arg func(any) int) (
 	if scope != "" {
 		out = append(out, scope)
 	}
+	if spec.extensionJoin != nil {
+		joined, err := spec.extensionJoin.Scope(ctx, arg)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, joined)
+	}
 	return out, nil
 }
 

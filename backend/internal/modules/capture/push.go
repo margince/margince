@@ -5,7 +5,6 @@ package capture
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -34,42 +33,37 @@ func BumpDueByMailbox(ctx context.Context, pool *pgxpool.Pool, provider, email s
 // BumpDueByMailboxes is the same for a DELIVERY naming several mailboxes at
 // once, which Graph's batched change notifications do.
 //
-// ONE fleet walk for the whole batch, not one per address. The walk opens a
-// transaction per workspace, so a per-address loop made the cost of a single
-// public request the product of the batch size and the installation's workspace
-// count — an unauthenticated caller's lever on this server's connection pool.
-// Matching a set inside the walk costs one predicate.
+// One scan serves the whole batch. A per-address loop would make the cost of
+// one public request grow with the batch size. An unauthenticated caller could
+// use that against the connection pool. Matching a set costs one predicate.
 func BumpDueByMailboxes(ctx context.Context, pool *pgxpool.Pool, provider string, emails []string) ([]DueConnection, error) {
 	if len(emails) == 0 {
 		return nil, nil
 	}
-	workspaces, err := database.LiveWorkspaces(ctx, pool)
-	if err != nil {
+	wsID, ok, err := database.LiveWorkspace(ctx, pool)
+	if err != nil || !ok {
 		return nil, err
 	}
 
 	var hits []DueConnection
-	var errs error
-	for _, wsID := range workspaces {
-		wsCtx := principal.WithWorkspaceID(ctx, wsID)
-		ws := ids.From[ids.WorkspaceKind](wsID)
-		err := database.WithTx(wsCtx, pool, func(tx pgx.Tx) error {
-			matched, err := makeDueNowTx(ctx, tx,
-				`c.provider = @pushed_provider AND c.status IN ('connected','error') AND c.sync_cursor->>'email' = ANY(@emails)`,
-				pgx.NamedArgs{"pushed_provider": provider, "emails": emails})
-			if err != nil {
-				return err
-			}
-			for _, id := range matched {
-				hits = append(hits, DueConnection{Workspace: ws, ID: id})
-			}
-			return nil
-		})
+	wsCtx := principal.WithWorkspaceID(ctx, wsID)
+	ws := ids.From[ids.WorkspaceKind](wsID)
+	err = database.WithTx(wsCtx, pool, func(tx pgx.Tx) error {
+		matched, err := makeDueNowTx(ctx, tx,
+			`c.provider = @pushed_provider AND c.status IN ('connected','error') AND c.sync_cursor->>'email' = ANY(@emails)`,
+			pgx.NamedArgs{"pushed_provider": provider, "emails": emails})
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("capture: push walk in workspace %s: %w", wsID, err))
+			return err
 		}
+		for _, id := range matched {
+			hits = append(hits, DueConnection{Workspace: ws, ID: id})
+		}
+		return nil
+	})
+	if err != nil {
+		return hits, fmt.Errorf("capture: push scan: %w", err)
 	}
-	return hits, errs
+	return hits, nil
 }
 
 // makeDueNowTx brings the matching live connections' next sync forward to now

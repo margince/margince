@@ -69,7 +69,7 @@ func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int
 	firstRun := strandedBackfill(t, b)
 	other, secondRun := startSecondHistory(t, b)
 	dispatch := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
-	if err := b.registry.DispatchBackfills(dispatch, backfillScheduler(b.env.WS), false); err != nil {
+	if err := b.registry.DispatchBackfills(dispatch, backfillScheduler(), false); err != nil {
 		t.Fatal(err)
 	}
 	blockers, targets := graphContactSets(t, b, parties)

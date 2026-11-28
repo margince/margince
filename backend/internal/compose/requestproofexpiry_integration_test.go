@@ -6,7 +6,6 @@
 package compose
 
 import (
-	"context"
 	"log/slog"
 	"strings"
 	"testing"
@@ -36,7 +35,7 @@ func (e proofEnv) closeAccess(t *testing.T, subjectRef string) ids.UUID {
 func (e proofEnv) expire(t *testing.T, now time.Time) {
 	t.Helper()
 	worker := newRequestProofExpiryWorker(e.Pool, func() time.Time { return now }, slog.New(slog.DiscardHandler))
-	if err := worker.Work(context.Background(), nil); err != nil {
+	if err := worker.Work(boundBackground(t), nil); err != nil {
 		t.Fatalf("expiry pass: %v", err)
 	}
 }

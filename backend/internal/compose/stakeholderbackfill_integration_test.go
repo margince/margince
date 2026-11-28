@@ -101,7 +101,7 @@ func (b *backfillEnv) passFails(t *testing.T, brain completer) bool {
 		t.Fatal(err)
 	}
 	spec, _ := jobs.SpecFor(args.Kind())
-	worker := rivertest.NewWorker(t, riverpgxv5.New(b.Pool), &river.Config{}, jobs.Govern(newCapturedDealRefileWorker(b.Pool, brain), spec))
+	worker := rivertest.NewWorker(t, riverpgxv5.New(b.Pool), bindingConfig(b.Pool), jobs.Govern(newCapturedDealRefileWorker(b.Pool, brain), spec))
 	var row *rivertype.JobRow
 	for range 10 {
 		tx, err := b.Pool.Begin(t.Context())
@@ -110,7 +110,7 @@ func (b *backfillEnv) passFails(t *testing.T, brain completer) bool {
 		}
 		var result *rivertest.WorkResult
 		if row == nil {
-			result, err = worker.Work(t.Context(), t, tx, args, nil)
+			result, err = worker.Work(boundBackground(t), t, tx, args, nil)
 		} else {
 			result, err = worker.WorkJob(t.Context(), t, tx, row)
 		}

@@ -59,15 +59,11 @@ const (
 // session: the worker binds this workspace before the dispatcher reads
 // anything.
 type SendEmailArgs struct {
-	Workspace  ids.UUID `json:"workspace_id"`
-	DeliveryID string   `json:"delivery_id"`
+	DeliveryID string `json:"delivery_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (SendEmailArgs) Kind() string { return "comms_send_email" }
-
-// WorkspaceID binds this delivery to its tenant (jobs.WorkspaceScoped).
-func (a SendEmailArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // sendMaxAttempts is the retry ladder for one delivery, and it is ONE number
 // on purpose: it is both the MaxAttempts River enqueues the job with and the
@@ -158,10 +154,7 @@ func (w *commsSendWorker) Work(ctx context.Context, job *river.Job[SendEmailArgs
 		return jobs.FaultContext(ctx, fmt.Errorf("comms_send_email: delivery id: %w", err))
 	}
 
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 
 	outcome, wait, err := w.dispatcher.DispatchWithWait(sendWorkerScope(wsCtx), deliveryID)
 	switch outcome {

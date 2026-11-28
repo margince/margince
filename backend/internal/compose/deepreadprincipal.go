@@ -23,7 +23,7 @@ import (
 // retry — including one after a recorded failure — CAS-misses and
 // no-ops. One honest outcome per dossier, no zombie re-crawls; reading
 // the site again is a human's next start, never an automatic retry.
-// deepReadWorkerCtx attaches the worker's principal, workspace and correlation
+// deepReadWorkerCtx attaches the worker's principal and correlation
 // onto the job context — the values every store write (and terminalCtx) needs.
 //
 // The requester it carries comes from the job payload, because the claim that
@@ -31,8 +31,7 @@ import (
 // replaced by withClaimedRequester the moment the row is in hand, so nothing
 // the worker writes is attributed on the payload's word.
 func deepReadWorkerCtx(ctx context.Context, args SiteDeepReadArgs) context.Context {
-	return withClaimedRequester(
-		principal.WithWorkspaceID(ctx, args.Workspace), args.RequestedBy, args.SiteReadID)
+	return withClaimedRequester(ctx, args.RequestedBy, args.SiteReadID)
 }
 
 // withClaimedRequester stamps the principal every store write is attributed to.

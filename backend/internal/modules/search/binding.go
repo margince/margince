@@ -314,13 +314,9 @@ func (s *Store) anyWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
 }
 
 func (s *Store) fleetWorkspaceIDs(ctx context.Context) ([]ids.WorkspaceID, error) {
-	live, err := database.LiveWorkspaces(ctx, s.db.Pool())
-	if err != nil {
+	live, ok, err := database.LiveWorkspace(ctx, s.db.Pool())
+	if err != nil || !ok {
 		return nil, err
 	}
-	workspaces := make([]ids.WorkspaceID, len(live))
-	for i, id := range live {
-		workspaces[i] = ids.From[ids.WorkspaceKind](id)
-	}
-	return workspaces, nil
+	return []ids.WorkspaceID{ids.From[ids.WorkspaceKind](live)}, nil
 }

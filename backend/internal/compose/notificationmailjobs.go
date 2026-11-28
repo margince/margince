@@ -71,15 +71,11 @@ type NotificationMailConfig struct {
 // because River persists args verbatim in a table with no workspace column and
 // no row-level security — a job names a row and the worker reads it.
 type SendNotificationEmailArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-	NoticeID  string   `json:"notice_id"`
+	NoticeID string `json:"notice_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (SendNotificationEmailArgs) Kind() string { return "notification_email" }
-
-// WorkspaceID binds this message to its tenant (jobs.WorkspaceScoped).
-func (a SendNotificationEmailArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // notificationMailJobAttempts is the ladder one notice's mail rides, and the
 // enqueue site owns it because api/jobs.yaml declares this kind caller-owned.
@@ -166,10 +162,7 @@ func (w *notificationMailWorker) Work(ctx context.Context, job *river.Job[SendNo
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("notification_email: notice id: %w", err))
 	}
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	if w.mail.Mailer == nil {
 		// No relay on THIS role, and the job ends here: nothing is claimed, so
 		// the row keeps its unspent attempt, but River does not offer a

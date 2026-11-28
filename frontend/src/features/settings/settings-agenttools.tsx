@@ -23,10 +23,11 @@ import {
 import { QueryStates } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { AutonomyDot } from "../../design-system/trust";
-import { useT } from "../../i18n";
+import { type Translator, useT } from "../../i18n";
 import { dotTier } from "../../lib/autonomy";
 import { passportName, usePassports } from "../../lib/passports.queries";
 import { unwrap } from "../../lib/problem";
+import { agentToolTitle } from "./settings-agenttools.copy";
 import "./settings-agents.css";
 import { holdsEveryWord, searchWords } from "../../format/collate";
 
@@ -60,12 +61,16 @@ export function AgentToolsCard() {
     !scopeId || tool.required_scope == null || granted.has(tool.required_scope);
   const all = tools.data?.data ?? [];
   const words = searchWords(query);
-  const shown = matching(all, words);
+  const shown = matching(all, words, t);
   // A row found by its key alone shows the key, or nothing on it says why.
   const keyHit = (tool: AgentTool) =>
     words.length > 0 &&
     holdsEveryWord(words, [tool.name]) &&
-    !holdsEveryWord(words, [tool.title, tool.description]);
+    !holdsEveryWord(words, [
+      agentToolTitle(t, tool.name, tool.title),
+      tool.title,
+      tool.description,
+    ]);
 
   return (
     <Panel title={t("tools.title")}>
@@ -130,9 +135,15 @@ export function AgentToolsCard() {
 function matching(
   tools: readonly AgentTool[],
   words: readonly string[],
+  t: Translator,
 ): readonly AgentTool[] {
   return tools.filter((tool) =>
-    holdsEveryWord(words, [tool.title, tool.name, tool.description]),
+    holdsEveryWord(words, [
+      agentToolTitle(t, tool.name, tool.title),
+      tool.title,
+      tool.name,
+      tool.description,
+    ]),
   );
 }
 
@@ -244,7 +255,7 @@ function ToolTable({
         <CellStack>
           <span className="tools-name-line">
             <span className={reachable(tool) ? undefined : "agents-ended"}>
-              {tool.title}
+              {agentToolTitle(t, tool.name, tool.title)}
             </span>
             {tool.egress && <Badge tone="warning">{t("tools.egress")}</Badge>}
           </span>
@@ -263,6 +274,9 @@ function ToolTable({
             {tool.description}
             {open.has(tool.name) && (
               <span className="tools-key">
+                <span>
+                  {t("tools.sourceTitle")}: {tool.title}
+                </span>
                 <KeyCode code={tool.name} />
               </span>
             )}
@@ -292,7 +306,9 @@ function ToolTable({
       detail={{
         header: t("tools.colDetail"),
         toggleLabel: (tool) =>
-          t("tools.descriptionToggle", { tool: tool.title }),
+          t("tools.descriptionToggle", {
+            tool: agentToolTitle(t, tool.name, tool.title),
+          }),
         expanded: open,
         onToggle: toggle,
         controls: descriptionId,

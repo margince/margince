@@ -66,10 +66,7 @@ type approvalAutoApplyWorker struct {
 // The correlation id groups one tick's applies as the single pass they are,
 // which is what lets a reader follow an unexpected batch back to its cause.
 func (w *approvalAutoApplyWorker) Work(ctx context.Context, _ *river.Job[ApprovalAutoApplyArgs]) error {
-	passCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	passCtx := ctx
 	passCtx = principal.WithCorrelationID(passCtx, ids.NewV7())
 	applied, err := SweepAutoApply(passCtx, w.pool)
 	if err != nil {

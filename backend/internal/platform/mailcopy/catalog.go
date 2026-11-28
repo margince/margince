@@ -166,7 +166,7 @@ func morningLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.MorningChangeClosed },
 		"closed as lost",
 		"als verloren geschlossen",
-		"đã đóng, thua")
+		"đã đóng, thất bại")
 	line(func(c *Copy) *string { return &c.MorningChangeMoved },
 		"moved forward",
 		"in eine spätere Phase verschoben",

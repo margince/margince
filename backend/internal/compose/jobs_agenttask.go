@@ -59,9 +59,6 @@ func (w *agentTaskRetentionWorker) Work(ctx context.Context, _ *river.Job[AgentT
 	// The installation is bound because the sweep's audit and system_log writes
 	// still stamp a workspace from the context; it retires with
 	// storekit.MustWorkspace (ADR-0091 §5).
-	passCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	passCtx := ctx
 	return jobs.FaultContext(ctx, w.sweeper.Sweep(passCtx))
 }

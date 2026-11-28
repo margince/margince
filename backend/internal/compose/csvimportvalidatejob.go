@@ -28,16 +28,12 @@ import (
 
 // ImportValidateArgs names one attempt at testing a run.
 type ImportValidateArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-	RunID     ids.UUID `json:"run_id"`
-	Attempt   int      `json:"attempt"`
+	RunID   ids.UUID `json:"run_id"`
+	Attempt int      `json:"attempt"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (ImportValidateArgs) Kind() string { return "import_validate" }
-
-// WorkspaceID binds the test run to its tenant (jobs.WorkspaceScoped).
-func (a ImportValidateArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 func (a ImportValidateArgs) lease() migration.Lease {
 	return migration.Lease{Run: a.RunID, Status: migration.StatusValidating, Attempt: a.Attempt}

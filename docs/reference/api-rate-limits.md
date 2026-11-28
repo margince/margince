@@ -70,11 +70,11 @@ Regenerate with `cd backend && go test ./gates -run TestRateLimitReferenceMatche
 | `public-booking/per-slug` | 20 | 1m0s | [internal/compose/publicbooking.go:55](../../backend/internal/compose/publicbooking.go) |
 | `public-confirm/per-ip` | 60 | 1m0s | [internal/compose/publicconfirm.go:44](../../backend/internal/compose/publicconfirm.go) |
 | `public-confirm/per-token` | 20 | 1m0s | [internal/compose/publicconfirm.go:45](../../backend/internal/compose/publicconfirm.go) |
-| `public-deal-room/link-per-address` | 3 | 1h0m0s | [internal/compose/publicdealroom.go:66](../../backend/internal/compose/publicdealroom.go) |
-| `public-deal-room/link-per-ip` | 3 | 1m0s | [internal/compose/publicdealroom.go:61](../../backend/internal/compose/publicdealroom.go) |
-| `public-deal-room/link-shared` | 10 | 1m0s | [internal/compose/publicdealroom.go:67](../../backend/internal/compose/publicdealroom.go) |
-| `public-deal-room/per-ip` | 60 | 1m0s | [internal/compose/publicdealroom.go:60](../../backend/internal/compose/publicdealroom.go) |
-| `public-deal-room/per-session-write` | 20 | 1m0s | [internal/compose/publicdealroom.go:68](../../backend/internal/compose/publicdealroom.go) |
+| `public-deal-room/link-per-address` | 3 | 1h0m0s | [internal/compose/publicdealroom.go:67](../../backend/internal/compose/publicdealroom.go) |
+| `public-deal-room/link-per-ip` | 3 | 1m0s | [internal/compose/publicdealroom.go:62](../../backend/internal/compose/publicdealroom.go) |
+| `public-deal-room/link-shared` | 10 | 1m0s | [internal/compose/publicdealroom.go:68](../../backend/internal/compose/publicdealroom.go) |
+| `public-deal-room/per-ip` | 60 | 1m0s | [internal/compose/publicdealroom.go:61](../../backend/internal/compose/publicdealroom.go) |
+| `public-deal-room/per-session-write` | 20 | 1m0s | [internal/compose/publicdealroom.go:69](../../backend/internal/compose/publicdealroom.go) |
 | `public-forms/unknown-keys` | configured: `limits.UnknownKeys` | 1m0s | [internal/modules/webforms/throttle.go:63](../../backend/internal/modules/webforms/throttle.go) |
 | `public-instrument/per-ip` | 600 | 1m0s | [internal/compose/publicinstrument.go:27](../../backend/internal/compose/publicinstrument.go) |
 | `public-preferences/per-ip` | 60 | 1m0s | [internal/compose/publicpreferences.go:42](../../backend/internal/compose/publicpreferences.go) |
