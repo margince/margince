@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The tree every census rule reads, walked, read and parsed once per run.
+// The tree every census rule reads, walked, read and parsed once in each run.
 // Vitest gives each test file its own module graph, so a parse is shared only
 // inside one file. census.test.ts builds this tree and hands it to every rule.
 
