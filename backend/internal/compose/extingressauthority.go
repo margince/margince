@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -127,17 +128,33 @@ func memberConsentedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.U
 		return false, nil
 	}
 	var consented bool
-	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM extension_secret s
-			JOIN app_user u ON u.id = s.user_id
-			WHERE s.extension_name = $1
-			  AND s.user_id = $2
-			  AND s.key = ANY($3)
-			  AND (u.service_extension IS NULL OR u.service_extension = $1)
-		)`, unit, member, declared).Scan(&consented)
+	err := tx.QueryRow(ctx, `SELECT EXISTS (`+memberCredentialSQL+`)`, unit, member, declared).Scan(&consented)
 	return consented, err
 }
+
+// memberConsentHeldTx is memberConsentedTx for a write that acts on the answer.
+// It locks the deposit, so a withdrawal still in flight waits for this
+// transaction to end, and one that committed first refuses it.
+func memberConsentHeldTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
+	declared := declaredUserSecretKeys(unit)
+	if len(declared) == 0 {
+		return false, nil
+	}
+	var one int
+	err := tx.QueryRow(ctx, memberCredentialSQL+` LIMIT 1 FOR SHARE OF s`, unit, member, declared).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+const memberCredentialSQL = `
+	SELECT 1 FROM extension_secret s
+	JOIN app_user u ON u.id = s.user_id
+	WHERE s.extension_name = $1
+	  AND s.user_id = $2
+	  AND s.key = ANY($3)
+	  AND (u.service_extension IS NULL OR u.service_extension = $1)`
 
 // memberConnectedTx reports whether the member is active now and holds one of
 // the unit's user-scoped secrets. A member who has left keeps the credential

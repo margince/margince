@@ -830,3 +830,54 @@ func TestTheBreadcrumbKeepsNoPartOfTheRefusedRecord(t *testing.T) {
 		t.Errorf("the breadcrumb stored a provider-supplied identifier: %q", stored)
 	}
 }
+
+// A withdrawal that has not committed yet holds the record that is landing on
+// the credential, and its commit refuses it. Without the lock the record would
+// land under a deposit that is already being removed.
+func TestARecordWaitsForAWithdrawalInFlightAndIsThenRefused(t *testing.T) {
+	e := setupIngress(t)
+	ctx := context.Background()
+	withdrawal, err := e.Pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := withdrawal.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("ending the withdrawal: %v", err)
+		}
+	})
+	var withdrawer int
+	if err := withdrawal.QueryRow(ctx,
+		`DELETE FROM extension_secret WHERE extension_name = $1 AND user_id = $2 RETURNING pg_backend_pid()`,
+		ingressUnit, e.member).Scan(&withdrawer); err != nil {
+		t.Fatalf("starting the withdrawal: %v", err)
+	}
+
+	landed := make(chan error, 1)
+	go func() {
+		_, err := e.ingestingRuntime().Ingest(ctx, extension.UserID(e.member.String()),
+			aProviderRecord("ws-7:9001", "outside@example.test"))
+		landed <- err
+	}()
+	for waiting := false; !waiting; {
+		select {
+		case err := <-landed:
+			t.Fatalf("the record finished (%v) while the withdrawal was still open; it must wait for it", err)
+		case <-time.After(10 * time.Millisecond):
+		}
+		if err := e.Pool.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid)))`, withdrawer).Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := withdrawal.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-landed; !errors.Is(err, extension.ErrForbidden) {
+		t.Fatalf("err = %v, want ErrForbidden once the withdrawal committed", err)
+	}
+	if got := e.countAsWorkspace(t,
+		`SELECT count(*) FROM activity WHERE source_system = $1`, ingressProbeSource); got != 0 {
+		t.Errorf("activity rows = %d, want none after the withdrawal", got)
+	}
+}
