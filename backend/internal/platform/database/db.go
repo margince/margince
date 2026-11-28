@@ -6,8 +6,11 @@ package database
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
+	"weak"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -51,6 +54,35 @@ type DB struct {
 type proof struct {
 	at      int64
 	company ids.WorkspaceID
+}
+
+// provenByPool gives every ForInstallation handle on one pool the same proof. A
+// request builds many stores, each with its own handle, and one proof per handle
+// would pay the check once per store. The pool is held weakly, so a closed
+// pool's entry goes with it.
+var (
+	provenMu     sync.Mutex
+	provenByPool = map[weak.Pointer[pgxpool.Pool]]*atomic.Pointer[proof]{}
+)
+
+func provenFor(pool *pgxpool.Pool) *atomic.Pointer[proof] {
+	if pool == nil {
+		return new(atomic.Pointer[proof])
+	}
+	key := weak.Make(pool)
+	provenMu.Lock()
+	defer provenMu.Unlock()
+	if held, ok := provenByPool[key]; ok {
+		return held
+	}
+	held := new(atomic.Pointer[proof])
+	provenByPool[key] = held
+	runtime.AddCleanup(pool, func(key weak.Pointer[pgxpool.Pool]) {
+		provenMu.Lock()
+		defer provenMu.Unlock()
+		delete(provenByPool, key)
+	}, key)
+	return held
 }
 
 func (d *DB) clock() time.Time {
@@ -132,7 +164,7 @@ func (d *DB) Budget() time.Duration {
 // censuses in backend/gates resolve calls by name, and a callee named New
 // collides there.
 func ForInstallation(pool *pgxpool.Pool) *DB {
-	return &DB{pool: pool, installation: true, proven: new(atomic.Pointer[proof]), recheck: InstallationRecheck}
+	return &DB{pool: pool, installation: true, proven: provenFor(pool), recheck: InstallationRecheck}
 }
 
 // NewAcrossWorkspaces returns a handle whose transactions need no live

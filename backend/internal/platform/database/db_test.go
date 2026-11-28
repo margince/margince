@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -139,5 +140,19 @@ func TestABoundedHandleKeepsItsInstallationCheck(t *testing.T) {
 	bounded := base.Bounded(time.Second)
 	if !bounded.installation || bounded.proven != base.proven {
 		t.Fatalf("Bounded dropped the installation check: installation=%v, shared proof=%v", bounded.installation, bounded.proven == base.proven)
+	}
+}
+
+// Handles on one pool share a proof, so a request that builds many stores pays
+// the check once.
+func TestHandlesOnOnePoolShareOneProof(t *testing.T) {
+	t.Parallel()
+	pool := new(pgxpool.Pool)
+	first, second := ForInstallation(pool), ForInstallation(pool)
+	if first.proven != second.proven {
+		t.Fatal("two handles on one pool hold separate proofs")
+	}
+	if ForInstallation(pool).proven == ForInstallation(new(pgxpool.Pool)).proven {
+		t.Fatal("handles on different pools share a proof")
 	}
 }

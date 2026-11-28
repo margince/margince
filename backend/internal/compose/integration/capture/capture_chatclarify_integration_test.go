@@ -935,7 +935,11 @@ func TestAnArchivedCompanysDueClarificationsSendNothing(t *testing.T) {
 		if _, err := c.e.Owner.Exec(context.Background(), `UPDATE workspace SET archived_at = now() WHERE id = $1`, c.e.WS); err != nil {
 			t.Fatal(err)
 		}
-		err := c.n.sweep(c.e, c.n.vault).Workspace(context.Background(), c.e.WS)
+		// A pool of its own. Handles on one pool trust a proof of the live
+		// company for a short window, and this pool has just been used.
+		sweep := c.n.sweep(c.e, c.n.vault)
+		sweep.Pool = integration.SchemaPool(t)
+		err := sweep.Workspace(context.Background(), c.e.WS)
 		if !errors.Is(err, database.ErrNotBootstrapped) {
 			t.Fatalf("sweep with no live company = %v, want ErrNotBootstrapped", err)
 		}
