@@ -102,7 +102,7 @@ func connectionAccountSinceTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, pro
 	var since *time.Time
 	err = tx.QueryRow(ctx, `
 		SELECT account_bound_at FROM capture_connection
-		 WHERE id = $1 AND user_id = $2 AND archived_at IS NULL AND status IN ('connected','error')`,
+		 WHERE id = $1 AND user_id = $2 AND status IN ('connected','error')`,
 		connection, seat).Scan(&since)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, nil
@@ -127,7 +127,7 @@ func EchoIdentityTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider stri
 		   AND a.source_system = $4 AND a.direction = 'outbound' AND a.archived_at IS NULL
 		   AND EXISTS (SELECT 1 FROM capture_connection c WHERE c.user_id = $1 AND c.provider = $2
 		               AND ($6::uuid IS NULL OR c.id = $6::uuid)
-		               AND c.archived_at IS NULL AND (c.account_bound_at IS NULL OR c.account_bound_at <= $5))
+		               AND (c.account_bound_at IS NULL OR c.account_bound_at <= $5))
 		 ORDER BY a.created_at, a.id LIMIT 1`,
 		seat, provider, providerMessageID, connector.EmailSourceSystem, sentAt, connection).Scan(&stamped)
 	if errors.Is(err, pgx.ErrNoRows) {

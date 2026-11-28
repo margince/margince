@@ -347,7 +347,7 @@ func TestAChangeCommittedBetweenTheLookupAndTheProviderCallParksTheReply(t *test
 	for name, change := range map[string]string{
 		"the seat leaves the team": `DELETE FROM team_membership WHERE user_id = $1`,
 		"replies are turned off":   `UPDATE capture_connection SET provider_scopes = '{}' WHERE user_id IS NULL AND $1::uuid IS NOT NULL`,
-		"the mailbox is archived":  `UPDATE capture_connection SET archived_at = now() WHERE user_id IS NULL AND $1::uuid IS NOT NULL`,
+		"the mailbox disconnects":  `UPDATE capture_connection SET status = 'disconnected' WHERE user_id IS NULL AND $1::uuid IS NOT NULL`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			p := setupPreflight(t)

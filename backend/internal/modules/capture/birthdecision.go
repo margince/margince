@@ -349,11 +349,11 @@ func mailboxPostureForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider
 	return connectionPostureTx(ctx, tx, memberConnection(user, connection))
 }
 
-// connectionPostureTx reads the posture of the one live connection match
+// connectionPostureTx reads the posture of the one connection match
 // names.
 func connectionPostureTx(ctx context.Context, tx pgx.Tx, match connectionMatch) (string, error) {
 	var posture string
-	err := tx.QueryRow(ctx, `SELECT mail_posture FROM capture_connection WHERE `+match.where+` AND archived_at IS NULL`, match.args...).Scan(&posture)
+	err := tx.QueryRow(ctx, `SELECT mail_posture FROM capture_connection WHERE `+match.where, match.args...).Scan(&posture)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return PostureHeld, nil

@@ -18,7 +18,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
 | [assurance](assurance.md) | 9 | 83 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 32 | 1 | 2 | 0 |
-| [capture](capture.md) | 25 | 275 | 7 | 27 | 14 |
+| [capture](capture.md) | 25 | 274 | 7 | 27 | 14 |
 | [chatlinks](chatlinks.md) | 10 | 146 | 0 | 9 | 6 |
 | [collections](collections.md) | 13 | 101 | 1 | 9 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |

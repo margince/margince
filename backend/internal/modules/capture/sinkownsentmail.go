@@ -127,7 +127,7 @@ func MailboxIsOwnAloneTx(ctx context.Context, tx pgx.Tx, capturedBy string) (boo
 	var label string
 	err = tx.QueryRow(ctx, `
 		SELECT coalesce(account_label, '') FROM capture_connection
-		 WHERE id = $1 AND user_id = $2 AND archived_at IS NULL`, connection, seat).Scan(&label)
+		 WHERE id = $1 AND user_id = $2`, connection, seat).Scan(&label)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -179,7 +179,7 @@ func addressHeldByAnotherSeatTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, a
 		SELECT value, source FROM capture_owner_identity WHERE kind = $2 AND user_id <> $1
 		 UNION ALL
 		SELECT account_label, '' FROM capture_connection
-		 WHERE user_id <> $1 AND status = 'connected' AND archived_at IS NULL
+		 WHERE user_id <> $1 AND status = 'connected'
 		   AND coalesce(account_label, '') <> ''`, seat, IdentityKindAddress)
 	if err != nil {
 		return false, fmt.Errorf("capture: reading whether another seat holds %s: %w", address, err)

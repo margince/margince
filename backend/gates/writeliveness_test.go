@@ -116,8 +116,6 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
-	"internal/modules/capture:dropArchivedNarrowingTx":        "reaches only an archived connection, on purpose: a removed mailbox's pending history narrowing is dropped rather than carried out",
-	"internal/modules/capture:upsertConnection":               "a grant revives an archived connection on purpose, as the add path's ON CONFLICT does: reconnecting is how a withdrawn mailbox comes back",
 	"internal/modules/privacy:redactSignals":                  "redacts archived signals on purpose: an archived signal about the erased contact holds the same free text and personal members a live one does",
 	"internal/modules/activities:StampSenderAuthenticationTx": "system-only repair of sender-authentication evidence from a retained original. Archiving a message does not change its sender authentication; restricted content is excluded explicitly",
 	"internal/modules/automation:claimStarterAuthorizer":      "UpdateAutomation holds a storekit.LiveOnly row lock before settleRuleOwner calls this claim, and retains it through the update transaction",
@@ -137,7 +135,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/activities:WithholdStoredFilesTx":       "withholding a captured file's bytes reaches an archived row on purpose: archiving hides an attachment and keeps its object, so a strip that skipped archived rows would leave a private message's bytes stored for good. The row stays archived; only its key, checksum and bytes_withheld change",
 	"internal/modules/identity:countFailure":                  "every caller first reads the member through LiveMemberSQL under FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), so the row it folds is live",
 	"internal/modules/identity:resetLockoutStreak":            "its callers read the member through LiveMemberSQL in the same transaction (checkCredentials, and lockSecondFactorStreak on second-factor completion), so the row it clears is live",
-	"internal/modules/capture:releaseSyncAnchor":              "the second half of the watermark write beside it in one transaction, which matches on id and generation alone so a round that already ran keeps its cursor. A release that refused an archived connection would leave the anchor held behind a stored cursor, and the next attempt would read that stale point as one somebody chose",
 	"internal/modules/activities:maskRowTextTx":               "the credential repair writes an archived mail on purpose: an archived row still stores the password in clear, and the acceptance is that no row keeps one. A statutory hold is a different matter and IS refused, by the restricted_at predicate in the same statement",
 	// ERASURE AND RETENTION MUST WRITE ARCHIVED ROWS. This is the family that
 	// makes a row-level trigger impossible, and the reason each entry gives is
@@ -156,7 +153,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// write sets the retired state absolutely rather than deriving it from a
 	// pre-read, so a second attempt converges on the same row instead of racing.
 	"internal/modules/activities:archiveAbsorbedEcho": "folding a duplicate capture into its survivor, which takes the echo off the timeline. archived_at is coalesced so a row a noise disposition already hid keeps the instant its undo window is measured from — a filter here would refuse exactly that row",
-	"internal/modules/capture:withdrawConnection":     "disconnecting a mailbox, and the retry that re-drives the cleanup a previous call left unfinished. The already-withdrawn arm is the one that must reach a retired row, and it is what makes the withdrawal recoverable rather than half-done",
 	"internal/modules/customfields:Retire":            "the catalog field's own retirement, which moves `status` and not archived_at; lockField holds the row from before the decision read, and a repeat converges on the same status",
 	"internal/modules/identity:UpdateTeam":            "the team's archive and restore arms are this function, so both directions have to reach a row on the far side of the transition. The row is held FOR UPDATE from before the state is read",
 
@@ -185,7 +181,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/capture:storeDeferredOriginalTx":    "the activity was INSERTed by this same transaction before its files were stored, so there is no archived row for it to find",
 	"internal/modules/capture:limitLinkLessAudience":      "the activity was INSERTed by this same transaction a few statements earlier, so there is no archived row for it to find — the function's own check is that exactly one row moved",
 	"internal/modules/capture:AdvanceChannelPollOffsetTx": "the poller's watermark for a connection its own live selection handed it, and the statement only ever moves the offset FORWARD (`poll_offset < $3`), so a late write from a retired cycle matches nothing",
-	"internal/modules/capture:backfillWorkspace":          "a one-time relocation of credential material out of the `auth` column and into the vault. It MUST reach withdrawn connections: leaving their secrets in a column the vault was introduced to empty is the defect, and the row is claimed with `credential_ref IS NULL` so two boots relocate once",
 
 	// MACHINE ATTRIBUTION AND DERIVED STATE. None of these carries anything a
 	// reader is shown as the record's own content, and each is chosen by a pass

@@ -182,7 +182,7 @@ func setChatSeatStatusTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, status s
 	var member bool
 	err := tx.QueryRow(ctx, `
 		SELECT provider, account_label, reader_team_id, mail_posture, status, (user_id IS NOT NULL) FROM capture_connection
-		 WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, seat).
+		 WHERE id = $1 FOR UPDATE`, seat).
 		Scan(&before.Provider, &before.Address, &before.ReaderTeam, &before.Posture, &before.Status, &member)
 	if err != nil {
 		return fmt.Errorf("capture: reading a chat seat: %w", err)
@@ -190,7 +190,7 @@ func setChatSeatStatusTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, status s
 	if before.Status == status {
 		return nil
 	}
-	if _, err := tx.Exec(ctx, `UPDATE capture_connection SET status = $2 WHERE id = $1 AND archived_at IS NULL`, seat, status); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE capture_connection SET status = $2 WHERE id = $1`, seat, status); err != nil {
 		return fmt.Errorf("capture: moving a chat seat to %s: %w", status, err)
 	}
 	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {

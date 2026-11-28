@@ -42,7 +42,7 @@ func (s *SettingsStore) ListInternalMailSources(ctx context.Context) ([]Internal
 		rows, err := tx.Query(ctx, `SELECT c.id, c.user_id, c.provider, coalesce(c.account_label, ''), coalesce(u.display_name, ''), c.generation
    FROM capture_connection c LEFT JOIN app_user u ON u.id = c.user_id
    WHERE c.provider IN ('gmail','graph','imap') AND c.status IN ('connected','error')
-    AND c.archived_at IS NULL AND ((u.id IS NOT NULL AND `+workforce.LiveHumanSQL("u")+`) OR `+sharedMailboxLiveSQL+`)
+    AND ((u.id IS NOT NULL AND `+workforce.LiveHumanSQL("u")+`) OR `+sharedMailboxLiveSQL+`)
    ORDER BY u.display_name NULLS FIRST, c.account_label, c.provider, c.id`)
 		if err != nil {
 			return err
