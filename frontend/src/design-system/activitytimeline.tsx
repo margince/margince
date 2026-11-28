@@ -18,6 +18,7 @@ import {
   withWhom,
 } from "./participants";
 import {
+  activityRecordedByAgent,
   provenanceOf,
   withAgentOrigin,
   withControllerSend,
@@ -233,7 +234,7 @@ export function activityTimeline(
               activity.source,
               activity.imported_from,
             ),
-            activity.recorded_by_agent,
+            activityRecordedByAgent(activity),
           ),
           activity.created_by,
         ),

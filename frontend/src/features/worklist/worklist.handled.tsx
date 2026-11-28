@@ -56,6 +56,7 @@ import {
 } from "../../lib/worklistrouting";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
+import { ReceiptNote } from "./worklist.receiptnote";
 
 /** The id a link to the Change history panel lands on. */
 export const CHANGE_HISTORY_ID = "worklist-change-history";
@@ -236,11 +237,21 @@ function ReceiptRecord({ receipt }: { readonly receipt: Receipt }) {
   if (!subject) return <>{t("worklist.handled.noRecord")}</>;
   if (!subject.label) return <>{t("worklist.handled.hiddenRecord")}</>;
   const href = subjectHref(receipt);
-  if (!href) return <>{subject.label}</>;
-  return (
+  const link = href ? (
     <AppLink className="entity-link" href={href}>
       {subject.label}
     </AppLink>
+  ) : (
+    subject.label
+  );
+  const noteAction = "magic.action.create_activity_note";
+  const isNote =
+    receipt.kind === noteAction ||
+    receipt.completed_change?.summary.key === noteAction;
+  return subject.type === "activity" && isNote ? (
+    <ReceiptNote activityId={subject.id}>{link}</ReceiptNote>
+  ) : (
+    link
   );
 }
 
