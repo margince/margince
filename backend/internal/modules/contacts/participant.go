@@ -28,18 +28,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// nameContactAmongParticipants attaches a resolved contact to the participant
-// rows that named them only by address.
-//
-// The address set comes from the contact's own emails, so an alias resolves as
-// readily as the primary — capture recorded whichever address the message
-// actually used, which need not be the one the record was created from.
-//
-// It is deliberately forgiving about finding nothing. A manually logged
-// activity has no address-only rows; a channel message has one only when its
-// provider knew an address and its source vouched for it, so most carry none;
-// a replayed capture already promoted its row on the first pass. None of those
-// is an error, and none should fail an ensure that has otherwise succeeded.
+// The contact is resolved after capture stamps its parties. Bind the existing
+// row instead of adding a second participant for the same contact.
 func nameContactAmongParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, contactID ids.ContactID) error {
 	_, err := promoteParticipantsToContact(ctx, tx, []ids.UUID{activityID.UUID}, contactID, nil)
 	return err
@@ -62,29 +52,63 @@ func (s *Store) stampProvenSenders(ctx context.Context, tx pgx.Tx, activities []
 	return s.stampSenders(ctx, tx, activities, contactID.UUID)
 }
 
-// promotableParticipantSQL is the predicate, on the participant row alias, for
-// an address-only row the promotion names @cohort_contact on. The address must
-// prove the contact, as it must for a stamped sender: a live address no other
-// contact ever held.
-// An activity that still holds an older, mixed-case address waits for the data
-// task: two spellings promoted together would meet on the identity key.
-func promotableParticipantSQL(alias string) string {
+// A bound party stays settled. Duplicate roles and mixed-case address sets
+// wait for their own repair before another participant can be bound.
+func promotableParticipantSQL(alias, contact string) string {
 	return alias + `.contact_id IS NULL
 		   AND ` + alias + `.user_id IS NULL
-		   AND ` + alias + `.address IS NOT NULL
 		   AND NOT ` + alias + `.past_party_cap
-		   AND ` + relstrength.AddressProvesSQL("@cohort_contact", alias+".address") + `
 		   AND NOT EXISTS (SELECT 1 FROM activity_participant older
-		        WHERE older.activity_id = ` + alias + `.activity_id AND older.address <> lower(btrim(older.address)))`
+		        WHERE older.activity_id = ` + alias + `.activity_id AND older.address <> lower(btrim(older.address)))
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant other
+		        WHERE other.activity_id = ` + alias + `.activity_id AND other.role = ` + alias + `.role
+		          AND other.contact_id = ` + contact + `)`
 }
 
-// promoteParticipantsToContact is that update over the given activities: the
-// one the ensure ran for, or the ones a cohort repair holds. Both paths share
-// this one statement, so both apply the same guards.
-// batch bounds a cohort pass; nil means unbounded, for the single activity.
-// A sweep by contact takes no meeting's attendee lock; the hourly evidence pass corrects it.
+func promotableAddressParticipantSQL(alias, contact string) string {
+	return promotableParticipantSQL(alias, contact) + " AND " + alias + ".address IS NOT NULL AND " +
+		relstrength.AddressProvesSQL(contact, alias+".address")
+}
+
+func promotableChannelParticipantSQL(alias, contact string) string {
+	return promotableParticipantSQL(alias, contact) + " AND " + linkedChannelParticipantSQL(alias, contact)
+}
+
+// Keep this proof correlated to the unresolved party. Pulling the joins into
+// its caller walks filed messages before the partial index can narrow them.
+func linkedChannelParticipantSQL(alias, contact string) string {
+	return `(` + alias + `.channel_user_id IS NOT NULL AND EXISTS (SELECT 1 FROM activity a
+		JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'contact'
+		JOIN contact_channel_identity ci ON ci.contact_id = l.contact_id
+		 WHERE a.id = ` + alias + `.activity_id AND l.contact_id = ` + contact + `
+		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		   AND ci.provider = a.channel_provider AND ci.channel_user_id = ` + alias + `.channel_user_id
+		   AND ci.archived_at IS NULL
+		   AND NOT EXISTS (SELECT 1 FROM contact_channel_identity rival
+		        WHERE rival.provider = ci.provider AND rival.channel_user_id = ci.channel_user_id
+		          AND rival.archived_at IS NULL AND rival.contact_id <> ci.contact_id)
+		 OFFSET 0))`
+}
+
+// Separate identity lookups prevent an address proof from scanning channel
+// history. Both use one update, pinned to the captured row or bounded by batch.
 func promoteParticipantsToContact(
 	ctx context.Context, tx pgx.Tx, activities []ids.UUID, contactID ids.ContactID, batch *int,
+) ([]ids.UUID, error) {
+	addressed, err := promoteMatchingParticipantsToContact(ctx, tx, activities, contactID, batch, promotableAddressParticipantSQL)
+	if err != nil {
+		return nil, err
+	}
+	channeled, err := promoteMatchingParticipantsToContact(ctx, tx, activities, contactID, batch, promotableChannelParticipantSQL)
+	if err != nil {
+		return nil, err
+	}
+	return append(addressed, channeled...), nil
+}
+
+func promoteMatchingParticipantsToContact(
+	ctx context.Context, tx pgx.Tx, activities []ids.UUID, contactID ids.ContactID, batch *int,
+	match func(string, string) string,
 ) ([]ids.UUID, error) {
 	// The WHERE clause carries the idempotence: a row that already names a
 	// contact is left alone, so a second pass cannot repoint a participant that
@@ -102,12 +126,7 @@ func promoteParticipantsToContact(
 		UPDATE activity_participant ap
 		   SET contact_id = @cohort_contact
 		 WHERE ap.activity_id = ANY(@activities)
-		   AND `+promotableParticipantSQL("ap")+`
-		   AND NOT EXISTS (
-		       SELECT 1 FROM activity_participant other
-		        WHERE other.activity_id = ap.activity_id
-		          AND other.role = ap.role
-		          AND other.contact_id = @cohort_contact)
+		   AND `+match("ap", "@cohort_contact")+`
 		   AND (@batch::int IS NULL OR ap.id IN (
 		       SELECT sub.id FROM activity_participant sub
 		        WHERE sub.activity_id = ANY(@activities)
@@ -115,7 +134,7 @@ func promoteParticipantsToContact(
 		          -- address-only rows in the workspace would let somebody else's
 		          -- backlog fill it: this contact stays selected by the sweep,
 		          -- is offered every tick, and is never reached.
-		          AND `+promotableParticipantSQL("sub")+`
+		          AND `+match("sub", "@cohort_contact")+`
 		        ORDER BY sub.id
 		        LIMIT @batch))
 		RETURNING ap.activity_id`,

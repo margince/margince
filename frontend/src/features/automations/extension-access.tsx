@@ -19,11 +19,8 @@ import {
 import { objectLabel } from "../../format/rbacobjects";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanMutate } from "../../lib/capability";
-import {
-  EXTENSION_SCREEN,
-  extensionTitle,
-  findExtension,
-} from "../../lib/extensions";
+import { extensionTitle, findExtension } from "../../lib/extensions";
+import { EXTENSION_SCREEN } from "../../lib/extensionscreen";
 import { composedScreens } from "../../lib/extensionscreens";
 import {
   isVersionSkew,

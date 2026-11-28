@@ -20,8 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedToolRoleRecords creates what these calls will take, through the app's own
-// routes, as the admin. The session's user owns them, or the named owner does.
+// seedToolRoleRecords creates what the calls take through the app's own routes.
+// Each seed uses the authority that gives its record the required ownership.
 func seedToolRoleRecords(t *testing.T, e *apptest.AppEnv, calls []toolRoleCall, owner string) *recordPool {
 	t.Helper()
 	counting := countingPool(t)

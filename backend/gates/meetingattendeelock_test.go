@@ -45,7 +45,7 @@ var attendeeSweeps = gatekit.Waive(map[string]string{
 		"so no one meeting keys the lock. A judge that read the old rows is corrected by the hourly pass",
 	"internal/modules/contacts:relinkParticipantRows": "a merge moves the source contact's rows on every activity it appeared in. " +
 		"The row keeps naming the same party",
-	"internal/modules/contacts:promoteParticipantsToContact": "binds a contact to the rows that carry an address it proves, " +
+	"internal/modules/contacts:promoteMatchingParticipantsToContact": "binds a contact to the rows that carry an address it proves, " +
 		"on every activity of a cohort. The row keeps naming the same party",
 	"internal/modules/activities:storeParticipantDomains": "folds the domain of stored addresses by row id, over whatever " +
 		"activities a batch spans. It restates the address the row already carries",

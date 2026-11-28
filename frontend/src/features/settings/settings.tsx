@@ -309,7 +309,7 @@ export const SETTINGS_PAGE_VIEWS = {
       [
         { FinanceSourceCard },
         { WebhooksCard },
-        { WorkspaceBotPanel, TelegramBusinessPanel },
+        { WorkspaceBotPanel, TelegramBusinessPanel, BusinessAccountsPanel },
         { SharedMailboxesCard },
         { ExtensionUnitsCard },
         { ProviderCard },
@@ -324,6 +324,8 @@ export const SETTINGS_PAGE_VIEWS = {
             <MessagingProvidersHost />
             <WorkspaceBotPanel provider="telegram" />
             <TelegramBusinessPanel />
+            <BusinessAccountsPanel provider="whatsapp" />
+            <BusinessAccountsPanel provider="zalo-oa" />
             <WorkspaceBotPanel provider="dispact" />
           </>
         ),

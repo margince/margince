@@ -531,16 +531,10 @@ and Microsoft 365 calendar.
   - `ImapConnectPanel` is the Settings IMAP form (`ImapMailboxForm`) with the step's own dismissal. It
     never shows a count of captured mail, because the connect answers before any mail is read.
   - The connect step (`connect-act.tsx`) offers a live chip for each of **Google**, **Microsoft**, and **IMAP**.
-- **Settings → Integrations** (`connectors.tsx`, `ConnectorsCard`): the roster of standing connections.
-  - It shows a status badge (`connected` / `reauth_required` / `error`) + the last sync time per
-    connection. It has a **reconnect** action for an OAuth connection in `reauth_required`, and a
-    **disconnect** that needs a confirm.
-  - Below the roster (or in the empty state) there is always an **"Add a connection"** control. It offers
-    each provider that is not yet connected. An OAuth pick sends the user to that provider's consent
-    screen right from Settings. An IMAP pick opens the same inline form.
-  - A provider whose backend app is not set up answers its declared `501`. The panel then renders
-    `{provider} isn't configured in this deployment`, not a raw error. It sits next to the `WebhooksCard`
-    (the outbound side).
+- **Settings → Connections** (`connectors.tsx`, `ConnectorsCard`): the user's mail accounts and their
+  capture services. The connect flow offers OAuth and IMAP, then the capture and sharing choices.
+  A refused connection keeps its error on the form. Company channels are set up separately under
+  **Settings → Integrations**; see [Connecting WhatsApp and Zalo](../handbook/connecting-whatsapp-and-zalo.md).
 
 ## Limitations
 

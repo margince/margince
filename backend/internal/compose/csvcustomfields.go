@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -104,10 +103,19 @@ func readImportColumns(ctx context.Context, db *database.DB, object string) (imp
 	if !hasCustomFields(object) {
 		return importColumns{catalog: cat}, nil
 	}
-	store, err := newContactsStore(db).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
-		ActiveCreateColumns(ctx, object)
+	// Missing create authority leaves row-level permission warnings; it does not
+	// prevent an owner from committing or undoing the import.
+	var store contacts.CustomColumns
+	columnsCtx, err := auth.Unrecorded(ctx, object, principal.ActionCreate)
 	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		return importColumns{}, err
+	}
+	if err == nil {
+		store, err = newContactsStore(db).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
+			ActiveCreateColumns(columnsCtx, object)
+		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+			return importColumns{}, err
+		}
 	}
 	out := importColumns{catalog: cat, store: store}
 	if object == migration.ObjectDeal {
@@ -179,7 +187,7 @@ func suggestImportMapping(p migration.Profile, object string, targets []string, 
 	out := make(map[string]string, len(headersOf))
 	for target, headers := range headersOf {
 		fits, guarded := sampleGuards[target]
-		if len(headers) == 1 && (!guarded || samplesFit(p, headers[0], fits)) {
+		if len(headers) == 1 && (!guarded || importcells.SamplesFit(p, headers[0], fits)) {
 			out[headers[0]] = target
 		}
 	}
@@ -190,36 +198,8 @@ func suggestImportMapping(p migration.Profile, object string, targets []string, 
 // CRM's "ID" names no Margince record, and a headcount of plain numbers is no
 // size band, so either would skip every row.
 var sampleGuards = map[string]func(string) bool{
-	csvTargetID:   isMarginceID,
+	csvTargetID:   importcells.IsMarginceID,
 	fieldSizeBand: importcells.IsSizeBand,
-}
-
-// isMarginceID reports a version-7 UUID, the only kind ids.NewV7 mints. Another
-// CRM's GUIDs are mostly version 4.
-func isMarginceID(value string) bool {
-	id, err := ids.Parse(value)
-	return err == nil && id[6]>>4 == 7
-}
-
-// samplesFit reports whether a column has a sampled value and every one fits.
-func samplesFit(p migration.Profile, header string, fits func(string) bool) bool {
-	seen := false
-	for _, col := range p.Columns {
-		if col.Header != header {
-			continue
-		}
-		for _, sample := range col.Samples {
-			value := strings.TrimSpace(sample)
-			if value == "" {
-				continue
-			}
-			if !fits(value) {
-				return false
-			}
-			seen = true
-		}
-	}
-	return seen
 }
 
 // suggestionsByObject is the mapping suggested for each of objects, keyed by object.

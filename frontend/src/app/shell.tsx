@@ -15,7 +15,8 @@ import {
   useSettingsSection,
 } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
-import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import { findExtension } from "../lib/extensions";
+import { EXTENSION_SCREEN } from "../lib/extensionscreen";
 import { useFirstScreenSettled } from "../lib/journeymarks";
 import { routeIdentity } from "../lib/routeidentity";
 import {

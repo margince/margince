@@ -29,8 +29,8 @@ type sweepSeed struct {
 	owner  string
 }
 
-// call sends one route as the signed-in admin and stops the sweep on any
-// failure. A seed that fails would leave its calls reading as measured.
+// call sends one route as the signed-in seat and stops the sweep on failure.
+// A seed that fails would leave its calls reading as measured.
 //
 //craft:ignore naked-any a request body is whichever JSON shape the route takes
 func (s sweepSeed) call(method, path string, body any, headers map[string]string, out any) {

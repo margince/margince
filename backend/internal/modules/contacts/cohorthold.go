@@ -33,15 +33,9 @@ const (
 	skipBusyActivities busyActivities = " SKIP LOCKED"
 )
 
-// holdCohortActivities locks the activities this pass may write, and returns
-// them. Every write of the pass is limited to these rows.
-//
-// Each arm is the predicate of one write, with that write's bound. The third
-// arm holds the meetings whose attendee rows the promotion names first.
-//
-// FOR NO KEY UPDATE is the mode the link ceiling trigger and the audience
-// recompute take later, so the pass never upgrades its lock. An import's key
-// share does not conflict with it.
+// holdCohortActivities bounds every write to the activity rows it locks.
+// Its mode matches later link and audience writes, avoiding an upgrade while
+// staying compatible with an import's key-share lock.
 func holdCohortActivities(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, busy busyActivities,
 ) ([]ids.UUID, error) {
@@ -57,7 +51,7 @@ func holdCohortActivities(
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT a.id FROM activity a
-		 WHERE a.id IN (
+		 WHERE a.id = ANY(ARRAY(
 		       (SELECT a.id FROM activity a
 		         WHERE `+capturedCohortMailSQL+`
 		         ORDER BY a.occurred_at DESC, a.id
@@ -70,10 +64,18 @@ func holdCohortActivities(
 		         LIMIT @batch)
 		       UNION ALL
 		       (SELECT sub.activity_id FROM activity_participant sub
-		         WHERE lower(sub.address) IN (`+cohortAddressesSQL+`)
-		           AND `+promotableParticipantSQL("sub")+`
+		         WHERE lower(sub.address) = ANY(ARRAY(`+cohortAddressesSQL+`))
+		           AND `+promotableAddressParticipantSQL("sub", "@cohort_contact")+`
 		         ORDER BY sub.id
-		         LIMIT @batch))
+		         LIMIT @batch)
+		       UNION ALL
+		       (SELECT sub.activity_id FROM contact_channel_identity owner
+		         JOIN activity_participant sub ON sub.channel_user_id = owner.channel_user_id
+		         WHERE owner.contact_id = @cohort_contact AND owner.archived_at IS NULL
+		           AND sub.channel_user_id IS NOT NULL
+		           AND `+promotableChannelParticipantSQL("sub", "@cohort_contact")+`
+		         ORDER BY sub.id
+		         LIMIT @batch)))
 		 ORDER BY a.id
 		 FOR NO KEY UPDATE`+string(busy), cohortArgs(canonical, nil))
 	if err != nil {

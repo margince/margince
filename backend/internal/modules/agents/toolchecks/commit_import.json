@@ -1,7 +1,6 @@
 {
   "verb": "commit_import",
   "checks": [
-    "contact.create",
     "custom_field.read",
     "import_run.read",
     "import_run.update"
