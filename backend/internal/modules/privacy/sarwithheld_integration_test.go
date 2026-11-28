@@ -49,7 +49,7 @@ import (
 var withheldFromTheExport = map[string][]string{
 	"activity":           {"system_text"},
 	"confirm_token":      {"token_hash", "delivered_to"},
-	"conversation_claim": {"captured_by", "corrected_by_user_id", "taken_by_user_id"},
+	"conversation_claim": {"captured_by", "taken_by_user_id"},
 }
 
 // The gate's registration and this one describe the same rule, so they must name
