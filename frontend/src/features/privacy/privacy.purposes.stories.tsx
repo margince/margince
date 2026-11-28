@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -81,7 +82,9 @@ export const Registry: Story = {
     const canvas = within(canvasElement);
     const row = (await canvas.findByText("Marketing")).closest("tr");
     await expect(row).not.toBeNull();
-    await expect(row && within(row).getByText("Double opt-in")).toBeVisible();
+    await expect(
+      row && within(row).getByText(englishCopy["privacy.purposeDoiBadge"]),
+    ).toBeVisible();
     await expect(canvas.getAllByRole("columnheader")).toHaveLength(1);
   },
 };
@@ -212,7 +215,7 @@ export const SendCounts: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const table = await canvas.findByRole("table", {
-      name: "Mail sent per purpose",
+      name: englishCopy["privacy.purposeSendsTable"],
     });
     await expect(within(table).getByText("1,240")).toBeVisible();
   },

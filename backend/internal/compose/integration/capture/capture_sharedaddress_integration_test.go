@@ -39,7 +39,7 @@ func receivesAtSharedAddress(t *testing.T, env captureEnv, colleagues ...ids.UUI
 // address, and whether the row names a seat.
 func statedSenders(t *testing.T, env captureEnv, sourceID string) (addresses []string, seats int) {
 	t.Helper()
-	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT coalesce(p.address, ''), p.user_id IS NOT NULL
 			  FROM activity_participant p JOIN activity a ON a.id = p.activity_id

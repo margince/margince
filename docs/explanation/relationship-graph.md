@@ -556,7 +556,7 @@ Two other rules follow the same shape:
   separate delete statement would copy the formula. It would also leave a pair that lives on with old
   counts, each time the activity is not its last evidence.
 
-Both tables are reached only through `database.WithWorkspaceTx`, as every other module statement is.
+Both tables are reached only through `database.WithTx`, as every other module statement is.
 See [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-and-consent.md).
 
 ## Limits we know of

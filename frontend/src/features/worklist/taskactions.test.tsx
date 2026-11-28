@@ -73,7 +73,9 @@ test("a task read out of a meeting opens that meeting", async () => {
   stubTask("meeting-9");
   openTask();
 
-  const open = await screen.findByRole("button", { name: "Open original" });
+  const open = await screen.findByRole("button", {
+    name: en["tasks.openSource"],
+  });
   await user.click(open);
 
   // The meeting itself, not another copy of the sentence naming it.
@@ -89,7 +91,9 @@ test("a task nobody read out of a meeting offers no way back", async () => {
   // The positive control is the test above: without it a build that never
   // rendered the button would pass this one for the wrong reason.
   await screen.findByText(/committed to this in the meeting transcript/);
-  expect(screen.queryByRole("button", { name: "Open original" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: en["tasks.openSource"] }),
+  ).toBeNull();
 });
 
 test("a transcript refused on reopen is not painted from the cache", async () => {
@@ -126,7 +130,7 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
   openTask();
 
   await user.click(
-    await screen.findByRole("button", { name: "Open original" }),
+    await screen.findByRole("button", { name: en["tasks.openSource"] }),
   );
   await screen.findByText(/Vergleichsblatt mit zwei Produkten/);
 
@@ -136,7 +140,7 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
   refused = true;
   await user.keyboard("{Escape}");
   await user.click(
-    await screen.findByRole("button", { name: "Open original" }),
+    await screen.findByRole("button", { name: en["tasks.openSource"] }),
   );
 
   // The words are gone, not merely accompanied by an error.
@@ -241,7 +245,9 @@ test("an email request is read in the task, with no click to open it", async () 
   // normalised read, and the plain activity carries an unparsed copy.
   expect(screen.queryByText("Unparsed body must not be displayed")).toBeNull();
   // And no button, because there is nothing left for one to open.
-  expect(screen.queryByRole("button", { name: "Open original" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: en["tasks.openSource"] }),
+  ).toBeNull();
 
   // Where it sits is the requirement. The message reads under the task's own
   // verbs, so a long mail cannot push Done off the panel.
@@ -258,7 +264,9 @@ test("a task's source email opens whole, with its thread, from the task", async 
   openTask();
 
   await user.click(
-    await screen.findByRole("button", { name: "View full thread" }),
+    await screen.findByRole("button", {
+      name: en["timeline.group.openThread"],
+    }),
   );
 
   // The message drawer over the task: a second dialog, headed by the message.
@@ -574,7 +582,7 @@ test.each([
   if (source?.content_state === "withheld") {
     await screen.findByText(en["email.detail.withheldReason"]);
   } else if (source) {
-    await screen.findByRole("button", { name: "Open original" });
+    await screen.findByRole("button", { name: en["tasks.openSource"] });
   }
   expect(call()?.getAttribute("href")).toBe("tel:+49301234567");
 });
@@ -607,7 +615,7 @@ test("a call task whose contact has no phone gets no Call", async () => {
   });
   openTaskWith();
 
-  await screen.findByRole("button", { name: "Open original" });
+  await screen.findByRole("button", { name: en["tasks.openSource"] });
   await contactSettled(contact.read);
   expect(call()).toBeNull();
 });
@@ -652,7 +660,7 @@ test("an archived contact gets no Call on a call task", async () => {
   });
   openTaskWith();
 
-  await screen.findByRole("button", { name: "Open original" });
+  await screen.findByRole("button", { name: en["tasks.openSource"] });
   await contactSettled(contact.read);
   expect(call()).toBeNull();
   expect(
@@ -681,7 +689,7 @@ test("a task linking no record offers no next steps", async () => {
 
   await screen.findByText(/^Logged/);
   // The source read answers before the verbs would be drawn.
-  await screen.findByRole("button", { name: "Open original" });
+  await screen.findByRole("button", { name: en["tasks.openSource"] });
   expect(openContact()).toBeNull();
   expect(screen.queryByText(en["record.verb.email"])).toBeNull();
   expect(screen.queryByText(en["task.next.draftEmail"])).toBeNull();

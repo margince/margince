@@ -103,7 +103,7 @@ func newColleagueMailFixture(t *testing.T) colleagueMailFixture {
 func (f colleagueMailFixture) stepStatus(t *testing.T, step string) string {
 	t.Helper()
 	var status string
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT status FROM data_task_run WHERE task_id = $1 AND step = $2`,
 			membersOnlyMailDataTask().ID, step).Scan(&status)
 	}); err != nil {
@@ -116,7 +116,7 @@ func (f colleagueMailFixture) stepStatus(t *testing.T, step string) string {
 func (f colleagueMailFixture) unknownParties(t *testing.T) int64 {
 	t.Helper()
 	var scanned int64
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT scanned FROM data_task_run
 			 WHERE task_id = $1 AND step = 'count_mail_with_unknown_parties'`,
 			membersOnlyMailDataTask().ID).Scan(&scanned)
@@ -130,7 +130,7 @@ func (f colleagueMailFixture) audience(t *testing.T, id ids.UUID) (string, strin
 	t.Helper()
 	var audience string
 	var reason *string
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT audience, audience_reason FROM activity WHERE id = $1`, id).Scan(&audience, &reason)
 	}); err != nil {
@@ -144,7 +144,7 @@ func (f colleagueMailFixture) audience(t *testing.T, id ids.UUID) (string, strin
 
 func (f colleagueMailFixture) audienceWrites(t *testing.T, id ids.UUID) (audits, events int) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `SELECT count(*) FROM audit_log
 			 WHERE entity_type = 'activity' AND entity_id = $1 AND after ? 'audience'`, id).Scan(&audits); err != nil {
 			return err
@@ -208,7 +208,7 @@ func TestTheMembersOnlyTaskHoldsColleaguesMailOnceAndLeavesHumanDecisions(t *tes
 	}
 
 	step := membersOnlyMailDataTask().Steps[0]
-	if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		if err == nil && out.Changed != 0 {
 			t.Errorf("a second run changed %d row(s)", out.Changed)
@@ -224,7 +224,7 @@ func TestTheMembersOnlyTaskRollsBackWithItsBatch(t *testing.T) {
 	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")
 	step := membersOnlyMailDataTask().Steps[0]
 	rollback := errors.New("roll back after the write")
-	err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		if err != nil {
 			return err

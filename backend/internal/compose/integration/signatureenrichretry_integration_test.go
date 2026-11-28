@@ -48,7 +48,7 @@ func signatureClaim(field, value string) map[string]any {
 func seedSigner(t *testing.T, e *Env, name, email, body string) ids.UUID {
 	t.Helper()
 	contact, mail := ids.NewV7(), ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, statement := range []struct {
 			sql  string
 			args []any
@@ -152,7 +152,7 @@ type signatureReadState struct {
 func readSignatureState(t *testing.T, e *Env, contact ids.UUID) signatureReadState {
 	t.Helper()
 	var state signatureReadState
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT coalesce(activity_id::text, ''), retry_count
 			  FROM contact_signature_enrich_state WHERE contact_id = $1`, contact).
@@ -237,7 +237,7 @@ func TestAReopenedSignatureGetsANewRetryBudget(t *testing.T) {
 	brain := &signatureFieldsBrain{fields: []map[string]any{signatureClaim("title", "Chief Technology Officer")}}
 	runSignaturePass(t, e, brain)
 	ctx := principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalSystem, ID: "system:signature-reopen", Permissions: principal.Permissions{RowScope: principal.RowScopeAll}})
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := contacts.QueueSignatureEventTx(ctx, tx, []ids.ContactID{ids.From[ids.ContactKind](bob)}, contacts.SignatureRequest{Reopen: true, Live: true})
 		return err
 	}); err != nil {

@@ -6,6 +6,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import type { SetupStep } from "../lib/setup-checklist";
 import { SetupSteps } from "./setup-steps";
 
@@ -38,7 +39,7 @@ it("sends the reader who sets up the company app to its page", async () => {
   );
 
   expect(
-    screen.getByText("Needs your company’s Google or Microsoft app."),
+    screen.getByText(englishCopy["setup.caption.registerApp"]),
   ).toBeTruthy();
   await userEvent.click(screen.getByRole("button", { name: "Set up app" }));
   expect(globalThis.location.hash).toBe("#/settings/authentication/apps");
@@ -59,6 +60,8 @@ it("offers no action to a reader who waits on an administrator", () => {
     </LocaleProvider>,
   );
 
-  expect(screen.getByText("Waits on an administrator.")).toBeTruthy();
+  expect(
+    screen.getByText(englishCopy["setup.caption.waitsAdmin"]),
+  ).toBeTruthy();
   expect(screen.queryByRole("button")).toBeNull();
 });

@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { expect, waitFor, within } from "storybook/test";
 import { Card } from "../design-system/atoms";
+import { en as englishCopy } from "../i18n/en";
 import type { Route } from "../lib/router";
 import { type GrantSpec, READS_DESTINATIONS } from "../testing/mefixture";
 import {
@@ -218,7 +219,7 @@ export const RecordFromTheWorklist: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       await within(canvasElement).findByRole("button", {
-        name: "Back to Worklist",
+        name: englishCopy["brief.queue.back"],
       }),
     ).toBeVisible();
   },

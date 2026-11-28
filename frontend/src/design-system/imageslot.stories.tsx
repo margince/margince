@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties } from "react";
 import { expect, fn, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { PORTRAIT } from "../testing/seatphotos";
 import { Avatar } from "./atoms";
 import { ImageSlot } from "./imageslot";
@@ -49,7 +50,9 @@ export const Empty: Story = {};
 
 async function openEdit({ canvasElement }: { canvasElement: HTMLElement }) {
   await userEvent.click(
-    within(canvasElement).getByRole("button", { name: "Edit profile picture" }),
+    within(canvasElement).getByRole("button", {
+      name: englishCopy["account.pictureEdit"],
+    }),
   );
 }
 
@@ -58,10 +61,12 @@ export const EmptyMenuOpen: Story = {
     await openEdit(context);
     const page = within(context.canvasElement.ownerDocument.body);
     await expect(
-      page.getByRole("button", { name: "Upload picture" }),
+      page.getByRole("button", { name: englishCopy["account.pictureAdd"] }),
     ).toBeVisible();
     await expect(
-      page.queryByRole("button", { name: "Remove picture" }),
+      page.queryByRole("button", {
+        name: englishCopy["account.pictureRemove"],
+      }),
     ).toBeNull();
   },
 };
@@ -87,7 +92,7 @@ export const FilledMenuOpen: Story = {
     await within(context.canvasElement.ownerDocument.body).findByRole(
       "button",
       {
-        name: "Remove picture",
+        name: englishCopy["account.pictureRemove"],
       },
     );
   },

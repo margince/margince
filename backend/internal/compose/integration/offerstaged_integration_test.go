@@ -226,7 +226,7 @@ func TestAddStagedOfferLinesUngroundedPriceIsTheHonestZeroSentinel(t *testing.T)
 	// is still bound. Insert straight past the Go store, at the SQL
 	// layer, to prove the database itself refuses the same bogus row.
 	rawCtx := principal.WithWorkspaceID(context.Background(), e.WS)
-	err = database.WithWorkspaceTx(rawCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(rawCtx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(rawCtx,
 			`INSERT INTO offer_line_item
 			   (offer_id, position, description, quantity, unit_price_minor,

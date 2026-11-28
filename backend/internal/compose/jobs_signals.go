@@ -86,7 +86,7 @@ func (w *signalScanWorker) scanWorkspaceSignals(ctx context.Context, workspace i
 
 	now := w.now()
 	var ghosted, quiet GhostedPass
-	if err := database.WithWorkspaceTx(wsCtx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, w.pool, func(tx pgx.Tx) error {
 		pass, err := WriteGhostedSignals(wsCtx, tx, now)
 		if err != nil {
 			return err

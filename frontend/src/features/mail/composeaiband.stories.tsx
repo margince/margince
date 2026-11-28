@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -78,7 +79,7 @@ async function draftAndFindLanguage() {
     await dialog.findByRole("button", { name: "Draft reply" }),
   );
   const picker = await dialog.findByRole("combobox", {
-    name: "Draft language",
+    name: englishCopy["compose.draftLanguage"],
   });
   await expect(picker).toHaveTextContent("Deutsch");
   await expect(frame.scrollWidth).toBeLessThanOrEqual(frame.clientWidth);
@@ -157,7 +158,7 @@ export const TemplateDraft: StoryObj = {
     await userEvent.click(
       await dialog.findByRole("button", { name: "Draft email" }),
     );
-    await dialog.findByText("AI could not write this draft");
+    await dialog.findByText(englishCopy["compose.templateDraftTitle"]);
     await expect(dialog.queryByRole("button", { name: "Polish" })).toBeNull();
   },
 };

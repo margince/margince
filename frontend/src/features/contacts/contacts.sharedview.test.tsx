@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   emptyPage,
   installFetchStub,
@@ -41,7 +42,9 @@ it("asks for the contacts shared with the reader, beside Mine", async () => {
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Shared with me" }),
+    await screen.findByRole("button", {
+      name: englishCopy["list.viewSharedWithMe"],
+    }),
   );
   await waitFor(() => expect(listed.at(-1)).toContain("shared_with_me=true"));
   expect(listed.at(-1)).not.toContain("owner_id=");

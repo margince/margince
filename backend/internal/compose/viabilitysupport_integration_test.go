@@ -57,7 +57,7 @@ func (v *viabilityEnv) receiptOf(t *testing.T, deal ids.UUID) (outcome, reasons 
 	t.Helper()
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), v.WS), assuranceActor)
 	var codes []string
-	if err := database.WithWorkspaceTx(ctx, v.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, v.Pool, func(tx pgx.Tx) error {
 		subjects, err := assuranceSubjects(ctx, tx, v.now, AssuranceCoverage(ctx, tx, v.now), []ids.UUID{deal})
 		if err != nil || len(subjects) != 1 {
 			return fmt.Errorf("reading the deal as the check does: %d subjects: %w", len(subjects), err)

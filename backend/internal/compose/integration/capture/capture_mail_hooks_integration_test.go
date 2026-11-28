@@ -130,7 +130,7 @@ func TestTheActivityReadNamesWhoFiledAMailOnItsDeal(t *testing.T) {
 	}
 	// The classifier's later mark on the link does not take the filing over.
 	system := newRepairer(e, w).system
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		_, err := activities.MarkDealLinkTx(system, tx, ids.From[ids.ActivityKind](mail), chosen, "uncertain", nil)
 		return err
 	}); err != nil {

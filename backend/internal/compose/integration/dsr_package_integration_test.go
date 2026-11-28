@@ -407,7 +407,7 @@ func seedSubjectWithMail(t *testing.T, e *Env) ids.UUID {
 		t.Fatalf("creating the subject: %v", err)
 	}
 	activity := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source, captured_by,
 			                      counterparty_email, audience)

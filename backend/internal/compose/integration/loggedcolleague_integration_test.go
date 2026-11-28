@@ -48,7 +48,7 @@ func (e *Env) whoKnows(t *testing.T, activityID, contact ids.UUID) map[ids.UUID]
 	t.Helper()
 	ctx := e.Admin()
 	known := map[ids.UUID]int{}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID}); err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ func TestAnActivityReadNamesNoBlindCopiedColleague(t *testing.T) {
 	}
 	mail := ids.UUID(logged.Id)
 	// The sender's own copy, as capture stamps it: a colleague on To and one on Bcc.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return capture.StampFurtherParticipants(e.Admin(), tx, ids.From[ids.ActivityKind](mail), "email", "", true,
 			[]connector.MessageParticipant{
 				{Email: "b@authz.test", Role: connector.ParticipantRoleTo},

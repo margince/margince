@@ -233,7 +233,7 @@ export function fieldsForFn(entity: AnalyticsEntity, fn: MeasureFn): string[] {
   if (NEEDS_MEASURE.has(fn)) {
     return [...entity.measures];
   }
-  return filterFields(entity);
+  return aggregableFields(entity);
 }
 
 /** The aggregates worth offering: `count`, and any other with a field to take. */
@@ -243,9 +243,15 @@ export function fnsFor(entity: AnalyticsEntity): MeasureFn[] {
   );
 }
 
-/** Every field a filter may name: the dimensions, then the measures. */
-export function filterFields(entity: AnalyticsEntity): string[] {
+/** The fields a distinct count, lowest or highest may read: dimensions, then measures. */
+function aggregableFields(entity: AnalyticsEntity): string[] {
   return [...new Set([...entity.group_by, ...entity.measures])];
+}
+
+/** Every field a filter may name: the dimensions, the measures, then the filter-only fields. */
+export function filterFields(entity: AnalyticsEntity): string[] {
+  const only = (entity.filters ?? []).map((f) => f.name);
+  return [...new Set([...aggregableFields(entity), ...only])];
 }
 
 // The two dimensions whose column is not text, as the engine's schema declares
@@ -256,6 +262,10 @@ const BOOLEAN_DIMENSIONS: ReadonlySet<string> = new Set(["became_opportunity"]);
 export type ValueShape = "number" | "boolean" | "text";
 
 export function valueShape(entity: AnalyticsEntity, field: string): ValueShape {
+  const declared = entity.filters?.find((f) => f.name === field)?.shape;
+  if (declared === "number" || declared === "boolean") {
+    return declared;
+  }
   if (entity.measures.includes(field) || NUMBER_DIMENSIONS.has(field)) {
     return "number";
   }

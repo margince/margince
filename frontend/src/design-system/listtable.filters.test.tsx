@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { openView, openViewStep } from "../testing/listview.testkit";
 import { type ListChip, ListTable } from "./listtable";
 import { columns, render } from "./listtable.testkit";
@@ -50,7 +51,10 @@ describe("the Filters step", () => {
     expect(screen.getByRole("button", { name: "Status" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Priority" })).toBeTruthy();
 
-    await user.type(screen.getByLabelText("Search attributes"), "sta");
+    await user.type(
+      screen.getByLabelText(englishCopy["table.filterSearch"]),
+      "sta",
+    );
     expect(screen.getByRole("button", { name: "Status" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Priority" })).toBeNull();
   });
@@ -131,7 +135,9 @@ describe("the Filters step", () => {
         name: "More actions for the Status filter",
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Delete filter" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["table.deleteFilter"] }),
+    );
     expect(onChipChange).toHaveBeenCalledWith("status", "");
   });
 
@@ -222,7 +228,7 @@ describe("a chip with an async search source", () => {
       />,
     );
     await openCompanyValueStep(user);
-    expect(screen.getByText("Type to search")).toBeTruthy();
+    expect(screen.getByText(englishCopy["filters.typeToSearch"])).toBeTruthy();
 
     vi.useFakeTimers();
     try {
@@ -325,6 +331,8 @@ describe("a chip with an async search source", () => {
       vi.useRealTimers();
     }
 
-    expect(await screen.findByText("Search failed. Retry.")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["table.filterSearchFailed"]),
+    ).toBeTruthy();
   });
 });

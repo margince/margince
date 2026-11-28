@@ -21,7 +21,7 @@ import (
 
 func objectsInDatabase(e *integration.Env, unit string) extcapability.Objects {
 	return extcapability.Objects{
-		Store: blobstore.NewMemory(), Ledger: extcapability.PoolLedger(e.Pool), Unit: unit,
+		Store: blobstore.NewMemory(), Ledger: extcapability.PoolLedger(e.Pool), Unit: unit, Workspace: extcapability.StoredWorkspace(e.Pool),
 		Gate: func(ctx context.Context) (context.Context, error) { return ctx, nil },
 	}
 }

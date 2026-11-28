@@ -77,7 +77,7 @@ func TestAnEffectWaitsForARoleChangeBeforeItLocksTheApproval(t *testing.T) {
 	// The effect waits at the hold, so the approval row is still free. Had it
 	// locked the row first, a role change that then wrote that member's
 	// approvals would close the cycle.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var locked ids.UUID
 		return tx.QueryRow(t.Context(), `SELECT id FROM approval WHERE id = $1 FOR UPDATE NOWAIT`, id).Scan(&locked)
 	}); err != nil {

@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { MAGIC_PAGE_LINES } from "../../lib/magic.queries";
 import { wonProposal } from "../../testing/magic.approval.fixtures";
 import { receipt, renderMagic, stub } from "../../testing/magic.testkit";
@@ -44,9 +45,7 @@ it("shows a stale preview warning without leaking cached commercial context", as
     }),
   );
   renderMagic();
-  await screen.findByText(
-    "This record changed after the proposal. Request a new proposal before approving.",
-  );
+  await screen.findByText(englishCopy["approval.preview.stale"]);
   expect(screen.queryByText("Nordwind Logistics")).toBeNull();
   expect(screen.queryByText("We confirm the renewal")).toBeNull();
 });
@@ -98,7 +97,9 @@ it("keeps a task's action and assignee visible when it has a typed preview", asy
   renderMagic();
   expect(await screen.findByText("Send the revised proposal")).toBeTruthy();
   expect(screen.getByText("Dana Weiss")).toBeTruthy();
-  expect(screen.queryByText("Review proposed change")).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["magic.approval.reviewChange"]),
+  ).toBeNull();
 });
 
 it("omits the same approval shown in Focus but keeps another decision for the same deal", async () => {
@@ -126,7 +127,9 @@ it("keeps an unknown legacy decision reachable without generic waiting prose", a
     }),
   );
   renderMagic();
-  expect(await screen.findByText("Review proposed change")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["magic.approval.reviewChange"]),
+  ).toBeTruthy();
   expect(screen.getByRole("link", { name: "Decide" })).toBeTruthy();
   expect(
     screen.queryByText(/waiting for your word|Nothing happens until/),
@@ -157,8 +160,10 @@ it("shows each active receipt once without suppressing other changes to the same
     }),
   );
   renderMagic("en", undefined, { visibleReceiptIds: ["shown-change"] });
-  await screen.findByText("A deal moved to its next stage");
-  expect(screen.getAllByText("A deal moved to its next stage")).toHaveLength(1);
+  await screen.findByText(englishCopy["magic.action.advance_stage"]);
+  expect(
+    screen.getAllByText(englishCopy["magic.action.advance_stage"]),
+  ).toHaveLength(1);
   expect(screen.queryByText(/deal sits in a later stage/i)).toBeNull();
 });
 
@@ -290,5 +295,7 @@ it("retains legacy and grouped changes without guessing a shared receipt identit
     visibleReceiptIds: ["same-looking-id", "known"],
   });
   await screen.findByText("3 changes, one by one");
-  expect(screen.getAllByText("A deal moved to its next stage")).toHaveLength(2);
+  expect(
+    screen.getAllByText(englishCopy["magic.action.advance_stage"]),
+  ).toHaveLength(2);
 });

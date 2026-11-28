@@ -7,6 +7,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ContractForm } from "./contractform";
 
 // A term is refused on its own field, before sending and after.
@@ -107,7 +108,9 @@ it("puts the server's refusal on the term it names, by its label", async () => {
   await user.type(await screen.findByLabelText(/^Title/), "MSA");
   const notice = screen.getByLabelText(/^Notice period/);
   await user.type(notice, "9000");
-  await user.click(screen.getByRole("button", { name: "Record contract" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["contracts.form.save"] }),
+  );
 
   const sentence = "Notice period (days) must be at most 3,650.";
   expect(await screen.findByText(sentence)).toBeTruthy();

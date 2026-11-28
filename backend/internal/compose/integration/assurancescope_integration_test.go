@@ -133,7 +133,7 @@ func TestAFindingIsVisibleExactlyWhereItsDealIs(t *testing.T) {
 	})
 
 	var found []assuranceExceptionSubject
-	if err := database.WithWorkspaceTx(repCtx, database.BindTo(pool, wsTyped).Pool(),
+	if err := database.WithTx(repCtx, database.BindTo(pool, wsTyped).Pool(),
 		func(tx pgx.Tx) error {
 			rows, err := compose.AssuranceExceptions(repCtx, tx)
 			if err != nil {
@@ -195,7 +195,7 @@ func TestAFindingIsVisibleExactlyWhereItsDealIs(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	if err := database.WithWorkspaceTx(noDealCtx, database.BindTo(pool, wsTyped).Pool(),
+	if err := database.WithTx(noDealCtx, database.BindTo(pool, wsTyped).Pool(),
 		func(tx pgx.Tx) error {
 			rows, err := compose.AssuranceExceptions(noDealCtx, tx)
 			if err != nil {

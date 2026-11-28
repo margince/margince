@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { CompanyMark } from "./companymark";
 
@@ -80,10 +81,12 @@ export const WideLogoMenuOpen: Story = {
   ...BothMarks,
   play: async ({ canvasElement }) => {
     await userEvent.click(
-      within(canvasElement).getByRole("button", { name: "Edit wide logo" }),
+      within(canvasElement).getByRole("button", {
+        name: englishCopy["settings.companyMarkEditWide"],
+      }),
     );
     await within(canvasElement.ownerDocument.body).findByRole("button", {
-      name: "Remove wide logo",
+      name: englishCopy["settings.companyMarkRemoveWide"],
     });
   },
 };
@@ -196,7 +199,9 @@ export const TheServerRefusesTheWideLogo: Story = {
   },
   play: async ({ canvasElement }) => {
     await refuseUpload(canvasElement, "Wide logo");
-    await within(canvasElement).findByText("Wide logo not uploaded");
+    await within(canvasElement).findByText(
+      englishCopy["settings.companyMarkUploadFailedWide"],
+    );
   },
 };
 
@@ -212,7 +217,9 @@ export const TheServerRefusesTheSquareIcon: Story = {
   },
   play: async ({ canvasElement }) => {
     await refuseUpload(canvasElement, "Square icon");
-    await within(canvasElement).findByText("Square icon not uploaded");
+    await within(canvasElement).findByText(
+      englishCopy["settings.companyMarkUploadFailedIcon"],
+    );
   },
 };
 
@@ -229,8 +236,12 @@ export const TheServerRefusesBothImages: Story = {
   play: async ({ canvasElement }) => {
     await refuseUpload(canvasElement, "Square icon");
     await refuseUpload(canvasElement, "Wide logo");
-    await within(canvasElement).findByText("Wide logo not uploaded");
-    await within(canvasElement).findByText("Square icon not uploaded");
+    await within(canvasElement).findByText(
+      englishCopy["settings.companyMarkUploadFailedWide"],
+    );
+    await within(canvasElement).findByText(
+      englishCopy["settings.companyMarkUploadFailedIcon"],
+    );
   },
 };
 
@@ -254,7 +265,7 @@ export const TheServerRefusesAnSvgWithLiveText: Story = {
   play: async ({ canvasElement }) => {
     await refuseUpload(canvasElement, "Wide logo");
     await within(canvasElement).findByText(
-      "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
+      englishCopy["settings.companyMarkSvgText"],
     );
   },
 };
@@ -278,7 +289,7 @@ export const TheServerRefusesAnSvgItCannotDraw: Story = {
   play: async ({ canvasElement }) => {
     await refuseUpload(canvasElement, "Wide logo");
     await within(canvasElement).findByText(
-      "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
+      englishCopy["settings.companyMarkSvgNotDrawable"],
     );
   },
 };

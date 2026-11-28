@@ -41,7 +41,7 @@ func (s *sharedMailboxSuite) whatsAppSeat(t *testing.T) ids.UUID {
 	t.Helper()
 	ctx := s.admin()
 	var seat ids.UUID
-	if err := database.WithWorkspaceTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		seat, err = capture.EnsureChatSeatTx(ctx, tx, capture.ChatSeat{
 			Provider: whatsapp.Provider, Account: whatsAppPhoneID, ReaderTeam: s.e.Team1, By: s.e.AdminUser,

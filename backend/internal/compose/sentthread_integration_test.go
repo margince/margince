@@ -30,7 +30,7 @@ func TestReplyJoinsSentMailBeforeMailboxEcho(t *testing.T) {
 	root := "opening@counterparty.test"
 	captureThreadMail(t, e, e.Rep1, threadMail(address, root, "Tue, 01 Sep 2026 10:00:00 +0000", ""))
 	var anchor ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT activity_id FROM activity_identity WHERE identity_kind = 'mail' AND identity_key = $1`, root).Scan(&anchor)
 	}); err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func TestReplyJoinsSentMailBeforeMailboxEcho(t *testing.T) {
 		t.Fatal(err)
 	}
 	var messageID, sentKey string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT source_id, thread_key FROM activity WHERE id = $1`, sent.ActivityID).Scan(&messageID, &sentKey)
 	}); err != nil {
 		t.Fatal(err)
@@ -171,7 +171,7 @@ func TestSentThreadJoinKeepsActorAndContentBoundaries(t *testing.T) {
 			root := "opening@counterparty.test"
 			captureThreadMail(t, e, e.Rep1, threadMail(address, root, "Tue, 01 Sep 2026 10:00:00 +0000", ""))
 			var anchor ids.UUID
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(e.Admin(), `SELECT activity_id FROM activity_identity WHERE identity_kind='mail' AND identity_key=$1`, root).Scan(&anchor)
 			}); err != nil {
 				t.Fatal(err)
@@ -201,7 +201,7 @@ func TestSentThreadJoinKeepsActorAndContentBoundaries(t *testing.T) {
 				}
 			}
 			denied := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{})
-			if err := database.WithWorkspaceTx(denied, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(denied, e.Pool, func(tx pgx.Tx) error {
 				found, err := activities.SentFromHereBySeatTx(denied, tx, e.Rep1, []ids.ActivityID{ids.From[ids.ActivityKind](sent.ActivityID)})
 				if len(found) != 0 {
 					t.Fatal("sent-mail proof ignored the read grant")

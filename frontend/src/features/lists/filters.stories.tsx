@@ -49,7 +49,6 @@ function routes(mePending = false): void {
             owner_id: "u-1",
             resource: "contacts",
             name: "Berlin contacts",
-            shared_scope: "private",
             query: {
               filter: { and: [{ field: "city", op: "eq", value: "Berlin" }] },
             },

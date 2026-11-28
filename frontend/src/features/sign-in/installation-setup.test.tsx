@@ -14,6 +14,7 @@ import type { components } from "../../api/schema";
 import { pickOption, pickSuggestion } from "../../design-system/select-testing";
 import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { forgetSetupDeclines } from "../../lib/installation-setup.decline";
 import { MODEL_SETUPS } from "../../lib/modelsetups.gen";
 import { jsonResponse } from "../../testing/company.fixtures";
@@ -25,7 +26,7 @@ import { InstallationSetup, outstandingStep } from "./installation-setup";
 async function chooseOneModel(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     screen.getByRole("checkbox", {
-      name: "Use one model for every tier instead",
+      name: en["firstRun.ai.oneModel"],
     }),
   );
 }
@@ -217,7 +218,9 @@ async function reportArrived(qc: QueryClient) {
 async function igniteGemini(user: ReturnType<typeof userEvent.setup>) {
   await user.type(await screen.findByLabelText("API key"), "AIza-secret");
   await user.click(screen.getByRole("button", { name: "Continue" }));
-  await screen.findByRole("heading", { name: "Model connected" });
+  await screen.findByRole("heading", {
+    name: en["firstRun.ignite.title"],
+  });
 }
 
 /**
@@ -251,7 +254,7 @@ describe("the first-run setup gate", () => {
   // it is the one thing asked for here.
   it("asks for the model binding", async () => {
     mount(setupReport(false, false));
-    expect(await screen.findByText("Choose a model provider")).toBeTruthy();
+    expect(await screen.findByText(en["firstRun.ai.title"])).toBeTruthy();
   });
 
   // The models bound and no app yet: the platform question, asked once of
@@ -259,14 +262,12 @@ describe("the first-run setup gate", () => {
   // the two fields an OAuth client has.
   it("asks what the company runs on once the models are bound", async () => {
     mount(setupReport(true, false));
-    expect(
-      await screen.findByText("What does your company run on?"),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["firstRun.platform.title"])).toBeTruthy();
     expect(
       screen.getByRole("radio", { name: /Google Workspace/ }),
     ).toHaveProperty("checked", true);
     expect(screen.getByLabelText("Client ID")).toBeTruthy();
-    expect(screen.getByLabelText("Client secret")).toBeTruthy();
+    expect(screen.getByLabelText(en["oauthApp.clientSecret"])).toBeTruthy();
     // The redirect URIs are registered in the vendor's console, which is the
     // one part of this step done elsewhere: they stand in the open with their
     // copy buttons, not behind the fold the rest of the help sits in.
@@ -282,7 +283,10 @@ describe("the first-run setup gate", () => {
       await screen.findByLabelText("Client ID"),
       "123.apps.googleusercontent.com",
     );
-    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-x");
+    await user.type(
+      screen.getByLabelText(en["oauthApp.clientSecret"]),
+      "GOCSPX-x",
+    );
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(writes.length).toBe(1));
     expect(writes[0]?.url.endsWith("/installation/oauth-apps/google")).toBe(
@@ -306,12 +310,15 @@ describe("the first-run setup gate", () => {
     // The redirect URIs are the one thing done in the vendor's console, so
     // the step says so in the open rather than in a fold; and the pin is
     // the directory sign-in runs on, which nothing else would explain.
-    expect(screen.getByText("Add these redirect addresses")).toBeTruthy();
+    expect(screen.getByText(en["oauthApp.drawer.step2Title"])).toBeTruthy();
     expect(
       screen.getByText(/directory puts Microsoft on the login page/),
     ).toBeTruthy();
     await user.type(screen.getByLabelText("Client ID"), "entra-app");
-    await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.type(
+      screen.getByLabelText(en["oauthApp.clientSecret"]),
+      "s3cret",
+    );
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
     expect(
@@ -320,7 +327,7 @@ describe("the first-run setup gate", () => {
     expect(writes.length).toBe(0);
 
     await user.type(
-      screen.getByLabelText("Directory (tenant) ID"),
+      screen.getByLabelText(en["oauthApp.tenant"]),
       "00000000-0000-0000-0000-000000000000",
     );
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -331,7 +338,7 @@ describe("the first-run setup gate", () => {
     expect(writes[0]?.body).toEqual({
       client_id: "entra-app",
       client_secret: "s3cret",
-      tenant: "00000000-0000-0000-0000-000000000000",
+      tenant: en["oauthApp.tenantPlaceholder"],
     });
   });
 
@@ -341,9 +348,12 @@ describe("the first-run setup gate", () => {
     mount(setupReport(true, false));
     const user = userEvent.setup();
     await screen.findByRole("radio", { name: /Google Workspace/ });
-    expect(screen.queryByLabelText("Directory (tenant) ID")).toBeNull();
+    expect(screen.queryByLabelText(en["oauthApp.tenant"])).toBeNull();
     await user.type(screen.getByLabelText("Client ID"), "google-app");
-    await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.type(
+      screen.getByLabelText(en["oauthApp.clientSecret"]),
+      "s3cret",
+    );
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.queryByText(/Still needed/)).toBeNull();
   });
@@ -447,7 +457,7 @@ describe("the first-run setup gate", () => {
     await user.click(await screen.findByRole("button", { name: "Not now" }));
     expect(
       await screen.findByRole("heading", {
-        name: "What does your company run on?",
+        name: en["firstRun.platform.title"],
       }),
     ).toBeTruthy();
   });
@@ -482,7 +492,7 @@ describe("the first-run setup gate", () => {
   it("stores the key before it binds the models", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await user.type(screen.getByLabelText("API key"), "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(writes.length).toBe(2));
@@ -493,10 +503,12 @@ describe("the first-run setup gate", () => {
   it("asks the vendor about the stored key before it binds any tier", async () => {
     const user = userEvent.setup();
     const { order } = mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await user.type(screen.getByLabelText("API key"), "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
-    await screen.findByRole("heading", { name: "Model connected" });
+    await screen.findByRole("heading", {
+      name: en["firstRun.ignite.title"],
+    });
     expect(order).toEqual([
       "PUT /v1/ai/provider-keys/gemini",
       "POST /v1/ai/provider-keys/gemini/test",
@@ -513,7 +525,7 @@ describe("the first-run setup gate", () => {
       false,
     );
     await reportArrived(qc);
-    expect(screen.queryByText("Choose a model provider")).toBeNull();
+    expect(screen.queryByText(en["firstRun.ai.title"])).toBeNull();
   });
 
   it("binds nothing and removes the key when the vendor refuses it", async () => {
@@ -522,14 +534,12 @@ describe("the first-run setup gate", () => {
       ok: false,
       reason: "auth_failed",
     });
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await user.type(screen.getByLabelText("API key"), "not-a-real-key");
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
     expect(
-      await screen.findByText(
-        "The provider refused this key. Check it, then replace it.",
-      ),
+      await screen.findByText(en["aiProviderKeys.reason.authFailed"]),
     ).toBeTruthy();
     await waitFor(() =>
       expect(writes.map((w) => `${w.method} ${w.url}`)).toEqual([
@@ -539,7 +549,9 @@ describe("the first-run setup gate", () => {
     );
     expect(writes.some((w) => w.url === "/v1/ai/routing")).toBe(false);
     expect(
-      screen.queryByRole("heading", { name: "Model connected" }),
+      screen.queryByRole("heading", {
+        name: en["firstRun.ignite.title"],
+      }),
     ).toBeNull();
     expect(screen.getByLabelText<HTMLInputElement>("API key").value).toBe(
       "not-a-real-key",
@@ -552,16 +564,20 @@ describe("the first-run setup gate", () => {
       ok: false,
       reason: "unreachable",
     });
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await user.type(screen.getByLabelText("API key"), "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    await screen.findByText(
-      "The provider did not respond. Check the host and the network.",
-    );
+    await screen.findByText(en["aiProviderKeys.reason.unreachable"]);
     expect(writes.some((w) => w.url === "/v1/ai/routing")).toBe(false);
-    await user.click(screen.getByRole("button", { name: "Connect anyway" }));
-    await screen.findByRole("heading", { name: "Model connected" });
+    await user.click(
+      screen.getByRole("button", {
+        name: en["firstRun.ai.connectAnyway"],
+      }),
+    );
+    await screen.findByRole("heading", {
+      name: en["firstRun.ignite.title"],
+    });
     expect(writes.at(-1)?.url).toBe("/v1/ai/routing");
   });
 
@@ -584,7 +600,9 @@ describe("the first-run setup gate", () => {
     ).toBeTruthy();
     await user.type(screen.getByLabelText("API key"), "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
-    await screen.findByRole("heading", { name: "Model connected" });
+    await screen.findByRole("heading", {
+      name: en["firstRun.ignite.title"],
+    });
     expect(writes.map((write) => write.url)).toEqual([
       "/v1/ai/provider-keys/gemini",
     ]);
@@ -593,13 +611,15 @@ describe("the first-run setup gate", () => {
   it("drops the step's status line once the binding lands", async () => {
     const user = userEvent.setup();
     mount(setupReport(false, false));
-    expect(await screen.findByText("No model connected")).toBeTruthy();
+    expect(await screen.findByText(en["firstRun.ai.eyebrow"])).toBeTruthy();
     await user.type(screen.getByLabelText("API key"), "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(
-      await screen.findByRole("heading", { name: "Model connected" }),
+      await screen.findByRole("heading", {
+        name: en["firstRun.ignite.title"],
+      }),
     ).toBeTruthy();
-    expect(screen.queryByText("No model connected")).toBeNull();
+    expect(screen.queryByText(en["firstRun.ai.eyebrow"])).toBeNull();
   });
 
   // The pressed Continue unmounts with the form, so focus is handed to the
@@ -610,7 +630,7 @@ describe("the first-run setup gate", () => {
     await user.type(await screen.findByLabelText("API key"), "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     const title = await screen.findByRole("heading", {
-      name: "Model connected",
+      name: en["firstRun.ignite.title"],
     });
     expect(document.activeElement).toBe(title);
   });
@@ -636,18 +656,20 @@ describe("the first-run setup gate", () => {
     const described = (carryOn.getAttribute("aria-describedby") ?? "")
       .split(" ")
       .map((id) => document.getElementById(id)?.textContent);
-    expect(described).toContain("Checking setup…");
+    expect(described).toContain(en["firstRun.ignite.leaving"]);
     expect(
-      screen.getByRole("heading", { name: "Model connected" }),
+      screen.getByRole("heading", {
+        name: en["firstRun.ignite.title"],
+      }),
     ).toBeTruthy();
-    expect(screen.queryByText("Choose a model provider")).toBeNull();
+    expect(screen.queryByText(en["firstRun.ai.title"])).toBeNull();
 
     reads.answer();
     const next = await screen.findByRole("heading", {
-      name: "What does your company run on?",
+      name: en["firstRun.platform.title"],
     });
     expect(document.activeElement).toBe(next);
-    expect(screen.queryByText("Choose a model provider")).toBeNull();
+    expect(screen.queryByText(en["firstRun.ai.title"])).toBeNull();
   });
 
   // A failed re-read leaves the stale report, which still asks for a model
@@ -665,14 +687,16 @@ describe("the first-run setup gate", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Model connected" }),
+      screen.getByRole("heading", {
+        name: en["firstRun.ignite.title"],
+      }),
     ).toBeTruthy();
-    expect(screen.queryByText("Choose a model provider")).toBeNull();
+    expect(screen.queryByText(en["firstRun.ai.title"])).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(
       await screen.findByRole("heading", {
-        name: "What does your company run on?",
+        name: en["firstRun.platform.title"],
       }),
     ).toBeTruthy();
     expect(reads.count()).toBe(2);
@@ -683,7 +707,7 @@ describe("the first-run setup gate", () => {
   it("binds every chat tier and the embedding lane", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await user.type(screen.getByLabelText("API key"), "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(writes.length).toBe(2));
@@ -716,7 +740,7 @@ describe("the first-run setup gate", () => {
   it("binds one model on every tier when the reader asks for it", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await chooseOneModel(user);
     await user.type(screen.getByLabelText("API key"), "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -735,7 +759,7 @@ describe("the first-run setup gate", () => {
   it("carries the broker endpoint when OpenRouter is chosen", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "Provider" }),
@@ -750,9 +774,11 @@ describe("the first-run setup gate", () => {
       embeddings: { base_url?: string };
     };
     for (const bound of Object.values(routing.tiers)) {
-      expect(bound.base_url).toBe("https://openrouter.ai/api");
+      expect(bound.base_url).toBe(en["aiRouting.baseUrl.placeholder"]);
     }
-    expect(routing.embeddings.base_url).toBe("https://openrouter.ai/api");
+    expect(routing.embeddings.base_url).toBe(
+      en["aiRouting.baseUrl.placeholder"],
+    );
   });
 
   // The residency choice binds under the profile it was offered as, at a
@@ -760,7 +786,7 @@ describe("the first-run setup gate", () => {
   it("binds Gemini on Vertex in the EU under eu_hosted, keyed by the key file", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "Provider" }),
@@ -774,7 +800,7 @@ describe("the first-run setup gate", () => {
       client_email: "m@acme-eu.iam.gserviceaccount.com",
       private_key: "-----BEGIN PRIVATE KEY-----",
     });
-    await user.click(screen.getByLabelText("Service-account key (JSON)"));
+    await user.click(screen.getByLabelText(en["serviceAccountKey.label"]));
     await user.paste(keyFile);
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(writes.length).toBe(2));
@@ -805,31 +831,27 @@ describe("the first-run setup gate", () => {
   it("refuses a pasted key file that is not JSON before writing anything", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "Provider" }),
       "Gemini on Vertex AI (EU data residency)",
     );
-    await user.click(screen.getByLabelText("Service-account key (JSON)"));
+    await user.click(screen.getByLabelText(en["serviceAccountKey.label"]));
     await user.paste("AIza-an-api-key");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByText(/this is not json/i)).toBeTruthy();
     expect(writes.length).toBe(0);
   });
 
-  // Continue is always pressable. Pressing it early is how a reader learns
-  // what is missing: the field turns red and the rail names it, and nothing is
-  // written — a grey button would have said only that something is wrong.
   it("names what is still needed when Continue is pressed early", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByText("Still needed: API key")).toBeTruthy();
-    expect(screen.getAllByText("Needed to continue").length).toBe(1);
+    expect(screen.getAllByText(en["firstRun.needed"]).length).toBe(1);
     expect(writes.length).toBe(0);
-    // Typing the key clears the note; the press then goes through.
     await user.type(screen.getByLabelText("API key"), "AIza-secret");
     expect(screen.queryByText("Still needed: API key")).toBeNull();
   });
@@ -845,20 +867,15 @@ describe("the first-run setup gate", () => {
     expect(writes.length).toBe(0);
   });
 
-  // The key is the reader's only copy. Clearing it after the FIRST write left a
-  // failed binding with an empty field, a disabled Continue, a step still
-  // unconfigured and a reload that restored exactly that — the only way on was
-  // to re-paste a key the server already held.
   it("keeps the key on screen when the binding fails, so Continue still works", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false), ["/ai/routing"]);
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     const key = screen.getByLabelText<HTMLInputElement>("API key");
     await user.type(key, "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(writes.length).toBe(2));
 
-    // The field still holds it, and the button is pressable again.
     await waitFor(() => expect(key.value).toBe("AIza-secret"));
     expect(
       screen.getByRole("button", { name: "Continue" }).getAttribute("disabled"),
@@ -868,7 +885,7 @@ describe("the first-run setup gate", () => {
   it("holds no copy of a stored key in the mutation cache when the binding fails", async () => {
     const user = userEvent.setup();
     const { writes, qc } = mount(setupReport(false, false), ["/ai/routing"]);
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await user.type(screen.getByLabelText("API key"), "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(writes.length).toBe(2));
@@ -885,13 +902,10 @@ describe("the first-run setup gate", () => {
     );
   });
 
-  // A first-time admin should not have to know a model id by heart. The sheet
-  // the installation was seeded with is what it can price, so it is what the
-  // field offers — per lane, because an embedder cannot serve a chat tier.
   it("offers the seeded models for the chosen vendor, per lane", async () => {
     const user = userEvent.setup();
     mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await chooseOneModel(user);
 
     await user.click(screen.getByRole("combobox", { name: "Model" }));
@@ -905,7 +919,11 @@ describe("the first-run setup gate", () => {
     ]);
     await user.keyboard("{Escape}");
 
-    await user.click(screen.getByRole("combobox", { name: "Embedding model" }));
+    await user.click(
+      screen.getByRole("combobox", {
+        name: en["firstRun.ai.embedModel"],
+      }),
+    );
     expect(
       within(screen.getByRole("listbox"))
         .getAllByRole("option")
@@ -916,7 +934,7 @@ describe("the first-run setup gate", () => {
   it("binds the model a reader picks off the list", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await chooseOneModel(user);
 
     await pickSuggestion(
@@ -934,13 +952,10 @@ describe("the first-run setup gate", () => {
     expect(routing.tiers.premium.model).toBe("gemini-3.5-flash");
   });
 
-  // The sheet is a starting point, never a permitted list: the server takes any
-  // id its vendor serves, and an admin arriving with a model we have not priced
-  // must not be stopped at the door.
   it("binds a model the seeded sheet does not carry", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
     await chooseOneModel(user);
 
     const model = screen.getByRole("combobox", { name: "Model" });
@@ -956,13 +971,10 @@ describe("the first-run setup gate", () => {
     expect(routing.tiers.premium.model).toBe("gemini-4-experimental-0731");
   });
 
-  // Switching vendor re-seeds the fields AND what they offer: the previous
-  // vendor's ids mean nothing to this one, and offering them would be worse
-  // than offering nothing.
   it("re-offers on the new vendor when the provider changes", async () => {
     const user = userEvent.setup();
     mount(setupReport(false, false));
-    await screen.findByText("Choose a model provider");
+    await screen.findByText(en["firstRun.ai.title"]);
 
     await pickOption(
       user,

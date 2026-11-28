@@ -30,7 +30,7 @@ func postureOf(state licensecheck.State) func() licensecheck.Posture {
 func workspaceCreated(t *testing.T, pool *pgxpool.Pool) time.Time {
 	t.Helper()
 	var created time.Time
-	// rls-exempt: test fixture reads the installation's workspace row.
+	// pool-exempt: test fixture reads the installation's workspace row.
 	if err := pool.QueryRow(context.Background(), `SELECT min(created_at) FROM workspace`).Scan(&created); err != nil {
 		t.Fatal(err)
 	}

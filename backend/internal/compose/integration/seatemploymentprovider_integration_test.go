@@ -31,7 +31,7 @@ func TestTheSeatRepairKeepsAProviderEmployerAHumanBought(t *testing.T) {
 
 	ctx := principal.SystemActing(e.Admin(), "system:seat-repair-test")
 	var page contacts.SeatEmploymentPage
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		page, err = contacts.RetireSeatEmploymentEdgesTx(ctx, tx, ids.Nil, 100, ids.NewV7().String())
 		return err

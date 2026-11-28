@@ -56,7 +56,7 @@ func Summary(
 		return source, nil, nil
 	}
 	var gaps []Gap
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		gaps, err = GapsTx(ctx, tx, store)
 		return err

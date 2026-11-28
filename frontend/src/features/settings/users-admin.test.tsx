@@ -118,7 +118,9 @@ describe("UsersAdminCard", () => {
     // repeating it are gone.
     expect(screen.queryByText(/^\d+ users$/)).toBeNull();
     expect(screen.queryByText(/including deactivated/i)).toBeNull();
-    expect(screen.queryByPlaceholderText("name@company.com")).toBeNull();
+    expect(
+      screen.queryByPlaceholderText(en["users.emailPlaceholder"]),
+    ).toBeNull();
   });
 
   it("renders the include-inactive roster with per-status actions", async () => {
@@ -283,7 +285,7 @@ describe("UsersAdminCard", () => {
       );
 
       const row = rowFor("Openchannel feed");
-      expect(within(row).getByText("Service member")).toBeTruthy();
+      expect(within(row).getByText(en["users.serviceMember"])).toBeTruthy();
       expect(within(row).queryByText("Agent")).toBeNull();
       expect(within(row).getByText("Feed of openchannel")).toBeTruthy();
       expect(within(row).queryByText(/members\.invalid/)).toBeNull();
@@ -360,7 +362,7 @@ describe("UsersAdminCard", () => {
 
     const dialog = await openInvite();
     await userEvent.type(
-      within(dialog).getByPlaceholderText("name@company.com"),
+      within(dialog).getByPlaceholderText(en["users.emailPlaceholder"]),
       "new@acme.test",
     );
     await userEvent.type(
@@ -394,7 +396,7 @@ describe("UsersAdminCard", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
     const dialog = await openInvite();
     await userEvent.type(
-      within(dialog).getByPlaceholderText("name@company.com"),
+      within(dialog).getByPlaceholderText(en["users.emailPlaceholder"]),
       "new@acme.test",
     );
     await userEvent.type(
@@ -727,7 +729,7 @@ describe("UsersAdminCard", () => {
 
     const dialog = await openInvite();
     await userEvent.type(
-      within(dialog).getByPlaceholderText("name@company.com"),
+      within(dialog).getByPlaceholderText(en["users.emailPlaceholder"]),
       "dupe@acme.test",
     );
     await userEvent.type(

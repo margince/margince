@@ -234,6 +234,7 @@ export function ProjectsScreen({
   return (
     <div className="wrap">
       <ListTable
+        customFieldsKind="project"
         title={pageName}
         state={state}
         unit="unit.projects"

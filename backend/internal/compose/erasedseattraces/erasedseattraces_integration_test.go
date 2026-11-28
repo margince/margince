@@ -120,7 +120,7 @@ func wipe(t *testing.T, e *integration.Env, seat ids.UUID, tombstone bool) {
 		return
 	}
 	ctx := principal.SystemActing(e.Admin(), "system:erasure-test")
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := storekit.AuditWithEvidence(ctx, tx, "erase", "deal_room_participant", seat, nil, nil,
 			map[string]any{"reason": "subject request", "cause": "contact_erasure"})
 		return err
@@ -133,7 +133,7 @@ func wipe(t *testing.T, e *integration.Env, seat ids.UUID, tombstone bool) {
 func ledger(t *testing.T, e *integration.Env) (run ids.UUID, scanned, changed, batches int64, status string) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT run_id, scanned, changed, batches, status FROM data_task_run
 			WHERE task_id = $1`, DataTask().ID).Scan(&run, &scanned, &changed, &batches, &status)
 	}); err != nil {
@@ -226,7 +226,7 @@ func TestTheTaskDeletesWhatAnErasedSeatWroteAndReplaysAsANoOp(t *testing.T) {
 	}
 
 	before := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE action = 'erase'`)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := DataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100})
 		if err == nil && (out.Scanned != 1 || out.Changed != 0 || !out.Done) {
 			t.Errorf("a replay scanned %d and changed %d seat(s), want 1 and 0, done", out.Scanned, out.Changed)
@@ -350,7 +350,7 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 	if n := threadErasures(t, e, thread); n != 0 {
 		t.Errorf("the rolled-back batch left %d erase tombstone(s)", n)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := purge(ctx, tx, datatask.BatchIn{Cursor: []byte(`"bad cursor"`), Limit: 2})
 		return err
 	}); err == nil {

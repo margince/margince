@@ -2,6 +2,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { TeamMarginceChangesPanel } from "./worklist.teamchanges";
@@ -63,7 +64,7 @@ it("counts the value each kind of change moved, not the deals' value", async () 
   });
   render(<TeamMarginceChangesPanel enabled />);
   const changes = await screen.findByRole("table", {
-    name: "Changes by Margince on your team",
+    name: englishCopy["changes.team.title"],
   });
   expect(within(changes).getByText("Value moved")).toBeTruthy();
   expect(within(changes).getByText(/5,000/)).toBeTruthy();
@@ -78,7 +79,7 @@ it("lists the deals nobody can act for, each a link to give it an owner", async 
   });
   render(<TeamMarginceChangesPanel enabled />);
   const ownerless = await screen.findByRole("table", {
-    name: "Deals Margince leaves alone until someone owns them",
+    name: englishCopy["changes.team.ownerless.title"],
   });
   expect(within(ownerless).getByText("No owner")).toBeTruthy();
   expect(within(ownerless).getByText("Jonas Klein left")).toBeTruthy();

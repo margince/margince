@@ -29,8 +29,8 @@ func TestFollowUpSourcesShareOnlyTheirOwnTransactionsWindow(t *testing.T) {
 	configtest.Bind(t, cfg)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	asOf := clocktest.Now(t)
-	err := database.WithWorkspaceSnapshot(e.as(), e.pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithSnapshot(e.as(), e.pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 			ctx, meter := database.WithStatementMeter(ctx)
 			read := func() error {
 				if _, days, err := store.AwaitingReplies(ctx, asOf); err != nil || days != 2 {
@@ -57,7 +57,7 @@ func TestFollowUpSourcesShareOnlyTheirOwnTransactionsWindow(t *testing.T) {
 				return err
 			}
 			detached := database.Detached(ctx)
-			return database.WithWorkspaceSnapshot(detached, e.pool, func(fresh context.Context) error {
+			return database.WithSnapshot(detached, e.pool, func(fresh context.Context) error {
 				_, days, err := store.AwaitingReplies(fresh, asOf)
 				if err == nil && days != 5 {
 					t.Errorf("a detached snapshot inherited the old %d-day window, want 5", days)
@@ -77,8 +77,8 @@ func TestFollowUpMemoFollowsSettingWritesAndSavepointRollback(t *testing.T) {
 	settingsStore, cfg := configtest.StoredOverWith(t, e.pool, nil, ConfigSettings())
 	configtest.Bind(t, cfg)
 	admin := e.settingsAdmin(true)
-	err := database.WithWorkspaceSnapshot(admin, e.pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithSnapshot(admin, e.pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 			check := func(want int) {
 				t.Helper()
 				if days, err := followUpAfterDays(ctx, tx); err != nil || days != want {

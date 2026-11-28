@@ -54,7 +54,7 @@ type sitePage struct {
 func seedEmployedContact(t *testing.T, e *Env, name string) (ids.ContactID, ids.CompanyID) {
 	t.Helper()
 	contactID, companyID := ids.NewV7(), ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO company (id, owner_id, display_name, source, captured_by)
 			VALUES ($1, $2, 'Gitex', 'manual', 'user:seed')`, companyID, e.Rep1); err != nil {
@@ -133,7 +133,7 @@ func contactCreated(contactID ids.ContactID) events.Envelope {
 func profileFields(t *testing.T, e *Env, contactID ids.ContactID) map[string]string {
 	t.Helper()
 	out := map[string]string{}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT field, value FROM contact_profile_field WHERE contact_id = $1`, contactID)
 		if err != nil {
@@ -191,7 +191,7 @@ func TestContactAutoEnrichFillsAContactFromTheirEmployersStagedPage(t *testing.T
 	// withdrawal, and reading that off `now()` would make the assertion depend
 	// on how long the test took.
 	var withdrawn bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT expires_at < created_at FROM approval WHERE id = $1`, approvalID).Scan(&withdrawn)
 	}); err != nil {
@@ -233,7 +233,7 @@ func TestContactAutoEnrichFailsWhenTheProposalCannotBeWithdrawn(t *testing.T) {
 	}
 
 	var live bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT expires_at >= created_at FROM approval WHERE id = $1`, approvalID).Scan(&live)
 	}); err != nil {
 		t.Fatalf("reading the proposal back: %v", err)
@@ -282,7 +282,7 @@ func TestContactAutoEnrichStopsAtAContactWithNoEmployer(t *testing.T) {
 	})
 
 	contactID := ids.From[ids.ContactKind](ids.NewV7())
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 			VALUES ($1, $2, 'Anna Muster', 'manual', 'user:seed')`, contactID, e.Rep1)
@@ -308,7 +308,7 @@ func TestContactAutoEnrichFollowsAMergeToTheSurvivor(t *testing.T) {
 	e := Setup(t)
 	survivor, companyID := seedEmployedContact(t, e, "Anna Muster")
 	mergedAway := ids.From[ids.ContactKind](ids.NewV7())
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, owner_id, full_name, source, captured_by, archived_at)
 			VALUES ($1, $2, 'A. Muster', 'manual', 'user:seed', now())`, mergedAway, e.Rep1)

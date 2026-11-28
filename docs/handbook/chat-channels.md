@@ -1,79 +1,91 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/components/channelpanel.tsx frontend/src/components/channellinkdialog.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/design-system/timelinechat.tsx backend/internal/modules/chatlinks backend/internal/compose/chatsync -->
+<!-- describes: frontend/src/components/channelpanel.tsx frontend/src/components/channelsyncsettings.tsx frontend/src/components/channeloutboundpreview.tsx frontend/src/components/channeldeliveryreview.tsx frontend/src/components/channelsyncended.tsx frontend/src/features/deals/dealdeliveryhandoff.tsx frontend/src/features/settings/channelinstallations.tsx frontend/src/design-system/timelinechat.tsx backend/internal/modules/chatlinks backend/internal/compose/chatsync -->
 # Team chat channels
 
-A deal or a project in Margince can have its own private channel in your team chat, Dispact. Margince
-keeps a card at the top of the channel with the record's name, stage, close date and owner. It also
-posts what happens on the record, so the team sees it where they already talk.
+Use **Team chat** on a company's, deal's or project's Overview to connect a work channel in Dispact,
+Slack or Teams. Channel sync saves relevant channel decisions to History and can send allowed CRM
+updates back to that channel.
 
-A deal and its project share one channel.
+[Messenger](messenger.md) is where you write a quick message yourself.
 
-### How do I connect the team chat?
-An admin connects the Dispact bot once for everyone.
-1. Open **Settings**, then **Integrations**, then **Chat bots**.
-2. Click **Connect Dispact bot**.
-3. Enter the **Chat address**, such as `https://chat.example.com`, and the app token, which starts with
-   `gwapp_`.
-4. Optional: paste the **Events secret** from the Margince app page in your chat. It starts with
-   `whsec_`. With it, the chat tells Margince when a channel has new messages, and summaries come
-   sooner. To add it later, or to change it, click **Replace token** on the connected bot. Leave the
-   field empty there to keep the saved secret.
+## Link a work channel
 
-### How do I give a deal a channel?
-Open the deal. Once an admin connects the chat bot, the **Team chat** card appears on its overview.
-- Click **Create a channel** to make a new private channel named after the deal. Every member who can
-  see the deal is invited, at most 50, starting with the deal's owner and you. Someone without a chat
-  account is not added. A member who later can no longer open the deal stays in the channel until
-  someone removes them in the chat. If another channel has that name, the new one ends in a short code.
-  If the chat refuses the name, rename the deal or link an existing channel.
-- Click **Link an existing channel** to use a private channel you already have. **Channel name or link**
-  lists the private channels the bot is in that no record has yet. Pick one, or type its name or link.
-- A private channel the bot is not in is not listed, because the chat does not show it to the bot. A
-  member of that channel adds the bot to it in the chat first. Then it shows up in the list.
+An administrator connects the shared provider under **Settings**, **Integrations**. Connect your own
+messaging account there too. Shared installation and personal access are separate: adding a bot
+does not give it your private conversations.
 
-A project's **Team chat** card works the same way.
+On the record, choose the provider and link an existing channel. Review the channel and its
+scope. A shared room needs a clear thread so other work does not become this record's
+history. Where the provider supports it, you can create a private channel from the same card.
+Private Teams channels support incoming summaries; automatic sent posting is not available there.
 
-### What does Margince post?
-**What Margince posts** sets how much reaches the channel:
-- **Everything**: every change to the record.
-- **Important only**: stage and owner changes, the close date, offers, contracts, and shared notes,
-  meetings and mail. This is the default.
-- **Milestones only**: stage, offer, contract and phase steps.
-- **Silent (card only)**: nothing is posted, and the card stays current.
+A channel can belong to a company even when no deal or project exists. Separate threads in a shared
+room can serve separate records. Linking a company does not give its readers access to a hidden
+deal or project.
 
-Margince waits two minutes, then sends the changes from that time together.
+Slack installation asks the account connecting it for read-only channel history, separately from personal Messenger. That account must be a member of the linked private channels. It asks for no private message history or personal sending permission. Losing that access pauses incoming summaries while the shared bot can still send eligible CRM updates. Reconnect the shared installation to renew consent.
 
-### Does Margince read the channel?
-Yes. When the team talks about the record, Margince writes a short AI summary of that talk on the
-record's timeline. A summary waits until the channel has been quiet for 30 minutes, or the day has
-ended. Talk that does not matter to the record gets no summary. The messages stay in the chat.
+Slack saves how the app is shared, as confirmed by an admin, and the documented history limits. Complete summaries require an internal app or one approved for the Slack app store, with the usual history limits. Other commercial apps show that complete summaries are paused; personal Messenger and CRM posts are separate. Admins can review the saved limits and confirmation time in Settings or the link’s Manage details. Provider retry delays still apply.
 
-On the timeline, such a note shows **AI summary** and **From Dispact**. The line under it says how many
-messages it covers and when the last one was sent. Click **Open in Dispact** to read them.
+## Choose what to save and send
 
-To remove a summary, archive the note. It is not written again.
+Open **Manage** on Team chat. **Save channel updates to History** and **Send CRM updates to channel**
+are separate switches. New links start with CRM posts off. Turning reads back on starts with new
+channel activity rather than importing the gap.
 
-### Can it write summaries of the talk from before the link?
-When you link an existing channel, keep **Summarize the talk so far (up to 5 summaries)** checked.
-Margince then writes summaries of the five newest parts of the talk from before the link. A channel
-Margince creates has no talk yet.
+Before enabling CRM posts, **Review channel delivery** shows the current audience, current
+overview card and allowed queued updates. It also shows the selected events and message detail.
+Confirm after checking them. A changed link or settings version requires a new review.
 
-### Will a private email reach the channel?
-No. A note, meeting or email reaches the channel only when everyone in your workspace may read it. If
-you make it private after it was posted, Margince removes it from that post.
+Choose which record changes to share. **Brief** and **Full** control how much context
+an allowed message carries. Full summaries keep the relevant decisions, conditions and open
+questions from long text. They are limited summaries rather than a transcript. Source content that is partial or too large stays pending with a reason; it is not cut short.
 
-### Why does the card show no amount?
-Some members may not see deal amounts, and everyone in the channel reads the card.
+Automatic sharing requires a complete audience whose members can read the record and the shared
+content. An unknown or outside audience stops posting. Check the stated reason, fix access
+or membership, then review delivery again. Private exchanges do not become a channel feed.
 
-### What does "Channel paused" mean?
-The channel was archived or deleted in the chat, or the bot lost access to it. Nothing is posted. An
-archive shows here within the hour.
-Click **Unlink**, then give the record a new channel.
+## Read the result in History
 
-### How do I stop it?
-Open the card's menu and click **Unlink**. Margince stops posting. The channel and its messages stay
-in the chat.
+A generated summary has the provider's mark and an AI label. Its details say how much talk it
+covers. Use **Check source access** before opening the original thread. Source access is checked for
+your connected account, even when you may read the retained CRM summary.
 
-### What happens when I archive a deal or project?
-Margince stops posting and frees the channel for another deal or project. A deal and its project keep
-a shared channel while one of them is still open. If you restore the record, link a channel again.
+Use **Channel recap source** to narrow the full available history to Dispact, Slack or Teams,
+including older pages. Summaries show the recorded channel name, update time and references to other
+available records they describe.
+
+A source change can update the same generated entry. A human edit is kept and marked for review when the source changes.
+Archiving a summary does not restore it on the next change. Confirmed source deletion can remove derived content.
+A missing page or a provider outage alone does not prove deletion.
+
+Company History can show allowed work from its deals and projects with the original record source.
+It does not grant access to those records or send those entries back to another channel.
+
+A source may request a change to a commitment. Margince can put a question with a source quote in the record owner’s Worklist. It keeps the accepted date. The proposed follow-up has no due date. Accepting it does not accept the requested date. A changed or removed source requires a new review.
+
+## Hand work to delivery
+
+**Start delivery** opens a handoff review with the current room, the new channel's audience,
+open promises, dates and any information your permissions leave out. A missing section does not mean
+there is no open work.
+
+An existing project channel is kept. If the project has none, the review says which deal room
+will continue. To choose a different delivery room, link it to the project in that review before
+confirming. The channel keeps its own save, send and detail settings.
+
+## Stop sync and check send results
+
+**Unlink** stops reads, posts and queued work for that link. **Sync ended** retains the end
+time and the coverage and delivery times that were recorded. Allowed earlier History remains under
+its existing visibility and retention rules. It makes no claim about provider changes after the
+last coverage time.
+
+Unlinking does not erase messages already delivered to the provider. Administrators can see
+confirmed rewrites from copies that still need a check and deliveries that need checking in the channel.
+A confirmed rewrite does not prove that every other copy was removed.
+
+In **Manage**, **Review delivery status** lets an authorized colleague stop retrying selected
+sends without a result. It does not mark them delivered or remove a provider copy. An overview card without a result stays paused until a separate confirmation requests a new card.
+
+For private conversations and their own delivery result, use [Messenger](messenger.md).

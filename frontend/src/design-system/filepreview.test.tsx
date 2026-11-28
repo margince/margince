@@ -2,6 +2,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { FileChip } from "./filechip";
 import { FilePreviewProvider } from "./filepreview";
 
@@ -194,7 +195,7 @@ describe("FilePreview", () => {
     serving(() => Promise.resolve(new Response("no", { status: 403 })));
     const { dialog } = await openPreview("GR-2026-0092.pdf");
     expect(
-      await within(dialog).findByText("File cannot be previewed"),
+      await within(dialog).findByText(englishCopy["filePreview.failedTitle"]),
     ).toBeTruthy();
     expect(dialog.textContent).not.toContain("403");
     // The one move left is still in the band above the sentence, and Print is

@@ -34,7 +34,7 @@ func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "system:meeting-profile")
 	for {
 		var removed int
-		if err := database.WithWorkspaceTx(ctx, s.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, s.Pool, func(tx pgx.Tx) error {
 			var err error
 			removed, err = contacts.RetractStaleMeetingProfilesTx(ctx, tx, s.batch())
 			return err

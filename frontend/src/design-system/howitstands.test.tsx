@@ -9,6 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { HowItStands } from "./howitstands";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -29,7 +30,9 @@ describe("How it stands", () => {
     expect(
       screen.getByRole("heading", { name: "How it stands · 13 Aug" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("From CRM records")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["standing.sources.records"]),
+    ).toBeInTheDocument();
     expect(document.querySelector(".badge-ai")).toBeNull();
   });
 

@@ -25,8 +25,8 @@ const uniqueViolation = "23505"
 
 func inSnapshot(ctx context.Context, t *testing.T, pool *pgxpool.Pool, fn func(context.Context, pgx.Tx)) error {
 	t.Helper()
-	return database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithSnapshot(ctx, pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			fn(ctx, tx)
 			return nil
 		})

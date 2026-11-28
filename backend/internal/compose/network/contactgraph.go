@@ -71,7 +71,7 @@ func (h Reads) GetContactGraph(w http.ResponseWriter, r *http.Request, id crmcon
 	}
 
 	ctx := r.Context()
-	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		return h.buildContactGraph(ctx, tx, contactID, now, &out)
 	})
 	if err != nil {

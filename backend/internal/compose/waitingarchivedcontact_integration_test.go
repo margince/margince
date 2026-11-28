@@ -67,7 +67,7 @@ func (o *owedEnv) archiveContact(t *testing.T, contact ids.UUID) {
 func (o *owedEnv) restoreContact(t *testing.T, contact ids.UUID) {
 	t.Helper()
 	admin := o.e.Admin()
-	if err := database.WithWorkspaceTx(admin, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, o.e.Pool, func(tx pgx.Tx) error {
 		_, err := o.e.Contacts.RestoreContactTx(admin, tx, ids.From[ids.ContactKind](contact), nil, unarchiveWith(nil))
 		return err
 	}); err != nil {

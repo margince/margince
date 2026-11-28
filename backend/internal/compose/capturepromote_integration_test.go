@@ -53,7 +53,7 @@ import (
 func seedAttestedOutbound(t *testing.T, e *integration.Env, sourceID, counterparty, threadKey string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO activity (kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, thread_key, counterparty_email,
@@ -145,7 +145,7 @@ func contactVisibility(t *testing.T, e *integration.Env, email string) (string, 
 	t.Helper()
 	var visibility string
 	found := true
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(context.Background(), `
 			SELECT p.visibility
 			  FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
@@ -167,7 +167,7 @@ func openDisposition(t *testing.T, e *integration.Env, email string) (ids.UUID, 
 	t.Helper()
 	var id ids.UUID
 	found := true
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(context.Background(), `
 			SELECT id FROM capture_pending_counterparty
 			 WHERE email = $1 AND status = 'pending'`, email).Scan(&id)
@@ -380,7 +380,7 @@ func TestASingleDecliningReplyDoesNotSpareASpammersDomain(t *testing.T) {
 // excludes: a lone outbound whose own words end the conversation.
 func seedDecliningOutbound(t *testing.T, e *integration.Env, sourceID, counterparty string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, counterparty_email, counterparty_outbound_attested)
@@ -396,7 +396,7 @@ func seedDecliningOutbound(t *testing.T, e *integration.Env, sourceID, counterpa
 func domainAdmission(t *testing.T, e *integration.Env, domain string) string {
 	t.Helper()
 	var admission string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(context.Background(),
 			`SELECT coalesce(admission, '') FROM company_domain_disposition WHERE domain = $1`,
 			domain).Scan(&admission)
@@ -430,7 +430,7 @@ func TestAReopenedThreadKeepsSomethingToAskAbout(t *testing.T) {
 	captureInboundThroughRealSink(t, e, e.Rep1, "reopen-in-1", first, "reopen-t1")
 
 	// The thread is settled as ordinary, recording the sender it read.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_thread_verdict
 			   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
@@ -447,7 +447,7 @@ func TestAReopenedThreadKeepsSomethingToAskAbout(t *testing.T) {
 
 	var status string
 	var pointer *ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT status, first_activity_id FROM capture_thread_verdict WHERE thread_key = $1`,
 			"reopen-t1").Scan(&status, &pointer)
@@ -462,7 +462,7 @@ func TestAReopenedThreadKeepsSomethingToAskAbout(t *testing.T) {
 			"judge an empty prompt — or, once the claim requires a readable message, never asked at all")
 	}
 	var pointedAt string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(counterparty_email, '') FROM activity WHERE id = $1`, *pointer).Scan(&pointedAt)
 	}); err != nil {
@@ -491,7 +491,7 @@ func TestAHeldMailboxIsNotAskedToPublishItsMail(t *testing.T) {
 	captureInboundThroughRealSink(t, e, e.Rep1, "held-in-1", first, "held-t1")
 
 	// The thread is settled, and THEN the seat asks for their mail to be kept.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			UPDATE capture_thread_verdict
 			   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
@@ -533,7 +533,7 @@ func TestAHeldMailboxIsNotAskedToPublishItsMail(t *testing.T) {
 // activity and records no per-seat contribution at all.
 func seedClassifiedGmail(t *testing.T, e *integration.Env, user ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection
 			       (user_id, provider, status, credential_ref, mail_posture, account_label)
@@ -646,7 +646,7 @@ func TestTheSweepDoesNotReaskASettledSender(t *testing.T) {
 func countDispositions(t *testing.T, e *integration.Env, email string) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM capture_pending_counterparty WHERE email = $1`, email).Scan(&n)
 	}); err != nil {
@@ -703,7 +703,7 @@ func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
 func contactIDFor(t *testing.T, e *integration.Env, email string) ids.ContactID {
 	t.Helper()
 	var id ids.ContactID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT contact_id FROM contact_email WHERE email = $1`, email).Scan(&id)
 	}); err != nil {
@@ -756,7 +756,7 @@ func TestPublishingACapturedContactLeavesATrace(t *testing.T) {
 func countVisibilityAudits(t *testing.T, e *integration.Env, id ids.ContactID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM audit_log
 			 WHERE entity_type = 'contact' AND entity_id = $1
@@ -771,7 +771,7 @@ func countVisibilityAudits(t *testing.T, e *integration.Env, id ids.ContactID) i
 func countOutboxFor(t *testing.T, e *integration.Env, id ids.ContactID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM event_outbox
 			 WHERE envelope->>'type' = 'contact.updated'

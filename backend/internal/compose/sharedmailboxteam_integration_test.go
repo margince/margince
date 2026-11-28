@@ -69,7 +69,7 @@ func TestFoldingAMailCopyCarriesTheSharedMailboxsImportRow(t *testing.T) {
 	}
 	box := connectOpsMailbox(t, e)
 	var folded bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `INSERT INTO capture_import(activity_id,connection_id,posture_at_import) VALUES($1,$2,'held')`, duplicate, box); err != nil {
 			return err
 		}

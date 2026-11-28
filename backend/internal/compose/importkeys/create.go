@@ -15,6 +15,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The reasons name the row's own value and nothing about the holder. They never
@@ -27,6 +29,18 @@ var (
 	DuplicateEmailWhy   = migration.Why(migration.ReasonDuplicateEmail)
 	NaturalKeyTakenWhy  = migration.Why(migration.ReasonNaturalKeyTaken)
 )
+
+// ProductSKUHeldWhy is the reason for a product whose SKU another live product holds.
+func ProductSKUHeldWhy(sku string) migration.Reason {
+	return migration.Why(migration.ReasonProductSKUHeld, "value", sku)
+}
+
+// ProjectDealTakenWhy is the reason for a project whose deal an earlier row of
+// the run already started a project from. The words are the projects store's own
+// refusal of a deal that names a project.
+func ProjectDealTakenWhy() migration.Reason {
+	return migration.Why(migration.ReasonProjectDealRefused, "detail", projects.RefuseDealForNewProject("open", true, nil).Error())
+}
 
 // KeyCheck is one key the create door refuses: held by an earlier row of the
 // run, or by a stored record.
@@ -65,6 +79,18 @@ func CreateKeyChecks(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, obj
 				func() (bool, error) { return ContactHoldsLeadKeys(ctx, pool, email, url) },
 			},
 		}
+	case migration.ObjectProject:
+		deal := keys[Deal]
+		return []KeyCheck{{
+			ProjectDealTakenWhy(), ledger.Held(Deal, deal, migration.ObjectProject),
+			func() (bool, error) { return false, nil },
+		}}
+	case migration.ObjectProduct:
+		sku := keys[SKU]
+		return []KeyCheck{{
+			ProductSKUHeldWhy(sku), ledger.Held(SKU, sku, migration.ObjectProduct),
+			func() (bool, error) { return ProductSKUHeld(ctx, pool, sku, ids.UUID{}) },
+		}}
 	case migration.ObjectCompany:
 		domain := keys[Domain]
 		return []KeyCheck{{

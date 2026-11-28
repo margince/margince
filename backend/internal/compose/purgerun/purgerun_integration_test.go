@@ -55,7 +55,7 @@ func purgerFor(e *integration.Env) *compose.CapturePurger {
 func seedMail(t *testing.T, e *integration.Env, from, subject string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, counterparty_email, audience)
@@ -105,7 +105,7 @@ func receipts(t *testing.T, e *integration.Env, entity string, subject ids.UUID)
 	t.Helper()
 	var out []int
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT (evidence->>'destroyed')::int FROM audit_log
 			WHERE entity_type = $1 AND entity_id = $2 AND evidence ? 'destroyed' ORDER BY id`, entity, subject)
 		if err != nil {
@@ -294,7 +294,7 @@ func TestTheSweepCertifiesAStoppedPersonalPass(t *testing.T) {
 func TestAReleaseIsStillCountedAfterItsMessageIsErased(t *testing.T) {
 	e := integration.Setup(t)
 	shared := seedMail(t, e, address, "Geteilt")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `INSERT INTO capture_import (activity_id, user_id, posture_at_import)
 			VALUES ($1, $2, 'classified')`, shared, e.Rep2)
 		return err
@@ -315,7 +315,7 @@ func TestAReleaseIsStillCountedAfterItsMessageIsErased(t *testing.T) {
 		t.Fatalf("the release row still shows its image (%d), so this test proves nothing", left)
 	}
 	var tally purgerun.Tally
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
 		tally, err = purgerun.TallyTx(e.Admin(), tx, run)
 		return err
 	}); err != nil || tally.Released != 1 {

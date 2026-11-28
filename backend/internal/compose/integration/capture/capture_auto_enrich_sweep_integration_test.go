@@ -37,7 +37,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T
 	// A captured, domain-named company (name_source='domain') with a live primary
 	// domain — the shape the sweep enriches. The capture_auto_enrich flag is ON
 	// by default (migration 0121), so no toggle is needed.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO company (id, owner_id, display_name, name_source, source, captured_by)
 			VALUES ($1, $2, 'Gitex', 'domain', 'connector:gmail', 'connector:gmail')`,
@@ -86,7 +86,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T
 	var readCount int
 	var requestedBy string
 	var readID string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*), coalesce(max(requested_by), ''), coalesce(max(id::text), '')
 			 FROM site_read WHERE company_id = $1`,
@@ -106,7 +106,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T
 	// for an unrelated domain in the same pass — an unscoped query naming only
 	// `kind` would read whichever row Postgres happened to return first.
 	var priority int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT priority FROM river_job WHERE kind = $1 AND args ->> 'site_read_id' = $2`,
 			compose.SiteDeepReadArgs{}.Kind(), readID,
@@ -121,7 +121,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T
 	// ...and armed the cursor (attempt counted, outcome queued)...
 	var attempts int
 	var outcome string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT attempts, last_outcome FROM capture_auto_enrich_state WHERE company_id = $1`,
 			companyID).Scan(&attempts, &outcome)
@@ -134,7 +134,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T
 
 	// ...and reserved exactly one daily-cap slot for this workspace's UTC day.
 	var enqueued int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(sum(enqueued), 0) FROM capture_auto_enrich_budget`).Scan(&enqueued)
 	}); err != nil {
@@ -156,7 +156,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T
 func TestCaptureAutoEnrichSweepQueuesDomainTriageAtHousekeepingPriorityToo(t *testing.T) {
 	e := integration.Setup(t)
 	const domain = "unjudged.example"
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO company_domain_disposition (domain, status, owner_id)
 			VALUES ($1, 'pending', $2)`, domain, e.Rep1)
@@ -191,7 +191,7 @@ func TestCaptureAutoEnrichSweepQueuesDomainTriageAtHousekeepingPriorityToo(t *te
 	integration.AwaitKindCompleted(waitCtx, t, sub, compose.CaptureAutoEnrichSweepArgs{}.Kind())
 
 	var readID string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id::text FROM site_read WHERE seed_url = $1 AND target_kind = 'domain_triage'`,
 			"https://"+domain,
@@ -201,7 +201,7 @@ func TestCaptureAutoEnrichSweepQueuesDomainTriageAtHousekeepingPriorityToo(t *te
 	}
 
 	var priority int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT priority FROM river_job WHERE kind = $1 AND args ->> 'site_read_id' = $2`,
 			compose.SiteDeepReadArgs{}.Kind(), readID,

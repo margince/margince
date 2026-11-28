@@ -109,7 +109,7 @@ func (w *csvWriters) stakeholderToSeat(ctx context.Context, dealID ids.UUID, typ
 		return ids.UUID{}, false, nil
 	}
 	var seated bool
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		// Not read through the caller's edge scope: an invisible edge is still
 		// a seat, and counting it absent would add a second one.
 		return tx.QueryRow(ctx, `
@@ -161,7 +161,7 @@ func (w *csvWriters) reconcileDeal(
 func (w *csvWriters) writeDealUpdate(ctx context.Context, id ids.UUID, plan dealPlan, typed map[string]any, source string) error {
 	ctx = contacts.WithBulkWrite(ctx)
 	deal := ids.From[ids.DealKind](id)
-	return database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		if plan.patch.Move != nil {
 			plan.patch.Move.IfVersion = w.reviewedVersion(id)
 			if _, err := w.deals.ImportAdvanceDealTx(ctx, tx, deal, *plan.patch.Move, plan.closedAt, w.cols.deals); err != nil {

@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { feature } from "../../testing/ai-admin.testkit";
 import { AiFeatureTable } from "./ai-feature-table";
 import { taskDot } from "./ai-task-details";
@@ -173,7 +174,9 @@ describe("a task's details", () => {
     show(ladder, blocked("gemini", "anthropic"));
     const details = await openTaskDetails(user, ladder.display_name);
     expect(details).toHaveTextContent("Waiting now");
-    expect(details).toHaveTextContent("Out of credit");
+    expect(details).toHaveTextContent(
+      englishCopy["aiProviderHealth.label.outOfCredit"],
+    );
   });
 
   it("says a task that answers from its own facts still answers while every model is blocked", async () => {
@@ -233,7 +236,9 @@ describe("a task's details", () => {
     };
     show(deciding);
     const details = await openTaskDetails(user, deciding.display_name);
-    expect(details).toHaveTextContent("Jev-compatible");
+    expect(details).toHaveTextContent(
+      englishCopy["aiProviders.name.jevCompatible"],
+    );
     expect(details).not.toHaveTextContent("jev_compatible");
   });
 

@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -259,7 +260,7 @@ export const FilteredByProvider: Story = {
   },
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByRole("button", {
-      name: "Clear filters",
+      name: englishCopy["aicalls.clear"],
     });
   },
 };
@@ -271,10 +272,12 @@ export const FilteredEmpty: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
-      await canvas.findByRole("searchbox", { name: "Search calls" }),
+      await canvas.findByRole("searchbox", {
+        name: englishCopy["aicalls.filter.search"],
+      }),
       "no such call",
     );
-    await canvas.findByText("No calls match these filters.");
+    await canvas.findByText(englishCopy["aicalls.filteredEmpty"]);
   },
 };
 

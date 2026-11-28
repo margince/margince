@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
@@ -18,7 +19,11 @@ import (
 // caller's transaction so the answer is the one that holds under the caller's
 // locks. A member who is not live is absent from the answer.
 func MemberPrincipalsTx(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]principal.Principal, error) {
-	rows, err := tx.Query(ctx, `SELECT id, seat_type FROM app_user WHERE id = ANY($1) AND `+LiveMemberSQL(""), users)
+	return principalsForTx(ctx, tx, users, LiveMemberSQL(""))
+}
+
+func principalsForTx(ctx context.Context, tx pgx.Tx, users []ids.UUID, standing string) (map[ids.UUID]principal.Principal, error) {
+	rows, err := tx.Query(ctx, `SELECT id, seat_type FROM app_user WHERE id = ANY($1) AND `+standing, users)
 	if err != nil {
 		return nil, fmt.Errorf("identity: reading members' seats: %w", err)
 	}
@@ -56,4 +61,15 @@ func MemberPrincipalTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (principal
 	}
 	member, live := members[user]
 	return member, live, nil
+}
+
+// WorkPrincipalTx reads assignment authority, including an invited human whose
+// work waits for sign-in. It does not authorize a session or a provider grant.
+func WorkPrincipalTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (principal.Principal, bool, error) {
+	members, err := principalsForTx(ctx, tx, []ids.UUID{user}, workforce.AskableMemberSQL(""))
+	if err != nil {
+		return principal.Principal{}, false, err
+	}
+	member, eligible := members[user]
+	return member, eligible, nil
 }

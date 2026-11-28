@@ -328,7 +328,7 @@ describe("the left column leaves conversation history to the overview", () => {
     (view) => {
       mount(view);
       expect(
-        screen.queryByRole("heading", { name: "Recent activity" }),
+        screen.queryByRole("heading", { name: en["agent.panel.recent"] }),
       ).toBeNull();
     },
   );
@@ -339,7 +339,9 @@ describe("the sibling sections governed by their own grants", () => {
     mount(withheld);
 
     expect(
-      within(section("Work history")).getByText(WITHHELD_SENTENCE),
+      within(section(en["contact.rail.employmentTitle"])).getByText(
+        WITHHELD_SENTENCE,
+      ),
     ).toBeTruthy();
   });
 
@@ -390,7 +392,7 @@ describe("adding a company", () => {
   // assertion below would keep passing over a checkbox that no longer exists.
   function primaryEmployerTicked(): boolean {
     const box = screen.getByRole("checkbox", {
-      name: "This is their primary employer",
+      name: en["contact.rail.isPrimaryEmployer"],
     });
     if (!(box instanceof HTMLInputElement)) {
       throw new Error(
@@ -451,7 +453,9 @@ describe("adding a company", () => {
     await screen.findByRole("button", { name: "Add company" });
     await openAndPickEmployer(user);
     await user.click(
-      screen.getByRole("checkbox", { name: "This is their primary employer" }),
+      screen.getByRole("checkbox", {
+        name: en["contact.rail.isPrimaryEmployer"],
+      }),
     );
     expect(primaryEmployerTicked()).toBe(false);
     await user.click(screen.getByRole("button", { name: "Create" }));
@@ -742,7 +746,9 @@ describe("which employer is the current one", () => {
         name: "More actions for Brandt Automotive GmbH",
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Mark as ended" }));
+    await user.click(
+      screen.getByRole("button", { name: en["contact.rail.markEnded"] }),
+    );
 
     await waitFor(() => {
       expect(sent.some((request) => request.method === "PATCH")).toBe(true);
@@ -780,7 +786,9 @@ describe("which employer is the current one", () => {
         name: "More actions for Brandt Automotive GmbH",
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Mark as ended" }));
+    await user.click(
+      screen.getByRole("button", { name: en["contact.rail.markEnded"] }),
+    );
 
     await waitFor(() => expect(companyReads()).toBeGreaterThan(before));
   });
@@ -829,8 +837,6 @@ describe("a contact with no primary employer", () => {
   });
 
   // The empty state is a different sentence about a different fact — nobody has
-  // recorded where this contact works — and asking for a choice there would be
-  // asking them to choose between nothing.
   it("leaves the empty state to say it when there are no employments", async () => {
     mount(emptyButGranted);
     expect(
@@ -911,12 +917,6 @@ describe("bought work history that waits for a company match", () => {
   });
 });
 
-// THE TRANSPORT ROW ANSWERS FOR ITSELF OR NOT AT ALL.
-//
-// Only the correspondence class speaks for a transport: it is the purpose a
-// reply rides, and the only one an inbound message can flip on its own. A
-// marketing grant drawn against Email is a permission the composer then refuses
-// on the record — the pair of true answers a rep has no way to reconcile.
 describe("the consent rail's transport row", () => {
   const reachable: Contact360 = {
     ...granted,
@@ -958,11 +958,9 @@ describe("the consent rail's transport row", () => {
   it("stays unanswered when no correspondence purpose is defined", async () => {
     mount(reachable, marketingOnly);
 
-    // Scoped to the row. The phone row reads "Nothing recorded yet" too once a
-    // fixture gains a number, and a column-wide match would pass on it.
-    const mail = (await screen.findByText("Business mail")).closest(
-      ".factlist-row",
-    );
+    const mail = (
+      await screen.findByText(en["contact.consent.businessMail"])
+    ).closest(".factlist-row");
     if (!(mail instanceof HTMLElement)) {
       throw new Error("the column drew no Business mail row");
     }
@@ -972,7 +970,6 @@ describe("the consent rail's transport row", () => {
     expect(
       within(mail).queryByText(en["contact.consent.fact.businessContact"]),
     ).toBeNull();
-    // The marketing grant is the Research tab's consent panel's to name.
     expect(screen.queryByText("Newsletter")).toBeNull();
   });
 
@@ -992,7 +989,7 @@ describe("the consent rail's transport row", () => {
       { ...reachable, contact: { ...reachable.contact, writable: false } },
       marketingOnly,
     );
-    await screen.findByText("Business mail");
+    await screen.findByText(en["contact.consent.businessMail"]);
     expect(screen.queryByRole("button", { name: editConsent })).toBeNull();
   });
 });

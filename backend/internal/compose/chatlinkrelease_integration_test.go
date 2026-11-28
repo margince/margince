@@ -60,7 +60,7 @@ func setupChatRelease(t *testing.T) *chatReleaseEnv {
 
 func (f *chatReleaseEnv) exec(t *testing.T, sql string, args ...any) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), sql, args...)
 		return err
 	}); err != nil {
@@ -79,7 +79,7 @@ func (f *chatReleaseEnv) archive(t *testing.T) {
 func (f *chatReleaseEnv) restore(t *testing.T) {
 	t.Helper()
 	ctx := f.e.Admin()
-	if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		_, err := f.deals.RestoreDealTx(ctx, tx, ids.From[ids.DealKind](f.deal), nil, unarchiveWith(nil))
 		return err
 	}); err != nil {
@@ -91,7 +91,7 @@ func (f *chatReleaseEnv) restore(t *testing.T) {
 func (f *chatReleaseEnv) outboxed(t *testing.T, eventType string) events.Envelope {
 	t.Helper()
 	var raw []byte
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT envelope FROM event_outbox
 			WHERE envelope->>'type' = $1 AND envelope->'entity'->>'id' = $2 ORDER BY seq DESC LIMIT 1`,
 			eventType, f.deal.String()).Scan(&raw)
@@ -115,7 +115,7 @@ func (f *chatReleaseEnv) handle(t *testing.T, env events.Envelope) {
 func (f *chatReleaseEnv) linkRetired(t *testing.T) bool {
 	t.Helper()
 	var retired bool
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT archived_at IS NOT NULL FROM chat_link WHERE id = $1`, f.link).Scan(&retired)
 	}); err != nil {
 		t.Fatal(err)

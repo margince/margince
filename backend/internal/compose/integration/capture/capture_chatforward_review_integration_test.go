@@ -83,7 +83,7 @@ func TestAForwardFiledOnAContactAfterItWasSelectedForExpiryIsKept(t *testing.T) 
 		t.Fatal(err)
 	}
 	var subject capturemod.PurgeSubject
-	if err := database.WithWorkspaceTx(workspaceConnectorCtx(e), e.Pool, func(tx pgx.Tx) (err error) {
+	if err := database.WithTx(workspaceConnectorCtx(e), e.Pool, func(tx pgx.Tx) (err error) {
 		subject, err = capturemod.SelectExpiredForwardsTx(context.Background(), tx)
 		return err
 	}); err != nil || len(subject.SoleImports) != 1 {

@@ -37,7 +37,7 @@ func TestSignatureTitlesFillTheCurrentRoleAndKeepAHumansRoleChoice(t *testing.T)
 			e := integration.Setup(t)
 			contact := ids.From[ids.ContactKind](seedEnrichContact(t, e, "lena@signature.example", "Lena | VP Finance"))
 			var activity ids.UUID
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(), `SELECT activity_id FROM activity_link WHERE contact_id=@contact`, pgx.NamedArgs{"contact": contact}).Scan(&activity)
 			}); err != nil {
 				t.Fatal(err)

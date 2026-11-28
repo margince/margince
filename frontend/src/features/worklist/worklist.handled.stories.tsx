@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   emptyListAnswer,
@@ -238,7 +239,9 @@ export const DirectAutomaticChangeGroup: Story = {
   play: async ({ canvasElement }) => {
     const page = within(canvasElement);
     await userEvent.click(
-      await page.findByText("Show recent changes", { exact: true }),
+      await page.findByText(englishCopy["worklist.handled.showHistory"], {
+        exact: true,
+      }),
     );
     await expect(
       await page.findByText("Created contact — at least 3 records"),

@@ -64,7 +64,7 @@ const bare = { code: "vn" };
 const succeeded = json({ code: "vn" });
 const okStatus = json({ code: "vn" }, 200);
 const okResponse = new Response(JSON.stringify({ code: "vn" }), { status: 200 });
-const field = { status: 422, code: "validation_error", details: { errors: [{ field: "a", code: "too_long" }] } }; // want: validation_error
+const field = { status: 422, code: "validation_error", details: { errors: [{ field: "a", code: "too_long" }] } }; // want: too_long validation_error
 const prop = <Create existing={{ id: "1", code: "duplicate_email" }} />;
 const type = (x: { code: string; status: number }) => x;
 const activeStatus = { status: "active", code: "vn" };

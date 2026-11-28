@@ -29,7 +29,7 @@ import (
 func latestSignatureOpening(t *testing.T, b *backfillWireEnv, id ids.UUID) events.Envelope {
 	t.Helper()
 	var encoded []byte
-	if err := database.WithWorkspaceTx(b.env.Admin(), b.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(b.env.Admin(), b.env.Pool, func(tx pgx.Tx) error {
 		args := []any{id.String()}
 		return tx.QueryRow(context.Background(), fmt.Sprintf(`SELECT envelope FROM event_outbox
    WHERE envelope->>'type'='activity.updated' AND envelope->'entity'->>'id'=$%d
@@ -80,7 +80,7 @@ func TestAutomaticOpeningKeepsItsHistoryOriginAndAnOwnerCanRequestALiveRead(t *t
 		t.Fatalf("ordinary classifier left mail %q", got)
 	}
 	systemRepair := principal.SystemActing(b.env.Admin(), "system:contact_cohort_repair")
-	if err := database.WithWorkspaceTx(systemRepair, b.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(systemRepair, b.env.Pool, func(tx pgx.Tx) error {
 		_, err := b.env.Contacts.PromoteContactCohortTx(systemRepair, tx, ids.From[ids.ContactKind](ids.UUID(contact.Id)))
 		return err
 	}); err != nil {
@@ -137,7 +137,7 @@ func assertAutomaticHistoryGraph(source context.Context, t *testing.T, b *backfi
 	t.Helper()
 	gen := NewGraphEdgeConsumer(b.env.Pool)
 	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "system:graph_edge_reconcile")
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error {
 		history, err := graphHistoryForEventTx(system, tx, opening)
 		if err != nil {
 			return err
@@ -165,7 +165,7 @@ func assertAutomaticHistoryGraph(source context.Context, t *testing.T, b *backfi
 		t.Fatal(err)
 	}
 	repair := principal.SystemActing(system, "system:contact_cohort_repair")
-	if err := database.WithWorkspaceTx(repair, b.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(repair, b.env.Pool, func(tx pgx.Tx) error {
 		_, err := b.env.Contacts.PromoteContactCohortTx(repair, tx, ids.From[ids.ContactKind](contact))
 		return err
 	}); err != nil {

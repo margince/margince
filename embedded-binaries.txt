@@ -20,3 +20,4 @@ github.com/margince/margince/backend | module/licensecheck.wasm.module | the lic
 github.com/margince/margince/backend | margince-mark.png | the Margince logo mark the mail letterhead shows, drawn by this product's publisher and committed as a PNG in internal/platform/emailview | BUSL-1.1
 github.com/margince/margince/backend | fonts/LiberationSans-Regular.ttf | Liberation Sans 2.1.5, the upstream TrueType file as Debian's fonts-liberation2 1:2.1.5-3 ships it, copied unchanged into internal/modules/deals/fonts for the offer PDF | OFL-1.1
 github.com/margince/margince/backend | fonts/LiberationSans-Bold.ttf | Liberation Sans Bold 2.1.5, from the same release as LiberationSans-Regular.ttf | OFL-1.1
+github.com/margince/margince/backend | assets/color.png | the Margince app icon, drawn by this product's publisher and committed in internal/compose/teamsapp for the Teams app package | BUSL-1.1

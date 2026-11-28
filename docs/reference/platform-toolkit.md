@@ -14,7 +14,7 @@ The signatures below are short (no `ctx` and no error returns); read the package
 
 ### `platform/database`: the pool & the workspace transaction
 The one place a module opens a transaction; no store calls its own `pool.Begin`.
-- `WithWorkspaceTx(ctx, pool, fn func(pgx.Tx) error) error`: the workspace transaction every store uses. It refuses with `ErrNoWorkspace` when the context carries no tenant.
+- `WithTx(ctx, pool, fn func(pgx.Tx) error) error`: the transaction every store uses. It joins the snapshot or write transaction already bound to the context.
 - `WithInfraTx(ctx, pool, fn) error`: a transaction for the few paths that serve the whole installation (relay, bootstrap). These need no tenant on the context.
 - `NewPool(ctx, dsn) (*pgxpool.Pool, error)`, `RegisterIDTypes(conn)`.
 - **Use it when:** you need a database transaction. Always go through these, never a plain `pool.Begin`.
@@ -243,7 +243,7 @@ on the module behind it.
 
 ## The pattern, in one line
 
-A normal CRUD store method is `WithWorkspaceTx` (database) → `auth.Require`/`EnsureVisible` (auth) → SQL
+A normal CRUD store method is `WithTx` (database) → `auth.Require`/`EnsureVisible` (auth) → SQL
 over your own tables → `storekit.Audit` + `Emit` (`storekit`) → return. Errors map through the `apperrors`
 sentinels that `httperr.Write` turns into a response. You wrote the SQL and the error map; all the rest
 comes from the toolkit above.

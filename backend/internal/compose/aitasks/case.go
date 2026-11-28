@@ -169,3 +169,16 @@ func KnownOutcome(result string) bool {
 	}
 	return false
 }
+
+// LoopRecoveryMeasure is a replayed loop's first action and final outcome.
+// Keeping both prevents a repaired mistake from becoming first-step success.
+type LoopRecoveryMeasure struct {
+	FirstStepCorrect bool `json:"first_step_correct"`
+	Completed        bool `json:"completed"`
+	Refusals         int  `json:"refusals"`
+	Recovered        bool `json:"recovered"`
+	TerminalRepeated bool `json:"terminal_repeated"`
+}
+
+// RefusalRecoveryBand starts a candidate after a fixture-owned failed tool call.
+const RefusalRecoveryBand = "refusal_recovery"

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en } from "../../i18n/en";
 import type { SavedView } from "../../lib/savedviews.queries";
 import {
   installFetchStub,
@@ -22,7 +23,6 @@ type Story = StoryObj;
 const VIEW: SavedView = {
   id: "v1",
   owner_id: "00000000-0000-4000-8000-000000000001",
-  shared_scope: "private",
   resource: "contacts",
   name: "Berlin contacts",
   query: { filter: { and: [{ field: "city", op: "eq", value: "Berlin" }] } },
@@ -83,9 +83,7 @@ export const RenameTakenName: Story = {
         name: "Rename",
       }),
     );
-    await page.findByText(
-      "A view with this name already exists. Choose another name.",
-    );
+    await page.findByText(en["views.nameTaken"]);
   },
 };
 

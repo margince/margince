@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { OpenSourceProvider } from "../../lib/opensource";
 import { ContactHowItStands } from "./contacthowitstands";
 
@@ -144,7 +145,9 @@ it("says what the newest mail said once a status line is written", () => {
   );
   const sentence = container.querySelector(".standing-sheet-sentence");
   expect(sentence?.textContent).toBe(line);
-  expect(container.textContent).not.toContain("Both sides have written.");
+  expect(container.textContent).not.toContain(
+    en["contact.standing.direction.twoWay"],
+  );
   expect(container.textContent).toContain("Margince · 2 sources");
 });
 
@@ -192,5 +195,5 @@ it("opens the mail a status line was read from", () => {
 
 it("keeps the page's own reading while no status line is written", () => {
   const text = standingText({ ...VIEW, relationship_direction: "two_way" });
-  expect(text).toContain("Both sides have written.");
+  expect(text).toContain(en["contact.standing.direction.twoWay"]);
 });

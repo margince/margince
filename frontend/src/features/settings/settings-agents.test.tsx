@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { AgentToolsCard } from "./settings-agenttools";
 import { PassportCard } from "./settings-passports";
@@ -126,8 +127,10 @@ describe("AgentToolsCard", () => {
 
     const sendRow = await screen.findByTestId("tool-send_email");
     const searchRow = screen.getByTestId("tool-search_records");
-    expect(within(sendRow).getByText("External access")).toBeTruthy();
-    expect(within(searchRow).queryByText("External access")).toBeNull();
+    expect(within(sendRow).getByText(englishCopy["tools.egress"])).toBeTruthy();
+    expect(
+      within(searchRow).queryByText(englishCopy["tools.egress"]),
+    ).toBeNull();
   });
 
   // What an agent selects on is the served description, governance clause
@@ -166,12 +169,18 @@ describe("AgentToolsCard", () => {
       .closest("details");
     expect(sendGroup).not.toBe(readGroup);
     expect(
-      within(sendGroup as HTMLElement).getByText("Send messages"),
+      within(sendGroup as HTMLElement).getByText(
+        englishCopy["passport.scope.send"],
+      ),
     ).toBeTruthy();
     expect(
-      within(readGroup as HTMLElement).getByText("Read records"),
+      within(readGroup as HTMLElement).getByText(
+        englishCopy["passport.scope.read"],
+      ),
     ).toBeTruthy();
-    expect(within(sendRow).queryByText("Send messages")).toBeNull();
+    expect(
+      within(sendRow).queryByText(englishCopy["passport.scope.send"]),
+    ).toBeNull();
     expect(screen.queryByText("send")).toBeNull();
   });
 
@@ -203,7 +212,7 @@ describe("AgentToolsCard", () => {
     vi.stubGlobal("fetch", agentToolsBackend());
     render(<AgentToolsCard />);
     const search = await screen.findByRole("searchbox", {
-      name: "Search tools",
+      name: englishCopy["tools.search"],
     });
     const shown = () =>
       ["search_records", "send_email"].filter((name) =>
@@ -231,7 +240,7 @@ describe("AgentToolsCard", () => {
     await user.clear(search);
     await user.type(search, "invoice");
     expect(shown()).toEqual([]);
-    expect(screen.getByText("No tools match this search.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["tools.noMatch"])).toBeTruthy();
   });
 });
 
@@ -323,7 +332,7 @@ describe("AgentToolsCard passport scoping", () => {
 
     // The options only exist while the popup is open — the control renders no
     // listbox when closed — so reading what it offers means opening it first.
-    await user.click(screen.getByLabelText("All passports"));
+    await user.click(screen.getByLabelText(englishCopy["tools.scopeAll"]));
     const optionLabels = screen
       .getAllByRole("option")
       .map((option) => option.textContent);
@@ -336,7 +345,7 @@ describe("AgentToolsCard passport scoping", () => {
     vi.stubGlobal("fetch", agentToolsWithPassportsBackend(true));
     render(<AgentToolsCard />);
     await screen.findByTestId("tool-list_pipelines");
-    await user.click(screen.getByLabelText("All passports"));
+    await user.click(screen.getByLabelText(englishCopy["tools.scopeAll"]));
     const optionLabels = screen
       .getAllByRole("option")
       .map((option) => option.textContent);
@@ -349,12 +358,16 @@ describe("AgentToolsCard passport scoping", () => {
     render(<AgentToolsCard />);
     const freeRow = await screen.findByTestId("tool-list_pipelines");
 
-    const select = screen.getByLabelText("All passports");
+    const select = screen.getByLabelText(englishCopy["tools.scopeAll"]);
     await pickOption(user, select, "Reachable by Scout");
 
-    expect(within(freeRow).queryByText("Scope not granted")).toBeNull();
+    expect(
+      within(freeRow).queryByText(englishCopy["tools.unreachable"]),
+    ).toBeNull();
     const scopedRow = screen.getByTestId("tool-send_email");
-    expect(within(scopedRow).getByText("Scope not granted")).toBeTruthy();
+    expect(
+      within(scopedRow).getByText(englishCopy["tools.unreachable"]),
+    ).toBeTruthy();
     expect(
       within(scopedRow).getByText("Send email").closest(".agents-ended"),
     ).toBeTruthy();
@@ -369,11 +382,13 @@ describe("AgentToolsCard passport scoping", () => {
 
     await pickOption(
       user,
-      screen.getByLabelText("All passports"),
+      screen.getByLabelText(englishCopy["tools.scopeAll"]),
       "Reachable by Scout",
     );
 
-    const reason = within(scopedRow).getByText("Scope not granted");
+    const reason = within(scopedRow).getByText(
+      englishCopy["tools.unreachable"],
+    );
     expect(reason.closest("td")).toBe(
       within(scopedRow).getByText("Send email").closest("td"),
     );
@@ -441,7 +456,7 @@ describe("AgentToolsCard passport scoping", () => {
     render(<AgentToolsCard />);
     await screen.findByTestId("tool-list_pipelines");
 
-    expect(screen.queryByLabelText("All passports")).toBeNull();
+    expect(screen.queryByLabelText(englishCopy["tools.scopeAll"])).toBeNull();
   });
 });
 
@@ -528,9 +543,11 @@ describe("PassportCard revoke", () => {
     );
     const scopedRow = await screen.findByTestId("tool-send_email");
 
-    const select = screen.getByLabelText("All passports");
+    const select = screen.getByLabelText(englishCopy["tools.scopeAll"]);
     await pickOption(user, select, "Reachable by Scout");
-    expect(within(scopedRow).getByText("Scope not granted")).toBeTruthy();
+    expect(
+      within(scopedRow).getByText(englishCopy["tools.unreachable"]),
+    ).toBeTruthy();
 
     const dialog = await openRevoke(user, "Scout");
     await user.click(within(dialog).getByRole("button", { name: "Revoke" }));
@@ -541,9 +558,11 @@ describe("PassportCard revoke", () => {
     await waitFor(() =>
       expect(
         screen.getAllByRole("option").map((option) => option.textContent),
-      ).toEqual(["All passports"]),
+      ).toEqual([englishCopy["tools.scopeAll"]]),
     );
-    expect(within(scopedRow).queryByText("Scope not granted")).toBeNull();
+    expect(
+      within(scopedRow).queryByText(englishCopy["tools.unreachable"]),
+    ).toBeNull();
   });
 
   it("revokes through a confirm, fires the DELETE with its id, and lands focus on the struck row", async () => {

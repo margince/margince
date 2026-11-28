@@ -114,6 +114,7 @@ type linkEnv struct {
 	flush                 *flushes
 	ws, rep, other        ids.UUID
 	deal, second, project ids.UUID
+	company               ids.UUID
 }
 
 func setupLinks(t *testing.T) *linkEnv {
@@ -150,6 +151,7 @@ func setupLinks(t *testing.T) *linkEnv {
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, 'Chat')`, pipeline)
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	company := ids.NewV7()
+	e.company = company
 	e.exec(t, `INSERT INTO company (id, display_name, owner_id, source, captured_by) VALUES ($1, 'Acme', $2, 'seed', 'system')`, company, e.rep)
 	e.exec(t, `INSERT INTO project (id, name, owner_id, source, captured_by) VALUES ($1, 'Rollout', $2, 'manual', 'system')`, e.project, e.rep)
 	e.exec(t, `INSERT INTO relationship (kind, project_id, company_id, role, source, captured_by)
@@ -176,6 +178,7 @@ func setupLinks(t *testing.T) *linkEnv {
 	}, members: map[string][]string{}}
 	e.flush = &flushes{links: map[ids.UUID]int{}, pulls: map[ids.UUID]int{}}
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), fakeChats{chat: e.chat, connection: connection}, e.flush, e.onlyRep)
+	e.store.WithMemberAuthority(func(ctx context.Context, _ pgx.Tx) (context.Context, error) { return ctx, nil })
 	return e
 }
 
@@ -210,7 +213,7 @@ func (e *linkEnv) seat(user ids.UUID) context.Context {
 func (e *linkEnv) seatWith(user ids.UUID, scope principal.RowScope, grants map[string]principal.ObjectGrant) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{RoleKeys: []string{"rep"}, RowScope: scope, Objects: grants},
 	})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
@@ -325,6 +328,7 @@ func TestAReplayedEventAddsNothingAndASilentLinkRecordsNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	e.enableOutbound(t)
 	ev := Event{
 		EventID: ids.NewV7(), EventType: "deal.stage_changed",
 		Tier: TierMilestone, Detail: map[string]any{"to_stage_name": "Won"}, Deals: []ids.UUID{e.deal},
@@ -358,6 +362,7 @@ func TestANarrowedActivityIsWithdrawnAndItsPostRewritten(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	e.enableOutbound(t)
 	activity := ids.NewV7()
 	for _, ev := range []Event{
 		{EventID: ids.NewV7(), EventType: "activity.captured", ActivityID: &activity, Tier: TierImportant, Deals: []ids.UUID{e.deal}},
@@ -372,7 +377,7 @@ func TestANarrowedActivityIsWithdrawnAndItsPostRewritten(t *testing.T) {
 		t.Fatalf("pending = %+v, %v; want two items", pending, err)
 	}
 	carried := []ids.UUID{pending.Items[0].ID, pending.Items[1].ID}
-	if err := e.store.MarkPosted(e.system(), state.Link.ID, carried[0], "m1", carried); err != nil {
+	if err := e.store.MarkPosted(e.system(), state.Link.ID, carried[0], "m1", carried, MessageDetailLegacy); err != nil {
 		t.Fatal(err)
 	}
 	if err := e.store.Withdraw(e.system(), activity); err != nil {
@@ -457,6 +462,7 @@ func TestAWithdrawDuringAPostLeavesTheFlushMoreToDo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	e.enableOutbound(t)
 	activity := ids.NewV7()
 	if err := e.store.RecordEvent(e.system(), Event{
 		EventID: ids.NewV7(), EventType: "activity.captured",
@@ -472,7 +478,7 @@ func TestAWithdrawDuringAPostLeavesTheFlushMoreToDo(t *testing.T) {
 	if err := e.store.Withdraw(e.system(), activity); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.store.MarkPosted(e.system(), state.Link.ID, pending.Items[0].ID, "m1", []ids.UUID{pending.Items[0].ID}); err != nil {
+	if err := e.store.MarkPosted(e.system(), state.Link.ID, pending.Items[0].ID, "m1", []ids.UUID{pending.Items[0].ID}, MessageDetailLegacy); err != nil {
 		t.Fatal(err)
 	}
 	more, err := e.store.HasPending(e.system(), state.Link.ID)
@@ -481,5 +487,13 @@ func TestAWithdrawDuringAPostLeavesTheFlushMoreToDo(t *testing.T) {
 	}
 	if pending, _ = e.store.PendingFor(e.system(), state.Link.ID); len(pending.Rewrites) != 1 {
 		t.Fatalf("rewrites = %+v, want message m1 rewritten", pending.Rewrites)
+	}
+}
+
+func (e *linkEnv) enableOutbound(t *testing.T) {
+	t.Helper()
+	enabled := true
+	if _, err := e.store.SetSyncOptions(e.seat(e.rep), RecordDeal, e.deal, SyncOptions{Post: &enabled}); err != nil {
+		t.Fatal(err)
 	}
 }

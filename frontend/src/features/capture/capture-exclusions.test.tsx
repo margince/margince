@@ -715,13 +715,15 @@ it("destroys only after the preview, and reports it in the past tense", async ()
 
   // Nothing to confirm until a look has been taken.
   expect(
-    screen.queryByRole("button", { name: "Delete permanently" }),
+    screen.queryByRole("button", { name: en["capturePurge.confirm"] }),
   ).toBeNull();
 
   await user.click(screen.getByRole("button", { name: "Check first" }));
   expect(await screen.findByText(/2 messages would be destroyed/)).toBeTruthy();
 
-  await user.click(screen.getByRole("button", { name: "Delete permanently" }));
+  await user.click(
+    screen.getByRole("button", { name: en["capturePurge.confirm"] }),
+  );
   expect(await screen.findByText(/2 messages destroyed/)).toBeTruthy();
   // The colleague's copy and the stripped contact are reported too.
   expect(screen.getByText(/Your access to it has ended/)).toBeTruthy();

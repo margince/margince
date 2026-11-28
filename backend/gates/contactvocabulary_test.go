@@ -197,11 +197,15 @@ func recordedCriteria() []string {
 // point: a waiver nobody had to justify is how a second spelling survives
 // review for a year.
 var retired = gatekit.Waive(map[string]string{
-	"backend/internal/compose/meetingbrief/coachingcopy.go":  "German human-role wording names the sales colleague and accountable actor, not the contact record type",
-	"backend/internal/compose/meetingbrief/advancecopy.go":   "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/compose/meetingbrief/objectivecopy.go": "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/compose/metriccopy/metriccopy.go":      "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/compose/metriccopy/labels.go":          "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/meetingbrief/coachingcopy.go":                 "German human-role wording names the sales colleague and accountable actor, not the contact record type",
+	"backend/internal/compose/meetingbrief/advancecopy.go":                  "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/meetingbrief/objectivecopy.go":                "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/metriccopy/metriccopy.go":                     "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/metriccopy/labels.go":                         "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"frontend/src/components/messenger":                                     "People names provider participants and internal colleagues in a private conversation, never the CRM Contact type",
+	"backend/internal/modules/chatlinks":                                    "people and person name provider conversation participants and internal member rosters, never the CRM contact record type",
+	"backend/internal/compose/messengeraccounts/roster.go":                  "RecordPerson is an internal assignee or owner resolved to a provider participant, never a CRM contact",
+	"backend/internal/compose/messengeraccounts/roster_integration_test.go": "fixture directory participants and internal assignees exercise the provider roster, never the CRM contact type",
 
 	"backend/internal/modules/contacts/reachfunction.go":      "\"head of people\" is an HR job title the reach card sorts LinkedIn connections by, not the record type",
 	"backend/internal/modules/contacts/reachfunction_test.go": "the same HR job titles, as the test table that pins them",

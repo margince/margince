@@ -6,6 +6,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
@@ -98,7 +99,11 @@ describe("ProgressResult", () => {
         /A colleague who manages sales goals can publish one\.$/,
       ),
     ).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "Set sales goals" })).toBeNull();
+    expect(
+      screen.queryByRole("link", {
+        name: englishCopy["progress.setGoals"],
+      }),
+    ).toBeNull();
   });
 
   it("links a reader who may set the missing goal to the sales goals", () => {
@@ -115,7 +120,7 @@ describe("ProgressResult", () => {
     );
     expect(
       screen
-        .getByRole("link", { name: "Set sales goals" })
+        .getByRole("link", { name: englishCopy["progress.setGoals"] })
         .getAttribute("href"),
     ).toBe("/#/goals?year=2026");
   });
@@ -142,7 +147,11 @@ describe("ProgressResult", () => {
         goalsHref="#/goals"
       />,
     );
-    await user.click(screen.getByRole("button", { name: "View won deals" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["progress.viewClosedDeals"],
+      }),
+    );
     expect(onEvidence).toHaveBeenCalledWith({
       metric: "bookings_won",
       context_id: "interval",
@@ -161,7 +170,7 @@ describe("ProgressReadings", () => {
     expect(
       screen.getByText("Fleet Suite, Telematics, Driver App and 1 more"),
     ).toBeTruthy();
-    expect(screen.getByText("Unclassified")).toBeTruthy();
+    expect(screen.getByText(englishCopy["progress.unclassified"])).toBeTruthy();
   });
 
   it("opens the sales behind a category, and shows no split while it is hidden", async () => {
@@ -185,7 +194,7 @@ describe("ProgressReadings", () => {
         onEvidence={onEvidence}
       />,
     );
-    expect(screen.queryByText("Unclassified")).toBeNull();
+    expect(screen.queryByText(englishCopy["progress.unclassified"])).toBeNull();
     expect(screen.getAllByText("Hidden").length).toBeGreaterThan(0);
   });
 });
@@ -204,7 +213,7 @@ describe("GoalEditor", () => {
     const january = screen.getByLabelText("January");
     await user.clear(january);
     await user.type(january, "5");
-    expect(screen.getByText("Save the draft first.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["goals.saveFirst"])).toBeTruthy();
   });
 });
 
@@ -310,13 +319,17 @@ describe("ProgressWork", () => {
       await screen.findByRole("button", { name: /^Deals\W*3$/ }),
     );
     expect(await screen.findByText("Fleet rollout")).toBeTruthy();
-    expect(screen.getByText("Product and service")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["progress.work.saleBoth"]),
+    ).toBeTruthy();
     expect(screen.getByText("Overdue")).toBeTruthy();
     expect(screen.getByText("Send the offer")).toBeTruthy();
-    expect(screen.getByText("Unclassified")).toBeTruthy();
-    expect(screen.getByText("Outside the period")).toBeTruthy();
+    expect(screen.getByText(englishCopy["progress.unclassified"])).toBeTruthy();
+    expect(screen.getByText(englishCopy["progress.work.outside"])).toBeTruthy();
     expect(screen.getByText("No date")).toBeTruthy();
-    expect(screen.getAllByText("No next task")).toHaveLength(2);
+    expect(
+      screen.getAllByText(englishCopy["progress.work.noNextTask"]),
+    ).toHaveLength(2);
   });
 
   it("names each deal's owner on a team and hides an amount the reader may not see", async () => {
@@ -390,7 +403,9 @@ describe("ProgressScreen", () => {
     const user = userEvent.setup();
     await pickOption(
       user,
-      await screen.findByRole("combobox", { name: "Team member or team" }),
+      await screen.findByRole("combobox", {
+        name: englishCopy["progress.scope"],
+      }),
       "Colleague without a team",
     );
     expect(window.location.hash).toContain(`scope=owner%3A${seller}`);
@@ -425,7 +440,9 @@ describe("ProgressScreen", () => {
     );
     // Analytics does not offer this reader the one team member, so no door.
     expect(
-      screen.queryByRole("link", { name: "Open in Analytics" }),
+      screen.queryByRole("link", {
+        name: englishCopy["palette.openAnalytics"],
+      }),
     ).toBeNull();
   });
 
@@ -461,9 +478,11 @@ describe("ProgressScreen", () => {
         /^Figures up to .+ · Central European Summer Time · UTC\+2$/,
       ),
     ).toBeTruthy();
-    expect(screen.queryByLabelText("Team member or team")).toBeNull();
+    expect(screen.queryByLabelText(englishCopy["progress.scope"])).toBeNull();
     // A link, so the reader can open Analytics in a new tab.
-    const analytics = screen.getByRole("link", { name: "Open in Analytics" });
+    const analytics = screen.getByRole("link", {
+      name: englishCopy["palette.openAnalytics"],
+    });
     expect(analytics.getAttribute("href")).toMatch(
       /#\/analytics\/performance\?/,
     );
@@ -490,7 +509,7 @@ describe("ProgressScreen", () => {
     const user = userEvent.setup();
     render(<ProgressScreen />);
     const links = await screen.findAllByRole("link", {
-      name: "View sales goals",
+      name: englishCopy["progress.viewGoals"],
     });
     await user.click(links[links.length - 1] as HTMLElement);
     expect(window.location.hash).toMatch(/^#\/goals\?/);

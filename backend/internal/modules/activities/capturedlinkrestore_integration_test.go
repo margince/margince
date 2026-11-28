@@ -36,7 +36,7 @@ func TestARelistedMeetingDocumentIsAnnouncedAsRestoredNotCreated(t *testing.T) {
 	const doc = "https://docs.google.com/document/d/notes-1"
 	step := func(name string, run func(tx pgx.Tx) (int, error)) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 			n, err := run(tx)
 			if err == nil && n != 1 {
 				t.Fatalf("%s changed %d link(s), want 1", name, n)

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -246,7 +247,9 @@ export const HeldNextStep: Story = {
     );
     const dialog = await within(document.body).findByRole("dialog");
     await userEvent.click(
-      within(dialog).getByRole("checkbox", { name: "Add a follow-up task" }),
+      within(dialog).getByRole("checkbox", {
+        name: englishCopy["log.addFollowUp"],
+      }),
     );
     await userEvent.type(
       within(dialog).getByRole("textbox", { name: "Next step" }),

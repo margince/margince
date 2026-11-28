@@ -18,6 +18,7 @@ import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { dueInstant } from "../format/calendarday";
 import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { MeetingOutcome, RecordMeetingOutcome } from "./meetingoutcome";
 import { writeMeetingOutcome } from "./taskactions.rowwrites";
@@ -131,7 +132,9 @@ describe("MeetingOutcome", () => {
     const dialog = await screen.findByRole("dialog");
 
     expect(
-      await within(dialog).findByRole("combobox", { name: "What happened" }),
+      await within(dialog).findByRole("combobox", {
+        name: englishCopy["worklist.verb.meetingWhatHappened"],
+      }),
     ).toBeTruthy();
   });
 
@@ -147,12 +150,20 @@ describe("MeetingOutcome", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(
-      within(dialog).getByRole("heading", { name: "How did it go?" }),
+      within(dialog).getByRole("heading", {
+        name: englishCopy["worklist.verb.meetingHowDidItGo"],
+      }),
     ).toBeTruthy();
     await user.click(
-      within(dialog).getByRole("button", { name: "Skip next step" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["worklist.verb.meetingSkipNextStep"],
+      }),
     );
-    expect(await screen.findByText("Meeting outcome recorded")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        englishCopy["worklist.verb.meetingOutcomeRecorded"],
+      ),
+    ).toBeTruthy();
     expect(sent.filter((request) => request.method === "PATCH")).toEqual([
       {
         method: "PATCH",
@@ -168,10 +179,16 @@ describe("MeetingOutcome", () => {
     stubServer([]);
     renderCard();
 
-    expect(screen.getByText("How did it go?")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["worklist.verb.meetingHowDidItGo"]),
+    ).toBeTruthy();
     expect(
       screen.getAllByRole("button").map((button) => button.textContent),
-    ).toEqual(["It happened", "Add notes", "Did not happen"]);
+    ).toEqual([
+      "It happened",
+      "Add notes",
+      englishCopy["worklist.verb.meetingCanceled"],
+    ]);
   });
 
   it("saves the notes dialog through the one outcome writer", async () => {
@@ -213,7 +230,9 @@ describe("MeetingOutcome", () => {
     );
     const dialog = await screen.findByRole("dialog");
     await user.click(
-      within(dialog).getByRole("checkbox", { name: "Add a follow-up task" }),
+      within(dialog).getByRole("checkbox", {
+        name: englishCopy["log.addFollowUp"],
+      }),
     );
     expect(
       within(dialog)
@@ -278,10 +297,16 @@ describe("MeetingOutcome", () => {
     await user.clear(notes);
     await user.type(notes, "Budget approved");
     await user.click(
-      within(dialog).getByRole("button", { name: "Skip next step" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["worklist.verb.meetingSkipNextStep"],
+      }),
     );
 
-    expect(await screen.findByText("Meeting outcome recorded")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        englishCopy["worklist.verb.meetingOutcomeRecorded"],
+      ),
+    ).toBeTruthy();
     expect(
       sent.filter((request) => request.method === "PATCH").map((r) => r.body),
     ).toEqual([{ meeting_status: "held", body: "Budget approved" }]);
@@ -297,7 +322,9 @@ describe("MeetingOutcome", () => {
       screen.getByRole("button", { name: "Did not happen: Site visit" }),
     );
     expect(
-      await screen.findByText("Marked as not held (canceled)."),
+      await screen.findByText(
+        englishCopy["worklist.verb.meetingCanceledRecorded"],
+      ),
     ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Undo" }));
 
@@ -492,7 +519,9 @@ describe("MeetingOutcome", () => {
       name: "Notes",
     });
     await user.click(
-      within(dialog).getByRole("button", { name: "Skip next step" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["worklist.verb.meetingSkipNextStep"],
+      }),
     );
 
     await waitFor(() =>

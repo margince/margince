@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/collections"
@@ -97,5 +98,29 @@ func TestTheVocabularyDigestMovesWithATagAndNotWithTheirOrder(t *testing.T) {
 	moved := collections.SuggestibleTag{ID: a.ID, Name: "Product", Description: " Xwants a demo"}
 	if VocabularyDigest([]collections.SuggestibleTag{moved, b}) == base {
 		t.Error("moving text from the name into the description left the digest unchanged")
+	}
+}
+
+func TestNestedAndLongForwardsKeepTheOriginalRequestWithinThePromptBudget(t *testing.T) {
+	item := rulesetNestedForward()
+	item.Body += "\n\nOn Monday, Sales wrote:\n> Old newsletter offer."
+	text := newText(item)
+	if !strings.Contains(text, "Could you send Product X pricing?") || !strings.Contains(text, "Buyer <buyer@example.com>") {
+		t.Fatalf("original request missing: %s", text)
+	}
+	if strings.Contains(text, "Old newsletter") {
+		t.Fatalf("reply history reached the model: %s", text)
+	}
+	if n := utf8.RuneCountInString(text); n > bodyPromptLimit {
+		t.Fatalf("model body has %d characters", n)
+	}
+}
+
+func TestTheModelBudgetAppliesAfterParsingAndToNonMailItems(t *testing.T) {
+	item := rulesetItem
+	item.Kind = "note"
+	item.Body = strings.Repeat("界", BodyReadLimit)
+	if n := utf8.RuneCountInString(newText(item)); n != bodyPromptLimit {
+		t.Fatalf("note has %d characters", n)
 	}
 }

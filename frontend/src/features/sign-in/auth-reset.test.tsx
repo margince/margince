@@ -2,6 +2,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { resetTheme } from "../../testing/theme-reset";
 import { AuthScreen } from "./auth";
 import { ok, render, stubApi, t } from "./auth.testkit";
@@ -34,11 +35,13 @@ describe("AuthScreen reset deep link", () => {
     render(<AuthScreen onAuthed={vi.fn()} />);
 
     await user.type(
-      await screen.findByLabelText("New password"),
+      await screen.findByLabelText(englishCopy["auth.newPassword"]),
       "an entirely new password{enter}",
     );
 
-    expect(await screen.findByText("Password updated")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["auth.resetDoneTitle"]),
+    ).toBeTruthy();
     const request = calls[0];
     expect(String(request?.url)).toContain("/v1/auth/reset-password");
     expect(await request?.text()).toContain("raw-reset-token");
@@ -57,8 +60,10 @@ describe("AuthScreen reset deep link", () => {
     });
     render(<AuthScreen onAuthed={vi.fn()} />);
 
-    const box = await screen.findByLabelText("New password");
-    await user.click(screen.getByRole("button", { name: "Set new password" }));
+    const box = await screen.findByLabelText(englishCopy["auth.newPassword"]);
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["auth.setNewPassword"] }),
+    );
     expect(screen.getByText("New password is required.")).toBeTruthy();
     expect(document.activeElement).toBe(box);
     expect(calls).toHaveLength(0);
@@ -76,8 +81,8 @@ describe("AuthScreen reset deep link", () => {
     });
     render(<AuthScreen onAuthed={vi.fn()} />);
 
-    await screen.findByLabelText("New password");
-    expect(screen.getByText("Enter a new password.")).toBeTruthy();
+    await screen.findByLabelText(englishCopy["auth.newPassword"]);
+    expect(screen.getByText(englishCopy["auth.resetSub"])).toBeTruthy();
     expect(screen.queryByText(/valid/i)).toBeNull();
   });
 
@@ -95,16 +100,14 @@ describe("AuthScreen reset deep link", () => {
     render(<AuthScreen onAuthed={vi.fn()} />);
 
     await user.type(
-      await screen.findByLabelText("New password"),
+      await screen.findByLabelText(englishCopy["auth.newPassword"]),
       "an entirely new password{enter}",
     );
 
     expect(
-      await screen.findByText(
-        "This reset link is invalid, already used or expired.",
-      ),
+      await screen.findByText(englishCopy["auth.resetFailed"]),
     ).toBeTruthy();
-    expect(screen.getByText("Request a new link")).toBeTruthy();
+    expect(screen.getByText(englishCopy["auth.requestNewLink"])).toBeTruthy();
   });
 
   it("leads back to sign-in from a refused link", async () => {
@@ -117,14 +120,16 @@ describe("AuthScreen reset deep link", () => {
     render(<AuthScreen onAuthed={vi.fn()} />);
 
     await user.type(
-      await screen.findByLabelText("New password"),
+      await screen.findByLabelText(englishCopy["auth.newPassword"]),
       "an entirely new password{enter}",
     );
     await screen.findByText(t("auth.askAdminForNewLink"));
-    await user.click(screen.getByRole("button", { name: "Back to sign in" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["auth.backToLogin"] }),
+    );
 
     expect(await screen.findByLabelText("Email")).toBeTruthy();
-    expect(screen.queryByLabelText("New password")).toBeNull();
+    expect(screen.queryByLabelText(englishCopy["auth.newPassword"])).toBeNull();
   });
 
   // "Request a new link" supersedes the token the user still holds. A failure
@@ -145,17 +150,15 @@ describe("AuthScreen reset deep link", () => {
     render(<AuthScreen onAuthed={vi.fn()} />);
 
     await user.type(
-      await screen.findByLabelText("New password"),
+      await screen.findByLabelText(englishCopy["auth.newPassword"]),
       "an entirely new password{enter}",
     );
 
     expect(
-      await screen.findByText(
-        "Too many attempts. Set the password again later.",
-      ),
+      await screen.findByText(englishCopy["auth.resetRateLimited"]),
     ).toBeTruthy();
     // The link is untouched by a rate limit, so replacing it is still wrong.
-    expect(screen.queryByText("Request a new link")).toBeNull();
+    expect(screen.queryByText(englishCopy["auth.requestNewLink"])).toBeNull();
   });
 
   it("blames the password, not the link, when the server refuses the password", async () => {
@@ -172,17 +175,15 @@ describe("AuthScreen reset deep link", () => {
     render(<AuthScreen onAuthed={vi.fn()} />);
 
     await user.type(
-      await screen.findByLabelText("New password"),
+      await screen.findByLabelText(englishCopy["auth.newPassword"]),
       "an entirely new password{enter}",
     );
 
     expect(
-      await screen.findByText(
-        "The password was refused. Choose a different password.",
-      ),
+      await screen.findByText(englishCopy["auth.resetRejectedPassword"]),
     ).toBeTruthy();
     // The link is still good, so replacing it must not be offered.
-    expect(screen.queryByText("Request a new link")).toBeNull();
+    expect(screen.queryByText(englishCopy["auth.requestNewLink"])).toBeNull();
   });
 
   it("keeps a good link alive when the request never reaches the server", async () => {
@@ -199,16 +200,14 @@ describe("AuthScreen reset deep link", () => {
     render(<AuthScreen onAuthed={vi.fn()} />);
 
     await user.type(
-      await screen.findByLabelText("New password"),
+      await screen.findByLabelText(englishCopy["auth.newPassword"]),
       "an entirely new password{enter}",
     );
 
     expect(
-      await screen.findByText(
-        "The password was not set. The link is still valid; retry shortly.",
-      ),
+      await screen.findByText(englishCopy["auth.resetServerFailed"]),
     ).toBeTruthy();
-    expect(screen.queryByText("Request a new link")).toBeNull();
+    expect(screen.queryByText(englishCopy["auth.requestNewLink"])).toBeNull();
   });
 
   it("announces a reset failure to assistive tech", async () => {
@@ -226,14 +225,12 @@ describe("AuthScreen reset deep link", () => {
     render(<AuthScreen onAuthed={vi.fn()} />);
 
     await user.type(
-      await screen.findByLabelText("New password"),
+      await screen.findByLabelText(englishCopy["auth.newPassword"]),
       "an entirely new password{enter}",
     );
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain(
-      "This reset link is invalid, already used or expired.",
-    );
+    expect(alert.textContent).toContain(englishCopy["auth.resetFailed"]);
   });
 
   // The token does not wait in the address bar for this screen to read it.
@@ -249,14 +246,14 @@ describe("AuthScreen reset deep link", () => {
     stubApi({ password: true, password_reset: true }, () => ok(204));
     globalThis.location.hash = "#/reset-password?token=good-token";
     const first = render(<AuthScreen onAuthed={vi.fn()} />);
-    await screen.findByLabelText("New password");
+    await screen.findByLabelText(englishCopy["auth.newPassword"]);
     expect(globalThis.location.hash).toBe("#/reset-password");
     first.unmount();
 
     render(<AuthScreen onAuthed={vi.fn()} />);
 
     expect(await screen.findByLabelText("Email")).toBeTruthy();
-    expect(screen.queryByLabelText("New password")).toBeNull();
+    expect(screen.queryByLabelText(englishCopy["auth.newPassword"])).toBeNull();
   });
 
   it("tells a signed-out reader that a reset address without its token is incomplete", async () => {
@@ -283,6 +280,6 @@ describe("AuthScreen reset deep link", () => {
 
     // The sign-in form, not the reset form.
     expect(await screen.findByLabelText("Email")).toBeTruthy();
-    expect(screen.queryByLabelText("New password")).toBeNull();
+    expect(screen.queryByLabelText(englishCopy["auth.newPassword"])).toBeNull();
   });
 });

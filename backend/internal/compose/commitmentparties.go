@@ -111,7 +111,7 @@ func (x *SignalExtractor) readCommitmentParties(ctx context.Context, thread *set
 		return nil
 	}
 	reader := extractorContext(ctx, signalScanActor)
-	return database.WithWorkspaceTx(reader, x.pool, func(tx pgx.Tx) error {
+	return database.WithTx(reader, x.pool, func(tx pgx.Tx) error {
 		for i := range thread.Messages {
 			parties, err := x.messages.PartiesOf(reader, tx, thread.Messages[i].ID)
 			if err != nil {
@@ -125,7 +125,7 @@ func (x *SignalExtractor) readCommitmentParties(ctx context.Context, thread *set
 
 func (p *TranscriptProposer) readCommitmentParties(ctx context.Context, activityID ids.ActivityID) ([]commitmentParty, error) {
 	var parties []commitmentParty
-	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		found, err := p.messages.PartiesOf(ctx, tx, activityID.UUID)
 		if err != nil {
 			return err

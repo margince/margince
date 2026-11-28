@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ListSurface } from "../../design-system/listsurface";
 import { type Locale, LocaleProvider, useLocale, useT } from "../../i18n";
 import { de } from "../../i18n/de";
+import { en as englishCopy } from "../../i18n/en";
 import { useCompanyZone } from "../../lib/companyzone";
 import { withheldDealDials } from "../../lib/dealranges";
 import { openFilterValues } from "../../testing/listquery.testkit";
@@ -79,7 +80,9 @@ describe("the deal list's commercial filters", () => {
     renderBar({ seen: (next) => (filters = next) });
     const user = await openAttribute("Close date");
     await user.click(
-      screen.getByRole("radio", { name: "This fiscal quarter" }),
+      screen.getByRole("radio", {
+        name: englishCopy["reporting.this_quarter"],
+      }),
     );
     expect(filters).toEqual({ close_day: "this_quarter" });
     expect(
@@ -107,7 +110,7 @@ describe("the deal list's commercial filters", () => {
     await openAttribute("Value");
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
     expect(
-      screen.getByText("Enter a start, an end or both."),
+      screen.getByText(englishCopy["deals.rangeEmpty"]),
     ).toBeInTheDocument();
   });
 

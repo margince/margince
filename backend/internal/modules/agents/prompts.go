@@ -53,11 +53,11 @@ var starterPrompts = []starterPrompt{
 	},
 	{
 		Name: "prepare_meeting", Title: "Prepare my next meeting",
-		Description: "Who is coming, the open threads and what was promised.",
+		Description: "Who is coming, the open threads and commitments made.",
 		Arguments:   []promptArgument{{Name: "with", Description: "The contact, company or deal the meeting is about", Required: true}},
 		Tools:       []string{readContextToolName},
 		Text: "Prepare me for my meeting with {with}. Call read_context with about meeting and " +
-			"record_name {with}. Tell me who is coming, the open threads and what my team promised.",
+			"record_name {with}. Tell me who is coming, the open threads and the commitments my team made.",
 	},
 	{
 		Name: "catch_up", Title: "Catch me up on a record",
@@ -68,10 +68,10 @@ var starterPrompts = []starterPrompt{
 			"{record}, and tell me what changed and what is next.",
 	},
 	{
-		Name: "open_promises", Title: "What did my team promise customers",
+		Name: "open_promises", Title: "What commitments did my team make to customers",
 		Description: "Commitments made to customers that are still open.",
 		Tools:       []string{readAttentionToolName},
-		Text: "What has my team promised customers that is still open? Call read_attention with view " +
+		Text: "Which commitments to customers are still open? Call read_attention with view " +
 			"commitments, and list each commitment with who owns it, when it is due and its link.",
 	},
 	{

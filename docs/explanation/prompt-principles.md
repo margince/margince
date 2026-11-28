@@ -150,7 +150,7 @@ A rename by find and replace can leave sentences that mean nothing. Some are
 fragments read on every drafting call. The gate for old words finds the old word. It cannot find the
 new word put in a sentence where it means nothing.
 
-*Checked by* `TestTheAIPromptsPageIsCurrent` (`backend/internal/compose/aipromptspage_test.go`).
+*Checked by* `TestTheAIPromptsPageIsCurrent` (`backend/internal/compose/aitasks/aipromptspage_test.go`).
 It makes every prompt change show up as a diff of [ai-prompts.md](../reference/ai-prompts.md).
 Reading that diff is review.
 

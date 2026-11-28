@@ -5,6 +5,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { cardRecords, StagedEditor } from "./approvaleditor";
 import { editableStrings } from "./approvalkind";
 
@@ -71,7 +72,9 @@ it("says so when the colleagues could not be loaded, instead of offering only Me
 
 it("offers who does an accepted promise, kept with the reader by default", async () => {
   const onChange = renderDoerEditor();
-  const picker = screen.getByRole("combobox", { name: "Who does this" });
+  const picker = screen.getByRole("combobox", {
+    name: englishCopy["approval.field.doer"],
+  });
   expect(picker).toHaveTextContent("Me");
   await userEvent.click(picker);
   await userEvent.click(screen.getByRole("option", { name: "Priya Raman" }));

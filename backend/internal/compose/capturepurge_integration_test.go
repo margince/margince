@@ -191,7 +191,7 @@ func seedOwnExclusion(t *testing.T, e *integration.Env, user ids.UUID, kind, val
 func seedPurgeableMail(t *testing.T, e *integration.Env, from, subject string, user ids.UUID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, counterparty_email, audience)
@@ -212,7 +212,7 @@ func seedPurgeableMail(t *testing.T, e *integration.Env, from, subject string, u
 
 func addImporter(t *testing.T, e *integration.Env, activityID, user ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_import (activity_id, user_id, posture_at_import)
 			VALUES ($1, $2, 'classified')`, activityID, user)
@@ -232,7 +232,7 @@ func addImporter(t *testing.T, e *integration.Env, activityID, user ids.UUID) {
 // the state is reached.
 func restrict(t *testing.T, e *integration.Env, activityID ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		// The EVIDENCE first. A restriction that recorded no reason for
 		// existing would be a hold nobody could later justify or lift, so the
 		// table refuses one — a controller's pin, attributed and reasoned.
@@ -261,7 +261,7 @@ func restrict(t *testing.T, e *integration.Env, activityID ids.UUID) {
 func activityBody(t *testing.T, e *integration.Env, id ids.UUID) string {
 	t.Helper()
 	var body string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(body, '') FROM activity WHERE id = $1`, id).Scan(&body)
 	}); err != nil {
@@ -273,7 +273,7 @@ func activityBody(t *testing.T, e *integration.Env, id ids.UUID) string {
 func importCount(t *testing.T, e *integration.Env, activityID, user ids.UUID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM capture_import WHERE activity_id = $1 AND user_id = $2`,
 			activityID, user).Scan(&n)
@@ -355,7 +355,7 @@ func TestAPurgeAsksTheStatutoryFloorBeforeDestroying(t *testing.T) {
 func statutoryWindowIsOpen(t *testing.T, e *integration.Env, activityID ids.UUID) bool {
 	t.Helper()
 	var open bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		policy, err := privacy.ResolveFloorPolicy(context.Background(), tx, identity.CountryOf)
 		if err != nil {
 			return err
@@ -374,7 +374,7 @@ func statutoryWindowIsOpen(t *testing.T, e *integration.Env, activityID ids.UUID
 // the law requires keeping, dated so its window is still open.
 func stampCommercialCorrespondence(t *testing.T, e *integration.Env, activityID ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE activity
 			   SET retention_class = 'commercial_correspondence',
@@ -581,7 +581,7 @@ func TestAMailboxSideDeletionDoesNotOutrankTheStatutoryFloor(t *testing.T) {
 func providerIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string {
 	t.Helper()
 	var sourceID string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT source_id FROM activity WHERE id = $1`, activityID).Scan(&sourceID)
 	}); err != nil {

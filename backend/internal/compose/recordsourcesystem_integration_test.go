@@ -126,7 +126,7 @@ func TestTheImporterPrefixNeverReachesAReader(t *testing.T) {
 func seedStoreBuiltImportsRaw(t *testing.T, e *integration.Env, sourceSystem string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, full_name, source, captured_by, source_system, source_author_name)
 			VALUES ($1, 'Imported Contact', 'hubspot_import', 'human:'||$2, $3, 'Mutaz Suleiman')`,

@@ -10,6 +10,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -119,20 +120,26 @@ it("draws a redirected question's answers through the real row without keep", as
   transport(() => response({ data: [], page: { has_more: false } }));
   mount(<WorklistRow item={row()} position={1} owner="" />);
   expect(
-    await screen.findByRole("button", { name: "Choose another" }),
+    await screen.findByRole("button", {
+      name: englishCopy["worklist.domainQuestion.chooseAnother"],
+    }),
   ).toBeTruthy();
   expect(
-    screen.queryByRole("button", { name: "Stop capturing in your mailboxes" }),
+    screen.queryByRole("button", {
+      name: englishCopy["worklist.verb.discard"],
+    }),
   ).toBeNull();
   await user.click(
     screen.getByRole("button", { name: "More actions for alias.example" }),
   );
   expect(
     await screen.findByRole("button", {
-      name: "Stop capturing in your mailboxes",
+      name: englishCopy["worklist.verb.discard"],
     }),
   ).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Create company" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: englishCopy["worklist.verb.keep"] }),
+  ).toBeNull();
   expect(
     screen.getByText(
       /Which company do Alex Example and one other contact work for\?/,
@@ -186,9 +193,13 @@ it("offers only choose and create when nothing is suggested", async () => {
     </>,
   );
   expect(
-    await screen.findByRole("button", { name: "Choose company" }),
+    await screen.findByRole("button", {
+      name: englishCopy["worklist.domainQuestion.choose"],
+    }),
   ).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Create company" })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: englishCopy["worklist.verb.keep"] }),
+  ).toBeTruthy();
   expect(screen.queryByText(/Suggested company/)).toBeNull();
   expect(screen.queryByRole("button", { name: /^Confirm/ })).toBeNull();
 });
@@ -202,10 +213,14 @@ it("opens only its own question and keeps website details closed", async () => {
   });
   mount(<DomainQuestionAnswer item={row()} />);
   await user.click(
-    await screen.findByRole("button", { name: "Choose another" }),
+    await screen.findByRole("button", {
+      name: englishCopy["worklist.domainQuestion.chooseAnother"],
+    }),
   );
   expect(
-    await screen.findByRole("heading", { name: "Company question" }),
+    await screen.findByRole("heading", {
+      name: englishCopy["worklist.source.domain_question"],
+    }),
   ).toBeTruthy();
   expect(asked).toEqual(["alias.example"]);
   expect(screen.getByText(/Suggested company: Example Company\./)).toBeTruthy();
@@ -249,7 +264,9 @@ it("says a site that could not be read was not read", async () => {
     />,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Choose company" }),
+    await screen.findByRole("button", {
+      name: englishCopy["worklist.domainQuestion.choose"],
+    }),
   );
   expect(
     await screen.findByText(/Their website could not be read/),

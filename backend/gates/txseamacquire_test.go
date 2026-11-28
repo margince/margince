@@ -56,15 +56,15 @@ import (
 // function must have made before it was handed the transaction, or delegated
 // to a caller that did.
 var connectionAcquirers = map[string]string{
-	"Acquire":         "takes a connection straight from the pool",
-	"Begin":           "opens a transaction on a pool, which takes a connection to hold it",
-	"BeginTx":         "opens a transaction on a pool, which takes a connection to hold it",
-	"Tx":              "opens a transaction on the bound handle (database.DB.Tx)",
-	"tx":              "opens a transaction through the store's own helper over database.DB.Tx",
-	"WithWorkspaceTx": "opens a workspace-bound transaction",
-	"WithInfraTx":     "opens an unbound infrastructure transaction",
-	"activeColumns":   "reads the custom-field catalog, which opens a transaction of its own",
-	"ActiveColumns":   "reads the custom-field catalog through the fieldcatalog seam, which opens a transaction of its own",
+	"Acquire":       "takes a connection straight from the pool",
+	"Begin":         "opens a transaction on a pool, which takes a connection to hold it",
+	"BeginTx":       "opens a transaction on a pool, which takes a connection to hold it",
+	"Tx":            "opens a transaction on the bound handle (database.DB.Tx)",
+	"tx":            "opens a transaction through the store's own helper over database.DB.Tx",
+	"WithTx":        "opens a transaction",
+	"WithInfraTx":   "opens an unbound infrastructure transaction",
+	"activeColumns": "reads the custom-field catalog, which opens a transaction of its own",
+	"ActiveColumns": "reads the custom-field catalog through the fieldcatalog seam, which opens a transaction of its own",
 	// The stores' own catalog reads, which a composite calls by name. They
 	// exist precisely so the answer can be fetched above a transaction, so
 	// calling one from inside a borrowed transaction reinstates the defect
@@ -137,12 +137,11 @@ func TestATxAcceptingFunctionAcquiresNoConnectionOfItsOwn(t *testing.T) {
 	}
 }
 
-// txBorrowing is one body that runs on a transaction somebody else opened: a
-// named function that takes a pgx.Tx, or the callback literal a transaction
-// opener is handed. Both are the same obligation. The literal matters most —
-// `WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error { … })` is where this tree
-// writes, so a gate that judged only named seams would miss the shape it is
-// most likely to meet.
+// txBorrowing is one body that runs on a transaction somebody else opened.
+// It is a named function that takes a pgx.Tx, or the callback literal a
+// transaction opener is handed. Both are the same obligation. The literal matters most:
+// `WithTx(ctx, pool, func(tx pgx.Tx) error { … })` is where this tree writes.
+// A gate that judged only named seams would miss that shape.
 type txBorrowing struct {
 	name   string
 	params *ast.FieldList
@@ -576,7 +575,7 @@ func TestTheGateSeesAnAcquireInsideATransactionCallback(t *testing.T) {
 	const assembler = fixtureImports + `
 func (s *Service) Assemble(ctx context.Context, id ids.ContactID) (Contact, error) {
 	var out Contact
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		active, err := s.contacts.ActiveContactColumns(ctx)
 		if err != nil {
 			return err
@@ -596,16 +595,15 @@ func (s *Service) Assemble(ctx context.Context, id ids.ContactID) (Contact, erro
 		return Contact{}, err
 	}
 	var out Contact
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		out, err = s.contacts.GetContactTx(ctx, tx, id, active)
 		return err
 	})
 	return out, err
 }
 `
-	// The prefetch moved above the opener, so the callback is clean — and
-	// Assemble itself borrows no transaction, so the WithWorkspaceTx call it
-	// makes is not the gate's business.
+	// The prefetch moved above the opener, so the callback is clean. Assemble
+	// itself borrows no transaction, so its WithTx call is not the gate's business.
 	assertGateReads(t, repaired, "Assemble's transaction callback")
 }
 

@@ -37,7 +37,7 @@ func TestReportedRenewalDoesNotChangeAnExistingTaskDeadline(t *testing.T) {
 	for _, confirmed := range []bool{false, true} {
 		c.NeedsConfirmation = !confirmed
 		var outcome CommitmentOutcome
-		if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 			var err error
 			outcome, _, err = dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 			return err

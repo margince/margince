@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -52,7 +53,11 @@ func NewMailbox(t *testing.T, provider, address string) Mailbox {
 		t.Fatal(err)
 	}
 	workspace, seat := ids.NewV7(), ids.NewV7()
-	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, workspace); err != nil {
+	var workspaceCreated time.Time
+	if err := owner.QueryRow(ctx, `INSERT INTO workspace (id) VALUES ($1) RETURNING created_at`, workspace).Scan(&workspaceCreated); err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.RecordInstallationTx(ctx, owner, workspace, workspaceCreated); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `INSERT INTO app_user (id,email,display_name,email_domain_folded) VALUES ($1,$2,'Mailbox owner',$3)`,

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -120,7 +121,7 @@ export const RebuildConfirm: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Rebuild index",
+        name: englishCopy["embedreindex.rebuildCta"],
       }),
     );
     await screen.findByText(/34,500/);
@@ -167,7 +168,7 @@ export const PreviewDialogWithEstimate: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const reviewButton = await canvas.findByRole("button", {
-      name: "Review and reindex",
+      name: englishCopy["embedreindex.reviewCta"],
     });
     await userEvent.click(reviewButton);
     // `screen`, not the canvas: ConfirmModal portals to document.body, so a
@@ -180,7 +181,7 @@ export const PreviewDialogWithEstimate: Story = {
     // honest to the contract. It sits in the same portalled dialog the
     // estimate does, so it is the same `screen` lookup — reaching for the
     // canvas here rejected while the dialog above it was drawn correctly.
-    await screen.findByText("Would enter economy mode");
+    await screen.findByText(englishCopy["embedreindex.impact.degraded"]);
   },
 };
 
@@ -214,7 +215,9 @@ export const PreviewDialogEstimateUnavailable: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Review and reindex" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["embedreindex.reviewCta"],
+      }),
     );
     // `screen`, not the canvas: ConfirmModal portals to document.body.
     await screen.findByText(/schema changed while the connection/);

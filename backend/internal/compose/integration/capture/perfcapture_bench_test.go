@@ -93,7 +93,7 @@ func capturePostgresVersion(t *testing.T, e *integration.SearchEnv) string {
 	t.Helper()
 	return integration.PostgresVersion(func(sql string) (string, error) {
 		var version string
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), sql).Scan(&version)
 		})
 		return version, err
@@ -143,7 +143,7 @@ func assertTimelineRenderIsNotBlockedByCapture(t *testing.T, e *integration.Sear
 	defer cancel()
 
 	var n int
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM activity_link al JOIN contact_email pe ON pe.contact_id = al.contact_id
 			WHERE al.entity_type = 'contact' AND pe.email = 'nobody@uncaptured.example'`).Scan(&n)
@@ -161,7 +161,7 @@ func assertTimelineRenderIsNotBlockedByCapture(t *testing.T, e *integration.Sear
 func timelineActivityCount(t *testing.T, e *integration.SearchEnv, email string) int {
 	t.Helper()
 	var n int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM activity_link al JOIN contact_email pe ON pe.contact_id = al.contact_id
 			WHERE al.entity_type = 'contact' AND pe.email = $1`, email).Scan(&n)

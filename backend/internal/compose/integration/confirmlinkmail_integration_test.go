@@ -137,7 +137,7 @@ func stagedConfirmSubject(t *testing.T, c *consentEnv) string {
 
 // installationContext binds the installation's own workspace, which the setting
 // row's transaction requires. The value is not tenant data, but the write still
-// goes through WithWorkspaceTx like every other write in this tree.
+// goes through WithTx like every other write in this tree.
 func installationContext(t *testing.T, c *consentEnv) context.Context {
 	t.Helper()
 	return principal.WithWorkspaceID(context.Background(),

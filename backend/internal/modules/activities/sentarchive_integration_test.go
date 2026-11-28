@@ -73,7 +73,7 @@ func TestASenderCannotArchiveAnEmailTheySentBeforeOrAfterItsEchoMerges(t *testin
 	worker := connector.WithSentEcho(e.asSendWorker(), connector.SentEcho{
 		Identity: stampedIdentity, Subject: capturedEchoSubject, Body: capturedEchoBody,
 	})
-	if err := database.WithWorkspaceTx(worker, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(worker, e.pool, func(tx pgx.Tx) error {
 		return store.ReconcileMessageIdentityTx(worker, tx, id, *sent.SourceId, stampedIdentity)
 	}); err != nil {
 		t.Fatalf("ReconcileMessageIdentityTx: %v", err)

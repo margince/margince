@@ -219,7 +219,7 @@ func TestTheAuditTrailNamesNoDeclaredAddress(t *testing.T) {
 	}
 
 	var images int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM audit_log
 			 WHERE coalesce(before::text, '') || coalesce(after::text, '') LIKE '%' || $1 || '%'`,
@@ -384,7 +384,7 @@ func TestAClaimSettlesNoColleaguesOpenQuestion(t *testing.T) {
 	env.sync(t, email(ownerAlias, "Lars Private", captureOwner, "pend2@private.example", ""))
 	// Re-own the pending row to a colleague, which is the state two connected
 	// mailboxes reach when both hear from the same sender.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_pending_counterparty SET owner_id = $1 WHERE email = $2`, e.Rep3, ownerAlias)
 		return err
@@ -416,7 +416,7 @@ func TestTheSeatsLoginAddressIsNeverACounterparty(t *testing.T) {
 
 	// The seat's login address, which the harness sets and no fixture declares.
 	var login string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT email FROM app_user WHERE id = $1`, e.Rep1).Scan(&login)
 	}); err != nil {

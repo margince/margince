@@ -75,42 +75,42 @@ var effectSentences = map[string]cardWords{
 	"archive_activity_preserve_content": {
 		en: "Archive this activity and remove it from active work. Its content remains stored; previously sent messages are not recalled.",
 		de: "Diese Aktivität archivieren und aus der aktiven Arbeit entfernen. Der Inhalt bleibt gespeichert; bereits gesendete Nachrichten werden nicht zurückgerufen.",
-		vi: "Lưu trữ hoạt động này và loại khỏi công việc đang hoạt động. Nội dung vẫn được lưu; tin nhắn đã gửi không bị thu hồi.",
+		vi: "Chuyển hoạt động này vào kho lưu trữ và loại khỏi công việc đang hoạt động. Nội dung vẫn được lưu; tin nhắn đã gửi không bị thu hồi.",
 	},
 	"archive_company_detach_scope": {
 		en: "Archive this company and its listed domains, classifications, partner program and relationships. Remove its list memberships and tags. Contacts, deals and conversation history remain.",
 		de: "Dieses Unternehmen mit den aufgeführten Domains, Klassifizierungen, dem Partnerprogramm und den Beziehungen archivieren. Listenzugehörigkeiten und Tags entfernen. Kontakte, Deals und Gesprächsverlauf bleiben erhalten.",
-		vi: "Lưu trữ công ty này cùng các tên miền, phân loại, chương trình đối tác và mối quan hệ được liệt kê. Xóa tư cách thành viên danh sách và thẻ. Giữ lại liên hệ, cơ hội bán hàng và lịch sử hội thoại.",
+		vi: "Chuyển công ty này vào kho lưu trữ cùng các tên miền, phân loại, chương trình đối tác và mối quan hệ được liệt kê. Xóa tư cách thành viên danh sách và thẻ. Giữ lại liên hệ, cơ hội bán hàng và lịch sử hội thoại.",
 	},
 	"archive_contact_detach_scope": {
 		en: "Archive this contact and retire the listed email addresses, phone numbers, channel bindings and relationships. Remove the listed memberships and tags. Conversation history remains.",
 		de: "Diesen Kontakt und die aufgeführten E-Mail-Adressen, Telefonnummern, Kanalverknüpfungen und Beziehungen archivieren. Die aufgeführten Listenmitgliedschaften und Tags entfernen. Der Gesprächsverlauf bleibt erhalten.",
-		vi: "Lưu trữ liên hệ này cùng các địa chỉ email, số điện thoại, liên kết kênh và mối quan hệ được liệt kê. Xóa tư cách thành viên danh sách và thẻ được liệt kê. Lịch sử hội thoại được giữ nguyên.",
+		vi: "Chuyển liên hệ này vào kho lưu trữ cùng các địa chỉ email, số điện thoại, liên kết kênh và mối quan hệ được liệt kê. Xóa tư cách thành viên danh sách và thẻ được liệt kê. Lịch sử hội thoại được giữ nguyên.",
 	},
 	"archive_deal_detach_scope": {
 		en: "Archive this deal and remove the shown stakeholder links, list memberships and tag assignments. Contacts, lists and tags remain stored.",
 		de: "Diesen Deal archivieren und die gezeigten Stakeholder-Verknüpfungen, Listenzugehörigkeiten und Tag-Zuordnungen entfernen. Kontakte, Listen und Tags bleiben gespeichert.",
-		vi: "Lưu trữ deal này và xóa các liên kết bên liên quan, tư cách thành viên danh sách và gán nhãn được hiển thị. Liên hệ, danh sách và nhãn vẫn được lưu.",
+		vi: "Chuyển deal này vào kho lưu trữ và xóa các liên kết bên liên quan, tư cách thành viên danh sách và gán nhãn được hiển thị. Liên hệ, danh sách và nhãn vẫn được lưu.",
 	},
 	"archive_lead_remove_tags": {
 		en: "Archives this lead and removes all its tags. The record remains available in archived records.",
 		de: "Archiviert diesen Lead und entfernt alle seine Tags. Der Datensatz bleibt unter den archivierten Datensätzen verfügbar.",
-		vi: "Lưu trữ lead này và xóa tất cả thẻ của lead. Bạn vẫn có thể xem bản ghi trong danh sách đã lưu trữ.",
+		vi: "Chuyển lead này vào kho lưu trữ và xóa tất cả thẻ của lead. Bạn vẫn có thể xem bản ghi trong danh sách đã chuyển vào kho lưu trữ.",
 	},
 	"archive_offer_preserve_lines": {
 		en: "Archive this offer and hide it from the active offer list. Its line items remain stored.",
 		de: "Dieses Angebot archivieren und aus der aktiven Angebotsliste ausblenden. Seine Positionen bleiben gespeichert.",
-		vi: "Lưu trữ báo giá này và ẩn khỏi danh sách báo giá đang hoạt động. Các hạng mục vẫn được lưu.",
+		vi: "Chuyển báo giá này vào kho lưu trữ và ẩn khỏi danh sách báo giá đang hoạt động. Các hạng mục vẫn được lưu.",
 	},
 	"archive_product_preserve_snapshots": {
 		en: "Archive this product and remove it from the active catalog. Existing offer line snapshots remain unchanged.",
 		de: "Dieses Produkt archivieren und aus dem aktiven Katalog entfernen. Gespeicherte Angebotspositionen bleiben unverändert.",
-		vi: "Lưu trữ sản phẩm này và loại khỏi danh mục đang hoạt động. Các bản chụp hạng mục báo giá hiện có không thay đổi.",
+		vi: "Chuyển sản phẩm này vào kho lưu trữ và loại khỏi danh mục đang hoạt động. Các bản chụp hạng mục báo giá hiện có không thay đổi.",
 	},
 	"archive_project_detach_scope": {
 		en: "Archive this project and remove the listed stakeholder links, list memberships and tags. Activities, deals and company links remain.",
 		de: "Dieses Projekt archivieren und die aufgeführten Beteiligten-Verknüpfungen, Listenmitgliedschaften und Tags entfernen. Aktivitäten, Deals und Firmenverknüpfungen bleiben erhalten.",
-		vi: "Lưu trữ dự án này và xóa các liên kết bên liên quan, tư cách thành viên danh sách và thẻ được liệt kê. Hoạt động, giao dịch và liên kết công ty được giữ nguyên.",
+		vi: "Chuyển dự án này vào kho lưu trữ và xóa các liên kết bên liên quan, tư cách thành viên danh sách và thẻ được liệt kê. Hoạt động, giao dịch và liên kết công ty được giữ nguyên.",
 	},
 	"archive_relationship_no_primary": {
 		en: "Leave the contact without a primary employer. No employer is chosen automatically.",
@@ -120,7 +120,7 @@ var effectSentences = map[string]cardWords{
 	"archive_relationship_preserve_records": {
 		en: "Archive this relationship link. The linked records remain stored.",
 		de: "Diese Verknüpfung archivieren. Die verknüpften Datensätze bleiben gespeichert.",
-		vi: "Lưu trữ liên kết quan hệ này. Các bản ghi được liên kết vẫn được lưu.",
+		vi: "Chuyển liên kết quan hệ này vào kho lưu trữ. Các bản ghi được liên kết vẫn được lưu.",
 	},
 	"archive_relationship_promote_employer": {
 		en: "Make the shown remaining employment the contact’s primary employer.",
@@ -130,7 +130,7 @@ var effectSentences = map[string]cardWords{
 	"archive_template_preserve_offers": {
 		en: "Archive this template and remove it from template selection, including its use as a default. Existing offers keep their template reference.",
 		de: "Diese Vorlage archivieren und aus der Vorlagenauswahl entfernen, auch als Standardvorlage. Bestehende Angebote behalten ihren Vorlagenverweis.",
-		vi: "Lưu trữ mẫu này và loại khỏi danh sách chọn mẫu, kể cả vai trò mẫu mặc định. Các báo giá hiện có giữ tham chiếu tới mẫu.",
+		vi: "Chuyển mẫu này vào kho lưu trữ và loại khỏi danh sách chọn mẫu, kể cả vai trò mẫu mặc định. Các báo giá hiện có giữ tham chiếu tới mẫu.",
 	},
 	"assign_offer_number": {
 		en: "Assign the offer number when the draft is created.",
@@ -300,7 +300,7 @@ var effectSentences = map[string]cardWords{
 	"merge_company_preserve_receipts": {
 		en: "Partner-program and tax-verification records move only when the survivor has none. Otherwise the source copies remain with the archived company.",
 		de: "Partnerprogramm- und Steuerprüfungsnachweise werden nur übernommen, wenn das Ziel keine hat. Andernfalls bleiben die Quellkopien beim archivierten Unternehmen.",
-		vi: "Hồ sơ chương trình đối tác và xác minh thuế chỉ được chuyển khi công ty giữ lại chưa có. Nếu đã có, bản nguồn vẫn thuộc công ty được lưu trữ.",
+		vi: "Hồ sơ chương trình đối tác và xác minh thuế chỉ được chuyển khi công ty giữ lại chưa có. Nếu đã có, bản nguồn vẫn thuộc công ty được chuyển vào kho lưu trữ.",
 	},
 	"merge_company_private_readings": {
 		en: "Each reader keeps their existing survivor summary when both companies have one. Suggestions dismissed on the removed company may be offered again on the survivor.",
@@ -315,12 +315,12 @@ var effectSentences = map[string]cardWords{
 	"merge_records_release_source": {
 		en: "Moves the displayed records and values to the survivor and archives the source. Existing survivor values take precedence where shown.",
 		de: "Übernimmt die angezeigten Datensätze und Werte in das Ziel und archiviert die Quelle. Vorhandene Zielwerte haben an den angezeigten Stellen Vorrang.",
-		vi: "Chuyển các hồ sơ và giá trị được hiển thị sang hồ sơ giữ lại rồi lưu trữ hồ sơ nguồn. Giá trị hiện có của hồ sơ giữ lại được ưu tiên ở những mục được chỉ rõ.",
+		vi: "Chuyển các hồ sơ và giá trị được hiển thị sang hồ sơ giữ lại rồi chuyển hồ sơ nguồn vào kho lưu trữ. Giá trị hiện có của hồ sơ giữ lại được ưu tiên ở những mục được chỉ rõ.",
 	},
 	"merge_tags_release_source": {
 		en: "Replace the source tag on the shown records with the surviving tag. Where both tags are present, remove only the duplicate source assignment. Archive the source tag and release its name for reuse; it is not retained as an alias.",
 		de: "Das Quell-Tag auf den gezeigten Datensätzen durch das verbleibende Tag ersetzen. Wenn beide Tags vorhanden sind, nur die doppelte Quell-Zuordnung entfernen. Das Quell-Tag archivieren und seinen Namen zur erneuten Verwendung freigeben; er bleibt nicht als Alias erhalten.",
-		vi: "Thay nhãn nguồn trên các bản ghi được hiển thị bằng nhãn giữ lại. Nếu đã có cả hai nhãn, chỉ xóa gán nhãn nguồn trùng lặp. Lưu trữ nhãn nguồn và cho phép dùng lại tên; tên không được giữ làm bí danh.",
+		vi: "Thay nhãn nguồn trên các bản ghi được hiển thị bằng nhãn giữ lại. Nếu đã có cả hai nhãn, chỉ xóa gán nhãn nguồn trùng lặp. Chuyển nhãn nguồn vào kho lưu trữ và cho phép dùng lại tên; tên không được giữ làm bí danh.",
 	},
 	"partner_margin_tier_unset": {
 		en: "Margin tier: not set. A human sets it on the company’s Partner tab.",
@@ -350,7 +350,7 @@ var effectSentences = map[string]cardWords{
 	"promote_lead_archive_source": {
 		en: "Qualifies and archives this lead, linking it to the contact. Keeps the original consent evidence on the lead.",
 		de: "Qualifiziert und archiviert diesen Lead und verknüpft ihn mit dem Kontakt. Die ursprünglichen Einwilligungsbelege bleiben am Lead.",
-		vi: "Xác định lead đủ điều kiện, lưu trữ lead và liên kết với liên hệ. Giữ bằng chứng đồng ý ban đầu ở lead.",
+		vi: "Xác định lead đủ điều kiện, chuyển lead vào kho lưu trữ và liên kết với liên hệ. Giữ bằng chứng đồng ý ban đầu ở lead.",
 	},
 	"promote_move_consent_links": {
 		en: "Moves the listed unsubscribe links and communication bases to the contact. Their scope, expiry and revocation remain unchanged.",
@@ -435,7 +435,7 @@ var effectSentences = map[string]cardWords{
 	"restore_lead_archive_contact": {
 		en: "Restores the lead as Engaged and removes its qualification links. Archives the contact, its email addresses, phone numbers, channel identities and relationships; removes its tags and list memberships. Activities stay where they are.",
 		de: "Stellt den Lead als Engagiert wieder her und entfernt seine Qualifizierungsverknüpfungen. Archiviert den Kontakt, seine E-Mail-Adressen, Telefonnummern, Kanalidentitäten und Beziehungen; entfernt seine Tags und Listenzugehörigkeiten. Aktivitäten bleiben unverändert zugeordnet.",
-		vi: "Khôi phục lead về trạng thái Đã tương tác và xóa các liên kết xác định đủ điều kiện. Lưu trữ liên hệ, địa chỉ email, số điện thoại, danh tính kênh và các mối quan hệ; xóa thẻ và tư cách thành viên danh sách. Hoạt động giữ nguyên liên kết.",
+		vi: "Khôi phục lead về trạng thái Đã tương tác và xóa các liên kết xác định đủ điều kiện. Chuyển liên hệ, địa chỉ email, số điện thoại, danh tính kênh và các mối quan hệ vào kho lưu trữ; xóa thẻ và tư cách thành viên danh sách. Hoạt động giữ nguyên liên kết.",
 	},
 	"restore_lead_preserve_contact": {
 		en: "Restores the lead as Engaged and removes its qualification links. Keeps the existing contact and its history; removes the link back to this lead. Activities stay where they are.",

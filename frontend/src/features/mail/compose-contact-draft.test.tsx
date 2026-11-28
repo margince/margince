@@ -17,6 +17,7 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { draftButton } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
@@ -280,9 +281,7 @@ describe("drafting to a contact", () => {
       intent: "Make this nicer",
       rewrite_of: "hi, two products missing. pls send",
     });
-    expect(
-      screen.queryByText("Your edits were kept. Draft again when ready."),
-    ).toBeNull();
+    expect(screen.queryByText(englishCopy["compose.draftKept"])).toBeNull();
   });
 
   // A revision answers the words that were sent. Words typed while it was out
@@ -315,7 +314,7 @@ describe("drafting to a contact", () => {
     answer?.(jsonResponse(CONTACT_DRAFT));
 
     expect(
-      await screen.findByText("Your edits were kept. Draft again when ready."),
+      await screen.findByText(englishCopy["compose.draftKept"]),
     ).toBeTruthy();
     expect(messageText("Body")).toBe("hi, two products missing. And a third.");
     const ask = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
@@ -354,9 +353,7 @@ describe("drafting to a contact", () => {
 
     await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
     expect(messageText("Body")).toContain("pls send");
-    expect(
-      screen.getByText("Your edits were kept. Draft again when ready."),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["compose.draftKept"])).toBeTruthy();
   });
 
   // A body past the contract's cap cannot be sent to revise. The route still
@@ -383,7 +380,7 @@ describe("drafting to a contact", () => {
     await user.click(draftButton());
 
     expect(
-      await screen.findByText("Your edits were kept. Draft again when ready."),
+      await screen.findByText(englishCopy["compose.draftKept"]),
     ).toBeTruthy();
     expect(messageText("Body")).toBe(long);
     const ask = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
@@ -410,7 +407,9 @@ describe("drafting to a contact", () => {
     await user.click(draftButton());
 
     expect(
-      await screen.findByRole("heading", { name: "AI-assisted draft" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["compose.aiDisclosureTitle"],
+      }),
     ).toBeTruthy();
   });
 
@@ -542,18 +541,20 @@ describe("saying which writer drafted the email", () => {
     await user.click(draftButton());
 
     expect(
-      await screen.findByText("AI could not write this draft"),
+      await screen.findByText(englishCopy["compose.templateDraftTitle"]),
     ).toBeTruthy();
-    expect(
-      screen.getByText("A basic template was used. Your purpose was not used."),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["compose.templateDraft"])).toBeTruthy();
     expect(messageText("Body")).toContain("Would a short call");
     // The arrival in indigo says a model wrote the words, so a template has none.
     expect(document.querySelector("[data-ai-reveal]")).toBeNull();
-    expect(screen.queryByText("AI-assisted draft")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["compose.aiDisclosureTitle"]),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "Polish" })).toBeNull();
     expect(
-      screen.queryByRole("combobox", { name: "Draft language" }),
+      screen.queryByRole("combobox", {
+        name: englishCopy["compose.draftLanguage"],
+      }),
     ).toBeNull();
     // The purpose stays, so the reader can ask again.
     expect(
@@ -568,8 +569,12 @@ describe("saying which writer drafted the email", () => {
 
     await user.click(draftButton());
 
-    expect(await screen.findByText("AI-assisted draft")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["compose.aiDisclosureTitle"]),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Polish" })).toBeTruthy();
-    expect(screen.queryByText("AI could not write this draft")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["compose.templateDraftTitle"]),
+    ).toBeNull();
   });
 });

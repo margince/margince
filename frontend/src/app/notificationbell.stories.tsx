@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { OpenSourceProvider } from "../lib/opensource";
 import {
   installFetchStub,
@@ -190,7 +191,9 @@ export const NothingEverRaisedPhone: Story = {
     await openIt(context);
     const body = within(document.body);
     const empty = await body.findByText(/Nothing has come in yet/);
-    const heading = body.getByRole("heading", { name: "Notifications" });
+    const heading = body.getByRole("heading", {
+      name: englishCopy["notifications.bell"],
+    });
     await expect(getComputedStyle(empty).borderTopWidth).toBe("0px");
     await expect(empty.getBoundingClientRect().left).toBe(
       heading.getBoundingClientRect().left,

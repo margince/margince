@@ -58,7 +58,6 @@ describe("DirectSendAction", () => {
     const settled = {
       id: "review-1",
       state: "resolved",
-      kind: "single",
       reason_code: "no_marketing_consent",
       refusals: [],
       warning: { version: "override-v1", text: "The refusal stands." },
@@ -123,7 +122,6 @@ describe("DirectSendAction", () => {
             JSON.stringify({
               id: "review-1",
               state,
-              kind: "single",
               reason_code: "no_marketing_consent",
               refusals: [],
               warning: { version: "override-v1", text: "The refusal stands." },
@@ -164,7 +162,6 @@ describe("DirectSendAction", () => {
               JSON.stringify({
                 id: "review-1",
                 state: "open",
-                kind: "single",
                 reason_code: "no_marketing_consent",
                 refusals: [],
                 warning: {
@@ -200,7 +197,6 @@ describe("DirectSendAction", () => {
     const asked = (id: string, state: string) => ({
       id,
       state,
-      kind: "single",
       reason_code: "no_marketing_consent",
       refusals: [],
       warning: { version: "override-v1", text: "The refusal stands." },

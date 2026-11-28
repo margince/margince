@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { Field, TextInput } from "./atoms";
 import { usePasswordReveal } from "./passwordreveal";
 
@@ -143,7 +144,9 @@ describe("usePasswordReveal", () => {
       "type",
       "password",
     );
-    const toggle = screen.getByRole("button", { name: "Show password" });
+    const toggle = screen.getByRole("button", {
+      name: englishCopy["auth.showPassword"],
+    });
     expect(toggle).toHaveAttribute("aria-pressed", "false");
   });
 
@@ -154,7 +157,9 @@ describe("usePasswordReveal", () => {
   it("flips the type and the pressed state together", async () => {
     const user = userEvent.setup();
     render(<RevealField />);
-    await user.click(screen.getByRole("button", { name: "Show password" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["auth.showPassword"] }),
+    );
     expect(screen.getByLabelText("Password")).toHaveAttribute("type", "text");
     expect(screen.getByRole("button", { name: "Hide" })).toHaveAttribute(
       "aria-pressed",

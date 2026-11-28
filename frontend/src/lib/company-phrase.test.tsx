@@ -4,6 +4,7 @@ import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { useCompanyPhrase } from "./company-phrase";
 
@@ -32,5 +33,5 @@ it("names the company once the session read has landed", () => {
 });
 
 it("says your company before the session read lands, never an empty name", () => {
-  expect(phrase(() => {})).toBe("your company");
+  expect(phrase(() => {})).toBe(englishCopy["ob.conv.connect.yourCompany"]);
 });

@@ -107,7 +107,9 @@ describe("the Shared mailboxes card", () => {
     backend(() => json({ items: [] }));
     draw();
 
-    expect(await screen.findByText("No shared mailboxes yet")).toBeTruthy();
+    expect(
+      await screen.findByText(en["sharedMailboxes.emptyTitle"]),
+    ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: /Connect a shared mailbox/ }),
     ).toBeTruthy();
@@ -152,7 +154,9 @@ describe("the Shared mailboxes card", () => {
       within(row).getByText(/^Mail from .+ was never read\./),
     ).toBeTruthy();
     expect(
-      within(row).getByRole("button", { name: "Import older mail" }),
+      within(row).getByRole("button", {
+        name: en["sharedMailboxes.importHistory"],
+      }),
     ).toBeTruthy();
     expect(within(row).queryByRole("button", { name: "Change" })).toBeNull();
   });
@@ -186,7 +190,7 @@ describe("the Shared mailboxes card", () => {
     draw();
 
     expect(
-      await screen.findByText("Only admins manage shared mailboxes"),
+      await screen.findByText(en["sharedMailboxes.adminOnlyTitle"]),
     ).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: /Connect a shared mailbox/ }),
@@ -199,16 +203,16 @@ describe("the Shared mailboxes card", () => {
     draw();
 
     await user.click(await screen.findByRole("button", { name: "Change" }));
-    expect(
-      screen.getByText(
-        "This applies to all mail the mailbox already captured, not only to new mail.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(en["sharedMailboxes.changeWarning"])).toBeTruthy();
     await user.click(screen.getByRole("radio", { name: /Held/ }));
     await user.click(
-      screen.getByRole("checkbox", { name: "Also hold mail already captured" }),
+      screen.getByRole("checkbox", {
+        name: en["sharedMailboxes.narrowHistory"],
+      }),
     );
-    await user.click(screen.getByRole("button", { name: "Apply to all mail" }));
+    await user.click(
+      screen.getByRole("button", { name: en["sharedMailboxes.changeConfirm"] }),
+    );
 
     await vi.waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toEqual({
@@ -238,10 +242,12 @@ describe("replying as a shared mailbox", () => {
     ).toBeTruthy();
     await user.click(
       screen.getByRole("checkbox", {
-        name: "Members may reply as this mailbox",
+        name: en["sharedMailboxes.replyEnabled"],
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Apply to all mail" }));
+    await user.click(
+      screen.getByRole("button", { name: en["sharedMailboxes.changeConfirm"] }),
+    );
 
     await vi.waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toEqual({
@@ -259,7 +265,7 @@ describe("replying as a shared mailbox", () => {
     await user.click(await screen.findByRole("button", { name: "Change" }));
     expect(
       screen.getByRole("checkbox", {
-        name: "Members may reply as this mailbox",
+        name: en["sharedMailboxes.replyEnabled"],
       }),
     ).toBeDisabled();
     expect(screen.getByText(/An IMAP mailbox only captures mail/)).toBeTruthy();

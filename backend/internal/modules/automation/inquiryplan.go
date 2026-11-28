@@ -47,7 +47,7 @@ func (s *EffectClaimStore) FreezeInquiry(ctx context.Context, key string, choose
 	ctx = principal.WithWorkspaceID(ctx, workspace.UUID)
 	var out InquiryPlan
 	run := func() error {
-		return database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
+		return database.WithSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
 			return s.db.Tx(bound, func(tx pgx.Tx) error {
 				if err := storekit.LockWriteIdentity(bound, tx, provenance.WebsiteInquirySource, key); err != nil {
 					return err

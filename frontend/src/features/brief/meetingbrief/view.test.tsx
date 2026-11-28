@@ -2,6 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../../i18n/en";
 import { StoryProviders } from "../../../testing/story-utils";
 import {
   briefManager,
@@ -51,8 +52,8 @@ describe("the prepared brief", () => {
     // The goal is first and the risks are second. Everything the server sends
     // after them is body; a reader who stops after two headings has still met
     // the two that change what they say in the room.
-    expect(headings[0]).toBe("Goal for this meeting");
-    expect(headings[1]).toBe("Risks and watch-outs");
+    expect(headings[0]).toBe(englishCopy["contact.meeting.goal"]);
+    expect(headings[1]).toBe(englishCopy["contact.meeting.risks"]);
   });
 
   it("draws no heading for a section the server did not send", () => {
@@ -61,9 +62,11 @@ describe("the prepared brief", () => {
       sections: briefReady.sections.filter((s) => s.kind === "goal"),
     };
     mount({ kind: "ready", brief: sparse });
-    expect(screen.queryByText("Risks and watch-outs")).toBeNull();
-    expect(screen.queryByText("Open commitments")).toBeNull();
-    expect(screen.getByText("Goal for this meeting")).toBeTruthy();
+    expect(screen.queryByText(englishCopy["contact.meeting.risks"])).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["contact.meeting.commitments"]),
+    ).toBeNull();
+    expect(screen.getByText(englishCopy["contact.meeting.goal"])).toBeTruthy();
   });
 
   it("names the writer, and tints the lead only for a model", () => {
@@ -152,17 +155,19 @@ describe("the preparation plan", () => {
     const headings = screen
       .getAllByRole("heading", { level: 3 })
       .map((h) => h.textContent);
-    expect(headings[0]).toBe("Target outcome");
+    expect(headings[0]).toBe(englishCopy["contact.meeting.objective"]);
     // And the sections a reader already had are still on the page, not buried:
     // an outline plan that hid the risks would be a regression.
-    expect(headings).toContain("Risks and watch-outs");
-    expect(headings).toContain("Goal for this meeting");
+    expect(headings).toContain(englishCopy["contact.meeting.risks"]);
+    expect(headings).toContain(englishCopy["contact.meeting.goal"]);
   });
 
   it("renders nothing of the plan when the brief carries none", () => {
     mount({ kind: "ready", brief: briefReady });
-    expect(screen.queryByText("Target outcome")).toBeNull();
-    expect(screen.queryByText("Close the meeting")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["contact.meeting.objective"]),
+    ).toBeNull();
+    expect(screen.queryByText(englishCopy["contact.meeting.close"])).toBeNull();
   });
 
   it("states the three ways to close, in order", () => {
@@ -171,7 +176,11 @@ describe("the preparation plan", () => {
       .getAllByRole("heading", { level: 4 })
       .map((h) => h.textContent);
     expect(legs).toEqual(
-      expect.arrayContaining(["Minimum advance", "Best advance", "Fallback"]),
+      expect.arrayContaining([
+        englishCopy["contact.meeting.advance.minimum"],
+        englishCopy["contact.meeting.advance.best"],
+        "Fallback",
+      ]),
     );
   });
 
@@ -270,7 +279,9 @@ describe("the preparation plan", () => {
 describe("the coaching layer", () => {
   it("is absent for the rep whose meeting it is", () => {
     mount({ kind: "ready", brief: briefWithPlan });
-    expect(screen.queryByText("Coaching focus")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["contact.meeting.coach.title"]),
+    ).toBeNull();
   });
 
   it("leads the page for a lead, and says which view this is", () => {
@@ -278,8 +289,10 @@ describe("the coaching layer", () => {
     const headings = screen
       .getAllByRole("heading", { level: 3 })
       .map((h) => h.textContent);
-    expect(headings[0]).toBe("Coaching focus");
-    expect(screen.getByText("Manager view")).toBeTruthy();
+    expect(headings[0]).toBe(englishCopy["contact.meeting.coach.title"]);
+    expect(
+      screen.getByText(englishCopy["contact.meeting.coach.eyebrow"]),
+    ).toBeTruthy();
   });
 
   it("shows the lead the same facts as the rep, plus the coaching", () => {
@@ -325,7 +338,9 @@ describe("the coaching layer", () => {
 
   it("gives the lead the coach's reading of each branch", () => {
     mount({ kind: "ready", brief: briefManager });
-    expect(screen.getByText("Possible outcomes")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["contact.meeting.coach.paths"]),
+    ).toBeTruthy();
     expect(screen.getByText("It becomes a price negotiation")).toBeTruthy();
   });
 });
@@ -333,14 +348,14 @@ describe("the coaching layer", () => {
 describe("the states a read can land in", () => {
   it("says it is assembling", () => {
     mount({ kind: "loading" });
-    expect(screen.getByText("Preparing brief…")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["contact.meeting.loading"]),
+    ).toBeTruthy();
   });
 
   it("says a cold record has nothing yet", () => {
     mount({ kind: "ready", brief: { ...briefReady, sections: [] } });
-    expect(
-      screen.getByText("Nothing recorded for this meeting yet."),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["contact.meeting.empty"])).toBeTruthy();
   });
 
   it("still names a withheld source when nothing else survived", () => {
@@ -348,9 +363,7 @@ describe("the states a read can land in", () => {
     // different facts. A brief whose only content is an omission must state
     // the omission rather than report itself empty.
     mount({ kind: "ready", brief: { ...briefOmitted, sections: [] } });
-    expect(
-      screen.queryByText("Nothing recorded for this meeting yet."),
-    ).toBeNull();
+    expect(screen.queryByText(englishCopy["contact.meeting.empty"])).toBeNull();
     expect(screen.getByText(/do not have access to Deal Rooms/)).toBeTruthy();
   });
 

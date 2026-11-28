@@ -50,7 +50,7 @@ function renderDialog(disabled: readonly CoreFeature[] = []) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return screen.getByRole("dialog", { name: "Keyboard shortcuts" });
+  return screen.getByRole("dialog", { name: en["shell.help.shortcuts"] });
 }
 
 function groupNamed(dialog: HTMLElement, title: string): HTMLElement {
@@ -106,7 +106,9 @@ describe("the keyboard shortcuts dialog", () => {
   it("reads a go-to sequence as one key, then the next", () => {
     const dialog = renderDialog();
     const goTo = groupNamed(dialog, "Go to");
-    expect(within(goTo).getByText("Press G, then the letter.")).toBeVisible();
+    expect(
+      within(goTo).getByText(en["shell.shortcuts.gotoHint"]),
+    ).toBeVisible();
     const contacts = within(goTo).getByText("Contacts", { selector: "dt" });
     expect(contacts.nextElementSibling).toHaveTextContent("GthenC");
   });
@@ -138,14 +140,14 @@ describe("the keyboard shortcuts dialog", () => {
     act(() => setSingleKeyShortcutsOn(false));
     const dialog = renderDialog();
     expect(
-      within(dialog).getByText("Single-key shortcuts are off"),
+      within(dialog).getByText(en["shell.shortcuts.singleKeyOff"]),
     ).toBeVisible();
   });
 
   it("says nothing about them while they are on", () => {
     const dialog = renderDialog();
     expect(
-      within(dialog).queryByText("Single-key shortcuts are off"),
+      within(dialog).queryByText(en["shell.shortcuts.singleKeyOff"]),
     ).toBeNull();
   });
 
@@ -162,7 +164,7 @@ describe("the keyboard shortcuts dialog", () => {
     expect(capsBeside(deck, "Approve")).toEqual(["→"]);
     expect(capsBeside(deck, "Later")).toEqual(["↓"]);
     expect(capsBeside(deck, "Undo last")).toEqual(["U"]);
-    expect(capsBeside(deck, "Send staged decisions")).toEqual(["Enter"]);
+    expect(capsBeside(deck, en["brief.deck.commit"])).toEqual(["Enter"]);
   });
 });
 

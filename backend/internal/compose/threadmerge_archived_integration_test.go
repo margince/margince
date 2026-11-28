@@ -37,7 +37,7 @@ func TestRecapturingAnArchivedMessageSkipsTheThreadJoin(t *testing.T) {
 		SELECT a.id FROM activity a
 		  JOIN activity_identity i ON i.activity_id = a.id
 		 WHERE i.identity_kind = 'mail' AND i.identity_key = 'arch-bridge@counterparty.example'`
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET archived_at = now() WHERE id = (`+bridgeRow+`)`)
 		return err
@@ -54,7 +54,7 @@ func TestRecapturingAnArchivedMessageSkipsTheThreadJoin(t *testing.T) {
 		t.Errorf("email activities went from %d to %d; the recapture must not file a second row", before, after)
 	}
 	var archived bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT archived_at IS NOT NULL FROM activity WHERE id = (`+bridgeRow+`)`).Scan(&archived)
 	}); err != nil {
@@ -73,7 +73,7 @@ func TestRecapturingAnArchivedMessageSkipsTheThreadJoin(t *testing.T) {
 func countEmailActivities(t *testing.T, e *integration.Env) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity WHERE kind = 'email'`).Scan(&n)
 	}); err != nil {

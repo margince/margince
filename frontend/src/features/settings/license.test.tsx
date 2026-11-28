@@ -226,7 +226,7 @@ describe("LicenseCard", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() => screen.getByText("This installation has no license")),
+      await waitFor(() => screen.getByText(en["license.absent.title"])),
     ).toBeTruthy();
     // Said once: the callout's title, with no standing line repeating it.
     expect(screen.getAllByText(/no license/i)).toHaveLength(1);
@@ -252,7 +252,7 @@ describe("LicenseCard", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() => screen.getByText("This installation has no license")),
+      await waitFor(() => screen.getByText(en["license.absent.title"])),
     ).toBeTruthy();
     expect(screen.getByText(/nothing is capped/)).toBeTruthy();
     // A standing condition does not interrupt: over-the-grant owns the only
@@ -277,12 +277,10 @@ describe("LicenseCard", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() =>
-        screen.getByText("This installation’s license was refused"),
-      ),
+      await waitFor(() => screen.getByText(en["license.refused.title"])),
     ).toBeTruthy();
     expect(screen.getAllByText(/refused/i)).toHaveLength(1);
-    expect(screen.queryByText("This installation has no license")).toBeNull();
+    expect(screen.queryByText(en["license.absent.title"])).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(
       screen.getByText(/Margince is locked until a check accepts it/),
@@ -508,7 +506,7 @@ describe("the licensee", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() => screen.getByText("License needs renewal")),
+      await waitFor(() => screen.getByText(en["license.renewal.title"])),
     ).toBeTruthy();
     // Amber, not an alert: nothing has gone wrong yet.
     expect(screen.queryByRole("alert")).toBeNull();
@@ -532,12 +530,12 @@ describe("the licensee", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() => screen.getByText("This license expired")),
+      await waitFor(() => screen.getByText(en["license.grace.title"])),
     ).toBeTruthy();
     expect(screen.getByText(/Margince is locked/)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     // One notice, not two: the expiry supersedes the renewal warning.
-    expect(screen.queryByText("License needs renewal")).toBeNull();
+    expect(screen.queryByText(en["license.renewal.title"])).toBeNull();
   });
 
   it("shows no licensee card for an unlicensed installation", async () => {
@@ -553,7 +551,7 @@ describe("the licensee", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() => screen.getByText("This installation has no license")),
+      await waitFor(() => screen.getByText(en["license.absent.title"])),
     ).toBeTruthy();
     expect(screen.queryByText("Licensed to")).toBeNull();
   });

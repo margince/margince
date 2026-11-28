@@ -89,15 +89,15 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 			}
 			if !limits.perIP.Allow(httpserver.ClientIP(r)) {
 				if preview {
-					srv.writeBookingPreviewUnavailable(w, r, slug, apperrors.ErrBudgetExceeded)
+					srv.writeBookingPreviewUnavailable(w, r, slug, ratelimit.Refused(limits.perIP))
 					return
 				}
-				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+				httperr.Write(w, r, ratelimit.Refused(limits.perIP))
 				return
 			}
 			// Lowercased, so the case variants of one alias share a budget.
 			if r.Method != http.MethodGet && !limits.perSlug.Allow(strings.ToLower(slug)) {
-				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+				httperr.Write(w, r, ratelimit.Refused(limits.perSlug))
 				return
 			}
 

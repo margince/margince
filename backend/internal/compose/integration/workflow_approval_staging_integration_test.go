@@ -123,7 +123,7 @@ func TestConfirmationRequiredActionStagesARealApprovalAndRejectionBlocksTheRun(t
 	var approvalIDStr, reason *string
 	readRun := func() {
 		t.Helper()
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(
 				context.Background(),
 				`SELECT status, detail->>'approval_id', detail->>'reason'
@@ -149,7 +149,7 @@ func TestConfirmationRequiredActionStagesARealApprovalAndRejectionBlocksTheRun(t
 	// The id in `detail` must name a REAL, live approval row, not merely a
 	// string shaped like one.
 	var kind, approvalStatus string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT kind, status FROM approval WHERE id = $1`, approvalID).Scan(&kind, &approvalStatus)
 	}); err != nil {

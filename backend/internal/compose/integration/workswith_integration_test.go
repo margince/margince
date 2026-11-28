@@ -155,7 +155,7 @@ func TestAWorksWithEdgeHidesWithItsFarEnd(t *testing.T) {
 			VALUES ($1, 'works_with', '`+pair[0].String()+`', '`+pair[1].String()+`', 'manual', 'human:x')`)
 		rep := e.As(e.Rep1, []ids.UUID{e.Team1}, worksWithPerms)
 		var peers map[ids.UUID]bool
-		err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			peers, err = contacts.NewStore(e.DB()).WorksWithPeers(rep, tx, ids.From[ids.ContactKind](mine))
 			return err

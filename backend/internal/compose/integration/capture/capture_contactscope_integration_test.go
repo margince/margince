@@ -35,7 +35,7 @@ import (
 func contactVisibility(t *testing.T, e *integration.SearchEnv, email string) string {
 	t.Helper()
 	var visibility string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT p.visibility FROM contact p
 			  JOIN contact_email pe ON pe.contact_id = p.id
@@ -50,7 +50,7 @@ func contactVisibility(t *testing.T, e *integration.SearchEnv, email string) str
 func contactOwnerOf(t *testing.T, e *integration.SearchEnv, email string) ids.UUID {
 	t.Helper()
 	var owner *ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT p.owner_id FROM contact p
 			  JOIN contact_email pe ON pe.contact_id = p.id
@@ -140,7 +140,7 @@ func promoteByVerdict(t *testing.T, e *integration.SearchEnv, email string, acti
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, domain, _ := strings.Cut(email, "@")
 		_, err := store.EnsureCounterpartyTx(ctx, tx, contacts.EnsureCounterpartyInput{
 			Email:      email,

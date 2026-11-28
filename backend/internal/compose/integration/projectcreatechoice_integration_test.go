@@ -53,7 +53,7 @@ func TestAChosenKeyIsStoredAndFilesMail(t *testing.T) {
 		t.Fatalf("stored key = %q, want the chosen key trimmed and upper-cased", key)
 	}
 	var matched ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		matched, err = e.Projects.MatchProjectKey(e.Admin(), tx, []string{"nord"})
 		return err

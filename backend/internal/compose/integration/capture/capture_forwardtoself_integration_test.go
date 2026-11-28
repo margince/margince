@@ -69,7 +69,7 @@ type filedForward struct {
 
 // adminRow scans one row of query into dest.
 func adminRow(e *integration.SearchEnv, query string, args []any, dest ...any) error {
-	return database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	return database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(dest...)
 	})
 }
@@ -277,7 +277,7 @@ func assertNoExchange(t *testing.T, e *integration.SearchEnv, forward ids.UUID) 
 		}
 	}
 	var move crmcontracts.EmailSummaryMove
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		moves, err := activities.MailMovesFor(reader, tx, []ids.UUID{forward}, later)
 		move = moves[forward]
 		return err

@@ -42,7 +42,7 @@ func TestABundleMatchesEachFileToItsTypeByName(t *testing.T) {
 		"README.txt":               "how to",
 		"__MACOSX/._companies.csv": "junk",
 		".DS_Store":                "junk",
-		"products.csv":             "Product\n",
+		"invoices.csv":             "Invoice\n",
 		"deals.csv":                "ref,name\n",
 		"Notes.csv":                "ref,subject\n",
 	}), 10<<20)
@@ -69,8 +69,8 @@ func TestABundleMatchesEachFileToItsTypeByName(t *testing.T) {
 	for _, i := range b.Ignored {
 		ignored[i.Entry] = i.Reason
 	}
-	if ignored["products.csv"] != IgnoredUnknownName || len(ignored) != 1 {
-		t.Fatalf("ignored = %v, want products.csv as unknown, and nothing else listed", ignored)
+	if ignored["invoices.csv"] != IgnoredUnknownName || len(ignored) != 1 {
+		t.Fatalf("ignored = %v, want invoices.csv as unknown, and nothing else listed", ignored)
 	}
 }
 
@@ -253,7 +253,7 @@ func TestAWorkbookPastTheEntryLimitIsRefusedAsAWorkbook(t *testing.T) {
 
 func TestAZipWithNoImportableFileIsRefusedNamingTheFilesItReads(t *testing.T) {
 	for name, files := range map[string]map[string]string{
-		"unknown names": {"products.csv": "Product\n", "notes.txt": "x"},
+		"unknown names": {"invoices.csv": "Invoice\n", "notes.txt": "x"},
 		"only a README": {"README.txt": "how to"},
 	} {
 		_, err := OpenBundle(zipOf(t, files), 10<<20)
@@ -262,7 +262,7 @@ func TestAZipWithNoImportableFileIsRefusedNamingTheFilesItReads(t *testing.T) {
 			t.Errorf("%s: err = %v, want no_importable_file", name, err)
 			continue
 		}
-		if names := fault.Params[string(ParamFileNames)]; names != "companies.csv, contacts.csv, leads.csv, deals.csv, activities.csv" {
+		if names := fault.Params[string(ParamFileNames)]; names != "companies.csv, contacts.csv, leads.csv, deals.csv, projects.csv, products.csv, activities.csv" {
 			t.Errorf("%s: file_names = %q, want the template's file of every type in import order", name, names)
 		}
 	}

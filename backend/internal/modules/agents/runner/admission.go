@@ -41,7 +41,7 @@ func observeRefusal(win *window, step modelStep, explained string, err error, me
 	directive := ""
 	switch {
 	case errors.Is(err, apperrors.ErrUnsupportedBySoR):
-		directive = "this workspace's system of record cannot serve this tool at all; do not call it again in this run"
+		directive = "this company's system of record cannot serve this tool at all; do not call it again in this run"
 	case errors.Is(err, errOutsideAgentSpec):
 		// Permanent for the same reason and for a different cause: the
 		// allowlist is code, so no re-plan reaches it within this run.
@@ -60,6 +60,6 @@ func observeRefusal(win *window, step modelStep, explained string, err error, me
 	return Step{
 		Tool: step.Tool, Args: step.Args, Observation: recorded,
 		ModelID: meta.ModelID, Tier: meta.Tier, TokensIn: resp.InputTokens, TokensOut: resp.OutputTokens,
-		Admission: AdmissionRefused,
+		Admission: AdmissionRefused, TerminalRefusal: directive != "",
 	}
 }

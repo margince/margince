@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { useMe } from "../../lib/session";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -151,7 +152,9 @@ async function searchOffScreen(canvasElement: HTMLElement) {
     "fraunhofer",
   );
   await expect(
-    await canvas.findByRole("button", { name: "Go to column" }),
+    await canvas.findByRole("button", {
+      name: englishCopy["board.showMatches"],
+    }),
   ).toBeTruthy();
   await expect(canvas.getByText("1 result in Signed")).toBeTruthy();
   const stage = canvasElement.querySelector(".board");

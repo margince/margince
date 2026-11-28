@@ -34,7 +34,7 @@ var listRecordsCopy = toolCopy{
 var readViewCopy = toolCopy{
 	Purpose: "Read one view the app draws that no other tool answers: a record's panels, such as a " +
 		"company's 360, contacts, documents, facts, graph or strength, a deal's status, documents or " +
-		"stakeholders, and a contact's cases; the workspace's reference lists, such as stages, custom " +
+		"stakeholders, and a contact's cases; the company's reference lists, such as stages, custom " +
 		"fields, lead sources, loss reasons, teams and lists; and reporting objects, such as targets, " +
 		"schedules, executions, sales progress and forecast calls.",
 	Limits: "Each view takes only a few of the arguments listed here: a record view its id, and its " +
@@ -75,7 +75,7 @@ var createRecordCopy = toolCopy{
 	Limits: "Creating a deal requires a pipeline_id and a stage_id, and " + pipelinesSource + " is " +
 		"what yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
 		"actually stores are accepted, and a field belonging to a neighboring type is refused " +
-		"rather than dropped. A CONTACT created here is visible to everyone in the workspace, " +
+		"rather than dropped. A CONTACT created here is visible to everyone in your company, " +
 		"the same as one a human types in." + pastDayNeedsATime + meetingStatusRule,
 	Instead: "Record a signed contract with change_offers action record_contract, never as a deal. " +
 		"A vCard file goes through change_capture. Before creating one contact or company that might " +
@@ -340,7 +340,7 @@ var advanceProjectPhaseCopy = toolCopy{
 }
 
 var listPipelinesCopy = toolCopy{
-	Purpose: "List every pipeline this workspace has with its live stages: the configuration " +
+	Purpose: "List every pipeline this company has with its live stages: the configuration " +
 		"the deal-shaped writes are named against.",
 	Limits: "It is where the id of a stage a deal could move TO comes from, so a deal cannot be " +
 		"created, or moved anywhere new, without calling this first: a deal you have already " +

@@ -99,7 +99,7 @@ func setupOwed(t *testing.T) *owedEnv {
 	o := &owedEnv{e: e, owner: e.Rep1, seat: seatAddress(t, e, e.Rep1), now: time.Now()}
 	// A shared mailbox, so captured mail is workspace mail: the classifier
 	// judges only mail the workspace may read.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_connection SET mail_posture = 'shared' WHERE user_id = $1`, o.owner)
 		return err
@@ -192,7 +192,7 @@ func (o *owedEnv) weLog(t *testing.T, kind string, contact ids.UUID, at time.Tim
 func (o *owedEnv) count(t *testing.T, query string, args ...any) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting: %v", err)
@@ -242,7 +242,7 @@ func (o *owedEnv) owed(t *testing.T, message ids.UUID) bool {
 func (o *owedEnv) threadKey(t *testing.T, message ids.UUID) string {
 	t.Helper()
 	var key string
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, message).Scan(&key)
 	}); err != nil {

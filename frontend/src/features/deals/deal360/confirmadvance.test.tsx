@@ -10,6 +10,7 @@ import type { components } from "../../../api/schema";
 import { holdExits } from "../../../design-system/presence-testing";
 import { pickOption } from "../../../design-system/select-testing";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { ProblemError } from "../../../lib/problem";
 import {
   advanceErrorBehind,
@@ -238,18 +239,24 @@ it("says a lost deal needs a reason from the list, and sends it with the note on
   openOn(LOST, onConfirm);
 
   await waitFor(() =>
-    expect(confirmRefusal()).toBe("Pick why the deal was lost."),
+    expect(confirmRefusal()).toBe(englishCopy["deals.lostReasonNeeded"]),
   );
-  await user.click(screen.getByRole("textbox", { name: "Note (optional)" }));
+  await user.click(
+    screen.getByRole("textbox", { name: englishCopy["deals.lostReasonNote"] }),
+  );
   await user.keyboard("Budget cut{Control>}{Enter}{/Control}");
   expect(onConfirm).not.toHaveBeenCalled();
 
-  const why = screen.getByRole("combobox", { name: "Why was it lost?" });
+  const why = screen.getByRole("combobox", {
+    name: englishCopy["deals.lostReasonCode"],
+  });
   await user.click(why);
   const price = await screen.findByRole("option", { name: "Price" });
   expect(screen.queryByRole("option", { name: "Bad timing" })).toBeNull();
   await user.click(price);
-  const note = screen.getByRole("textbox", { name: "Note (optional)" });
+  const note = screen.getByRole("textbox", {
+    name: englishCopy["deals.lostReasonNote"],
+  });
   await user.click(note);
   // Plain Enter starts a new line of the note.
   await user.keyboard("{Enter}more");
@@ -298,10 +305,12 @@ it("says a win marked Other needs details, and sends them on Ctrl+Enter", async 
   await waitFor(() => expect(confirmRefusal()).toBeNull());
   await user.click(screen.getByRole("button", { name: "Confirm" }));
 
-  const how = await screen.findByRole("combobox", { name: "How was it won?" });
-  expect(confirmRefusal()).toBe("Pick how the deal was won.");
+  const how = await screen.findByRole("combobox", {
+    name: englishCopy["deals.winReason"],
+  });
+  expect(confirmRefusal()).toBe(englishCopy["deals.winReasonNeeded"]);
   await pickOption(user, how, "Other");
-  expect(confirmRefusal()).toBe("Describe how the deal was won.");
+  expect(confirmRefusal()).toBe(englishCopy["deals.winDetailNeeded"]);
 
   await user.click(screen.getByRole("textbox", { name: "Details" }));
   await user.keyboard("Signed on a napkin{Control>}{Enter}{/Control}");
@@ -319,8 +328,10 @@ it("asks how a win happened before Confirm when the deal has no signed contract"
   const onConfirm = vi.fn(async () => undefined);
   openOn(WON, onConfirm, false);
 
-  const how = await screen.findByRole("combobox", { name: "How was it won?" });
-  expect(confirmRefusal()).toBe("Pick how the deal was won.");
+  const how = await screen.findByRole("combobox", {
+    name: englishCopy["deals.winReason"],
+  });
+  expect(confirmRefusal()).toBe(englishCopy["deals.winReasonNeeded"]);
   await pickOption(user, how, "On a purchase order");
   expect(confirmRefusal()).toBeNull();
 
@@ -336,7 +347,9 @@ it("drops the answer when a contract was filed while the dialog sat open", async
   const onConfirm = vi.fn(async () => undefined);
   openOn(WON, onConfirm, false);
 
-  const how = await screen.findByRole("combobox", { name: "How was it won?" });
+  const how = await screen.findByRole("combobox", {
+    name: englishCopy["deals.winReason"],
+  });
   await pickOption(user, how, "Verbally, in person or by phone");
   stubReads(true);
   await user.click(screen.getByRole("button", { name: "Confirm" }));
@@ -356,7 +369,7 @@ it("keeps a win with a signed contract to one click with nothing asked", async (
 
   await waitFor(() => expect(confirmRefusal()).toBeNull());
   expect(
-    screen.queryByRole("combobox", { name: "How was it won?" }),
+    screen.queryByRole("combobox", { name: englishCopy["deals.winReason"] }),
   ).toBeNull();
   await user.click(screen.getByRole("button", { name: "Confirm" }));
   expect(onConfirm).toHaveBeenCalledTimes(1);
@@ -387,14 +400,14 @@ it("holds Confirm while it checks whether the deal has a signed contract", async
     </QueryClientProvider>,
   );
   await waitFor(() =>
-    expect(confirmRefusal()).toBe("Checking the deal’s contract…"),
+    expect(confirmRefusal()).toBe(englishCopy["deals.winEvidenceChecking"]),
   );
   expect(
-    screen.queryByRole("combobox", { name: "How was it won?" }),
+    screen.queryByRole("combobox", { name: englishCopy["deals.winReason"] }),
   ).toBeNull();
 
   await act(async () => release());
-  await screen.findByRole("combobox", { name: "How was it won?" });
+  await screen.findByRole("combobox", { name: englishCopy["deals.winReason"] });
 });
 
 it("falls back to asking after a refusal when the contract check cannot be read", async () => {
@@ -407,7 +420,7 @@ it("falls back to asking after a refusal when the contract check cannot be read"
 
   await waitFor(() => expect(confirmRefusal()).toBeNull());
   await user.click(screen.getByRole("button", { name: "Confirm" }));
-  await screen.findByRole("combobox", { name: "How was it won?" });
+  await screen.findByRole("combobox", { name: englishCopy["deals.winReason"] });
 });
 
 it("does not look for a contract when the deal is going to a lost stage", async () => {
@@ -417,10 +430,10 @@ it("does not look for a contract when the deal is going to a lost stage", async 
     false,
   );
   await waitFor(() =>
-    expect(confirmRefusal()).toBe("Pick why the deal was lost."),
+    expect(confirmRefusal()).toBe(englishCopy["deals.lostReasonNeeded"]),
   );
   expect(
-    screen.queryByRole("combobox", { name: "How was it won?" }),
+    screen.queryByRole("combobox", { name: englishCopy["deals.winReason"] }),
   ).toBeNull();
   const reads = vi
     .mocked(fetch)

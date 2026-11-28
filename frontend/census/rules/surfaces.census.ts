@@ -73,6 +73,9 @@ export const THEME_ROOTS = new Set(
     .filter(
       (rule) =>
         !rule.selector.includes("*") &&
+        declarations(rule.body).some(
+          ({ property }) => property === "--bgPage",
+        ) &&
         compounds(rule.selector).every((part) => classesOf(part).size === 0) &&
         declarations(rule.body).every(({ property }) =>
           property.startsWith("--"),

@@ -1,61 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type QueryKey, useQuery } from "@tanstack/react-query";
-import { api } from "../../api/client";
+import { useQuery } from "@tanstack/react-query";
 import type { RecordType } from "../../components/share.parts";
-import { useCanWrite, type WritableRecord } from "../../lib/capability";
-import { contactQuery } from "../../lib/contact.queries";
-import { leadKey } from "../../lib/leadkeys";
-import { problemStatus, SHOWN_REFUSALS, unwrap } from "../../lib/problem";
+import { useCanWrite } from "../../lib/capability";
+import { problemStatus, SHOWN_REFUSALS } from "../../lib/problem";
+import { recordRead } from "../../lib/recordread";
 import {
   useActionRefusal,
   useKindWriteRefusal,
   useMeSettled,
 } from "../../lib/writerefusal";
-
-type RecordRead = Readonly<{
-  queryKey: QueryKey;
-  queryFn: () => Promise<WritableRecord>;
-}>;
-
-// Each record under the key its own page reads it by. Every write to it
-// invalidates that key (lib/recordwritekeys.ts), so the screen never holds a
-// `writable` the record has since lost.
-function recordRead(kind: RecordType, id: string): RecordRead {
-  const params = { params: { path: { id } } };
-  switch (kind) {
-    case "contact":
-      return {
-        queryKey: contactQuery(id).queryKey,
-        queryFn: async () => unwrap(await api.GET("/contacts/{id}", params)),
-      };
-    case "company":
-      return {
-        queryKey: ["company", id],
-        queryFn: async () => unwrap(await api.GET("/companies/{id}", params)),
-      };
-    case "deal":
-      return {
-        queryKey: ["deal", id],
-        queryFn: async () => unwrap(await api.GET("/deals/{id}", params)),
-      };
-    case "lead":
-      return {
-        queryKey: leadKey(id),
-        queryFn: async () => unwrap(await api.GET("/leads/{id}", params)),
-      };
-    case "project":
-      return {
-        queryKey: ["project", id],
-        queryFn: async () => unwrap(await api.GET("/projects/{id}", params)),
-      };
-    default:
-      // The route admits only the kinds above (share.tsx), so this is a kind a
-      // newer contract added and this build cannot read.
-      throw new Error(`no record read for kind ${kind}`);
-  }
-}
 
 export type ShareStanding =
   | Readonly<{ state: "pending" }>

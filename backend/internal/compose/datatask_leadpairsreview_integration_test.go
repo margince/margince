@@ -39,7 +39,7 @@ func runLeadPairsBatch(ctx context.Context, t *testing.T, e *integration.Env) da
 	t.Helper()
 	step := leadContactPairsDataTask(e.Pool).Steps[0]
 	var out datatask.BatchOut
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = step.Batch(ctx, tx, datatask.BatchIn{Limit: 25, RunID: ids.NewV7()})
 		return err
@@ -53,7 +53,7 @@ func runLeadPairsBatch(ctx context.Context, t *testing.T, e *integration.Env) da
 func leadPairsEstimate(ctx context.Context, t *testing.T, e *integration.Env) int64 {
 	t.Helper()
 	var count int64
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		count, _, err = leadContactPairsDataTask(e.Pool).Steps[0].Estimate(ctx, tx, 100)
 		return err

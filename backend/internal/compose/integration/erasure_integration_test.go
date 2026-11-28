@@ -49,7 +49,7 @@ func seededPreferenceToken(contactID ids.UUID) string {
 func seedSubject(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
 	contactID := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact (id, full_name, first_name, title, source, captured_by)
@@ -139,7 +139,7 @@ func seedSubject(t *testing.T, e *Env) ids.UUID {
 // tombstone, scrubbed raw capture.
 func assertSubjectErased(t *testing.T, e *Env, contactID ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		checks := []struct {
 			what  string
@@ -248,7 +248,7 @@ func TestErasureRemovesPIIEverywhereAndSticksViaSuppression(t *testing.T) {
 
 	// A subject under legal hold cannot be erased.
 	held := seedSubject(t, e)
-	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE contact SET legal_hold = true WHERE id = $1`, held)
 		return err
 	})
@@ -310,7 +310,7 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 	freeActivity := ids.NewV7()
 	companyID := ids.NewV7()
 
-	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact (id, full_name, first_name, source, captured_by)
@@ -363,7 +363,7 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 		t.Fatalf("erasing an unheld contact → %v", err)
 	}
 
-	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		// The contact's own PII is still erased — the cascade ran.
 		var name string
@@ -416,7 +416,7 @@ func TestEraseContactHonoursCommercialCorrespondenceFloor(t *testing.T) {
 	email := ids.NewV7()
 	note := ids.NewV7()
 
-	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact (id, full_name, first_name, source, captured_by)
@@ -459,7 +459,7 @@ func TestEraseContactHonoursCommercialCorrespondenceFloor(t *testing.T) {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 
-	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		var name string
 		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, contactID).Scan(&name); err != nil {
@@ -511,7 +511,7 @@ func TestErasureRetiresTheSubjectsMessageIdentities(t *testing.T) {
 
 	const messageID = "selma-thread-1@example.test"
 	var activityID ids.ActivityID
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
 			SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1 LIMIT 1`,
 			contactID).Scan(&activityID); err != nil {
@@ -535,7 +535,7 @@ func TestErasureRetiresTheSubjectsMessageIdentities(t *testing.T) {
 	}
 
 	var left int
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity_identity WHERE activity_id = $1`, activityID).Scan(&left)
 	}); err != nil {

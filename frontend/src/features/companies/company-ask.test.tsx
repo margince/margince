@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { companyBackstop, jsonResponse } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { CompanyScreen } from "./companies";
@@ -61,10 +62,12 @@ describe("the company profile carries the ask surface", () => {
     // Profile tab draws AssistantPanel. A question button alone would still be
     // found if the panel were mounted anywhere else on the record.
     expect(
-      await screen.findByRole("heading", { name: "Ask about this company" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["co.assistant.title"],
+      }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "What is open here?" }),
+      screen.getByRole("button", { name: englishCopy["co.ask.q.whats_open"] }),
     ).toBeTruthy();
   });
 
@@ -82,7 +85,9 @@ describe("the company profile carries the ask surface", () => {
     render(<CompanyScreen id="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "What is open here?" }),
+      await screen.findByRole("button", {
+        name: englishCopy["co.ask.q.whats_open"],
+      }),
     );
 
     await waitFor(() => expect(asked).toEqual({ question: "whats_open" }));

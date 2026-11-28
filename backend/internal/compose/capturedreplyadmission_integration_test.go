@@ -71,7 +71,7 @@ func (o *owedEnv) unanswered(t *testing.T, message ids.UUID) bool {
 	t.Helper()
 	var answers []activities.OffThreadAnswer
 	ctx := o.judge()
-	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		answers, err = activities.OffThreadAnswersTx(ctx, tx, message, o.now, 1500, 100)
 		return err
@@ -84,7 +84,7 @@ func (o *owedEnv) unanswered(t *testing.T, message ids.UUID) bool {
 func assertCapturedRequestTask(t *testing.T, o *owedEnv, message ids.UUID) {
 	t.Helper()
 	var task ids.UUID
-	if err := database.WithWorkspaceTx(o.reader(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.reader(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(o.reader(), `SELECT id FROM activity WHERE source_system=$1 AND source_activity_id=$2 AND archived_at IS NULL`, activities.EmailRequestTaskSource, message).Scan(&task)
 	}); err != nil {
 		t.Fatal(err)

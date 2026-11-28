@@ -89,18 +89,22 @@ function readings(
     const display = read(field, record[field.column_name]);
     if (!display) continue;
     displayValues[field.column_name] = display;
-    if (field.type === "record" && field.options?.[0]) {
-      renderValues[field.column_name] = (
-        <KindRecordName kind={field.options[0]} id={display} />
-      );
-      continue;
-    }
-    const href = customFieldHref(display);
-    // Not a picklist: InlineChoice holds no link inside its pill.
-    if (href && (field.type === "text" || field.type === "url"))
-      renderValues[field.column_name] = (
-        <OffsiteLink href={href}>{display}</OffsiteLink>
-      );
+    const rendered = renderCustomFieldValue(field, display);
+    if (rendered !== undefined) renderValues[field.column_name] = rendered;
   }
   return { displayValues, renderValues };
+}
+
+export function renderCustomFieldValue(
+  field: CustomField,
+  display: string,
+): ReactNode {
+  if (field.type === "record" && field.options?.[0]) {
+    return <KindRecordName kind={field.options[0]} id={display} />;
+  }
+  const href = customFieldHref(display);
+  if (href && (field.type === "text" || field.type === "url")) {
+    return <OffsiteLink href={href}>{display}</OffsiteLink>;
+  }
+  return undefined;
 }

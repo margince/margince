@@ -63,7 +63,7 @@ type MailAttempt struct {
 func (e *BriefEngine) ClaimMailAttempt(ctx context.Context, runID ids.UUID, now time.Time) (MailAttempt, bool, error) {
 	var attempt MailAttempt
 	var claimed bool
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		attempt, claimed, err = e.ClaimMailAttemptTx(ctx, tx, runID, now)
 		return err
@@ -149,7 +149,7 @@ func (e *BriefEngine) MailFailed(ctx context.Context, runID ids.UUID, cause stri
 		return err
 	}
 	cause = textcut.Runes(cause, maxMailErrorRunes)
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE brief_run SET mail_error = $3
 			 WHERE id = $1 AND user_id = $2 AND mail_attempted_at IS NOT NULL`,
@@ -178,7 +178,7 @@ func (e *BriefEngine) LastMailedBefore(ctx context.Context, now time.Time) (*tim
 		return nil, err
 	}
 	var at *time.Time
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT max(mail_attempted_at) FROM brief_run
 			 WHERE user_id = $1 AND mail_error IS NULL AND mail_attempted_at < $2`,

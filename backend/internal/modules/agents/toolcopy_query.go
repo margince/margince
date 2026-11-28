@@ -25,7 +25,7 @@ var queryWorkspaceCopy = toolCopy{
 		"`partial_degraded` means something in the plan could not be answered as asked (`notes` " +
 		"says which). Keep each row's record_type and id for any follow-up call, and its `evidence` " +
 		"for the related record that admitted it. A row's `owner` is the colleague who holds that " +
-		"company: rows come back from across the whole workspace, so most of them belong to " +
+		"company: rows come back from across the whole company, so most of them belong to " +
 		"someone other than the contact asking. " + sayWhoseItIs,
 }
 

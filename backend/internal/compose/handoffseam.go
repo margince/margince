@@ -73,7 +73,7 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 // identity.TimezoneAppliedTx says; a reader without that grant still gets a handoff.
 func handoffZone(ctx context.Context, pool *pgxpool.Pool) (*time.Location, error) {
 	var zone *time.Location
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) (err error) {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) (err error) {
 		zone, err = identity.ZoneAppliedTx(ctx, tx)
 		return err
 	})

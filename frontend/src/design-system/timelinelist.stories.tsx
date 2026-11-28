@@ -6,6 +6,7 @@ import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { browserZone } from "../format/timezone";
 import { LocaleProvider, useLocale, useT } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { StoryProviders } from "../testing/story-utils";
 import { activityTimeline } from "./activitytimeline";
 import { Avatar, Card } from "./atoms";
@@ -590,7 +591,7 @@ export const SentByMarginceForYou: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByText("Sent by Margince for you"),
+      await canvas.findByText(englishCopy["trust.relayForYou"]),
     ).toBeVisible();
     await expect(canvas.getByText("From privacy@kps.test")).toBeVisible();
   },
@@ -648,7 +649,9 @@ export const NotesAnAgentLogged: Story = {
     await expect(
       await canvas.findByText("Made by Claude for Anna Weber"),
     ).toBeVisible();
-    await expect(canvas.getByText("Automated by an agent")).toBeVisible();
+    await expect(
+      canvas.getByText(englishCopy["trust.agentUnnamed"]),
+    ).toBeVisible();
   },
 };
 

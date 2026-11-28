@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { RecordMessenger } from "../../../components/messenger/recordmessenger";
 // This deal's VERBS — split out of deals.tsx, which is at its own line
 // ceiling and may not grow, for the same readability reason DealOverviewPane
 // and the deal's committee card were split out before it: the record-view render
@@ -246,6 +247,13 @@ export function DealActions({
         open={writing}
         onOpenChange={setWriting}
         keyShortcuts={writeKeys}
+      />
+      <RecordMessenger
+        recordType="deal"
+        recordId={deal.id}
+        name={deal.name}
+        disabled={Boolean(deal.archived_at)}
+        reasonId={refusedByArchive}
       />
       <Button
         disabled={logPending}

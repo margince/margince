@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OverflowMenu } from "../../design-system/atoms";
 import { ToastProvider } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { FIXTURE_TIMEZONE, meFixture } from "../../testing/mefixture";
 import { row } from "./worklist.fixtures";
@@ -89,7 +90,9 @@ describe("RowTaskReminder", () => {
     // A line that draws more open is a setting: the menu stays up under it.
     expect(line.getAttribute("aria-expanded")).toBe("true");
     await user.click(
-      await screen.findByRole("button", { name: "Remove reminder" }),
+      await screen.findByRole("button", {
+        name: englishCopy["tasks.remind.remove"],
+      }),
     );
     await waitFor(() => expect(patches).toHaveLength(1));
     expect(patches[0]).toEqual({ body: { remind_at: null }, ifMatch: "7" });

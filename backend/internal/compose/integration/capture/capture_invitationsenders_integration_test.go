@@ -65,7 +65,7 @@ func seedSeatSince(t *testing.T, e *integration.SearchEnv, login string, since t
 // wsExec runs one statement in the workspace as its admin.
 func wsExec(t *testing.T, e *integration.SearchEnv, sql string, args ...any) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), sql, args...)
 		return err
 	}); err != nil {
@@ -174,7 +174,7 @@ func TestAnOlderInvitationNamesItsColleagueFromItsOriginal(t *testing.T) {
 	}
 
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := invitationsenders.DataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		if err == nil && (out.Changed != 0 || out.Scanned != 9 || !out.Done) {
 			t.Errorf("a replay scanned %d and changed %d, want the 9 uncredited live Gmail invitations and no change", out.Scanned, out.Changed)
@@ -183,7 +183,7 @@ func TestAnOlderInvitationNamesItsColleagueFromItsOriginal(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("replaying the batch: %v", err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		restamped, err := activities.StampInvitationSenderTx(ctx, tx, activityIDOf(t, e, "old-invite@search.test"), e.Rep1, ids.NewV7())
 		if err == nil && restamped {
 			t.Error("a second stamp replaced the sender the invitation already names")

@@ -186,7 +186,7 @@ func TestAColleaguesMeetingWithOutsideGuestsIsFiledOnGuestsWhoArriveLater(t *tes
 	}
 	var meeting ids.UUID
 	var occurred time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT id, occurred_at FROM activity
 			 WHERE source_system = 'gcal' AND source_id = 'kickoff' AND kind = 'meeting'`).Scan(&meeting, &occurred)

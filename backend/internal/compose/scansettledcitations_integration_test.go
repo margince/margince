@@ -32,7 +32,7 @@ func (o *owedEnv) settledAs(reader context.Context, t *testing.T, message ids.UU
 		roster = append(roster, ids.ContactID{UUID: recipient})
 	}
 	var states map[ids.UUID]bool
-	if err := database.WithWorkspaceTx(reader, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		states, err = activities.SettledCitations(reader, tx, []ids.UUID{message}, roster, o.now)
 		return err

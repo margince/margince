@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/dbtest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -45,7 +46,7 @@ func TestARefusalReleasesTheKeyAndASuccessDoesNot(t *testing.T) {
 
 // A claim that cannot be taken refuses a tool's call, whose caller asked for at
 // most once. A REST request still runs, since a client may not mean its header.
-// A context with no workspace fails the claim before any pool is touched.
+// A pool that cannot open a transaction fails the claim.
 func TestAFailedClaimRefusesOnlyAToolsCall(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
@@ -54,7 +55,7 @@ func TestAFailedClaimRefusesOnlyAToolsCall(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ran := false
 			mux := chi.NewRouter()
-			mux.With(idempotency(nil, nil, nil)).Post("/v1/lead-origins", func(http.ResponseWriter, *http.Request) { ran = true })
+			mux.With(idempotency(dbtest.ClosedPool(t), nil, nil)).Post("/v1/lead-origins", func(http.ResponseWriter, *http.Request) { ran = true })
 			ctx := principal.WithActor(context.Background(),
 				principal.Principal{Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String()})
 			if tc.tool {

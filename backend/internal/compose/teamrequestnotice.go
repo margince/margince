@@ -64,7 +64,7 @@ func teamRequestLine(request activities.TeamRequest) notices.NewNotice {
 // A request no longer pending is not current, and its mail is not sent.
 func refreshTeamRequest(ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt) (notices.EmailAttempt, bool, error) {
 	var standing activities.TeamRequestStanding
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		standing, err = activities.ReadTeamRequestTx(ctx, tx, *attempt.TeamRequestPage, attempt.Recipient)
 		return err

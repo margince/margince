@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import {
   jsonResponse,
   type RouteMap,
@@ -269,7 +270,9 @@ describe("the dossier's legal-entity picker", () => {
     );
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Edit fields directly" }),
+      await screen.findByRole("button", {
+        name: englishCopy["ob.conv.review.editDirectly"],
+      }),
     );
     const legalName = screen.getByLabelText(/Registered legal name/);
     fireEvent.change(legalName, { target: { value: "Gradion, roughly" } });
@@ -340,10 +343,14 @@ describe("arriving at the review scene", () => {
     // reading is not editing, so the wall is two doors away, and this test
     // walks the same two a reader would.
     fireEvent.click(
-      await screen.findByRole("button", { name: "Read full profile" }),
+      await screen.findByRole("button", {
+        name: englishCopy["ob.deck.readWhole"],
+      }),
     );
     fireEvent.click(
-      await screen.findByRole("button", { name: "Choose facts to keep" }),
+      await screen.findByRole("button", {
+        name: englishCopy["ob.digest.pickFacts"],
+      }),
     );
     await screen.findByRole("heading", { level: 2, name: /Correct anything/ });
 

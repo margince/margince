@@ -50,7 +50,7 @@ func undoObservation(field, key, value string) contacts.TechnicalObservation {
 func technicalUndoFacts(t *testing.T, e *integration.Env, company ids.CompanyID) []map[string]any {
 	t.Helper()
 	var facts []map[string]any
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(e.Admin(), `SELECT to_jsonb(f) FROM company_fact f WHERE company_id = $1 ORDER BY field, value_key`, company)
 		if err != nil {
 			return err
@@ -68,7 +68,7 @@ func technicalUndoFacts(t *testing.T, e *integration.Env, company ids.CompanyID)
 // event committed with it.
 func reversalWriteShape(t *testing.T, e *integration.Env, auditID ids.UUID) (reversals, events int) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
 			SELECT count(DISTINCT a.id), count(o.id)
 			  FROM audit_log a
@@ -240,7 +240,7 @@ func TestASameValueRefreshIsAnObservationAndNotAChange(t *testing.T) {
 	refresh := applyUndoLookup(t, e, company, undoObservation("mail_provider", "mail", "Mail"))
 	var changes float64
 	var snapshot, events int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
 			SELECT (a.evidence->'technical'->>'changes')::float,
 			       (a.evidence->'technical' ? 'restore')::int,
@@ -320,7 +320,7 @@ func TestALegacyLookupReceiptSaysItHasNoSnapshot(t *testing.T) {
 	e := integration.Setup(t)
 	company := mergeTestCompany(t, e, "Legacy Lookup GmbH")
 	var answer Undoability
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = restoreSeamFor(e).evaluator.Evaluate(e.Admin(), tx, AuditRow{
 			ID: ids.NewV7(), EntityType: "company", EntityID: company.UUID, Action: string(auditverb.Update),
@@ -355,9 +355,9 @@ func TestTechnicalUndoRefusesALaterWriteThatBeganBeforeTheLookup(t *testing.T) {
 			applyUndoLookup(t, e, company, undoObservation("mail_provider", "old", "Old mail"))
 			began, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 			go func() {
-				done <- database.WithWorkspaceSnapshot(e.Admin(), e.Pool, func(ctx context.Context) error {
+				done <- database.WithSnapshot(e.Admin(), e.Pool, func(ctx context.Context) error {
 					// The first statement fixes the transaction's start time.
-					if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+					if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 						_, err := tx.Exec(ctx, `SELECT 1`)
 						return err
 					}); err != nil {

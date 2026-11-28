@@ -7,11 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // The problem codes this endpoint adds to modelfailure's.
@@ -68,6 +71,38 @@ func (h Handlers) RenderActivityForReader(w http.ResponseWriter, r *http.Request
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnprocessableEntity, Code: codeTooLong,
 			Detail: fmt.Sprintf("this text is longer than the %d characters one answer can carry; read the original", MaxSourceRunes),
+		})
+	case err != nil:
+		modelfailure.Write(w, r, err)
+	default:
+		httperr.WriteJSON(w, http.StatusOK, out)
+	}
+}
+
+// SuggestLabelTranslation implements POST /label-translations.
+func (h Handlers) SuggestLabelTranslation(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.LabelTranslationRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if strings.TrimSpace(req.Text) == "" {
+		httperr.Write(w, r, httperr.Validation("text", "required", "send the label to translate"))
+		return
+	}
+	if utf8.RuneCountInString(req.Text) > MaxLabelRunes {
+		httperr.Write(w, r, httperr.Validation("text", codeTooLong, fmt.Sprintf("a label is at most %d characters", MaxLabelRunes)))
+		return
+	}
+	if !req.Language.Valid() {
+		httperr.Write(w, r, httperr.Validation("language", "invalid_enum", "language must be one of en, de, vi"))
+		return
+	}
+	out, err := h.svc.SuggestLabel(r.Context(), req.Text, textlang.Lang(req.Language))
+	switch {
+	case errors.Is(err, ErrNoModel):
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict, Code: httperr.CodeAINotConfigured,
+			Detail: "suggesting a translation needs an AI model; an administrator can bind one under Settings → AI",
 		})
 	case err != nil:
 		modelfailure.Write(w, r, err)

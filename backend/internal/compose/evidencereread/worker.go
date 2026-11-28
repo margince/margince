@@ -98,7 +98,7 @@ func (w *Worker[T]) readPage(ctx context.Context, queue Enqueuer, job T) (int, i
 		size = DefaultPage
 	}
 	var judged, queued int
-	err := database.WithWorkspaceTx(ctx, w.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.Pool, func(tx pgx.Tx) error {
 		judged, queued = 0, 0
 		sent, err := deals.DealMailSentFrom(ctx, tx, job.SentFrom(), job.PageAfter(), size)
 		if err != nil {

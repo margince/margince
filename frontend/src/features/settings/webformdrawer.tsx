@@ -49,6 +49,7 @@ export type WebFormDraft = Readonly<{
   ownerId: string;
   productId: string;
   consentRequired: boolean;
+  notifyOwner: boolean;
   consentWording: string;
   consentPolicyVersion: string;
   privacyNotice: string;
@@ -66,6 +67,7 @@ export function draftFor(form?: WebForm): WebFormDraft {
     ownerId: form?.owner_id ?? "",
     productId: form?.product_id ?? "",
     consentRequired: form?.consent_required ?? false,
+    notifyOwner: form?.notify_owner ?? false,
     consentWording: form?.consent_wording ?? "",
     consentPolicyVersion: form?.consent_policy_version ?? "",
     privacyNotice: form?.privacy_notice ?? "",
@@ -152,6 +154,7 @@ export function webFormBodyOf(draft: WebFormDraft, form?: WebForm) {
       ? { product_id: optional(draft.productId) }
       : {}),
     consent_required: draft.consentRequired,
+    notify_owner: draft.notifyOwner,
     consent_wording: optional(draft.consentWording),
     consent_policy_version: optional(draft.consentPolicyVersion),
     privacy_notice: optional(draft.privacyNotice),
@@ -358,6 +361,19 @@ export function WebFormDrawer({
             onChange={(ownerId) => set({ ownerId })}
           />
         )}
+        <Field
+          label={t("webForms.field.notifyOwner")}
+          hint={t("webForms.field.notifyOwnerHint")}
+        >
+          {(field) => (
+            <Checkbox
+              {...field}
+              checked={draft.notifyOwner}
+              label={null}
+              onChange={(event) => set({ notifyOwner: event.target.checked })}
+            />
+          )}
+        </Field>
         <ProductField
           productId={draft.productId}
           error={fieldErrors.get("product_id")}

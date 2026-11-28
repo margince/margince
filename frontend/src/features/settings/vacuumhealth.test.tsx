@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { tableRowCells } from "../../testing/tablerow.testkit";
@@ -68,8 +69,10 @@ it("lists a table with its size, its empty space, the statement and the role to 
 
   const row = await tableRowCells("Table space", "public.event_outbox");
   expect(row.Size).toHaveTextContent("800 MB");
-  expect(row["Space without live rows"]).toHaveTextContent("480 MB");
-  expect(row["Space without live rows"]).toHaveTextContent("60%");
+  expect(row[englishCopy["vacuumHealth.col.waste"]]).toHaveTextContent(
+    "480 MB",
+  );
+  expect(row[englishCopy["vacuumHealth.col.waste"]]).toHaveTextContent("60%");
   expect(row["What to run"]).toHaveTextContent(
     'VACUUM (FULL, ANALYZE) "public"."event_outbox";',
   );
@@ -89,7 +92,9 @@ it("says no table needs it rather than showing an empty table", async () => {
   expect(
     await screen.findByText(/There is nothing to run/),
   ).toBeInTheDocument();
-  expect(screen.queryByText("How to run it")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(englishCopy["vacuumHealth.howTitle"]),
+  ).not.toBeInTheDocument();
 });
 
 it("counts the large tables it could not estimate", async () => {

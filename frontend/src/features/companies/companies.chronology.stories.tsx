@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { GroupedTimelineList } from "../../design-system/timeline";
+import { en as englishCopy } from "../../i18n/en";
 import { useViewerZone } from "../../lib/viewerzone";
 import { company, company360 } from "../../testing/company.fixtures";
 import {
@@ -86,7 +87,9 @@ export const ThreadsCut: Story = {
     await expect(
       await canvas.findByText("Re: Fleet renewal"),
     ).toBeInTheDocument();
-    await expect(canvas.queryByText("No threads yet.")).toBeNull();
+    await expect(
+      canvas.queryByText(englishCopy["chronology.conversationsEmpty"]),
+    ).toBeNull();
   },
 };
 

@@ -27,7 +27,7 @@ func TestABootSetRetainOnlyPostureIsNotSeeded(t *testing.T) {
 	if !seeds.RetainOnly() {
 		t.Fatal("the fixture does not ask for the retain-only posture")
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return seedRetentionPosture(e.Admin(), tx, seeds)
 	}); err != nil {
 		t.Fatalf("seeding the posture under a boot value: %v", err)

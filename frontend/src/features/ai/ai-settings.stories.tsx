@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
 import { Panel } from "../../design-system/panel";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -141,7 +142,7 @@ export const AnsweringFromTestProvider: Story = {
   args: { served: ["fake"] },
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText(
-      "answering from the built-in test provider",
+      englishCopy["aiSettings.providers.standIn"],
     );
   },
 };

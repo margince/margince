@@ -1,10 +1,11 @@
 /** @vitest-environment happy-dom */
 
-import { LocaleProvider } from "@margince/frontend/app";
+import { LocaleProvider, useT } from "@margince/frontend/app";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   render,
+  renderHook,
   screen,
   waitFor,
   within,
@@ -187,9 +188,7 @@ describe("the openchannel screen", () => {
 
     renderScreen();
     expect(await screen.findByText("No endpoint open")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Open endpoint" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open endpoint" })).toBeTruthy();
     // Nothing to mint against, so no control that would 404 on the way.
     expect(
       screen.queryByRole("button", { name: "Mint signing secret" }),
@@ -300,9 +299,7 @@ describe("the openchannel screen", () => {
 
     renderScreen();
     await screen.findByTestId("openchannel-curl");
-    expect(
-      screen.getByText(/can see it in the process list/),
-    ).toBeTruthy();
+    expect(screen.getByText(/can see it in the process list/)).toBeTruthy();
   });
 
   // The secret exists on a screen exactly once, and the sentence saying so is
@@ -561,9 +558,7 @@ describe("the openchannel screen", () => {
     // stronger claim than naming the four and is the one that survives a fifth
     // control being added.
     expect(screen.queryAllByRole("button")).toHaveLength(0);
-    expect(
-      screen.queryByLabelText("Outbound address"),
-    ).toBeNull();
+    expect(screen.queryByLabelText("Outbound address")).toBeNull();
   });
 
   // An ungranted seat is told so, and — the part that matters — no request is
@@ -637,13 +632,16 @@ describe("the openchannel screen", () => {
     // The read failure announces itself, and nothing on the page claims the
     // member has no endpoint.
     const alert = await screen.findByRole("alert");
+    const { result: translator } = renderHook(() => useT(), {
+      wrapper: ({ children }) => (
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      ),
+    });
     expect(
-      within(alert).getByText("Could not load this view. Reload the page."),
+      within(alert).getByText(translator.current("common.error")),
     ).toBeTruthy();
     expect(screen.queryByText("No endpoint open")).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Open endpoint" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open endpoint" })).toBeNull();
   });
 
   // A failed write is ANNOUNCED, not merely rendered: it appears after the

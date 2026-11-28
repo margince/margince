@@ -51,7 +51,7 @@ func TestTheProofBackfillRebuildsWhatTheRecordsHoldAndReplaysSafely(t *testing.T
 	step := requestProofDataTask().Steps[0]
 	e.WsExec(t, `DELETE FROM privacy_request_proof`)
 	var estimated int64
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		estimated, _, err = step.Estimate(ctx, tx, 1000)
 		return err
@@ -72,7 +72,7 @@ func TestTheProofBackfillRebuildsWhatTheRecordsHoldAndReplaysSafely(t *testing.T
 	}
 
 	audits := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'privacy_request_proof'`)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		if err == nil && (out.Changed != 0 || out.Scanned != 2) {
 			t.Errorf("replay changed %d of %d, want 0 of 2", out.Changed, out.Scanned)
@@ -91,7 +91,7 @@ func TestTheProofBackfillNamesTheLatestCloseOfAReopenedRequest(t *testing.T) {
 	request := e.closeAccess(t, "reopened@proof.test")
 	// The status machine refuses a reopen today; an earlier writer did not,
 	// and its audit row is what this request carries.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(e.Admin(), `UPDATE data_subject_request SET status = 'in_progress' WHERE id = $1`, request); err != nil {
 			return err
 		}

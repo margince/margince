@@ -8,6 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { PipelineLadder } from "./pipelineladder";
 
 // What the ladder may say, and what it must never say.
@@ -153,6 +154,8 @@ describe("the pipeline ladder", () => {
       rung({ stage: "tier_ladder", order: 60, status: "not_applicable" }),
     ]);
     expect(screen.getByText("Unknown")).toBeInTheDocument();
-    expect(screen.getByText("Not applicable")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["pipeline.status.not_applicable"]),
+    ).toBeInTheDocument();
   });
 });

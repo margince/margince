@@ -568,7 +568,6 @@ export const seededViews: components["schemas"]["SavedView"][] = [
     resource: "contacts",
     name: "Contacts I own",
     owner_id: "u1",
-    shared_scope: "private",
     query: {
       filter: { and: [{ field: "owner_id", op: "eq", value: "u1" }] },
     },
@@ -579,7 +578,6 @@ export const seededViews: components["schemas"]["SavedView"][] = [
     resource: "companies",
     name: "Fleet companies",
     owner_id: "u1",
-    shared_scope: "private",
     query: {
       filter: { and: [{ field: "industry", op: "eq", value: "automotive" }] },
     },
@@ -590,7 +588,6 @@ export const seededViews: components["schemas"]["SavedView"][] = [
     resource: "deals",
     name: "Partner deals",
     owner_id: "u1",
-    shared_scope: "private",
     query: {
       list: {
         q: "",

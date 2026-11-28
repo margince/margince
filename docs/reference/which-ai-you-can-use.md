@@ -20,8 +20,8 @@ Also called: which model should I use, best model, recommended model, which LLM,
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 31 | 6 | 1 | 0 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 31 | 6 | 1 | 0 |
+| Google Gemini | global cloud | 28 | 9 | 1 | 0 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 28 | 9 | 1 | 0 |
 | Anthropic Claude | global cloud | 34 | 3 | 0 | 1 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 7 | 7 |
@@ -30,7 +30,7 @@ Also called: which model should I use, best model, recommended model, which LLM,
 | Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
 | Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
 
-[96 of these 199 grades](ai-certification.md#stale-records-and-why) were measured on an older version of Margince and wait for a re-check.
+[98 of these 199 grades](ai-certification.md#stale-records-and-why) were measured on an older version of Margince and wait for a re-check.
 
 ### What does a grade of a Margince AI feature mean?
 A grade of a Margince AI feature says how often it was right. **Ready** means right in at least 90 of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over what it makes. **Not reliable yet** means wrong too often: leave it off. **Not measured** means nobody has tested that feature on that model yet.
@@ -71,7 +71,7 @@ Also called: untested assistant, another AI tool, my own agent.
 The job by job results are in [Your AI assistant: test results](mcp-tool-coverage.md).
 
 ### What did you test, and what not?
-For Margince AI we ran 352 test cases. Each one is an example with a known right answer, in one of the 64 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
+For Margince AI we ran 356 test cases. Each one is an example with a known right answer, in one of the 64 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
 Also called: how is the AI tested, test coverage, certification.
 
 ## Where to go next

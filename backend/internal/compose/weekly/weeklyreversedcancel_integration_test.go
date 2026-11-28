@@ -35,14 +35,14 @@ func TestAReversedCalendarCancellationCountsNoSecondBooking(t *testing.T) {
 	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
 	key := connector.NaturalKey{SourceSystem: "gcal", SourceID: "evt-guest-copy"}
 	cancelling := e.ConnectorOwnerCtx(e.Rep1, "gcal")
-	if err := database.WithWorkspaceTx(cancelling, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(cancelling, e.Pool, func(tx pgx.Tx) error {
 		_, err := activities.CancelMeetingByIDTx(cancelling, tx, id, key, at)
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
 	repair := principal.SystemActing(e.Admin(), "system:datatask:test")
-	if err := database.WithWorkspaceTx(repair, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(repair, e.Pool, func(tx pgx.Tx) error {
 		_, err := activities.ReopenCalendarCancellationTx(repair, tx, activities.CalendarCancellation{
 			ID: id.UUID, ActorType: "connector", Restore: &booked, Key: key,
 		}, ids.NewV7())
@@ -79,7 +79,7 @@ func TestAConnectorBookingLaterCancelledStillCountsAsABooking(t *testing.T) {
 		t.Fatal(err)
 	}
 	cancelling := e.ConnectorOwnerCtx(e.Rep1, source)
-	if err := database.WithWorkspaceTx(cancelling, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(cancelling, e.Pool, func(tx pgx.Tx) error {
 		_, err := activities.CancelMeetingByIDTx(cancelling, tx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)),
 			connector.NaturalKey{SourceSystem: source, SourceID: event}, at)
 		return err

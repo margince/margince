@@ -17,6 +17,7 @@ import {
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { CfObject } from "../lib/customfields.logic";
 import { entryDepth } from "../lib/historydepth";
 import { problemMessageOf, problemStatus } from "../lib/problem";
 import {
@@ -33,6 +34,7 @@ import {
   useNarrowedFromOutside,
   useUrlParams,
 } from "../lib/urlstate";
+import { useListCustomFields } from "./listcustomfields";
 import type {
   FilterSpec,
   ListState,
@@ -67,6 +69,7 @@ import {
  */
 export function ListTable<Row>({
   title,
+  customFieldsKind,
   state,
   columns,
   rowKey,
@@ -105,6 +108,7 @@ export function ListTable<Row>({
    * comes with it: the screen also joins `SELF_HEADED_SCREENS`.
    */
   title?: ReactNode;
+  customFieldsKind?: CfObject;
   state: ListState<Row>;
   columns: readonly ListColumn<Row>[];
   rowKey: (row: Row) => string;
@@ -196,6 +200,7 @@ export function ListTable<Row>({
   // The rendered page is a dial like the rest, so it comes from the address.
   // Read here rather than threaded through ListState: it is the only dial the
   // table owns by default.
+  const custom = useListCustomFields<Row>(customFieldsKind, query.filters);
   const [params, setParams] = useUrlParams();
   const narrowedFromOutside = useNarrowedFromOutside(JSON.stringify(query));
   // Where the reader was in the rows, which the shell cannot remember for them.
@@ -251,21 +256,11 @@ export function ListTable<Row>({
   const allChips: readonly ListChip[] = [
     ...chips.map((chip) => translateChip(chip, t)),
     ...dataChips,
+    ...custom.chips,
   ];
   // Keyed on the filters, which are what the list reads. The table treats a
   // new `chosen` identity as the reader narrowing the list and resets to
   // page 1. So this identity must change only when the answer changes.
-  //
-  // Keying on the chip options made the roster do it. The team dial names the
-  // workspace's teams, which arrive on their own query. A chip gained an
-  // option seconds after the list rendered and threw the reader from page 2
-  // back to page 1 with nothing touched.
-  //
-  // Keying on chosenFor's result is not enough either, and the saved views are
-  // why. A restored view sets `owner_team_id=t-9` before the roster answers.
-  // So the filter is already there when the matching option arrives. chosenFor
-  // then adds the chip's own key, and the result changes shape. The query and
-  // every row stay as they were.
   //
   // The filters are the true signal: the fetch reads them and nothing else.
   // So an identity that follows them resets when the rows change and never
@@ -408,7 +403,7 @@ export function ListTable<Row>({
     <ListSurface<Row>
       title={title}
       rows={rows}
-      columns={columns}
+      columns={[...columns, ...custom.columns]}
       rowKey={rowKey}
       onRowClick={rowRoute ? (row) => navigate(rowRoute(row)) : undefined}
       rowHref={rowRoute ? (row) => routeHash(rowRoute(row)) : undefined}

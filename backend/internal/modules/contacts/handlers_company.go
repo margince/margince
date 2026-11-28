@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -96,8 +98,8 @@ func (h Handlers) CreateCompany(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// A declared importer (a HUMAN holding import_run:create) may stamp the
-	// reserved mirror: namespace; everyone else, an agent carrying that human's
+	// A declared importer (auth.DeclaredImporter) may stamp the reserved
+	// mirror: namespace; everyone else, an agent carrying that human's
 	// grants included, gets the closed door.
 	mapInput := CompanyCreationInput
 	if auth.DeclaredImporter(r.Context()) {
@@ -232,6 +234,7 @@ func (h Handlers) RequestCompanyVatCheck(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	if errors.Is(err, apperrors.ErrBudgetExceeded) {
+		ratelimit.SetHeaders(w.Header(), 1, int(vatRecheckCooldown.Seconds()))
 		// Written here rather than let through the default path, which passes
 		// the wrapped error's own text to the client — and that text ends in
 		// the sentinel's name. A rep reading "budget exceeded" learns nothing

@@ -232,13 +232,11 @@ it("keeps a pending provider operation distinct from a confirmed invitation", as
   expect(
     await screen.findByRole("heading", { level: 1, name: "Project discovery" }),
   ).toBeTruthy();
-  expect(screen.getByRole("status").textContent).toBe(
-    "Creating your invitation…",
-  );
-  expect(screen.queryByText("Calendar invitation created")).toBeNull();
+  expect(screen.getByRole("status").textContent).toBe(en["scheduling.pending"]);
+  expect(screen.queryByText(en["scheduling.confirmed"])).toBeNull();
   expect(
     screen
-      .getByRole("button", { name: "Cancel meeting" })
+      .getByRole("button", { name: en["scheduling.cancel"] })
       .hasAttribute("disabled"),
   ).toBe(false);
 });
@@ -267,7 +265,7 @@ it("recovers the existing meeting from a used personal proposal", async () => {
   );
   mount("proposal-personal-link");
   await user.click(
-    await screen.findByRole("button", { name: "View your meeting" }),
+    await screen.findByRole("button", { name: en["scheduling.openMeeting"] }),
   );
   expect(window.location.hash).toContain("manage-recovered-link");
 });
@@ -290,7 +288,7 @@ it("shows guest slots in the city selected from the timezone dropdown", async ()
 // does not advertise itself on it, in any state a guest can reach (#10087).
 function expectNoPromotion() {
   expect(screen.queryByText("Powered by")).toBeNull();
-  expect(screen.queryByAltText("Powered by Margince")).toBeNull();
+  expect(screen.queryByAltText(en["buyer.poweredByMargince"])).toBeNull();
 }
 it("shows the host's page without a Margince footer and names the booking in the tab", async () => {
   inBookingMonth();
@@ -307,7 +305,7 @@ it("shows the guest's confirmed meeting without a Margince footer", async () => 
     await screen.findByRole("heading", { level: 1, name: "Project discovery" }),
   ).toBeTruthy();
   expectNoPromotion();
-  expect(document.title).toBe("Your meeting");
+  expect(document.title).toBe(en["book.meetingTitle"]);
 });
 it("shows a missing booking page without a Margince footer or the host's name", async () => {
   vi.stubGlobal(
@@ -321,7 +319,7 @@ it("shows a missing booking page without a Margince footer or the host's name", 
     ),
   );
   mount("retired-page");
-  await waitFor(() => expect(document.title).toBe("Book a meeting"));
+  await waitFor(() => expect(document.title).toBe(en["scheduling.new"]));
   await screen.findByRole("alert");
   expectNoPromotion();
 });

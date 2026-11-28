@@ -44,7 +44,7 @@ func TestThePersonalSurfaceFollowsTheMemberAndTheCombinedOneTheInstallation(t *t
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			var goDay time.Time
-			err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				var err error
 				goDay, _, err = dayrule.DayAt(e.Admin(), tx, c.surface, c.user, at)
 				return err
@@ -129,7 +129,7 @@ func TestOneReadResolvesEachZoneOnce(t *testing.T) {
 	askInTx := func(ctx context.Context) int64 {
 		t.Helper()
 		var sent int64
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			metered, meter := database.WithStatementMeter(ctx)
 			_, err := dayrule.Zone(metered, tx, occurredday.Personal, e.Rep1)
 			sent = meter.Cost().Statements

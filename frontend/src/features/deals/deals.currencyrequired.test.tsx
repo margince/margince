@@ -11,6 +11,7 @@ import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { RecordFormBody } from "../../components/create.form";
 import { LocaleProvider, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { dealEditFields } from "./deals.fields";
 import { mapDealUpdate } from "./deals.write";
 
@@ -77,7 +78,7 @@ it.each(["Value", "Expected ARR"])(
     expect(save).not.toHaveBeenCalled();
     expect(screen.getByText("Currency is required.")).toBeInTheDocument();
     expect(
-      screen.getByText("This amount needs a currency first."),
+      screen.getByText(englishCopy["amount.refused.noCurrency"]),
     ).toBeInTheDocument();
     expect(input).toHaveFocus();
     fireEvent.change(input, { target: { value: "" } });

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -92,8 +93,6 @@ export const OffTrackWithNoNoteYet: Story = {
     await userEvent.click(
       await dialog.findByRole("button", { name: "Off track" }),
     );
-    await dialog.findByText(
-      "Describe the problem so the next reader has the context.",
-    );
+    await dialog.findByText(englishCopy["projectHealth.noteRequiredHint"]);
   },
 };

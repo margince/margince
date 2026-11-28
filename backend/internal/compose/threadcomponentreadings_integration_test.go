@@ -27,7 +27,7 @@ func TestAPaidReadingWaitsForItsComponentWithoutRepeatingTheModel(t *testing.T) 
 	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), o.e.WS), signalScanActor)
 	extractor := NewSignalExtractor(o.e.Pool, brain, func() time.Time { return o.now.Add(72 * time.Hour) }, slog.Default())
 	finished := make(chan error, 1)
-	if err := database.WithWorkspaceTx(pass, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(pass, o.e.Pool, func(tx pgx.Tx) error {
 		if err := storekit.WaitThreadKeysTx(pass, tx, []string{key}); err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func TestAReadingWhoseThreadMergedAwayIsDeclinedWithoutAFailedJob(t *testing.T) 
 	o.customerSays(t, oldKey, "", "The old conversation.", "", o.now.Add(-48*time.Hour))
 	o.customerSays(t, newKey, "", "The surviving conversation.", "", o.now.Add(-49*time.Hour))
 	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), o.e.WS), signalScanActor)
-	if err := database.WithWorkspaceTx(pass, o.e.Pool, func(tx pgx.Tx) error { return mergeThreadsTx(pass, tx, oldKey, newKey) }); err != nil {
+	if err := database.WithTx(pass, o.e.Pool, func(tx pgx.Tx) error { return mergeThreadsTx(pass, tx, oldKey, newKey) }); err != nil {
 		t.Fatal(err)
 	}
 	extractor := NewSignalExtractor(o.e.Pool, &askedBrain{}, func() time.Time { return o.now }, slog.Default())

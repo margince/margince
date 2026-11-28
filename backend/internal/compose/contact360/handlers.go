@@ -95,7 +95,7 @@ func (s *Service) Acknowledge(ctx context.Context, contactID ids.ContactID) (crm
 	}
 	now := s.now().UTC()
 	var stored time.Time
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// Anything that names a record is gated: acknowledging a contact the
 		// caller cannot read would confirm they exist.
 		// Live, not merely visible: Art. 17 anonymizes a contact in place and
@@ -132,7 +132,7 @@ func (s *Service) ProfileFields(ctx context.Context, contactID ids.ContactID) ([
 		return nil, err
 	}
 	var out []crmcontracts.ContactProfileField
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// Live, not merely visible: Art. 17 anonymizes a contact in place and
 		// stamps archived_at while LEAVING owner_id alone, so the plain probe
 		// still admits their owner. This sidecar is the only path to the

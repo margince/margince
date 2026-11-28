@@ -20,6 +20,7 @@ import type { WorklistItem } from "./worklist.queries";
 // the interval between the two answers; without it they draw as a bare inline
 // run with no gap, which is a picture of markup rather than of the row.
 import "./worklist.row.css";
+import { en as englishCopy } from "../../i18n/en";
 
 // ANSWERING AN UNDECIDED DOMAIN, from the row that asked.
 //
@@ -129,7 +130,9 @@ function line(item: WorklistItem, stub: () => void) {
 const pressKeep = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
   const canvas = within(canvasElement);
   await userEvent.click(
-    await canvas.findByRole("button", { name: "Create company" }),
+    await canvas.findByRole("button", {
+      name: englishCopy["worklist.verb.keep"],
+    }),
   );
 };
 
@@ -198,10 +201,12 @@ export const AVendorQuestionOffersCreateOrKeepAsVendor: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByRole("button", { name: "Keep as vendor" }),
+      canvas.getByRole("button", {
+        name: englishCopy["worklist.verb.keepAsVendor"],
+      }),
     ).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "Create company" }),
+      canvas.getByRole("button", { name: englishCopy["worklist.verb.keep"] }),
     ).toBeVisible();
   },
 };
@@ -262,7 +267,7 @@ export const ARedirectWithASuggestedCompany: Story = {
       await canvas.findByRole("button", { name: "Confirm Example Company" }),
     ).toBeVisible();
     await expect(
-      canvas.queryByRole("button", { name: "Create company" }),
+      canvas.queryByRole("button", { name: englishCopy["worklist.verb.keep"] }),
     ).not.toBeInTheDocument();
   },
 };

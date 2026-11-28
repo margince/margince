@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { SettingsScreen, settingsAddress } from "./settings";
 
@@ -132,7 +133,9 @@ function renderAgents() {
 }
 
 function passportsTable(): HTMLElement {
-  return screen.getByRole("table", { name: "Your passports" });
+  return screen.getByRole("table", {
+    name: englishCopy["settings.passportsYours"],
+  });
 }
 
 function areasCell(name: string): HTMLElement {
@@ -283,7 +286,7 @@ describe("PassportCard: changing areas", () => {
       within(drawer).getByRole("button", { name: "Save areas" }),
     ).toBeDisabled();
     expect(
-      within(drawer).getByText("Tick at least one area."),
+      within(drawer).getByText(englishCopy["workArea.pickOne"]),
     ).toBeInTheDocument();
   });
 });
@@ -292,7 +295,9 @@ describe("PassportCard: minting with areas", () => {
   async function openMint(user: ReturnType<typeof userEvent.setup>) {
     renderAgents();
     await user.click(
-      await screen.findByRole("button", { name: "New passport" }),
+      await screen.findByRole("button", {
+        name: englishCopy["settings.mintOpen"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.type(within(dialog).getByLabelText(/^Agent name/), "Scout");
@@ -307,7 +312,9 @@ describe("PassportCard: minting with areas", () => {
       within(dialog).getByRole("radio", { name: /All areas/ }),
     ).toBeChecked();
     await user.click(
-      within(dialog).getByRole("button", { name: "Create passport" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.mint"],
+      }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
     expect(sent[0]?.body).toMatchObject({ areas: { mode: "all", areas: [] } });
@@ -329,7 +336,9 @@ describe("PassportCard: minting with areas", () => {
       await user.click(within(dialog).getByRole("checkbox", { name: area }));
     }
     await user.click(
-      within(dialog).getByRole("button", { name: "Create passport" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.mint"],
+      }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
     expect(sent[0]?.body).toMatchObject({

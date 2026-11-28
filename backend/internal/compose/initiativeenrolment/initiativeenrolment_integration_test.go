@@ -95,7 +95,7 @@ func (w manufacturingDeals) open(t *testing.T, initiative ids.UUID) map[ids.UUID
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), w.e.WS)
 	open := map[ids.UUID]string{}
-	if err := database.WithWorkspaceTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT record_id, reason FROM sales_initiative_enrolment WHERE initiative_id = $1 AND left_at IS NULL`, initiative)
 		if err != nil {
 			return err
@@ -179,7 +179,7 @@ func TestADeletedDealKeepsOnlyItsDatedMembership(t *testing.T) {
 	}
 	ctx := w.manager()
 	var membership initiatives.Membership
-	if err := database.WithWorkspaceTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		membership, err = w.store.MembershipOf(ctx, tx, id)
 		return err
@@ -247,7 +247,7 @@ func TestTheEnrolmentTaskDatesAnInitiativeLaunchedBeforeTheRows(t *testing.T) {
 	batch := func() datatask.BatchOut {
 		t.Helper()
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 			return err

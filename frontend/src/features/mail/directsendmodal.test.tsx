@@ -5,6 +5,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { DirectSendModal } from "./directsendmodal";
 
 // What must be true before an exception is recorded in somebody's name.
@@ -16,7 +17,6 @@ import { DirectSendModal } from "./directsendmodal";
 const review: components["schemas"]["CommunicationReview"] = {
   id: "review-1",
   state: "needs_repair",
-  kind: "single",
   reason_code: "no_marketing_consent",
   refusals: [],
   warning: {
@@ -149,7 +149,9 @@ it("shows the specific recipient, refusal, purpose and sending company", () => {
   });
   expect(screen.getByText("alex@example.test")).toBeTruthy();
   expect(screen.getByText("Sending company: Example Company")).toBeTruthy();
-  expect(screen.getByText("Follow-up they requested")).toBeTruthy();
+  expect(
+    screen.getByText(englishCopy["compose.why.requestedFollowup"]),
+  ).toBeTruthy();
 });
 
 it("requires a new acknowledgement when the served warning version changes", async () => {
@@ -197,7 +199,9 @@ it("keeps the recorded reason locked while entering and leaving wording correcti
   );
   expect(screen.getByRole("textbox", { name: "Explanation" })).toBeDisabled();
   await user.click(
-    screen.getByRole("button", { name: "Correct spelling or punctuation" }),
+    screen.getByRole("button", {
+      name: englishCopy["directSend.correctWording"],
+    }),
   );
   expect(screen.getByRole("textbox", { name: "Subject" })).toHaveValue(
     "Requested information",

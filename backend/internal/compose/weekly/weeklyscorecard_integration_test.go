@@ -200,7 +200,7 @@ func TestFreezingAScorecardTwiceLeavesTheFirstOne(t *testing.T) {
 		t.Fatal(err)
 	}
 	second := Scorecard{Lead: &LeadBlock{Advanced: 99}}
-	if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		return insertScorecard(e.repCtx, tx, written.ID, second)
 	}); err != nil {
 		t.Fatalf("a second freeze must be refused quietly, not fail: %v", err)

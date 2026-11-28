@@ -4,6 +4,7 @@
 
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import { replaceDial } from "../lib/urlstate";
 import {
@@ -94,7 +95,9 @@ describe("an address whose sort the server refuses", () => {
     const fetchPage = refusingSort("owner_id", "invalid_uuid");
     render(<ListTableHarness fetchPage={fetchPage} />);
 
-    await screen.findByText("This list cannot be shown with these filters.");
-    expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
+    await screen.findByText(englishCopy["table.dialsRefused"]);
+    expect(
+      screen.getByRole("button", { name: englishCopy["table.clearFilters"] }),
+    ).toBeTruthy();
   });
 });

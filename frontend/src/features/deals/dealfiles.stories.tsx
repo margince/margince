@@ -8,6 +8,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -152,7 +153,7 @@ const pressHide: Story["play"] = async ({ canvasElement }) => {
   );
   await user.click(
     await within(document.body).findByRole("button", {
-      name: "Hide from this deal",
+      name: englishCopy["files.hide"],
     }),
   );
 };

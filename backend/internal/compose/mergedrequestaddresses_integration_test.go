@@ -117,7 +117,7 @@ func quoteVerdictFor(t *testing.T, e *integration.Env, gate *consent.Gate, addre
 // bound the same way. The purpose gate a send still asks reads it.
 func TestAMergedRequestDoesNotOpenCorrespondenceToTheOtherAddress(t *testing.T) {
 	e := integration.Setup(t)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return consent.SeedDefaultPurposesTx(context.Background(), tx)
 	}); err != nil {
 		t.Fatalf("seeding the purposes: %v", err)
@@ -152,7 +152,7 @@ func TestASharedEnquiryKeepsTheAddressesOfBothRecords(t *testing.T) {
 	asker := seedMergeContact(t, e, "Asker", askerAddress, contacts.Acquisition{})
 	other := seedMergeContact(t, e, "Other", otherAddress, contacts.Acquisition{})
 	var booking ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO activity (kind, subject, direction, occurred_at, source, captured_by)
 			VALUES ('meeting', 'Booked a call', 'inbound', now(), 'manual', 'human:test')

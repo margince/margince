@@ -12,6 +12,7 @@ import {
 } from "./company-review-scene";
 import type { DeckCard } from "./review-deck";
 import "../../../design-system/panel.css";
+import { en as englishCopy } from "../../../i18n/en";
 
 const CARD: DeckCard = {
   field: "icp",
@@ -107,7 +108,7 @@ export const DeckNotRefused: Story = {
   args: { mode: "dossier", error: null },
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByRole("button", {
-      name: "Confirm profile",
+      name: englishCopy["ob.deck.confirm"],
     });
     await expect(within(canvasElement).queryByRole("alert")).toBeNull();
   },
@@ -144,7 +145,9 @@ export const WholeRecordRefusedAfterSave: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const save = await canvas.findByRole("button", { name: "Save changes" });
+    const save = await canvas.findByRole("button", {
+      name: englishCopy["ob.digest.saveChanges"],
+    });
     await userEvent.click(save);
     const alert = await canvas.findByRole("alert");
     await expect(alert).toHaveTextContent(REFUSAL);

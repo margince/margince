@@ -168,7 +168,7 @@ func TestAMeetingSyncedBeforeItsGuestBecameAContactReachesTheirMeetingsTab(t *te
 		t.Fatalf("the meeting is filed before the cohort promotion ran (%q), so the case proves nothing", listed)
 	}
 	promoter := principal.WithCorrelationID(e.Admin(), ids.NewV7())
-	if err := database.WithWorkspaceTx(promoter, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(promoter, e.Pool, func(tx pgx.Tx) error {
 		_, err := store.PromoteContactCohortTx(promoter, tx, ids.From[ids.ContactKind](buyer))
 		return err
 	}); err != nil {

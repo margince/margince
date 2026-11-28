@@ -67,7 +67,7 @@ func seedAuditActionRow(t *testing.T, e *Env, action, entityType string, entityI
 	beforeJSON, afterJSON := auditImageJSON(t, before), auditImageJSON(t, after)
 	rowID := ids.NewV7()
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, action,
 			                        entity_type, entity_id, before, after, occurred_at)

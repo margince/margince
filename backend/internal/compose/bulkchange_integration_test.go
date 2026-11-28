@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"sync"
 	"testing"
 
@@ -542,11 +543,12 @@ func TestAChangeThatDoesNotCommitGivesItsReservationBack(t *testing.T) {
 // statements one more record adds to a bulk reassignment's preview or execution.
 // They are the counts measured with one read check per row, no re-read for
 // If-Match and no read-back for the caller. A lead's writer takes its own lock.
+// Each record also reads the trigger-source journal before its audit is written.
 var bulkReassignStatementsPerRecord = map[crmcontracts.BulkRecordType]int64{
-	crmcontracts.BulkRecordTypeContact: 21,
-	crmcontracts.BulkRecordTypeCompany: 15,
-	crmcontracts.BulkRecordTypeDeal:    11,
-	crmcontracts.BulkRecordTypeLead:    16,
+	crmcontracts.BulkRecordTypeContact: 22,
+	crmcontracts.BulkRecordTypeCompany: 16,
+	crmcontracts.BulkRecordTypeDeal:    12,
+	crmcontracts.BulkRecordTypeLead:    17,
 }
 
 func seedBulkCompanies(t *testing.T, e *integration.Env, owner ids.UUID, n int) []crmcontracts.BulkItem {
@@ -641,5 +643,30 @@ func TestABulkReassignmentCostsAFixedNumberOfStatementsPerRecord(t *testing.T) {
 				t.Errorf("executing a %s reassignment costs %d statements per record, ceiling %d", recordType, execute, ceiling)
 			}
 		})
+	}
+}
+
+func TestABulkSavepointKeepsTheTriggeredSourceInItsAuditAndEvent(t *testing.T) {
+	e := integration.Setup(t)
+	owner, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Error(err)
+		}
+	})
+	id := integration.SeedBeforeSourceCheck(t, owner, "contact", `INSERT INTO contact(id,full_name,owner_id,source,captured_by) VALUES($1,'Legacy bulk contact',$2,'gmail:bulk-41','human:old')`, e.Rep1)
+	items := []crmcontracts.BulkItem{{Id: openapi_types.UUID(id), Version: 1}}
+	out, err := bulkEngineFor(e).Execute(e.Admin(), reassignTo(e.Rep2, items))
+	if err != nil || out.Changed != 1 {
+		t.Fatalf("bulk change=%+v err=%v", out, err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND before->>'source'='gmail:bulk-41' AND after->>'source'='capture'`, id); n != 1 {
+		t.Fatalf("%d source audits, want one", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id'=$1 AND envelope->>'type'='contact.updated' AND envelope->'payload'->'changed_fields'->>'source'='capture'`, id.String()); n != 1 {
+		t.Fatalf("%d source events, want one", n)
 	}
 }

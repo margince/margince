@@ -89,7 +89,7 @@ changes none.
 | `finance` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `forecast` | CRU- | CRU- | CRU- | -RU- | -R-- | CRU- |
 | `fx_rate` | CRU- | ---- | ---- | ---- | ---- | CRU- |
-| `import_run` | CRUD | ---- | ---- | ---- | ---- | CRUD |
+| `import_run` | CRUD | CRU- | CRU- | CRU- | ---- | CRUD |
 | `installation_settings` | -RU- | -R-- | -R-- | -R-- | -R-- | -RU- |
 | `integrations` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `introduction` | CRU- | CRU- | CRU- | CRU- | -R-- | CRU- |

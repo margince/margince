@@ -43,7 +43,7 @@ func TestOverlappingHistoryImportsKeepSharedWorkDeferredAndLiveWorkPrompt(t *tes
 	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
 	queue := func(run *ids.UUID) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{id}, run) }); err != nil {
+		if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{id}, run) }); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -73,7 +73,7 @@ func TestOverlappingHistoryImportsKeepSharedWorkDeferredAndLiveWorkPrompt(t *tes
 		t.Fatal(err)
 	}
 	assertPending(0)
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error {
 		pending, err := search.HasPendingGraphWorkTx(system, tx)
 		if pending {
 			t.Fatal("one finished import released overlapping graph work")
@@ -104,7 +104,7 @@ func TestOverlappingHistoryImportsKeepSharedWorkDeferredAndLiveWorkPrompt(t *tes
 		t.Fatal(err)
 	}
 	assertPending(1)
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { _, err := search.DrainPendingGraphTx(system, tx, 100); return err }); err != nil {
+	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { _, err := search.DrainPendingGraphTx(system, tx, 100); return err }); err != nil {
 		t.Fatal(err)
 	}
 	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE count_total=3 AND requested_generation=processed_generation`); got != 1 {

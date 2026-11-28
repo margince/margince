@@ -4,6 +4,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { openFilterValues } from "../../testing/listquery.testkit";
 import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
@@ -166,9 +167,7 @@ describe("the lead list's company dials", () => {
           : onePage(),
     });
     render(<LeadsScreen />);
-    expect(
-      await screen.findByText("Could not load this view. Reload the page."),
-    ).toBeTruthy();
+    expect(await screen.findByText(englishCopy["common.error"])).toBeTruthy();
     expect(
       screen.queryByText("Your role cannot narrow leads by", { exact: false }),
     ).toBeNull();
@@ -201,9 +200,7 @@ describe("the lead list's company dials", () => {
     await waitFor(() =>
       expect(urls.filter((url) => url.endsWith("/v1/me")).length).toBe(2),
     );
-    expect(
-      await screen.findByText("Could not load this view. Reload the page."),
-    ).toBeTruthy();
+    expect(await screen.findByText(englishCopy["common.error"])).toBeTruthy();
     expect(
       screen.queryByText("Your role cannot narrow leads by", { exact: false }),
     ).toBeNull();

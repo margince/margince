@@ -244,7 +244,7 @@ func (r recoveryEnv) connectionRow(t *testing.T) capturemod.ConnectionView {
 func (r recoveryEnv) count(t *testing.T, query string, args ...any) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(r.e.Admin(), r.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(r.e.Admin(), r.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&n)
 	}); err != nil {
 		t.Fatalf("%s: %v", query, err)
@@ -256,7 +256,7 @@ func (r recoveryEnv) count(t *testing.T, query string, args ...any) int {
 func (r recoveryEnv) activityOf(t *testing.T, note gmailNote) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	err := database.WithWorkspaceTx(r.e.Admin(), r.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(r.e.Admin(), r.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT COALESCE((SELECT id FROM activity WHERE source_id = $1), '00000000-0000-0000-0000-000000000000')`,
 			note.id+"@mail.example").Scan(&id)
@@ -272,7 +272,7 @@ func (r recoveryEnv) activityOf(t *testing.T, note gmailNote) ids.UUID {
 func (r recoveryEnv) captureState(t *testing.T) map[ids.UUID]string {
 	t.Helper()
 	state := map[ids.UUID]string{}
-	err := database.WithWorkspaceTx(r.e.Admin(), r.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(r.e.Admin(), r.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT a.id, concat_ws('|', a.audience, a.restricted_at IS NOT NULL,
 			       (SELECT count(*) FROM capture_import i WHERE i.activity_id = a.id),

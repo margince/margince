@@ -87,7 +87,7 @@ func (e *pairEnv) seedDeal(t *testing.T, owner *pgx.Conn, name string, closeInDa
 // pairFinding is the stored finding for the pair, whatever its status.
 func (e *pairEnv) pairFinding(t *testing.T) (id ids.UUID, status string, found bool) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT id, status FROM assurance_exception WHERE type = $1`,
 			assurance.TypeDuplicateMotion).Scan(&id, &status)
 	})
@@ -272,7 +272,7 @@ func TestAReaderWithoutTheOtherDealIsNotNamedIt(t *testing.T) {
 	e.run(t)
 	read := func(reader context.Context) assurance.Exception {
 		var pair assurance.Exception
-		if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 			var found []assurance.Exception
 			err := tx.QueryRow(reader, `SELECT id, type, subject_kind, subject_id, observed FROM assurance_exception WHERE type = $1`,
 				assurance.TypeDuplicateMotion).Scan(&pair.ID, &pair.Type, &pair.SubjectKind, &pair.SubjectID, &pair.Observed)
@@ -431,7 +431,7 @@ func TestSeparateNeedsAuthorityOverBothDeals(t *testing.T) {
 		t.Fatalf("status = %q after the refused answer, want open", status)
 	}
 	var answerable map[ids.UUID]bool
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		var found assurance.Exception
 		if err := tx.QueryRow(reader, `SELECT id, type, subject_kind, subject_id, observed FROM assurance_exception WHERE type = $1`,
 			assurance.TypeDuplicateMotion).Scan(&found.ID, &found.Type, &found.SubjectKind, &found.SubjectID, &found.Observed); err != nil {

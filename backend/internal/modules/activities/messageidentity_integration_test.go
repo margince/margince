@@ -100,7 +100,7 @@ func (e *sendEnv) reconcile(t *testing.T, id ids.ActivityID, stamped string) {
 func (e *sendEnv) reconcileAs(ctx context.Context, t *testing.T, id ids.ActivityID, stamped string) {
 	t.Helper()
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return store.ReconcileMessageIdentityTx(ctx, tx, id, mintedIdentity, stamped)
 	}); err != nil {
 		t.Fatalf("ReconcileMessageIdentityTx: %v", err)
@@ -115,7 +115,7 @@ func (e *sendEnv) reconcileExpectingRefusal(t *testing.T, id ids.ActivityID) err
 	t.Helper()
 	ctx := e.asSendWorker()
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return store.ReconcileMessageIdentityTx(ctx, tx, id, mintedIdentity, stampedIdentity)
 	})
 }
@@ -258,7 +258,7 @@ func TestAnAnchorsSourceIDDoesNotBecomeTheThreadKey(t *testing.T) {
 
 	const minted = "019fad38-ours@margince.test"
 	var chain threading
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		chain, err = anchorThreading(ctx, tx, anchor, minted, "")
 		return err
@@ -303,14 +303,14 @@ func TestAnArchivedAnchorYieldsNoThreadingChain(t *testing.T) {
 
 	// Live, it threads: the control, without which the refusal below could be
 	// any other reason this read answers nothing.
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		_, err := anchorThreading(ctx, tx, anchor, "019fad38-ours@margince.test", "")
 		return err
 	}); err != nil {
 		t.Fatalf("a live anchor was refused: %v", err)
 	}
 
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET archived_at = now() WHERE id = $1`, anchor)
 		return err
@@ -318,7 +318,7 @@ func TestAnArchivedAnchorYieldsNoThreadingChain(t *testing.T) {
 		t.Fatalf("archiving the anchor: %v", err)
 	}
 
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		_, err := anchorThreading(ctx, tx, anchor, "019fad38-ours@margince.test", "")
 		return err
 	})

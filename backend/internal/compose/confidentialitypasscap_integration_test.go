@@ -66,7 +66,7 @@ func seedHeldThreads(t *testing.T, e *integration.Env, n int) {
 // host's would leave every thread not yet due, and a pass would judge none.
 func dueByTheDatabaseClock(t *testing.T, e *integration.Env) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_thread_verdict SET next_attempt_at = now() - interval '1 minute'`)
 		return err
@@ -180,7 +180,7 @@ func TestTheBacklogCountsWhatThePassStillOwesAndAgesTheOldest(t *testing.T) {
 	seedThreadQuestion(t, e, "thread-backlog-old", oldest)
 	seedThreadQuestion(t, e, "thread-backlog-new", seedHeldThreadMail(t, e, "thread-backlog-new", "kunde@example.test", "Neu"))
 	dueByTheDatabaseClock(t, e)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET created_at = now() - interval '30 minutes' WHERE id = $1`, oldest)
 		return err

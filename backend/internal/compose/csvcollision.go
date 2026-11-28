@@ -46,7 +46,7 @@ func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bo
 		return false, nil
 	}
 	var visible bool
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		match, err := contacts.DedupeCompany(ctx, tx, candidate)
 		if match = match.Without(w.links.batch.Changes); err != nil || match.Decision == contacts.DecisionNoMatch {
 			return err
@@ -110,7 +110,7 @@ func (w *csvWriters) changeOf(ctx context.Context, id ids.UUID, changed map[stri
 		return func(b *contacts.Batch) { b.AddCompany(held) }, err
 	case migration.ObjectContact:
 		var held contacts.NewContact
-		err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) (err error) {
+		err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) (err error) {
 			held, err = contacts.ContactAfterUpdate(ctx, tx, ids.From[ids.ContactKind](id), current, contactUpdateFrom(changed, nil))
 			return err
 		})
@@ -123,7 +123,7 @@ func (w *csvWriters) changeOf(ctx context.Context, id ids.UUID, changed map[stri
 // an earlier row of the file creates or changes as its duplicate.
 func (w *csvWriters) collidesInFile(ctx context.Context, row migration.Row) (bool, error) {
 	fields := textFields(row.Fields)
-	inTx := func(fn func(pgx.Tx) error) error { return database.WithWorkspaceTx(ctx, w.pool, fn) }
+	inTx := func(fn func(pgx.Tx) error) error { return database.WithTx(ctx, w.pool, fn) }
 	switch w.object {
 	case migration.ObjectCompany:
 		return w.links.batch.CompanyLookAlike(ctx, inTx, newCompanyOf(fields))

@@ -72,7 +72,7 @@ func applyPurchase(t *testing.T, e *Env, subject ids.UUID, vendor string, claims
 func applyRun(t *testing.T, e *Env, subject ids.UUID, vendor, trigger string, credits int, claims []provider.Claim) {
 	t.Helper()
 	run := seedRun(t, e, subject, "completed", ids.NewV7().String(), false)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(e.Admin(), `UPDATE provider_run SET provider = $2, trigger = $3,
 			requested_by = CASE WHEN $3 = 'manual' THEN (SELECT id FROM app_user LIMIT 1) END
 			WHERE id = $1`, run, vendor, trigger); err != nil {
@@ -198,7 +198,7 @@ func TestTheMarksAndTheRevertAgree(t *testing.T) {
 	sharedEdge := employmentMark(t, before)
 
 	var reverted contacts.RevertedSubject
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
 		reverted, err = contacts.RevertProviderFills(e.Admin(), tx, "surfe", subject)
 		return err
 	}); err != nil {
@@ -319,7 +319,7 @@ func TestRevertingABoughtCurrentEmployerPromotesTheOtherAndRecordsBoth(t *testin
 	var eventsBefore, eventsAfter int
 	queryAsOwner(t, e, eventsNaming, &eventsBefore, bought)
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := contacts.RevertProviderFills(e.Admin(), tx, "surfe", subject)
 		return err
 	}); err != nil {
@@ -384,7 +384,7 @@ func TestRevertingTwoBoughtCurrentEmployersPromotesTheOneTypedIn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := contacts.RevertProviderFills(e.Admin(), tx, "surfe", subject)
 		return err
 	}); err != nil {

@@ -38,7 +38,7 @@ func TestAWeekForecastResolvesThroughTheInstallationZone(t *testing.T) {
 	at := time.Date(2026, 6, 3, 9, 0, 0, 0, time.UTC)
 
 	var week forecasting.Period
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		got, _, err := ForecastPeriodAt(e.Admin(), tx, forecasting.PeriodWeek, at)
 		week = got
 		return err
@@ -75,7 +75,7 @@ func TestTheForecastWeekIsTheWeekTheReviewIsAbout(t *testing.T) {
 	at := time.Date(2026, 6, 3, 9, 0, 0, 0, time.UTC)
 
 	var fromForecast, fromReview time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		week, _, err := ForecastPeriodAt(e.Admin(), tx, forecasting.PeriodWeek, at)
 		if err != nil {
 			return err
@@ -112,7 +112,7 @@ func TestADayNamedWestOfUTCResolvesToItsOwnWeek(t *testing.T) {
 	asOf := forecasting.DayNamed(time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC))
 
 	var week forecasting.Period
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		got, _, err := ForecastPeriodAt(e.Admin(), tx, forecasting.PeriodWeek, asOf)
 		week = got
 		return err
@@ -147,7 +147,7 @@ func TestTheCurrentInstantResolvesToTheWeekTheReaderIsStandingIn(t *testing.T) {
 	now := time.Date(2026, 6, 1, 8, 0, 0, 0, tokyo)
 
 	var week forecasting.Period
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		got, _, err := ForecastPeriodAt(e.Admin(), tx, forecasting.PeriodWeek, now)
 		week = got
 		return err

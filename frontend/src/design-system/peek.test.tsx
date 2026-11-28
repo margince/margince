@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import { type PeekContent, usePeek } from "./peek";
 
@@ -78,7 +79,7 @@ it("opens on a settled pointer and names what it counts", () => {
   });
 
   const card = screen.getByRole("region", {
-    name: "Open deals on this company",
+    name: englishCopy["co.standing.peek.openDeals"],
   });
   expect(card.textContent).toContain("Expansion");
   expect(card.textContent).toContain("€95k");
@@ -92,7 +93,9 @@ it("opens when keyboard focus lands on the door inside the tile", async () => {
   await user.tab();
 
   expect(
-    screen.getByRole("region", { name: "Open deals on this company" }),
+    screen.getByRole("region", {
+      name: englishCopy["co.standing.peek.openDeals"],
+    }),
   ).toBeTruthy();
 });
 

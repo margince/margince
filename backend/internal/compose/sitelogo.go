@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -67,10 +66,6 @@ const logoLaneBudget = 20 * time.Second
 // logoReclaimBudget bounds one detached delete of an unreferenced object.
 const logoReclaimBudget = 15 * time.Second
 
-// companyLogoKind is the blobstore key's entity discriminator, the peer
-// of "attachment" (blobstore.WorkspaceKey).
-const companyLogoKind = "company_logo"
-
 // Outcomes the resolve records per candidate. They are the quality signal the
 // `worker siteread` report prints: WHY the obvious logo was passed over is the
 // thing you need when a company's face comes out wrong.
@@ -79,26 +74,6 @@ const (
 	logoOutcomeFallback = "wide, kept only as a fallback"
 	logoOutcomeSkipped  = "also wide, and an earlier wide candidate is already the fallback"
 )
-
-// companyLogoKey mints the key for ONE resolve attempt. It is
-// per-attempt, not per-company, so two resolves of the same company can
-// never write the same object — an overwrite there would leave the stored
-// image and the row's recorded origin describing different pictures, and would
-// also write straight over a logo a contact uploaded. The company id stays
-// in the key so an object is still traceable to the record it belongs to.
-func companyLogoKey(wsID ids.WorkspaceID, companyID ids.CompanyID) string {
-	return blobstore.WorkspaceKey(wsID, companyLogoKind, companyID.String()+"/"+ids.NewV7().String())
-}
-
-// siteReadLogoKey mints the key for a mark resolved before its company exists.
-// The dossier id stands where the company id stands in its sibling: it is
-// what the object is traceable to until a confirmation adopts it, and the
-// per-attempt uuid keeps two resolves of one read from writing the same object.
-// The bytes are never copied when the company arrives — the record simply names
-// this key — so the object outlives the read that stored it.
-func siteReadLogoKey(wsID ids.WorkspaceID, readID ids.UUID) string {
-	return blobstore.WorkspaceKey(wsID, companyLogoKind, "site-read/"+readID.String()+"/"+ids.NewV7().String())
-}
 
 // declaredAssets is the visual identity one page declared: the sharing card
 // and the icons its <head> named, and the pictures the page itself calls its
@@ -309,10 +284,18 @@ func (w *siteDeepReadWorker) resolveLogo(ctx context.Context, args SiteDeepReadA
 // a logo a contact uploaded, which lives at a key of its own, from being written
 // over at all.
 func (w *siteDeepReadWorker) storeResolvedLogo(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, logo resolvedLogo) string {
-	wsID := ids.From[ids.WorkspaceKind](args.Workspace)
-	base := siteReadLogoKey(wsID, args.SiteReadID)
+	// A mark resolved before its company exists is keyed by the dossier id,
+	// which the object traces back to until a confirmation adopts it. The bytes
+	// are never copied then: the record names the key.
+	what := "site-read/" + args.SiteReadID.String()
 	if claim.CompanyID != nil {
-		base = companyLogoKey(wsID, ids.From[ids.CompanyKind](*claim.CompanyID))
+		what = ids.From[ids.CompanyKind](*claim.CompanyID).String()
+	}
+	base, err := w.contacts.NewLogoBase(ctx, what)
+	if err != nil {
+		w.log.WarnContext(ctx, "minting the resolved logo key failed",
+			"read", args.SiteReadID.String(), "err", err)
+		return ""
 	}
 	// Declared before the bytes exist: a read that has already answered for its
 	// marks leaves this key named by nothing, and the ledger is what collects it.

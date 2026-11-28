@@ -34,7 +34,7 @@ func (s *Store) ReuseWebsiteArrivalTask(ctx, admit context.Context, key string, 
 	found := false
 	run := func() error {
 		found = false
-		return database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
+		return database.WithSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
 			return s.tx(bound, func(tx pgx.Tx) error {
 				var err error
 				found, err = s.reuseArrivalTaskTx(bound, admit, tx, key, source, recipient, due)

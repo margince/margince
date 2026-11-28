@@ -9,16 +9,16 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/dbtest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestBindReturnsTheErrorOfAWriteThatCannotOpen(t *testing.T) {
-	w := &csvWriters{links: newTestLinkResolver(t), object: migration.ObjectCompany}
+	w := &csvWriters{pool: dbtest.ClosedPool(t), links: newTestLinkResolver(t), object: migration.ObjectCompany}
 	err := w.bind(context.Background(), migration.Row{ExternalID: "CO-1"}, ids.NewV7())
-	if !errors.Is(err, database.ErrNoWorkspace) {
-		t.Fatalf("bind = %v, want the transaction's refusal returned", err)
+	if err == nil {
+		t.Fatal("bind on a closed pool = nil, want the transaction's refusal returned")
 	}
 }
 

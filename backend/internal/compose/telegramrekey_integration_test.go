@@ -52,7 +52,7 @@ func replaceTestTelegramBot(t *testing.T, e *integration.Env, vault keyvault.Vau
 func telegramActivityKeys(t *testing.T, e *integration.Env) (sourceID, threadKey string) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT source_id, thread_key FROM activity WHERE source_system = 'telegram'`).Scan(&sourceID, &threadKey)
 	}); err != nil {

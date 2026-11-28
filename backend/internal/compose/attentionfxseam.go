@@ -42,7 +42,7 @@ func (m AttentionBaseMoney) ToBase(
 ) ([]*int64, string, error) {
 	out := make([]*int64, len(amounts))
 	var base string
-	err := database.WithWorkspaceTx(ctx, m.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, m.Pool, func(tx pgx.Tx) error {
 		var err error
 		// Unlocked and ungated: the queue only orders by the base. A re-base
 		// need not wait for it, and a seat that may read deals may rank them.

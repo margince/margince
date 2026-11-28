@@ -113,7 +113,7 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]crmcontracts.Custom
 	fields := []crmcontracts.CustomField{}
 	var cursorKeys []*string
 	var page storekit.Page
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
 			`SELECT `+catalogColumns+sorted.CursorKeySuffix()+` FROM custom_field WHERE `+where+
 				sorted.OrderBy()+storekit.SQLf(` LIMIT %d`, limit+1),

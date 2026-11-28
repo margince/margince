@@ -26,6 +26,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -86,4 +87,30 @@ func sample(found []string) []string {
 		return found
 	}
 	return append(found[:most:most], fmt.Sprintf("… and %d more", len(found)-most))
+}
+
+func TestTheConsentExportNamesTheGrantedPolicyVersion(t *testing.T) {
+	e := Setup(t)
+	contact := e.SeedContact(t, "Policy Subject", nil)
+	purpose := ids.New[ids.PurposeKind]()
+	e.WsExec(t, `INSERT INTO consent_purpose (id, key, label, requires_double_opt_in)
+		VALUES ($1, 'policy_export', 'Policy export', false)`, purpose)
+	wording, version := "Send the newsletter", "policy-export-v2"
+	grant, err := consent.NewStore(e.DB()).Record(e.Admin(), consent.RecordInput{
+		ContactID: ids.From[ids.ContactKind](contact), PurposeID: purpose,
+		NewState: "granted", PolicyText: &wording, PolicyVersion: &version,
+	})
+	if err != nil || !grant.Changed {
+		t.Fatalf("grant: changed=%v err=%v", grant.Changed, err)
+	}
+	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.ContactKind](contact))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pkg.Consent) != 1 || pkg.Consent[0]["policy_version"] != version {
+		t.Fatalf("consent export = %v, want policy version %q", pkg.Consent, version)
+	}
+	if len(pkg.ConsentEvents) != 1 || pkg.ConsentEvents[0]["policy_version"] != version {
+		t.Fatalf("proof export = %v, want policy version %q", pkg.ConsentEvents, version)
+	}
 }

@@ -37,7 +37,7 @@ import (
 func seedAgedCorrespondence(t *testing.T, e *Env) (mail, channel ids.UUID) {
 	t.Helper()
 	mail, channel = ids.NewV7(), ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(),
 			`INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
 			 VALUES ($1, 'email', 'Old thread', 'text', now() - interval '4000 days', 'capture', 'connector:gmail')`,
@@ -73,7 +73,7 @@ func TestRetentionTreatsAChannelMessageLikeMail(t *testing.T) {
 	}
 
 	var mailArchived, channelArchived bool
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT archived_at IS NOT NULL FROM activity WHERE id = $1`, mail).Scan(&mailArchived); err != nil {
 			return err

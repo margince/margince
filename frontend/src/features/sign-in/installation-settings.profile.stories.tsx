@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { DateFormatsProvider } from "../../app/dateformats";
+import { en as englishCopy } from "../../i18n/en";
 import { faultSentence } from "../../lib/problem";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
@@ -173,7 +174,9 @@ export const EscapeAsksBeforeDiscarding: Story = {
   play: async () => {
     const user = userEvent.setup();
     const drawer = within(await screen.findByRole("dialog"));
-    const zone = drawer.getByRole("textbox", { name: "Company time zone" });
+    const zone = drawer.getByRole("textbox", {
+      name: englishCopy["installationSettings.timezone"],
+    });
     await user.clear(zone);
     await user.type(zone, "Europe/Vienna");
     // Dispatched by hand: Storybook wraps its key presses in act, and the
@@ -182,7 +185,7 @@ export const EscapeAsksBeforeDiscarding: Story = {
       new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
     );
     const question = await screen.findByRole("dialog", {
-      name: "Discard unsaved changes?",
+      name: englishCopy["unsaved.title"],
     });
     await waitFor(() => expect(question).toBeVisible());
   },

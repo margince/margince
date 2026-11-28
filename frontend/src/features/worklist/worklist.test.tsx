@@ -32,7 +32,7 @@ describe("what the ranked queue tells a reader", () => {
     stub(day());
     renderWorklist();
 
-    await screen.findByText("Nothing is waiting on you.");
+    await screen.findByText(en["worklist.clear"]);
     // Asked of the QUEUE: the sections below it are panels in their own right
     // and stand whatever the day holds. worklist.today holds the other half,
     // that a clear day draws no list either.
@@ -50,17 +50,15 @@ describe("what the ranked queue tells a reader", () => {
     stub(day());
     renderWorklist();
 
-    await screen.findByText("Nothing is waiting on you.");
+    await screen.findByText(en["worklist.clear"]);
     await user.click(screen.getByRole("button", { name: /^Tasks/ }));
 
     expect(
-      await screen.findByText(
-        "No tasks due today or overdue. Later tasks are under Upcoming and backlog.",
-      ),
+      await screen.findByText(en["worklist.clearOfTasksToday"]),
     ).toBeTruthy();
     // The unqualified sentence is the one that misled: it must not be what a
     // reader under this pill is left with.
-    expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+    expect(screen.queryByText(en["worklist.clear"])).toBeNull();
   });
 
   it("names the record when the title alone cannot be told apart", async () => {
@@ -318,7 +316,7 @@ describe("what the ranked queue tells a reader", () => {
     // pages twenty at a time, so the page alone left an officer with no sign
     // of which row they were sent to read.
     const request = await screen.findByRole("link", {
-      name: "Open privacy request",
+      name: en["worklist.untitled.dsr"],
     });
     const dsr = "01a05500-0000-7000-8000-00000000dddd";
     expect(request.getAttribute("href")).toBe(
@@ -390,7 +388,7 @@ describe("what the ranked queue tells a reader", () => {
     );
     const { container } = renderWorklist();
 
-    await screen.findByText("Approval waiting");
+    await screen.findByText(en["worklist.untitled.approval"]);
     // Named values, not a blanket ban on underscores: a real title may carry
     // one ("ACME_Q3"), and the raw words that actually leak — a kind, a source,
     // a reason, an i18n key — mostly carry none.
@@ -528,12 +526,14 @@ describe("what the ranked queue tells a reader", () => {
     // halves — a row that opened nothing would pass on the button alone.
     await screen.findByRole("button", { name: "Decide" });
     // Not answerable until the reader asks: the queue draws no Accept.
-    expect(screen.queryByRole("button", { name: "Approve email" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["brief.approval.email"] }),
+    ).toBeNull();
     await userEvent.click(
       await screen.findByRole("button", { name: "Decide" }),
     );
     expect(
-      await screen.findByRole("button", { name: "Approve email" }),
+      await screen.findByRole("button", { name: en["brief.approval.email"] }),
     ).toBeTruthy();
   });
 
@@ -601,9 +601,9 @@ describe("what the ranked queue tells a reader", () => {
     renderWorklist();
 
     expect(
-      await screen.findByText("No items in the sources that loaded."),
+      await screen.findByText(en["worklist.clearOfWhatWasRead"]),
     ).toBeTruthy();
-    expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+    expect(screen.queryByText(en["worklist.clear"])).toBeNull();
   });
 
   it("narrows the queue when the reader picks a kind of work", async () => {

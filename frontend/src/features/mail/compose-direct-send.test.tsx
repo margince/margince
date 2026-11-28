@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import {
   fillSendableForm,
@@ -31,7 +32,6 @@ const INLINE_WARNING = {
 const REVIEW = {
   id: "r-1",
   state: "open",
-  kind: "single",
   reason_code: "no_compatible_evidence",
   refusals: [],
   warning: INLINE_WARNING,
@@ -131,7 +131,7 @@ describe("sending with a recorded exception", () => {
     );
     const timelineKeys = entityTimelineKeys("contact", "c-1");
     for (const key of timelineKeys) queryClient.setQueryData(key, []);
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
     await fillSendableForm(user);
     await pressSend(user);
 
@@ -142,7 +142,7 @@ describe("sending with a recorded exception", () => {
     await user.click(screen.getByRole("button", { name: "Send anyway" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(screen.getByText("Queued as a recorded exception.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["directSend.queued"])).toBeTruthy();
     expect(
       queryClient.getQueryData(draftKey({ type: "contact", id: "c-1" })),
     ).toBeNull();

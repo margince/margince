@@ -19,8 +19,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Closing a connection returns the planner memory its backend retains.
@@ -188,32 +186,25 @@ func openPool(ctx context.Context, cfg *pgxpool.Config) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-// ErrNoWorkspace means a domain query was attempted outside a workspace
-// context — a programming error, surfaced before any SQL runs.
+// ErrNoWorkspace means a caller that needs the installation's workspace id found
+// none bound to its context, or a store was built without a database handle.
+// Either way it surfaces before any SQL runs.
 var ErrNoWorkspace = errors.New("pg: no workspace bound to context")
 
-// WithWorkspaceTx runs fn inside ONE transaction, and refuses before any SQL
-// runs if the context carries no workspace.
+// WithTx runs fn inside one transaction, or joins the one a snapshot or write
+// transaction bound to ctx.
 //
 // It is the seam every domain read and write goes through: one transaction
 // boundary per unit of work, so a module's row, its audit row and its outbox
 // row commit together, and one place to audit what addresses the database.
-// There is no raw-pool path for domain data — scripts/check-rls-store-path.sh
+// There is no raw-pool path for domain data; scripts/check-rls-store-path.sh
 // holds that.
-//
-// The workspace itself scopes nothing in SQL. An installation holds exactly one
-// (ADR-0061), no table carries workspace_id and no policy reads one, so what
-// this checks is that a domain call was reached through a request that resolved
-// its tenant at all — a programming-error check, not an isolation boundary.
-func WithWorkspaceTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return ErrNoWorkspace
-	}
+func WithTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
 	// A read composed from many statements binds ONE snapshot to the context
 	// and every store beneath it lands here; joining that snapshot is what
 	// makes the composition cost one transaction instead of forty.
 	if tx, joined := snapshotOf(ctx); joined {
-		return guardedTransaction(ctx, tx, fn)
+		return guardedTransaction(ctx, &ownedTx{Tx: tx, root: tx}, fn)
 	}
 	return runTx(ctx, pool, fn)
 }
@@ -231,15 +222,15 @@ func snapshotOf(ctx context.Context) (pgx.Tx, bool) {
 	return tx, ok
 }
 
-// InWorkspaceTransaction reports whether a caller must leave rollback and retry
+// InTransaction reports whether a caller must leave rollback and retry
 // to the owner of an ambient transaction.
-func InWorkspaceTransaction(ctx context.Context) bool {
+func InTransaction(ctx context.Context) bool {
 	_, joined := snapshotOf(ctx)
 	return joined
 }
 
-// WithWorkspaceSnapshot runs fn against ONE read-only snapshot, which every
-// WithWorkspaceTx reached beneath it joins instead of opening its own.
+// WithSnapshot runs fn against one snapshot, which every WithTx reached beneath
+// it joins instead of opening its own.
 //
 // FOR A READ WHOSE ANSWER IS COMPOSED FROM MANY STATEMENTS, and the worklist is
 // the largest in the product: it assembles six fixed lanes and sixteen optional
@@ -262,10 +253,7 @@ func InWorkspaceTransaction(ctx context.Context) bool {
 //
 // Nesting JOINS rather than opening a second transaction, so a composed read
 // that calls another composed read still costs one.
-func WithWorkspaceSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) error {
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return ErrNoWorkspace
-	}
+func WithSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) error {
 	if _, joined := snapshotOf(ctx); joined {
 		return fn(ctx)
 	}
@@ -275,13 +263,10 @@ func WithWorkspaceSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(cont
 	})
 }
 
-// WithWorkspaceWriteTx runs fn in one read-committed transaction that every
+// WithWriteTx runs fn in one read-committed transaction that every
 // store reached beneath it joins. Writes owned by several modules then commit or
 // roll back together. Nesting joins the outer transaction.
-func WithWorkspaceWriteTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) error {
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return ErrNoWorkspace
-	}
+func WithWriteTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) error {
 	if _, joined := snapshotOf(ctx); joined {
 		return fn(ctx)
 	}
@@ -309,10 +294,9 @@ func Detached(ctx context.Context) context.Context {
 }
 
 // WithInfraTx runs fn in a transaction for the narrow infra paths that run
-// outside any one tenant's request — workspace bootstrap, session lookup by
-// token hash, the outbox relay. It differs from WithWorkspaceTx in exactly one
-// way: it does not require a workspace on the context, which is why a path that
-// HAS one must not reach for it.
+// outside any one request. They are workspace bootstrap, session lookup by token
+// hash and the outbox relay. A path with a workspace on its context uses WithTx
+// instead, so that it joins the ambient snapshot.
 func WithInfraTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
 	return runTx(ctx, pool, fn)
 }
@@ -343,7 +327,7 @@ func runTxWith(ctx context.Context, pool *pgxpool.Pool, opts pgx.TxOptions, fn f
 	defer func() { _ = rollbackDetached(ctx, tx) }()
 	defer openTxMemo(tx)()
 
-	if err := guardedTransaction(ctx, tx, fn); err != nil {
+	if err := guardedTransaction(ctx, &ownedTx{Tx: tx, root: tx}, fn); err != nil {
 		return err
 	}
 	return commitWhileAnswerable(ctx, tx)

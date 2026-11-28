@@ -21,38 +21,11 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/zonefault"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// enumerateWorkspaces reads every live workspace. This is the sanctioned
-// fleet scan for a pass that works on behalf of an active tenant.
-func enumerateWorkspaces(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {
-	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; this reads every tenant before any per-workspace tx exists.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL ORDER BY created_at`)
-	if err != nil {
-		return nil, fmt.Errorf("compose: enumerating workspaces: %w", err)
-	}
-	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-}
-
-// enumerateEveryWorkspace reads every workspace, archived ones included,
-// unlike the passes that work on behalf of a live tenant. Both retention passes
-// fan out over this enumeration, because archiving does not un-store data.
-//
-// GDPR storage limitation does not pause because a tenant stopped logging in:
-// skipping archived rows would hold personal data past its retention floor in
-// exactly the workspaces nobody looks at any more. Idempotency claim retention
-// still runs under each workspace's own transaction, so it needs every one.
-func enumerateEveryWorkspace(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {
-	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; retention reads every tenant, archived included, before any per-workspace tx exists.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace ORDER BY created_at`)
-	if err != nil {
-		return nil, fmt.Errorf("compose: enumerating every workspace: %w", err)
-	}
-	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-}
 
 // The bounded queues a fanned-out pass lands on. MaxWorkers: 5 bounds only
 // the default queue, and deep_read and rate_refresh already run alongside it
@@ -226,7 +199,7 @@ type insertManyFunc func(ctx context.Context, params []river.InsertManyParams) e
 // swallowed them would be the swallowed-error shape the fan-out's own
 // atomicity argument exists to prevent.
 func runPerWorkspace(ctx context.Context, pool *pgxpool.Pool, run func(context.Context, ids.UUID) error) error {
-	workspaces, err := enumerateWorkspaces(ctx, pool)
+	workspaces, err := database.LiveWorkspaces(ctx, pool)
 	if err != nil {
 		return err
 	}
@@ -260,7 +233,7 @@ func runEach(ctx context.Context, pool *pgxpool.Pool, workspaces []ids.UUID, run
 // retention pass that walked only live workspaces would hold personal data past
 // its floor in exactly the workspaces nobody looks at any more.
 func runPerEveryWorkspace(ctx context.Context, pool *pgxpool.Pool, run func(context.Context, ids.UUID) error) error {
-	workspaces, err := enumerateEveryWorkspace(ctx, pool)
+	workspaces, err := database.EveryWorkspace(ctx, pool)
 	if err != nil {
 		return err
 	}

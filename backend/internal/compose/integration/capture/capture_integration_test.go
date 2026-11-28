@@ -125,7 +125,7 @@ type captureCounts struct{ activities, leads, raws, audits int }
 func readCaptureCounts(t *testing.T, e *integration.SearchEnv) captureCounts {
 	t.Helper()
 	var got captureCounts
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		// Mail keys on the shared identity; the LEAD below still keys on the
 		// connector, which is why these two counts read different columns.
 		if err := tx.QueryRow(context.Background(), `SELECT count(*) FROM activity WHERE source_system = 'email'`).Scan(&got.activities); err != nil {
@@ -195,7 +195,7 @@ func TestCaptureSyncIsIdempotentAndProvenanced(t *testing.T) {
 	// Provenance is the connector, and the link landed.
 	var capturedBy string
 	var links int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `SELECT captured_by FROM activity WHERE source_system = 'email'`).Scan(&capturedBy); err != nil {
 			return err
 		}
@@ -213,7 +213,7 @@ func TestCaptureSyncIsIdempotentAndProvenanced(t *testing.T) {
 	}
 	// The jsonb cursor advanced to the second sync's watermark.
 	var syncN *string
-	err = database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT sync_cursor->>'n' FROM capture_connection WHERE id = $1`, connID).Scan(&syncN)
 	})
 	if err != nil || syncN == nil || *syncN != "2" {
@@ -232,7 +232,7 @@ func TestCaptureScopeIntersectionRefusesOverScopedConnector(t *testing.T) {
 		t.Fatalf("over-scoped connector grant → %v, want ErrScopeExceeded", err)
 	}
 	var connections int
-	err = database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM capture_connection`).Scan(&connections)
 	})
 	if err != nil || connections != 0 {
@@ -252,7 +252,7 @@ func TestReconnectUnarchivesTheConnection(t *testing.T) {
 	}
 	// Archive the row: the per-user unique key spans archived rows, so a
 	// reconnect must resurrect this exact row, not be blocked by it.
-	if err := database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE capture_connection SET archived_at = now() WHERE id = $1`, connID)
 		return err
 	}); err != nil {
@@ -271,7 +271,7 @@ func TestReconnectUnarchivesTheConnection(t *testing.T) {
 		t.Fatalf("after reconnect Connections = %+v err=%v, want one connected (archived_at cleared)", views, err)
 	}
 	var archivedAt *time.Time
-	if err := database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT archived_at FROM capture_connection WHERE id = $1`, connID).Scan(&archivedAt)
 	}); err != nil {
 		t.Fatal(err)
@@ -303,7 +303,7 @@ func TestCaptureLinkTargetOutsideScopeRefused(t *testing.T) {
 	}
 	// The refused record left no activity behind (one tx per record).
 	var activities int
-	dbErr := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	dbErr := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM activity WHERE source_system = 'graph'`).Scan(&activities)
 	})
 	if dbErr != nil || activities != 0 {

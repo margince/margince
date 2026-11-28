@@ -33,7 +33,7 @@ var contractRouters = []mcp.ToolSpec{
 		Description: readDetailsCopy.render(), Instead: readDetailsCopy.Instead,
 	},
 	{
-		Name: "change_settings", Title: "Change how the workspace is set up",
+		Name: "change_settings", Title: "Change how the company is set up",
 		Description: changeSettingsCopy.render(), Instead: changeSettingsCopy.Instead,
 	},
 	{

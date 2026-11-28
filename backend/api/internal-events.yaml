@@ -100,6 +100,17 @@ components:
         change: { type: string, enum: [connected, reconnected, readers_changed, visibility_changed, backup_owner_changed, reply_changed, disconnected, history_import_started] }
       additionalProperties: false
 
+    InternalEventConsentPurposeChanged:
+      type: object
+      x-event-type: consent_purpose.changed
+      x-entity-type: consent_purpose
+      x-version: 1
+      description: A human created, renamed or archived a consent purpose.
+      required: [action]
+      properties:
+        action: { type: string, enum: [created, renamed, archived] }
+      additionalProperties: false
+
     InternalEventCaptureSettingsUpdated:
       type: object
       x-event-type: capture_settings.updated

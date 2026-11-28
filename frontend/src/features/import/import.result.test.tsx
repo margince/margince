@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { recordNamesAnswer } from "../../testing/recordnames.testkit";
 import {
@@ -43,7 +44,7 @@ describe("the import and its result", () => {
       expect(await screen.findByText(/importing/i)).toBeVisible();
       status = "complete";
       await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
-      expect(await screen.findByText("Import complete")).toBeVisible();
+      expect(await screen.findByText(englishCopy["import.done"])).toBeVisible();
     } finally {
       vi.useRealTimers();
     }
@@ -110,7 +111,9 @@ describe("the import and its result", () => {
     });
     renderAtImport("r1");
     expect(await screen.findByText("The database went away.")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Resume import" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["import.resume"] }),
+    );
     await waitFor(() =>
       expect(sent.map((s) => s.path)).toContain("POST /imports/r1/approve"),
     );
@@ -173,10 +176,12 @@ describe("the import and its result", () => {
       });
       renderAtImport("r1");
       await user.click(
-        await screen.findByRole("button", { name: "Undo this import" }),
+        await screen.findByRole("button", {
+          name: englishCopy["import.result.undo"],
+        }),
       );
       const dialog = await screen.findByRole("dialog", {
-        name: "Undo this import?",
+        name: englishCopy["import.undoConfirm.title"],
       });
       await user.click(
         within(dialog).getByRole("button", { name: "Undo import" }),
@@ -187,7 +192,9 @@ describe("the import and its result", () => {
       expect(await screen.findByText(/Undo is running/)).toBeVisible();
       status = "undone";
       await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
-      expect(await screen.findByText("Import undone")).toBeVisible();
+      expect(
+        await screen.findByText(englishCopy["import.undone"]),
+      ).toBeVisible();
       const lead = await screen.findByRole("link", { name: "Jo Tran" });
       expect(lead.closest("li")).toHaveTextContent(
         "Leads: Jo Tran — Someone changed this record after the import, so it was left in place.",
@@ -216,8 +223,12 @@ describe("the import and its result", () => {
         }),
     });
     renderAtImport("r1");
-    expect(await screen.findByText("Import complete")).toBeVisible();
-    expect(screen.queryByRole("link", { name: "problems.csv" })).toBeNull();
+    expect(await screen.findByText(englishCopy["import.done"])).toBeVisible();
+    expect(
+      screen.queryByRole("link", {
+        name: englishCopy["import.result.problemsFile"],
+      }),
+    ).toBeNull();
     expect(screen.queryByText(/A test run is staged/)).toBeNull();
     expect(
       screen.getByText(/This import is finished, so its files and map/),
@@ -249,10 +260,11 @@ describe("the import and its result", () => {
     expect(
       screen.getByText("2 rows were skipped. problems.csv lists each one."),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: "problems.csv" })).toHaveAttribute(
-      "href",
-      "/v1/imports/r1/problems.csv?lang=en",
-    );
+    expect(
+      screen.getByRole("link", {
+        name: englishCopy["import.result.problemsFile"],
+      }),
+    ).toHaveAttribute("href", "/v1/imports/r1/problems.csv?lang=en");
   });
 
   it("shows how far an undo has got and offers Continue undo only once the worker is silent", async () => {
@@ -289,12 +301,18 @@ describe("the import and its result", () => {
       await screen.findByText(/30 of 70 rows processed · 40 rows\/s/),
     ).toBeVisible();
     expect(screen.getAllByText("Undoing Contacts").length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Continue undo" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["import.continueUndo"],
+      }),
+    ).toBeNull();
     view.unmount();
     silent = 45;
     renderAtImport("r1");
     expect(
-      await screen.findByRole("button", { name: "Continue undo" }),
+      await screen.findByRole("button", {
+        name: englishCopy["import.continueUndo"],
+      }),
     ).toBeVisible();
   });
 
@@ -325,10 +343,16 @@ describe("the import and its result", () => {
     });
     renderAtImport("r1");
     expect(
-      (await screen.findAllByText("Waiting for the server")).length,
+      (
+        await screen.findAllByText(
+          englishCopy["import.progress.stalled.server"],
+        )
+      ).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText(/The undo has stopped/)).toBeNull();
-    expect(screen.getByRole("button", { name: "Continue undo" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: englishCopy["import.continueUndo"] }),
+    ).toBeVisible();
   });
 
   it("treats a press on a run another attempt holds as progress, not as a failure", async () => {
@@ -357,12 +381,14 @@ describe("the import and its result", () => {
     });
     renderAtImport("r1");
     await user.click(
-      await screen.findByRole("button", { name: "Continue undo" }),
+      await screen.findByRole("button", {
+        name: englishCopy["import.continueUndo"],
+      }),
     );
     await waitFor(() =>
       expect(sent.map((s) => s.path)).toContain("POST /imports/r1/undo"),
     );
-    expect(screen.queryByText("Undo did not run")).toBeNull();
+    expect(screen.queryByText(englishCopy["import.undoFailed"])).toBeNull();
     expect(screen.queryByText(/already running/)).toBeNull();
   });
 });

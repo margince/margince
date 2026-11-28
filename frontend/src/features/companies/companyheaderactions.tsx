@@ -8,6 +8,7 @@ import type { ActivityGate } from "../../components/activitygate";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { LogActivityAction } from "../../components/logactivity.action";
 import { searchCompanyContacts } from "../../components/meetingattendees";
+import { RecordMessenger } from "../../components/messenger/recordmessenger";
 import { Button } from "../../design-system/atoms";
 import { tipText, VerbWord } from "../../design-system/iconaction";
 import {
@@ -135,6 +136,13 @@ export function CompanyHeaderActions({
         reasonTip={logRefusal}
         disabled={logPending}
         keyShortcuts={writeKeys}
+      />
+      <RecordMessenger
+        recordType="company"
+        recordId={company.id}
+        name={company.display_name}
+        disabled={Boolean(company.archived_at)}
+        reasonId={archived}
       />
       <CompanyBookMeeting
         companyId={company.id}

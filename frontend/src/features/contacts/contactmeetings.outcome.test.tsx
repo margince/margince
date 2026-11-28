@@ -15,6 +15,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -163,7 +164,7 @@ it("sends only how it went for a meeting its calendar invitation holds", async (
   const dialog = await screen.findByRole("dialog");
   expect(
     await within(dialog).findByText(
-      "The calendar invitation keeps the subject, notes and date. Only the outcome is saved here.",
+      englishCopy["worklist.verb.meetingCalendarManaged"],
     ),
   ).toBeTruthy();
   expect(within(dialog).queryByRole("textbox")).toBeNull();

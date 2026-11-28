@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { parseHash, routeHash } from "../../lib/router";
 import { SETTINGS_PAGES, type SettingsPageId } from "../../lib/settingscatalog";
 import { settingsHref, settingsRouteTarget } from "../../lib/settingsrouting";
@@ -179,7 +180,9 @@ describe("the nav rows a reader actually clicks", () => {
     renderNav();
     // The granted rows arrive with the /me answer, so waiting on one of them is
     // waiting for the level to be complete.
-    await screen.findByRole("link", { name: "Records and fields" });
+    await screen.findByRole("link", {
+      name: englishCopy["settings.tab.records"],
+    });
     const rows = screen
       .getAllByRole("link")
       .map((link) => ({
@@ -286,7 +289,7 @@ describe("a legacy address is answered and rewritten in place", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: "Loss reasons",
+        name: englishCopy["settings.part.deals.loss"],
         pressed: true,
       }),
     ).toBeTruthy();

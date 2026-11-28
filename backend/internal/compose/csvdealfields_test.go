@@ -59,7 +59,7 @@ func TestADealsNewStageIsAnAdvanceNotAFieldWrite(t *testing.T) {
 // which targets reach the create input and which the update.
 func dealRoundTrip(fields map[string]string, typed map[string]any) (created, patched map[string]bool) {
 	maps.Copy(typed, resolvedDealCells())
-	in := dealCreateFrom(fields, typed, importwire.SourceSystem(""))
+	in := dealCreateFrom(fields, typed, importwire.SourceSystem("", nil))
 	up := dealUpdateFrom(fields, typed)
 	moved := up.Move != nil && !up.Move.ToStageID.IsZero()
 	created = map[string]bool{

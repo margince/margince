@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -103,7 +104,7 @@ export const ProductFlow: Story = {
     await waitFor(() => expect(reading).toBeVisible());
     await user.click(dialog.getByRole("button", { name: "Change Product" }));
     const search = await screen.findByRole("dialog", {
-      name: "Change product",
+      name: englishCopy["lead.product.change"],
     });
     await waitFor(() => expect(search).toBeVisible());
     await expect(screen.queryByRole("dialog", { name: "About" })).toBeNull();

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -78,10 +79,10 @@ export const CompanyContacts: Story = {
     await userEvent.click(canvas.getByTestId("share-grant-submit"));
     const dialog = await within(canvasElement.ownerDocument.body).findByRole(
       "dialog",
-      { name: "Share these contacts?" },
+      { name: englishCopy["share.bulkConfirmTitle"] },
     );
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Grant access" }),
+      within(dialog).getByRole("button", { name: englishCopy["share.grant"] }),
     );
     await expect(canvas.findByRole("status")).resolves.toHaveTextContent(
       "3 shared · 1 skipped",
@@ -213,7 +214,7 @@ export const RosterFailed: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText("People did not load. Teams are shown below.");
+    await canvas.findByText(englishCopy["share.rosterErrorUsers"]);
     await canvas.findByRole("button", { name: "Retry" });
   },
 };

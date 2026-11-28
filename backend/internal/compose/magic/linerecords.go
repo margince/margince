@@ -58,8 +58,8 @@ func (s *Service) LineRecords(
 	}
 	offset := pos.offset
 	out := crmcontracts.MagicLineRecords{Data: []crmcontracts.MagicLineRecord{}}
-	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 			entries, _, err := doneSince(ctx, tx, from, maxLimit)
 			if err != nil {
 				return err

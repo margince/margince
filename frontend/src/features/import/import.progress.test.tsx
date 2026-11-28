@@ -9,6 +9,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { hasProgress, ImportProgressPanel } from "./import.progress";
 import { run } from "./import.testkit";
 import type { ImportRun } from "./importtypes";
@@ -135,13 +136,15 @@ describe("the import progress panel", () => {
 
   it("shows stalled after 30 s idle, with the server's heartbeat age", () => {
     const { rerender } = show(panel({ ...working, idle_seconds: 45 }));
-    expect(screen.getByRole("status")).toHaveTextContent("Still working on it");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      englishCopy["import.progress.stalled.working"],
+    );
     expect(screen.getByText(/No progress for 0m 45s/)).toBeVisible();
     rerender(
       panel({ ...working, idle_seconds: 45, heartbeat_age_seconds: 40 }),
     );
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Waiting for the server",
+      englishCopy["import.progress.stalled.server"],
     );
   });
 
@@ -154,8 +157,12 @@ describe("the import progress panel", () => {
       idle_seconds: 600,
     };
     show(panel(queued));
-    expect(screen.getAllByText("Waiting to start").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Still working on it")).toBeNull();
+    expect(
+      screen.getAllByText(englishCopy["import.progress.queued"]).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByText(englishCopy["import.progress.stalled.working"]),
+    ).toBeNull();
   });
 
   it("announces a phase change once and no poll", () => {
@@ -169,7 +176,7 @@ describe("the import progress panel", () => {
     expect(screen.getByRole("status")).toBe(region);
     expect(region).toHaveTextContent("Importing Contacts");
     rerender(panel({ ...working, phase: "linking", phase_object: "links" }));
-    expect(region).toHaveTextContent("Linking records");
+    expect(region).toHaveTextContent(englishCopy["import.phase.linking"]);
   });
 
   it("names no phase when the worker sends none, and the caller's line stands", () => {

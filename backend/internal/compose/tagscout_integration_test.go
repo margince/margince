@@ -78,7 +78,7 @@ func (e *tagScoutEnv) pass(t *testing.T, now time.Time) TagScoutPass {
 	t.Helper()
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:tag-scout")
 	var pass TagScoutPass
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		pass, err = RunTagScout(ctx, tx, now)
 		return err
@@ -96,7 +96,7 @@ func (e *tagScoutEnv) pass(t *testing.T, now time.Time) TagScoutPass {
 func (e *tagScoutEnv) decidedAt(t *testing.T, id ids.UUID) time.Time {
 	t.Helper()
 	var at time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT decided_at FROM tag_suggestion WHERE id = $1`, id).Scan(&at)
 	}); err != nil {
 		t.Fatalf("reading when the suggestion was decided: %v", err)

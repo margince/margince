@@ -53,19 +53,35 @@ func newDeferredTx(tx pgx.Tx) *deferredTx { return &deferredTx{Tx: tx} }
 
 // deferredOf answers tx as a deferredTx when it is one.
 func deferredOf(tx pgx.Tx) (*deferredTx, bool) {
-	d, ok := tx.(*deferredTx)
-	return d, ok
+	for {
+		if deferred, ok := tx.(*deferredTx); ok {
+			return deferred, true
+		}
+		if wrapped, ok := tx.(interface{ Unwrap() pgx.Tx }); ok {
+			tx = wrapped.Unwrap()
+			continue
+		}
+		return nil, false
+	}
 }
 
 // underlying is the driver's transaction behind tx, the key its memo has.
 //
 //nolint:ireturn // pgx.Tx is the driver's transaction interface.
 func underlying(tx pgx.Tx) pgx.Tx {
-	if d, ok := deferredOf(tx); ok {
-		return d.Tx
+	for {
+		if wrapped, ok := tx.(interface{ Unwrap() pgx.Tx }); ok {
+			tx = wrapped.Unwrap()
+			continue
+		}
+		return tx
 	}
-	return tx
 }
+
+// Unwrap answers the transaction behind the deferred statements.
+//
+//nolint:ireturn // pgx.Tx is the driver's transaction interface.
+func (d *deferredTx) Unwrap() pgx.Tx { return d.Tx }
 
 // open starts a scope whose opening statements ride on the next exchange.
 func (d *deferredTx) open(statements ...deferredStatement) *deferredScope {

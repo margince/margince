@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { en as englishCopy } from "../../i18n/en";
 import type { FilterVocabulary } from "../../lib/filterdata";
 import { type Group, newGroup, newLeaf } from "../../lib/segmentpredicate";
 import {
@@ -135,7 +136,7 @@ function story(answer: Answer, start: () => Group = () => newGroup("and")) {
 
 /** Types a description and sends it, opening the folded box first if shut. */
 async function askInWords(canvas: Canvas) {
-  const folded = canvas.queryByText("Describe changes in plain words");
+  const folded = canvas.queryByText(englishCopy["filters.describeChanges"]);
   if (folded) {
     await userEvent.click(folded);
   }
@@ -144,7 +145,7 @@ async function askInWords(canvas: Canvas) {
     "German companies, quiet for 45 days",
   );
   await userEvent.click(
-    canvas.getByRole("button", { name: "Propose conditions" }),
+    canvas.getByRole("button", { name: englishCopy["filters.propose.submit"] }),
   );
 }
 
@@ -178,7 +179,7 @@ export const LandedOverOwnConditions: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await askInWords(canvas);
-    await canvas.findByText("Replace my conditions");
+    await canvas.findByText(englishCopy["filters.proposal.replaceMine"]);
   },
 };
 

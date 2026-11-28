@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   CAPTURE_CONTACT_PARAM,
   captureReviewTarget,
@@ -169,10 +170,12 @@ async function openHeld(canvasElement: HTMLElement) {
   );
   const drawer = await within(canvasElement.ownerDocument.body).findByRole(
     "dialog",
-    { name: "Mail not shared with the team" },
+    { name: englishCopy["heldThreads.title"] },
   );
   await userEvent.click(
-    within(drawer).getByRole("button", { name: "Browse recent conversations" }),
+    within(drawer).getByRole("button", {
+      name: englishCopy["heldThreads.browse"],
+    }),
   );
   return drawer;
 }
@@ -196,7 +199,7 @@ export const Mixed: Story = {
     });
     await expect(
       within(drawer).getAllByRole("button", {
-        name: "Preview and change sharing",
+        name: englishCopy["heldThreads.preview"],
       }).length,
     ).toBeGreaterThan(0);
   },
@@ -307,7 +310,7 @@ export const MixedPhone: Story = {
     await expect(beside?.getBoundingClientRect().height).toBe(0);
     await expect(
       within(drawer).getAllByRole("button", {
-        name: "Preview and change sharing",
+        name: englishCopy["heldThreads.preview"],
       }).length,
     ).toBeGreaterThan(0);
   },
@@ -323,14 +326,14 @@ export const SearchFirst: Story = {
     );
     const dialog = await within(canvasElement.ownerDocument.body).findByRole(
       "dialog",
-      { name: "Mail not shared with the team" },
+      { name: englishCopy["heldThreads.title"] },
     );
     await waitFor(() =>
       expect(within(dialog).getByRole("searchbox")).toBeVisible(),
     );
     await expect(
       within(dialog).getByRole("button", {
-        name: "Browse recent conversations",
+        name: englishCopy["heldThreads.browse"],
       }),
     ).toBeVisible();
   },
@@ -390,14 +393,16 @@ export const FromContact: Story = {
   play: async ({ canvasElement }) => {
     const drawer = await within(canvasElement.ownerDocument.body).findByRole(
       "dialog",
-      { name: "Mail not shared with the team" },
+      { name: englishCopy["heldThreads.title"] },
     );
     await within(drawer).findByRole("button", {
       name: "Entwurf Aufhebungsvertrag",
     });
     await waitFor(() =>
       expect(
-        within(drawer).getByRole("button", { name: "Show all threads" }),
+        within(drawer).getByRole("button", {
+          name: englishCopy["heldThreads.allThreads"],
+        }),
       ).toBeVisible(),
     );
   },
@@ -412,11 +417,11 @@ export const FromRefusedContact: Story = {
   play: async ({ canvasElement }) => {
     const drawer = await within(canvasElement.ownerDocument.body).findByRole(
       "dialog",
-      { name: "Mail not shared with the team" },
+      { name: englishCopy["heldThreads.title"] },
     );
     await within(drawer).findByRole("alert");
     await expect(
-      within(drawer).queryByText("No held thread matches."),
+      within(drawer).queryByText(englishCopy["heldThreads.noMatch"]),
     ).toBeNull();
   },
 };

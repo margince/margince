@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -68,13 +69,19 @@ it("lists the open decision and records its outcome without touching the deal", 
   ).toBeInTheDocument();
   expect(screen.getByText("Budget owner named")).toBeInTheDocument();
 
-  await user.click(screen.getByRole("button", { name: "Record outcome" }));
-  const save = screen.getByRole("button", { name: "Save outcome" });
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["analytics.decisions.recordOutcome"],
+    }),
+  );
+  const save = screen.getByRole("button", {
+    name: englishCopy["analytics.decisions.saveOutcome"],
+  });
   const result = screen.getByRole("textbox", {
-    name: "What work was completed?",
+    name: englishCopy["analytics.decisions.whatWasDone"],
   });
   await user.click(save);
-  expect(screen.getByText("This field is required.")).toBeVisible();
+  expect(screen.getByText(englishCopy["record.fieldRequired"])).toBeVisible();
   expect(result).toHaveFocus();
   expect(outcome).not.toHaveBeenCalled();
   await user.type(result, "Buyer met");
@@ -139,7 +146,9 @@ it("can record the first manual decision without drawing an empty table", async 
       <DecisionsPanel />
     </StoryProviders>,
   );
-  const action = await screen.findByRole("button", { name: "Record decision" });
+  const action = await screen.findByRole("button", {
+    name: englishCopy["analytics.decisions.record"],
+  });
   expect(screen.queryByRole("table")).toBeNull();
   await userEvent.setup().click(action);
   expect(await screen.findByRole("dialog")).toBeVisible();
@@ -164,7 +173,9 @@ async function typePastReviewDay(settings: Record<string, string>) {
     advanceTimers: vi.advanceTimersByTime,
   });
   await user.click(
-    await screen.findByRole("button", { name: "Record decision" }),
+    await screen.findByRole("button", {
+      name: englishCopy["analytics.decisions.record"],
+    }),
   );
   const field = await screen.findByRole("textbox", { name: /^Review on/ });
   await waitFor(() => expect(read).toHaveBeenCalled());

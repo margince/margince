@@ -34,7 +34,7 @@ var callWeekEnd = time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)
 func standingTeamCall(t *testing.T, e *teamEnv, team ids.UUID) forecasting.Call {
 	t.Helper()
 	var period forecasting.Period
-	if err := database.WithWorkspaceTx(e.leadCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.leadCtx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		period, _, err = compose.ForecastPeriodAt(e.leadCtx, tx, forecasting.PeriodMonth, callWeekEnd)
 		return err

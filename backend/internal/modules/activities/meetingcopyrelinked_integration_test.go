@@ -43,7 +43,7 @@ func TestAFoldedCopyCarriesAGuestsRelinkMark(t *testing.T) {
 
 	system := principal.SystemActing(principal.WithWorkspaceID(ctx, e.ws), "system:meeting-fold")
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	if err := database.WithWorkspaceTx(system, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 		return store.RetireMeetingCopyTx(system, tx, ids.From[ids.ActivityKind](duplicate), ids.From[ids.ActivityKind](survivor))
 	}); err != nil {
 		t.Fatalf("folding the copy: %v", err)
@@ -92,7 +92,7 @@ func TestAFoldedCopyCarriesItsCalendarToTheSurvivorsGuests(t *testing.T) {
 
 	system := principal.SystemActing(principal.WithWorkspaceID(ctx, e.ws), "system:meeting-fold")
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	if err := database.WithWorkspaceTx(system, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 		return store.RetireMeetingCopyTx(system, tx, ids.From[ids.ActivityKind](duplicate), ids.From[ids.ActivityKind](survivor))
 	}); err != nil {
 		t.Fatalf("folding the copy: %v", err)
@@ -132,7 +132,7 @@ func TestAFoldedCopyCarriesAnOlderGuestInLowercase(t *testing.T) {
 
 	system := principal.SystemActing(principal.WithWorkspaceID(ctx, e.ws), "system:meeting-fold")
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	if err := database.WithWorkspaceTx(system, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 		return store.RetireMeetingCopyTx(system, tx, ids.From[ids.ActivityKind](duplicate), ids.From[ids.ActivityKind](survivor))
 	}); err != nil {
 		t.Fatalf("folding the copy: %v", err)
@@ -154,7 +154,7 @@ func TestACopyCarryReportsAFoldItCouldNotRun(t *testing.T) {
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:meeting-fold")
 	stopped, stop := context.WithCancel(ctx)
 	stop()
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		_, err := carryMissingParticipantsTx(stopped, tx, ids.New[ids.ActivityKind](), ids.New[ids.ActivityKind]())
 		return err
 	})

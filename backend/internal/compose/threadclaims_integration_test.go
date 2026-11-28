@@ -22,7 +22,7 @@ func threadReadableBy(t *testing.T, e *integration.Env, seat ids.UUID, message s
 	t.Helper()
 	ctx := e.As(seat, nil, integration.RepPerms)
 	var visible bool
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(value any) int { args = append(args, value); return len(args) }
 		clause, err := auth.ActivityContentClause(ctx, "a", arg)

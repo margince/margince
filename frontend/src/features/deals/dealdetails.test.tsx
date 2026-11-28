@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -87,7 +88,10 @@ it("saves fractional money and ARR together in the chosen currency", async () =>
   const amount = within(dialog).getByLabelText("Value");
   await user.clear(amount);
   await user.type(amount, "14.60");
-  await user.type(within(dialog).getByLabelText("Expected ARR"), "2.50");
+  await user.type(
+    within(dialog).getByLabelText(englishCopy["deal.expectedArr"]),
+    "2.50",
+  );
   expect(sent).toEqual([]);
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
   await waitFor(() =>
@@ -181,7 +185,7 @@ it("shows why a company change is refused while the deal's contracts name anothe
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
   expect(
     await within(dialog).findByText(
-      "This deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before changing the company.",
+      englishCopy["deals.contractCompanyBlocked"],
     ),
   ).toBeTruthy();
 });

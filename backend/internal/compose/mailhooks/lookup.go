@@ -39,7 +39,7 @@ func (r lookupRow) Scan(dest ...any) error {
 	ctx, cancel := context.WithTimeout(r.ctx, mailHookLimit)
 	defer cancel()
 	ctx = database.Detached(ctx)
-	return database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		for _, setup := range []string{"SET TRANSACTION READ ONLY", "SELECT 1"} {
 			if _, err := tx.Exec(ctx, setup); err != nil {
 				return fmt.Errorf("mailhooks: opening a read-only lookup: %w", err)

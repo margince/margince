@@ -187,7 +187,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 0 |
 | … **no case requires** | 6 |
 | … of those, permitted somewhere but never required | 1 |
-| Prompt tokens spent on tools no case requires | 3685 |
+| Prompt tokens spent on tools no case requires | 3686 |
 | Use cases | 83 |
 | Acceptance criteria the cases declare, each with a statement | 133 |
 
@@ -657,8 +657,8 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
+| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
@@ -683,8 +683,8 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
+| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
@@ -702,8 +702,8 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
+| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
@@ -794,9 +794,9 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | Tool | Tokens | Graded by | Near miss in | Permitted in | Attached to |
 |---|---:|---|---|---|---|
 | `change_record_parts` | 1017 | - | - | - | - |
-| `change_relationships` | 816 | - | - | - | - |
-| `schedule_meeting` | 527 | - | - | - | - |
-| `decide_approvals` | 463 | - | - | `case126_file_it_i_approve` | - |
-| `enrich` | 446 | - | - | - | - |
+| `change_relationships` | 818 | - | - | - | - |
+| `schedule_meeting` | 526 | - | - | - | - |
+| `decide_approvals` | 464 | - | - | `case126_file_it_i_approve` | - |
+| `enrich` | 445 | - | - | - | - |
 | `annotate_brief` | 416 | `agent_loop` | `agent_loop` | - | `morning_brief` |
 

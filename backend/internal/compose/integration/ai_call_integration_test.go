@@ -72,7 +72,7 @@ func TestCallMeterWritesTraceAndOptInPayload(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM ai_call_payload`); n != 1 {
 		t.Fatalf("ai_call_payload rows = %d, want 1", n)
 	}
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var provider, modelID, storedCorr string
 		var tokensIn, tokensOut int64
 		if err := tx.QueryRow(context.Background(),
@@ -187,7 +187,7 @@ func TestRecordWritesEveryAttemptOfOneLogicalCallInOneTransaction(t *testing.T) 
 		t.Fatalf("ai_call_payload rows = %d, want 1 (terminal attempt only)", n)
 	}
 
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		rows, qerr := tx.Query(context.Background(),
 			`SELECT attempt, is_terminal, attempt_reason, tier FROM ai_call WHERE logical_call_id = $1 ORDER BY attempt`, logical)
 		if qerr != nil {

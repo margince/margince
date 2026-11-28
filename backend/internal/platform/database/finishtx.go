@@ -48,6 +48,9 @@ func commitWhileAnswerable(ctx context.Context, tx pgx.Tx) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("pg: commit: %w", err)
 	}
+	if err := runBeforeCommit(ctx, tx); err != nil {
+		return err
+	}
 	if err := witnessWrite(ctx, tx); err != nil {
 		return err
 	}

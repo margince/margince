@@ -220,9 +220,11 @@ it("shows the ARR an offer set in its currency, locked with the reason", async (
   const value = await openSection(user, "Value");
   expect(within(value).getByRole("textbox", { name: "Value" })).toBeTruthy();
   expect(
-    within(value).queryByRole("textbox", { name: "Expected ARR" }),
+    within(value).queryByRole("textbox", { name: en["deal.expectedArr"] }),
   ).toBeNull();
-  const arr = within(value).getByRole("group", { name: "Expected ARR" });
+  const arr = within(value).getByRole("group", {
+    name: en["deal.expectedArr"],
+  });
   expect(arr).toHaveTextContent("€12,000");
   expect(arr).toHaveAccessibleDescription(en["deal.arrFromOffer"]);
 });
@@ -253,7 +255,7 @@ it("changes tags through Registration's Edit, leaving the row a reading", async 
   const user = userEvent.setup();
   mount(["read", "update"], deal, "en", fleet);
   const registration = await screen.findByRole("region", {
-    name: "Registration",
+    name: en["record.registration"],
   });
   expect(await within(registration).findByText("Fleet")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Add tag" })).toBeNull();
@@ -263,13 +265,15 @@ it("changes tags through Registration's Edit, leaving the row a reading", async 
     name: en["tags.panelTitle"],
   });
   expect(within(editor).getByRole("button", { name: "Add tag" })).toBeTruthy();
-  expect(screen.queryByRole("dialog", { name: "Registration" })).toBeNull();
+  expect(
+    screen.queryByRole("dialog", { name: en["record.registration"] }),
+  ).toBeNull();
 });
 
 it("offers a reader without the update grant no tag verb", async () => {
   mount(["read"], deal, "en", fleet);
   const registration = await screen.findByRole("region", {
-    name: "Registration",
+    name: en["record.registration"],
   });
   expect(await within(registration).findByText("Fleet")).toBeTruthy();
   expect(
@@ -283,7 +287,7 @@ it("says withheld tags are withheld rather than none", async () => {
     jsonResponse({ data: [], withheld: true }),
   );
   const registration = await screen.findByRole("region", {
-    name: "Registration",
+    name: en["record.registration"],
   });
   expect(
     await within(registration).findByText(en["tags.withheld"]),
@@ -368,7 +372,9 @@ it("says the owner left and opens Ownership from the note's action", async () =>
     gone,
   );
   expect(await screen.findByText(leftNote)).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Choose a new owner" }));
+  await user.click(
+    screen.getByRole("button", { name: en["deal.owner.choose"] }),
+  );
   expect(await screen.findByRole("dialog", { name: "Ownership" })).toBeTruthy();
 });
 
@@ -382,7 +388,7 @@ it("gives a reader who may not edit the sentence and no action", async () => {
   );
   expect(await screen.findByText(leftNote)).toBeTruthy();
   expect(
-    screen.queryByRole("button", { name: "Choose a new owner" }),
+    screen.queryByRole("button", { name: en["deal.owner.choose"] }),
   ).toBeNull();
 });
 
@@ -426,7 +432,7 @@ it("drops the note once the deal is saved with a new owner", async () => {
     [...gone, ...here],
   );
   await user.click(
-    await screen.findByRole("button", { name: "Choose a new owner" }),
+    await screen.findByRole("button", { name: en["deal.owner.choose"] }),
   );
   const dialog = await screen.findByRole("dialog", { name: "Ownership" });
   await user.click(within(dialog).getByRole("combobox"));

@@ -69,7 +69,7 @@ describe("the deal header's Email verb", () => {
   it("is refused without the activity grant, over the same sentence as Log", async () => {
     mount({ deal: ["read"] });
 
-    const log = await screen.findByRole("button", { name: "Log activity" });
+    const log = await screen.findByRole("button", { name: en["log.title"] });
     const email = screen.getByRole("button", { name: "Email" });
     await expect
       .poll(() => email.getAttribute("aria-describedby"))
@@ -81,7 +81,7 @@ describe("the deal header's Email verb", () => {
     expect(
       document.getElementById(email.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe("Your role can only read. Ask an administrator for another role.");
+    ).toBe(en["record.roleReadsOnly"]);
   });
 
   it("names the refusal in its tooltip, described once by the header's sentence", async () => {
@@ -211,9 +211,7 @@ describe("the deal's record keys", () => {
     const user = userEvent.setup();
     renderHook(() => useShortcutDispatcher());
     mount({ deal: ["read"] });
-    await screen.findByText(
-      "Your role can only read. Ask an administrator for another role.",
-    );
+    await screen.findByText(en["record.roleReadsOnly"]);
 
     await user.keyboard("ntm");
     expect(screen.queryByRole("dialog")).toBeNull();

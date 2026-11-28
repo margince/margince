@@ -319,7 +319,7 @@ func Definitions() []settings.Definition {
 // Settings is identity's contribution to the configuration registry.
 func Settings() []config.Any {
 	out := []config.Any{
-		Name, Country, BaseLanguage, DateFormat, TimeFormat, FiscalYearStartMonth, DeadWorkBannerHours,
+		Name, Country, BaseLanguage, DateFormat, TimeFormat, FiscalYearStartMonth, DeadWorkBannerHours, PaymentLongOverdueDays,
 		ForecastForwardMeasure, EnabledOidcProviders, RequireSSO, RequireMFA, OidcGroupRoleMap,
 		GoogleDirectoryCredential, OAuthAccessTokenTTLMinutes, DynamicClientRegistration, MetadataDocumentClients, McpClientCheck,
 		CallWhatsApp, CallTelegram, CallZalo, IndividualPerformance, ForecastSelfCorrecting,
@@ -446,7 +446,7 @@ func InstallationNameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // surface holding only a pool — the public preference centre's seam.
 func InstallationNameForPublicPage(ctx context.Context, pool *pgxpool.Pool) (string, error) {
 	var name string
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		name, err = InstallationNameOf(ctx, tx)
 		return err

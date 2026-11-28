@@ -76,7 +76,7 @@ func TestTwoMeetingRecapRulesStageOneDraftAfterNotesAndHeld(t *testing.T) {
 	dispatch := func(kind string, source crmcontracts.Id, becameReady bool) {
 		t.Helper()
 		var raw json.RawMessage
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(ctx, `SELECT envelope FROM event_outbox
     WHERE envelope->>'type'=@kind AND envelope->'entity'->>'id'=@id
     ORDER BY created_at DESC, id DESC LIMIT 1`, pgx.NamedArgs{"kind": kind, "id": source.String()}).Scan(&raw)

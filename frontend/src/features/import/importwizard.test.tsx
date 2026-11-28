@@ -14,6 +14,7 @@ import {
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
+import { en as englishCopy } from "../../i18n/en";
 import { ImportCard } from "./import";
 import {
   jsonResponse,
@@ -38,7 +39,7 @@ async function toTheMap(user: UserEvent) {
   globalThis.location.hash = RUN_PAGE;
   render(<ImportCard subpage="run" />);
   await user.upload(
-    await screen.findByLabelText("Upload your data"),
+    await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
     new File(["Email\na@x.test\n"], "leads.csv"),
   );
   await user.click(await screen.findByRole("button", { name: /Next: map/ }));
@@ -49,7 +50,9 @@ async function clearFullName(user: UserEvent) {
   await user.click(
     screen.getByRole("combobox", { name: "Field for Full Name" }),
   );
-  await user.click(screen.getByRole("option", { name: "Do not import" }));
+  await user.click(
+    screen.getByRole("option", { name: englishCopy["import.dontImport"] }),
+  );
 }
 
 // Holds every request whose url ends in `tail`, or every PATCH, until released.
@@ -126,7 +129,9 @@ describe("the wizard is the run", () => {
       await user.click(
         screen.getByRole("combobox", { name: "Field for Email" }),
       );
-      await user.click(screen.getByRole("option", { name: "Do not import" }));
+      await user.click(
+        screen.getByRole("option", { name: englishCopy["import.dontImport"] }),
+      );
       await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS * 2);
       expect(held.started).toHaveLength(1);
       held.release();
@@ -273,10 +278,10 @@ describe("the wizard is the run", () => {
     });
     renderAtImport(run.id);
     expect(
-      await screen.findByText("A newer test run replaced this import"),
+      await screen.findByText(englishCopy["import.superseded"]),
     ).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "Open the newer test run" }),
+      screen.getByRole("link", { name: englishCopy["import.supersededOpen"] }),
     ).toHaveAttribute("href", expect.stringContaining("run=019ff-newer"));
   });
 
@@ -289,7 +294,7 @@ describe("the wizard is the run", () => {
     globalThis.location.hash = RUN_PAGE;
     render(<ImportCard subpage="run" />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["Email\na@x.test\n"], "leads.csv"),
     );
     await user.click(await screen.findByRole("button", { name: "Cancel" }));
@@ -308,12 +313,12 @@ describe("the wizard is the run", () => {
     globalThis.location.hash = RUN_PAGE;
     render(<ImportCard subpage="run" />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["Email\na@x.test\n"], "leads.csv"),
     );
     await user.click(await screen.findByRole("button", { name: "Cancel" }));
     expect(
-      await screen.findByText("The import was not canceled"),
+      await screen.findByText(englishCopy["import.cancelFailed"]),
     ).toBeVisible();
     expect(globalThis.location.hash).toContain("run=");
   });
@@ -326,7 +331,7 @@ describe("the wizard is the run", () => {
     globalThis.location.hash = RUN_PAGE;
     render(<ImportCard subpage="run" />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["Email\na@x.test\n"], "leads.csv"),
     );
     await user.click(await screen.findByRole("button", { name: "Cancel" }));
@@ -352,7 +357,7 @@ async function dropCsv(
   globalThis.location.hash = RUN_PAGE;
   render(<ImportCard subpage="run" />);
   await user.upload(
-    await screen.findByLabelText("Upload your data"),
+    await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
     new File(["Email\na@x.test\n"], name),
   );
   await screen.findByLabelText("Source name");
@@ -400,14 +405,12 @@ describe("another type for a single CSV", () => {
     globalThis.location.hash = RUN_PAGE;
     render(<ImportCard subpage="run" />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["Email\n"], "leads.csv"),
     );
     await retype(user);
     expect(
-      await screen.findByText(
-        "The earlier draft of this file was not canceled",
-      ),
+      await screen.findByText(englishCopy["import.files.retireFailed"]),
     ).toBeVisible();
     expect(globalThis.location.hash).toContain("run=019ff-retyped");
     expect(screen.getByRole("button", NEXT)).toBeEnabled();
@@ -459,9 +462,7 @@ describe("a single CSV whose name names no type", () => {
     );
     expect(uploadsOf(sent)).toEqual([{ file: "export.csv" }]);
     expect(typeOf()).toHaveTextContent("Contacts");
-    expect(
-      screen.getByText("Record type chosen from the columns"),
-    ).toBeVisible();
+    expect(screen.getByText(englishCopy["import.files.guessed"])).toBeVisible();
     expect(screen.getByRole("button", NEXT)).toBeEnabled();
     expect(sent.some((s) => s.path.endsWith("/cancel"))).toBe(false);
   });
@@ -469,15 +470,19 @@ describe("a single CSV whose name names no type", () => {
   it("opens with no type when its header names none, and refuses Next until one is picked", async () => {
     const user = userEvent.setup();
     const sent = await dropCsv(user, "export.csv", unnamed("lead", "none"));
-    expect(screen.getByText("No record type found")).toBeVisible();
-    expect(typeOf()).toHaveTextContent("Skip this file");
+    expect(
+      screen.getByText(englishCopy["import.files.unguessed"]),
+    ).toBeVisible();
+    expect(typeOf()).toHaveTextContent(englishCopy["import.files.skip"]);
     expect(screen.getByRole("button", NEXT)).toBeDisabled();
     expect(
-      screen.getByText("Choose a record type for at least one file."),
+      screen.getByText(englishCopy["import.files.noneTyped"]),
     ).toBeVisible();
     await user.click(typeOf());
     await user.click(screen.getByRole("option", { name: "Leads" }));
-    expect(screen.queryByText("No record type found")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["import.files.unguessed"]),
+    ).toBeNull();
     expect(screen.getByRole("button", NEXT)).toBeEnabled();
     await waitFor(() =>
       expect(sent.find((s) => s.method === "PATCH")?.body).toMatchObject({
@@ -490,21 +495,25 @@ describe("a single CSV whose name names no type", () => {
 
   it("still shows no type after a reload of the draft", async () => {
     reloadDraft("lead", unnamed("lead", "none"));
-    expect(await screen.findByText("No record type found")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["import.files.unguessed"]),
+    ).toBeVisible();
     expect(screen.getByRole("button", NEXT)).toBeDisabled();
   });
 
   it("shows Leads after a reload once the reader saved Leads as the type", async () => {
     reloadDraft("lead", unnamed("lead"));
     await waitFor(() => expect(typeOf()).toHaveTextContent("Leads"));
-    expect(screen.queryByText("No record type found")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["import.files.unguessed"]),
+    ).toBeNull();
     expect(screen.getByRole("button", NEXT)).toBeEnabled();
   });
 
   it("still names the header's choice after a reload of the draft", async () => {
     reloadDraft("contact", unnamed("contact", "columns"));
     expect(
-      await screen.findByText("Record type chosen from the columns"),
+      await screen.findByText(englishCopy["import.files.guessed"]),
     ).toBeVisible();
     expect(typeOf()).toHaveTextContent("Contacts");
   });
@@ -512,7 +521,9 @@ describe("a single CSV whose name names no type", () => {
   it("shows the type the reader saved over the server's none", async () => {
     reloadDraft("contact", unnamed("lead", "none"));
     await waitFor(() => expect(typeOf()).toHaveTextContent("Contacts"));
-    expect(screen.queryByText("No record type found")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["import.files.unguessed"]),
+    ).toBeNull();
     expect(screen.getByRole("button", NEXT)).toBeEnabled();
   });
 });
@@ -533,13 +544,13 @@ describe("a run address that names no run", () => {
       });
       renderAtImport(id);
       expect(
-        await screen.findByText("This import does not exist or was removed."),
+        await screen.findByText(englishCopy["import.missing.body"]),
       ).toBeVisible();
       expect(screen.queryByText(/A test run is staged/)).toBeNull();
       expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
       expect(screen.queryByText(/Reload the page/)).toBeNull();
       expect(
-        screen.getByRole("link", { name: "Back to data import" }),
+        screen.getByRole("link", { name: englishCopy["import.back"] }),
       ).toBeVisible();
     },
   );
@@ -563,7 +574,7 @@ describe("draft saves around a test run and a cancel", () => {
     globalThis.location.hash = RUN_PAGE;
     render(<ImportCard subpage="run" />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["Email\n"], "leads.csv"),
     );
     await screen.findByLabelText("Source name");
@@ -648,7 +659,9 @@ describe("draft saves around a test run and a cancel", () => {
         jsonResponse({ ...run, status: "cancelled", draft_step: "files" }),
     });
     renderAtImport(run.id);
-    expect(await screen.findByText("This import was canceled")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["import.closed.cancelled"]),
+    ).toBeVisible();
     expect(writesOf(sent)).toEqual([]);
   });
 });
@@ -685,7 +698,9 @@ describe("a draft another tab has tested or cancelled", () => {
     );
     await toTheMap(user);
     await clearFullName(user);
-    expect(await screen.findByText("This import was canceled")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["import.closed.cancelled"]),
+    ).toBeVisible();
     expect(screen.queryByText(/changed in another tab/)).toBeNull();
     expect(screen.queryByText(/cannot become pending/)).toBeNull();
   });

@@ -43,7 +43,7 @@ func (e *cimdEnv) selfRegister(t *testing.T, h Handlers, name string) (int, stri
 func (e *cimdEnv) consent(t *testing.T, clientID string) {
 	t.Helper()
 	admin := e.actorWith(t, fullAgentClientGrant)
-	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.ctx, `INSERT INTO oauth_grant (client_id, user_id, scopes) VALUES ($1, $2, '{read}')`,
 			clientID, admin.UserID)
 		return err
@@ -57,7 +57,7 @@ func (e *cimdEnv) consent(t *testing.T, clientID string) {
 func (e *cimdEnv) clientExists(t *testing.T, clientID string) bool {
 	t.Helper()
 	var exists bool
-	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx, `SELECT EXISTS (SELECT 1 FROM oauth_client WHERE client_id = $1)`, clientID).Scan(&exists)
 	})
 	if err != nil {
@@ -70,7 +70,7 @@ func (e *cimdEnv) clientExists(t *testing.T, clientID string) bool {
 // that much time had passed since each one registered.
 func (e *cimdEnv) ageSelfMade(t *testing.T, age time.Duration) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.ctx, `UPDATE oauth_client SET created_at = created_at - make_interval(secs => $1::float8)
 			WHERE created_via IN ('dcr', 'cimd')`, age.Seconds())
 		return err
@@ -84,7 +84,7 @@ func (e *cimdEnv) ageSelfMade(t *testing.T, age time.Duration) {
 func (e *cimdEnv) unusedSelfMade(t *testing.T) int {
 	t.Helper()
 	var n int
-	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx, `SELECT count(*) FROM oauth_client c WHERE `+unusedSelfMadeClient).Scan(&n)
 	})
 	if err != nil {
@@ -187,7 +187,7 @@ func TestADisabledDocumentClientSurvivesTheCapAndTheSweep(t *testing.T) {
 	if err := e.svc.resolveCIMDClient(e.ctx, banned, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatal(err)
 	}
-	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.ctx, `UPDATE oauth_client SET disabled_at = now() WHERE client_id = $1`, banned)
 		return err
 	})
@@ -236,7 +236,7 @@ func TestTheSweepDeletesOnlyOldSelfRegisteredClientsNoConsentUsed(t *testing.T) 
 		t.Fatal(err)
 	}
 	e.consent(t, clients["old used"])
-	err = database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+	err = database.WithTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.ctx, `UPDATE oauth_client SET created_at = now() - interval '30 days'
 			WHERE client_id = ANY($1)`, []string{clients["old unused"], clients["old used"], clients["old by an admin"], clients["old document"]})
 		return err

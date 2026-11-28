@@ -16,6 +16,7 @@ import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ListQuery } from "../../components/listquery";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type SavedView, useSaveView } from "../../lib/savedviews.queries";
 import { meFixture } from "../../testing/mefixture";
 import { SaveViewAction } from "./savedviews";
@@ -130,7 +131,9 @@ describe("managing saved views", () => {
     await waitFor(() =>
       expect(seen.some((call) => call.path.endsWith("/views"))).toBe(true),
     );
-    expect(screen.queryByRole("button", { name: "Manage views" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["views.manage"] }),
+    ).toBeNull();
   });
 
   it("renames a view against the version it was read at", async () => {
@@ -139,7 +142,7 @@ describe("managing saved views", () => {
     draw();
 
     await user.click(
-      await screen.findByRole("button", { name: "Manage views" }),
+      await screen.findByRole("button", { name: englishCopy["views.manage"] }),
     );
     await user.click(
       screen.getByRole("button", { name: "Rename German customers" }),
@@ -163,7 +166,6 @@ describe("managing saved views", () => {
     const row: SavedView = {
       ...VIEW,
       resource: "companies",
-      shared_scope: "private",
     };
     const seen = stubServer([row]);
     const user = userEvent.setup();
@@ -171,7 +173,9 @@ describe("managing saved views", () => {
       wrapper: Providers,
     });
 
-    await user.click(screen.getByRole("button", { name: "Manage views" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["views.manage"] }),
+    );
     await user.click(
       screen.getByRole("button", { name: "Rename German customers" }),
     );
@@ -199,7 +203,7 @@ describe("managing saved views", () => {
     draw();
 
     await user.click(
-      await screen.findByRole("button", { name: "Manage views" }),
+      await screen.findByRole("button", { name: englishCopy["views.manage"] }),
     );
     await user.click(
       screen.getByRole("button", { name: "Rename German customers" }),
@@ -219,7 +223,7 @@ describe("managing saved views", () => {
     draw();
 
     await user.click(
-      await screen.findByRole("button", { name: "Manage views" }),
+      await screen.findByRole("button", { name: englishCopy["views.manage"] }),
     );
     await user.click(
       screen.getByRole("button", { name: "Delete German customers" }),
@@ -229,7 +233,7 @@ describe("managing saved views", () => {
 
     await user.click(screen.getByRole("button", { name: "Delete view" }));
 
-    expect(await screen.findByText("No saved views")).toBeTruthy();
+    expect(await screen.findByText(englishCopy["views.none"])).toBeTruthy();
     expect(seen.find((call) => call.method === "DELETE")?.path).toBe(
       "/v1/views/v-1",
     );
@@ -284,7 +288,7 @@ describe("managing saved views", () => {
     draw();
 
     await user.click(
-      await screen.findByRole("button", { name: "Manage views" }),
+      await screen.findByRole("button", { name: englishCopy["views.manage"] }),
     );
     await user.click(
       screen.getByRole("button", { name: "Rename German customers" }),

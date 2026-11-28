@@ -34,6 +34,7 @@ import {
   unwrap,
 } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { PurposeActions } from "./privacy.purposeactions";
 import "./privacy.css";
 
 type ConsentPurpose = components["schemas"]["ConsentPurpose"];
@@ -295,6 +296,7 @@ export function ConsentPurposesCard() {
 
 function PurposeTable({ purposes }: Readonly<{ purposes: ConsentPurpose[] }>) {
   const t = useT();
+  const canChange = useCanWrite("consent_config", "update");
   // The key is the API's handle, read where the purposes are wired, not here.
   const columns: DataTableColumn<ConsentPurpose>[] = [
     {
@@ -311,6 +313,12 @@ function PurposeTable({ purposes }: Readonly<{ purposes: ConsentPurpose[] }>) {
         ),
     },
   ];
+  if (canChange)
+    columns.push({
+      key: "actions",
+      header: t("table.actions"),
+      render: (purpose) => <PurposeActions purpose={purpose} />,
+    });
   return (
     <DataTable
       label={t("privacy.purposesRegistry")}

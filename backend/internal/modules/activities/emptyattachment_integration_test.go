@@ -46,7 +46,7 @@ func (e *sendEnv) captureAFile(t *testing.T, anchor ids.ActivityID, filename str
 	if err != nil {
 		t.Fatalf("staging %q: %v", filename, err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return store.RecordCapturedFiles(ctx, tx, anchor, CapturedFileSource{
 			System: "imap", MessageID: filename + "-" + anchor.String(),
 			CapturedBy: "connector:imap", Category: "email_attachment",
@@ -128,7 +128,7 @@ func TestAWithheldFileCannotBeSentBackOut(t *testing.T) {
 				},
 			}), ids.NewV7())
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return store.RecordWithheldFiles(ctx, tx, anchor, CapturedFileSource{
 			System: "imap", MessageID: "private-" + anchor.String(),
 			CapturedBy: "connector:imap", Category: "email_attachment",

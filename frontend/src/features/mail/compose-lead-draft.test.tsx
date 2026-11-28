@@ -14,6 +14,7 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { draftButton, redraft } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
@@ -239,7 +240,9 @@ describe("drafting to a lead", () => {
     await user.click(draftButton());
 
     expect(
-      await screen.findByRole("heading", { name: "AI-assisted draft" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["compose.aiDisclosureTitle"],
+      }),
     ).toBeTruthy();
   });
 
@@ -268,7 +271,7 @@ describe("drafting to a lead", () => {
     await user.click(draftButton());
 
     expect(
-      await screen.findByText("AI could not write this draft"),
+      await screen.findByText(englishCopy["compose.templateDraftTitle"]),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Shorter" })).toBeNull();
   });

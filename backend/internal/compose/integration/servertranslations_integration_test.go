@@ -134,7 +134,7 @@ func TestReportableChoicesCarryTheReadersNames(t *testing.T) {
 		var label string
 		var named map[string]string
 		ctx := reading(e.Admin(), t, locale)
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			cols, err := customfields.ReportableColumnsIn(ctx, tx, "deal")
 			if err != nil || len(cols) != 1 {
 				t.Fatalf("reportable columns = %v (%v), want the one field", cols, err)

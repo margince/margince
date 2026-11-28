@@ -45,7 +45,7 @@ func (s *Service) accountIntroDraft(
 	ctx context.Context, companyID ids.CompanyID, active contacts.CustomColumns, req IntroRequest,
 ) (crmcontracts.CompanyEmailDraft, error) {
 	var facts accountIntroFacts
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		facts, err = s.accountIntroFactsFor(ctx, tx, companyID, active, req)
 		return err

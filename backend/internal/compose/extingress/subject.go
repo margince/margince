@@ -34,7 +34,7 @@ func CheckSubject(ctx context.Context, pool *pgxpool.Pool, subject datasource.En
 	if err := auth.Require(ctx, table, principal.ActionRead); err != nil {
 		return refuseSubject(err)
 	}
-	return refuseSubject(database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return refuseSubject(database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return auth.EnsureLinkTarget(ctx, tx, table, subject.ID)
 	}))
 }
@@ -52,7 +52,7 @@ func refuseSubject(err error) error {
 // member's authority was checked by CheckSubject, and the capture link probe
 // checks it again.
 func EnsureChosenLink(ctx context.Context, pool *pgxpool.Pool, activity datasource.EntityRef, subject datasource.EntityRef) error {
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return capture.EnsureChosenLinkTx(ctx, tx, ids.From[ids.ActivityKind](activity.ID), subject)
 	})
 }

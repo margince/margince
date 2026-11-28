@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { DataTasksHealthCard } from "./datataskshealth";
@@ -40,7 +41,9 @@ it("distinguishes rows checked, changes and an unknown estimate", async () => {
   routes({ data: [runningDataTask] });
   render(<DataTasksHealthCard />);
   expect(await screen.findByText("Correct held mail")).toBeInTheDocument();
-  expect(screen.getByText("Not estimated")).toBeInTheDocument();
+  expect(
+    screen.getByText(englishCopy["dataTasks.unknown"]),
+  ).toBeInTheDocument();
   expect(screen.getByText("200")).toBeInTheDocument();
   expect(screen.getByText("12")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
@@ -75,15 +78,17 @@ it("keeps read-only progress visible without write controls", async () => {
   render(<DataTasksHealthCard />);
   await screen.findByText("Correct held mail");
   expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Estimate rows" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: englishCopy["dataTasks.action.estimate"],
+    }),
+  ).toBeNull();
 });
 
 it("does not fetch a report the reader cannot see", async () => {
   const { fetch } = routes({ data: [] }, {});
   render(<DataTasksHealthCard />);
-  await screen.findByText(
-    "Permission is required to read data updates. Ask an admin for access.",
-  );
+  await screen.findByText(englishCopy["dataTasks.withheld"]);
   expect(
     fetch.mock.calls.every(([input]) =>
       (input instanceof Request ? input.url : String(input)).endsWith("/me"),
@@ -103,7 +108,7 @@ it.each([500, 200])(
     );
     render(<DataTasksHealthCard />);
     expect(await screen.findByRole("alert")).toBeInTheDocument();
-    expect(screen.queryByText("No data updates are registered.")).toBeNull();
+    expect(screen.queryByText(englishCopy["dataTasks.empty"])).toBeNull();
   },
 );
 
@@ -141,7 +146,7 @@ it("does not offer controls until the worker registers a version", async () => {
     ],
   });
   render(<DataTasksHealthCard />);
-  await screen.findByText("Waiting for a worker.");
+  await screen.findByText(englishCopy["dataTasks.blocked.waiting_for_worker"]);
   expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
 });
 
@@ -173,7 +178,7 @@ it("keeps known rows visible when another row has a newer server state", async (
   render(<DataTasksHealthCard />);
   await screen.findByText("Newer task");
   expect(
-    screen.getAllByText("Update the application to manage this state."),
+    screen.getAllByText(englishCopy["dataTasks.unknownState"]),
   ).toHaveLength(2);
   expect(screen.getAllByRole("button", { name: "Pause" })).toHaveLength(1);
 });
@@ -280,11 +285,13 @@ it("separates completed history and unrequested maintenance from pending updates
   expect(await screen.findByText("Required update")).toBeVisible();
   expect(screen.queryByText("Finished update")).not.toBeVisible();
   expect(screen.queryByText("Optional repair")).not.toBeVisible();
-  fireEvent.click(screen.getByText("Completed updates"));
+  fireEvent.click(screen.getByText(englishCopy["health.completedUpdates"]));
   expect(screen.getByText("Finished update")).toBeVisible();
-  expect(screen.getAllByRole("button", { name: "Estimate rows" })).toHaveLength(
-    1,
-  );
+  expect(
+    screen.getAllByRole("button", {
+      name: englishCopy["dataTasks.action.estimate"],
+    }),
+  ).toHaveLength(1);
 });
 
 it("keeps work visible when polling marks it completed", async () => {
@@ -316,7 +323,7 @@ it("keeps work visible when polling marks it completed", async () => {
   fireEvent.click(await screen.findByRole("button", { name: "Pause" }));
   expect(await screen.findByText("Done")).toBeVisible();
   expect(screen.getByText("Correct held mail")).toBeVisible();
-  expect(screen.queryByText("Completed updates")).toBeNull();
+  expect(screen.queryByText(englishCopy["health.completedUpdates"])).toBeNull();
 });
 
 it("leaves earlier steps neutral and separates an unrequested review", async () => {
@@ -338,7 +345,7 @@ it("leaves earlier steps neutral and separates an unrequested review", async () 
     (await screen.findByText("Running")).closest(".badge"),
   ).not.toHaveClass("badge-warning");
   expect(screen.queryByText("Optional repair")).not.toBeVisible();
-  fireEvent.click(screen.getByText("Optional maintenance"));
+  fireEvent.click(screen.getByText(englishCopy["health.optionalMaintenance"]));
   expect(screen.getByText("Optional repair")).toBeVisible();
 });
 
@@ -352,7 +359,7 @@ it("keeps completed earlier steps out of a task's initial pending view", async (
   render(<DataTasksHealthCard />);
   await screen.findByRole("button", { name: "Pause" });
   expect(screen.queryByText("Step: earlier")).not.toBeVisible();
-  fireEvent.click(screen.getByText("Completed updates"));
+  fireEvent.click(screen.getByText(englishCopy["health.completedUpdates"]));
   expect(screen.getByText("Step: earlier")).toBeVisible();
 });
 
@@ -374,8 +381,10 @@ const leftOpen = {
 it("keeps a finished step with records left in view, names them and offers a rerun", async () => {
   const { writes } = routes({ data: [leftOpen] });
   render(<DataTasksHealthCard />);
-  expect(await screen.findByText("Done, action needed")).toBeInTheDocument();
-  expect(screen.queryByText("Completed updates")).toBeNull();
+  expect(
+    await screen.findByText(englishCopy["dataTasks.status.doneWithAction"]),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(englishCopy["health.completedUpdates"])).toBeNull();
   expect(
     screen.getByText(
       "No reviewer could be told. Grant review access, then press Retry.",
@@ -383,7 +392,11 @@ it("keeps a finished step with records left in view, names them and offers a rer
   ).toBeInTheDocument();
   expect(screen.getByText("2 records left to act on")).toBeInTheDocument();
   expect(screen.queryByText(/0190a1b2-0000-7000-8000-000000000001/)).toBeNull();
-  expect(screen.queryByRole("button", { name: "Estimate rows" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: englishCopy["dataTasks.action.estimate"],
+    }),
+  ).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
   await waitFor(() =>
     expect(writes).toEqual([
@@ -400,7 +413,7 @@ it("keeps a finished step with records left in view, names them and offers a rer
 it("offers a read-only reader no rerun of a step with records left", async () => {
   routes({ data: [leftOpen] }, { data_task: ["read"] });
   render(<DataTasksHealthCard />);
-  await screen.findByText("Done, action needed");
+  await screen.findByText(englishCopy["dataTasks.status.doneWithAction"]);
   expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
 });
 
@@ -415,13 +428,17 @@ it("does not show a malformed action as a finished step", async () => {
   });
   render(<DataTasksHealthCard />);
   expect(await screen.findByRole("alert")).toBeInTheDocument();
-  expect(screen.queryByText("Done, action needed")).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["dataTasks.status.doneWithAction"]),
+  ).toBeNull();
 });
 
 it("offers no rerun on a finished step with nothing left open", async () => {
   routes({ data: [{ ...runningDataTask, status: "done" }] });
   render(<DataTasksHealthCard />);
-  fireEvent.click(await screen.findByText("Completed updates"));
+  fireEvent.click(
+    await screen.findByText(englishCopy["health.completedUpdates"]),
+  );
   await screen.findByText("Done");
   expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
 });

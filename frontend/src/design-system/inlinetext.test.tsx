@@ -260,7 +260,7 @@ describe("the value at rest", () => {
       canEdit: false,
       emptyText: "Not on their website",
     });
-    expect(screen.getByText("Not on their website")).toBeInTheDocument();
+    expect(screen.getByText(en["co.narrative.notOnSite"])).toBeInTheDocument();
     expect(screen.queryByText(en["field.unset"])).toBeNull();
     cleanup();
     renderText({
@@ -269,7 +269,7 @@ describe("the value at rest", () => {
       emptyText: "Not on their website",
     });
     expect(screen.getByText("Banks")).toBeInTheDocument();
-    expect(screen.queryByText("Not on their website")).toBeNull();
+    expect(screen.queryByText(en["co.narrative.notOnSite"])).toBeNull();
   });
 
   it("keeps a linked value's own action, and edits from the bubble", async () => {

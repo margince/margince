@@ -17,5 +17,5 @@ func notFoundExplanation(err error) string {
 		_, message := fault.MessageFault()
 		return echoSafe(message, MaxFaultDetail)
 	}
-	return "No such record in this workspace (or it is outside the acting user's row scope). (" + refusalDetail(err) + ")"
+	return "No such record in this company (or it is outside the acting user's row scope). (" + refusalDetail(err) + ")"
 }

@@ -107,6 +107,10 @@ func prepareAuditRow(ctx context.Context, entityType string, entityID ids.UUID, 
 // and entity type, by the bound actor, in one statement. It answers the ids it
 // wrote, in the order of rows.
 func insertAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, rows []auditRow) ([]ids.UUID, error) {
+	matched, err := sourceAuditRows(ctx, tx, action, entityType, rows)
+	if err != nil {
+		return nil, err
+	}
 	p, err := Actor(ctx)
 	if err != nil {
 		return nil, err
@@ -132,5 +136,11 @@ func insertAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, 
 	// name is the constant the fault classifier reads, so a rename moves both.
 	_, err = tx.Exec(ctx, `INSERT INTO `+TableAudit+` (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, before, after, evidence, authorization_rule, batch_id)
 		 VALUES `+strings.Join(values, ", "), args...)
-	return written, err
+	if err != nil {
+		return nil, err
+	}
+	if err := keepSourceAudits(ctx, tx, written, matched); err != nil {
+		return nil, err
+	}
+	return written, nil
 }

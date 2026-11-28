@@ -33,7 +33,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 	for object, build := range map[string]func(map[string]string, map[string]any) (created, patched map[string]bool){
 		migration.ObjectLead: leadRoundTrip,
 		migration.ObjectCompany: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
-			in := companyCreateFrom(fields, typed, importwire.SourceSystem(""), "src")
+			in := companyCreateFrom(fields, typed, importwire.SourceSystem("", nil), "src")
 			up := companyUpdateFrom(fields, typed)
 			created := map[string]bool{
 				"display_name":        in.DisplayName != "",
@@ -80,13 +80,14 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			return created, patched
 		},
 		migration.ObjectContact: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
-			in := contactCreateFrom(fields, typed, importwire.SourceSystem(""), "src")
+			in := contactCreateFrom(fields, typed, importwire.SourceSystem("", nil), "src")
 			up := contactUpdateFrom(fields, typed)
 			created := map[string]bool{
 				"full_name":           in.FullName != "",
 				"first_name":          in.FirstName != nil,
 				"last_name":           in.LastName != nil,
 				"title":               in.Title != nil,
+				"salutation":          in.Salutation != nil,
 				"email":               len(in.Emails) > 0,
 				"phone":               len(in.Phones) > 0,
 				"linkedin_url":        in.Social["linkedin"] != nil,
@@ -106,6 +107,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"first_name": up.FirstName != nil,
 				"last_name":  up.LastName != nil,
 				"title":      up.Title != nil,
+				"salutation": up.Salutation != nil,
 				// The half that did not exist before this object did: a
 				// contact's emails are child rows, and the patch input
 				// carried no member for them at all.
@@ -133,6 +135,9 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			fields, typed := make(map[string]string, len(targets)), map[string]any{}
 			for _, target := range targets {
 				fields[target] = "value"
+				if target == fieldSalutation {
+					fields[target] = "mr"
+				}
 				if datasource.IsCustomFieldKey(target) {
 					typed[target] = "value"
 				}
@@ -470,7 +475,7 @@ func TestCSVWritersRefuseARowForAnotherObject(t *testing.T) {
 // wire mappers refuse — so a client cannot pre-plant a row under a guessed
 // import id and have the store hand it back as already imported.
 func TestImportedRowsCarryTheReservedProvenance(t *testing.T) {
-	w := &csvWriters{object: migration.ObjectLead, sourceSystem: importwire.SourceSystem("hubspot")}
+	w := &csvWriters{object: migration.ObjectLead, sourceSystem: importwire.SourceSystem("hubspot", nil)}
 
 	stamp := w.provenanceOf("ada@lovelace.example")
 	if !strings.HasPrefix(stamp, provenance.ReservedSourceSystemPrefix) {
@@ -479,8 +484,8 @@ func TestImportedRowsCarryTheReservedProvenance(t *testing.T) {
 	if !strings.Contains(stamp, migration.ObjectLead) || !strings.Contains(stamp, "ada@lovelace.example") {
 		t.Fatalf("provenance %q does not name the object and the source row", stamp)
 	}
-	if !strings.HasPrefix(importwire.SourceSystem("hubspot"), provenance.ReservedSourceSystemPrefix) {
-		t.Fatalf("source system %q is not reserved", importwire.SourceSystem("hubspot"))
+	if !strings.HasPrefix(importwire.SourceSystem("hubspot", nil), provenance.ReservedSourceSystemPrefix) {
+		t.Fatalf("source system %q is not reserved", importwire.SourceSystem("hubspot", nil))
 	}
 }
 
@@ -490,7 +495,7 @@ func TestImportedRowsCarryTheReservedProvenance(t *testing.T) {
 func TestSkippedLinesReachTheObjectsReport(t *testing.T) {
 	report := migration.Report{Objects: []migration.ObjectReport{{Object: migration.ObjectLead}}}
 
-	out := withSkippedLines(report, migration.ObjectLead, []migration.SkippedLine{{Line: 7, Reason: "no key"}})
+	out := importwire.WithSkippedLines(report, migration.ObjectLead, []migration.SkippedLine{{Line: 7, Reason: "no key"}})
 
 	if len(out.Objects[0].Skipped) != 1 {
 		t.Fatalf("skips = %+v, want the source's own disclosure", out.Objects[0].Skipped)
@@ -499,7 +504,7 @@ func TestSkippedLinesReachTheObjectsReport(t *testing.T) {
 		t.Fatalf("line = %d, want 7 — the report must send a human to the right line", got)
 	}
 	// An object the report does not carry cannot silently swallow them either.
-	untouched := withSkippedLines(report, migration.ObjectCompany, []migration.SkippedLine{{Line: 2}})
+	untouched := importwire.WithSkippedLines(report, migration.ObjectCompany, []migration.SkippedLine{{Line: 2}})
 	if len(untouched.Objects[0].Skipped) != 1 {
 		t.Fatalf("skips = %+v, want the lead's own single skip", untouched.Objects[0].Skipped)
 	}

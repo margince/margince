@@ -49,7 +49,7 @@ func SeedSystemHealthFixture(ctx context.Context, pool *pgxpool.Pool, owner ids.
 			return fmt.Errorf("seeding capture health: %w", err)
 		}
 	}
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		classifier, err := capturehealth.ClassifierHealth(ctx, tx, now.UTC())
 		if err != nil {
 			return err
@@ -65,7 +65,7 @@ func SeedSystemHealthFixture(ctx context.Context, pool *pgxpool.Pool, owner ids.
 	}); err != nil {
 		return err
 	}
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		for range count {
 			if err := recordIngestRefusal(ctx, tx, "health_fixture", extension.RefusalKey, now.UTC()); err != nil {
 				return err

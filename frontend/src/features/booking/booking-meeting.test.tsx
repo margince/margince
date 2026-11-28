@@ -14,6 +14,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { browserZone } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import { routeHash, watchAddress } from "../../lib/router";
 import { bookingInvitation } from "../../testing/book.testkit";
 import {
@@ -68,7 +69,7 @@ it("names the meeting in its heading, with its delivery as a badge and its time 
     await screen.findByRole("heading", { level: 1, name: "Project discovery" }),
   ).toBeTruthy();
   expect(screen.getByRole("status").textContent).toBe(
-    "Calendar invitation created",
+    englishCopy["scheduling.confirmed"],
   );
   const zone = browserZone();
   expect(
@@ -101,7 +102,9 @@ it("shows the join link with a copy action once the calendar has made one", asyn
   expect(screen.getByText("Google Meet")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: "Open in Google Calendar" }),
+    screen.getByRole("link", {
+      name: englishCopy["scheduling.openGoogleCalendar"],
+    }),
   ).toBeTruthy();
   // The agent's verb leads, and giving up on the meeting comes last.
   const verbs = screen
@@ -113,37 +116,37 @@ it("shows the join link with a copy action once the calendar has made one", asyn
       ),
     );
   expect(verbs).toEqual([
-    "Prepare for this meeting",
+    englishCopy["scheduling.prepare"],
     "Reschedule",
-    "Cancel meeting",
+    englishCopy["scheduling.cancel"],
   ]);
 });
 
 it("says the link is coming while the calendar has not answered yet", async () => {
   host({ status: "pending", provider: "graphcal", video_call: true });
   expect(
-    await screen.findByText(
-      "The link appears once the calendar accepts the invitation.",
-    ),
+    await screen.findByText(englishCopy["scheduling.videoPending"]),
   ).toBeTruthy();
-  expect(screen.getByText("Microsoft Teams")).toBeTruthy();
+  expect(
+    screen.getByText(englishCopy["webhooks.body.preset.teams"]),
+  ).toBeTruthy();
   const delivery = screen.getByRole("region", { name: "Delivery" });
-  expect(within(delivery).getByText("Invitation created")).toBeTruthy();
+  expect(
+    within(delivery).getByText(englishCopy["scheduling.step.created"]),
+  ).toBeTruthy();
   const current = delivery.querySelector('[aria-current="step"]');
-  expect(current?.textContent).toBe("Sending to the calendar…");
+  expect(current?.textContent).toBe(englishCopy["scheduling.step.sending"]);
 });
 
 it("tells the host when the calendar accepted without a link", async () => {
   host({ status: "confirmed", provider: "gcal", video_call: true });
   expect(
-    await screen.findByText(
-      "The calendar did not add a video link. Add one in your calendar.",
-    ),
+    await screen.findByText(englishCopy["scheduling.videoMissing"]),
   ).toBeTruthy();
   // Accepted by the calendar is not accepted by the guest.
   const delivery = screen.getByRole("region", { name: "Delivery" });
   expect(delivery.querySelector('[aria-current="step"]')?.textContent).toBe(
-    "Waiting for the guest’s reply",
+    englishCopy["scheduling.step.reply"],
   );
 });
 
@@ -166,15 +169,19 @@ it("sends the host to reconnect when their calendar refused Margince", async () 
     attention_reason: "calendar_disconnected",
   });
   const notice = (
-    await screen.findByText("Your calendar refused Margince")
+    await screen.findByText(englishCopy["scheduling.calendarDisconnectedTitle"])
   ).closest(".callout");
   if (!(notice instanceof HTMLElement))
     throw new Error("The refusal is explained in a callout");
   expect(
-    within(notice).getByRole("button", { name: "Reconnect calendar" }),
+    within(notice).getByRole("button", {
+      name: englishCopy["scheduling.reconnectCalendar"],
+    }),
   ).toBeTruthy();
   expect(
-    within(notice).queryByRole("button", { name: "Retry invitation" }),
+    within(notice).queryByRole("button", {
+      name: englishCopy["scheduling.retry"],
+    }),
   ).toBeNull();
 });
 
@@ -182,21 +189,23 @@ it("offers a retry of the same invitation before cancelling when the calendar re
   const user = userEvent.setup();
   const changes = host({ status: "needs_attention", version: 4 });
   const notice = (
-    await screen.findByText("The calendar did not accept the invitation")
+    await screen.findByText(englishCopy["scheduling.attentionTitle"])
   ).closest(".callout");
   if (!(notice instanceof HTMLElement))
     throw new Error("The refusal is explained in a callout");
   const retry = within(notice).getByRole("button", {
-    name: "Retry invitation",
+    name: englishCopy["scheduling.retry"],
   });
-  const cancel = screen.getByRole("button", { name: "Cancel meeting" });
+  const cancel = screen.getByRole("button", {
+    name: englishCopy["scheduling.cancel"],
+  });
   expect(
     retry.compareDocumentPosition(cancel) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   // A refused invitation never reached the guest, so nothing awaits a reply.
   const delivery = screen.getByRole("region", { name: "Delivery" });
   expect(
-    within(delivery).queryByText("Waiting for the guest’s reply"),
+    within(delivery).queryByText(englishCopy["scheduling.step.reply"]),
   ).toBeNull();
   await user.click(retry);
   await waitFor(() =>

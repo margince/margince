@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
+import { en as englishCopy } from "../i18n/en";
 import {
   expectFoldedRowsUnderSummary,
   StoryProviders,
@@ -65,7 +66,9 @@ export const InAPanelNoApp: Story = {
     const canvas = within(canvasElement);
     await canvas.findByRole("table");
     await expect(
-      canvas.getByText("Authorized redirect URIs").closest("summary"),
+      canvas
+        .getByText(englishCopy["oauthApp.redirectTitle"])
+        .closest("summary"),
     ).toHaveAttribute("aria-expanded", "true");
   },
 };
@@ -81,7 +84,9 @@ const openFold = async ({
   canvasElement,
 }: Readonly<{ canvasElement: HTMLElement }>) => {
   await userEvent.click(
-    await within(canvasElement).findByText("Authorized redirect URIs"),
+    await within(canvasElement).findByText(
+      englishCopy["oauthApp.redirectTitle"],
+    ),
   );
   await within(canvasElement).findByRole("table");
 };

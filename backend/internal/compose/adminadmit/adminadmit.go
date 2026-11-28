@@ -63,7 +63,7 @@ func ServeReport[T any](w http.ResponseWriter, r *http.Request, pool *pgxpool.Po
 	defer cancel()
 
 	var out T
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = read(ctx, tx)
 		return err

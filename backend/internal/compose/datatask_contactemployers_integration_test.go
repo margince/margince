@@ -53,7 +53,7 @@ func TestContactEmployerTaskRepairsArchivedLeadEvidenceAndReplays(t *testing.T) 
 		t.Fatalf("company count = %d", companies)
 	}
 	audits := e.WsCount(t, `SELECT count(*) FROM audit_log`)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		if err == nil && out.Changed != 0 {
 			t.Errorf("replay changed %d records", out.Changed)
@@ -102,7 +102,7 @@ func TestContactEmployerTaskBoundsPagingAndRejectsMalformedCursor(t *testing.T) 
 	if err != nil || count != 1 || !more {
 		t.Fatalf("estimate %d, %v, %v", count, more, err)
 	}
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		first, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 1, RunID: ids.NewV7()})
 		if err != nil {
 			return err
@@ -128,7 +128,7 @@ func TestContactEmployerTaskSkipsConflictingEvidenceAndKeepsScanning(t *testing.
 	}
 	task := contactEmployersDataTask(e.Pool)
 	ctx := datatask.Acting(e.Admin(), task.ID)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		if err == nil && (out.Changed != 0 || !out.Done || len(out.Cursor) == 0) {
 			t.Errorf("refused page: %+v", out)
@@ -152,7 +152,7 @@ func TestContactEmployerTaskPreservesArchivedEmployment(t *testing.T) {
 		t.Fatal(err)
 	}
 	var edge ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT id FROM relationship WHERE contact_id=$1`, contact.Id).Scan(&edge)
 	}); err != nil {
 		t.Fatal(err)

@@ -58,7 +58,7 @@ func seedCalendarMailSaying(t *testing.T, e *loadEnv, method, verdict, text stri
 // setCalendarMethod writes the method as the re-read of a stored original does.
 func setCalendarMethod(t *testing.T, e *loadEnv, id ids.UUID, method string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(asClassifier(e), e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(asClassifier(e), e.pool, func(tx pgx.Tx) error {
 		_, err := SetCalendarMethodTx(asClassifier(e), tx, ids.From[ids.ActivityKind](id), method)
 		return err
 	}); err != nil {

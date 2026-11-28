@@ -77,7 +77,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		return nil, "", false, &datasource.UnsupportedEntityError{Type: string(t)}
 	}
 	in := ListProjectsInput{Query: text, Limit: &limit, Cursor: cursor, Offset: offset}
-	if err := projectListFilters.Apply(&in, filters); err != nil {
+	if err := projectListFilters.ApplyCustom(&in, filters, func(in *ListProjectsInput, custom map[string]string) { in.CustomFilters = custom }); err != nil {
 		return nil, "", false, err
 	}
 	rows, page, err := p.store.ListProjects(ctx, in)
@@ -100,7 +100,7 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	if t != datasource.EntityProject {
 		return nil
 	}
-	return projectListFilters.Names()
+	return append(projectListFilters.Names(), datasource.CustomFieldPrefix)
 }
 
 // Create mints a project from the tool surface's raw body.

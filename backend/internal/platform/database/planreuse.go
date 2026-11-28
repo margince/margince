@@ -27,7 +27,7 @@ func GenericPlansEnabled(ctx context.Context) bool {
 	scoped, ok := ctx.Value(genericPlanScope{}).(pgx.Tx)
 	tx, joined := snapshotOf(ctx)
 	custom, _ := ctx.Value(customPlanScope{}).(pgx.Tx)
-	return ok && joined && tx == scoped && custom != tx
+	return ok && joined && underlying(tx) == underlying(scoped) && underlying(custom) != underlying(tx)
 }
 
 // ReuseGenericPlans runs fn with each statement on the ambient snapshot reusing
@@ -59,7 +59,7 @@ func UseCustomPlansTx(ctx context.Context, tx pgx.Tx, fn func(context.Context) e
 // Its statements must keep partial-index predicates literal, as for snapshot reuse.
 // On the ambient snapshot already reusing generic plans it only runs fn.
 func ReuseGenericPlansTx(ctx context.Context, tx pgx.Tx, fn func() error) error {
-	if snapshot, joined := snapshotOf(ctx); joined && snapshot == tx && GenericPlansEnabled(ctx) {
+	if snapshot, joined := snapshotOf(ctx); joined && underlying(snapshot) == underlying(tx) && GenericPlansEnabled(ctx) {
 		return fn()
 	}
 	return withPlanCacheMode(ctx, tx, "force_generic_plan", fn)

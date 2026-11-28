@@ -122,7 +122,7 @@ type healthCandidate struct {
 func (s *ProjectHealthScan) RunWorkspace(ctx context.Context, workspace ids.UUID) (ProjectHealthPass, error) {
 	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), projectHealthActor)
 	var candidates []healthCandidate
-	if err := database.WithWorkspaceTx(wsCtx, s.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		candidates, err = scanHealthCandidates(wsCtx, tx)
 		return err
@@ -179,7 +179,7 @@ func scanHealthCandidates(ctx context.Context, tx pgx.Tx) ([]healthCandidate, er
 // in their place.
 func (s *ProjectHealthScan) judge(ctx context.Context, candidate healthCandidate) (projects.AIHealthOutcome, error) {
 	var outcome projects.AIHealthOutcome
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		words := projectHealthCopyFor(identity.BaseLanguageForRecord(ctx, tx))
 		var finding projectHealthFinding
 		result, err := s.projects.RecordAIHealthTx(ctx, tx, candidate.ProjectID,

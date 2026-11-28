@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -87,7 +88,7 @@ export const ModelDraft: Story = {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = within(await body.findByRole("dialog"));
     await userEvent.click(
-      dialog.getByRole("button", { name: "Draft message" }),
+      dialog.getByRole("button", { name: englishCopy["co.intro.write"] }),
     );
     await dialog.findByRole("textbox", { name: "Subject" });
   },

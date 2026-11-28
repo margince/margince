@@ -99,7 +99,9 @@ export const Sent: Story = {
     await userEvent.click(await askWhenSendable(canvasElement));
     const dialog = within(await screen.findByRole("dialog"));
     await dialog.findByText("Ihre Kontaktdaten prüfen");
-    await userEvent.click(dialog.getByRole("button", { name: "Send request" }));
+    await userEvent.click(
+      dialog.getByRole("button", { name: en["controllerMail.confirmSend"] }),
+    );
     await canvas.findByTestId("confirm-details-sent");
   },
 };

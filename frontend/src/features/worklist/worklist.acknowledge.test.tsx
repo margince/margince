@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { WorklistScreen } from "./worklist";
 
 // A notice's one verb settles it through its own read endpoint, not a link
@@ -143,7 +144,7 @@ describe("settling a notice", () => {
     await waitFor(() => {
       expect(screen.queryByText("A deal you own changed stage")).toBeNull();
     });
-    await screen.findByText("Nothing is waiting on you.");
+    await screen.findByText(englishCopy["worklist.clear"]);
   });
 
   it("says so and leaves the notice in the lane when the read is refused", async () => {
@@ -155,7 +156,7 @@ describe("settling a notice", () => {
     await user.click(screen.getByRole("button", { name: "Acknowledge" }));
 
     expect(
-      await screen.findByText("Item was not marked as seen. Retry."),
+      await screen.findByText(englishCopy["worklist.verb.acknowledgeFailed"]),
     ).toBeTruthy();
     expect(screen.getByText("A deal you own changed stage")).toBeTruthy();
   });

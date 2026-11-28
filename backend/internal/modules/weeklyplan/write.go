@@ -40,7 +40,7 @@ func (s *Store) StartWeek(ctx context.Context, now time.Time) (Plan, error) {
 		return Plan{}, err
 	}
 	var plan Plan
-	err = database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		week, err := s.weekStart(ctx, tx, now)
 		if err != nil {
 			return err
@@ -117,7 +117,7 @@ func (s *Store) AddCommitment(ctx context.Context, now time.Time, in NewCommitme
 		return Commitment{}, err
 	}
 	var out Commitment
-	err = database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		plan, err := s.openPlanTx(ctx, tx, owner, now)
 		if err != nil {
 			return err

@@ -80,7 +80,7 @@ func (c weeklyPlanCapacity) ForWeek(
 	ctx context.Context, owner ids.UUID, weekStart time.Time,
 ) (weeklyplan.Committed, error) {
 	var out weeklyplan.Committed
-	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, c.pool, func(tx pgx.Tx) error {
 		zone, err := identity.TimezoneAppliedTx(ctx, tx)
 		if err != nil {
 			return err

@@ -117,7 +117,7 @@ func (e *Engine) Seed(ctx context.Context) error {
 	}
 	ctx, cancel := context.WithTimeout(ctx, transactionLimit)
 	defer cancel()
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		if err := database.BoundStatement(ctx, tx, statementLimit); err != nil {
 			return err
 		}

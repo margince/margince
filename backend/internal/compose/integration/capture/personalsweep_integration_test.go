@@ -35,7 +35,7 @@ const sweepBatch = 500
 func seedImportedMail(t *testing.T, e *integration.Env, from, subject string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, counterparty_email, audience)
@@ -59,7 +59,7 @@ func seedImportedMail(t *testing.T, e *integration.Env, from, subject string) id
 func resolveAsPersonal(t *testing.T, e *integration.Env, from string, activity ids.UUID) {
 	t.Helper()
 	store := capturemod.NewPendingStore(compose.InstallationDB(e.Pool))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_pending_counterparty
 			       (email, domain, activity_id, owner_id, status, next_attempt_at)
@@ -76,7 +76,7 @@ func resolveAsPersonal(t *testing.T, e *integration.Env, from string, activity i
 		if row.Email != from {
 			continue
 		}
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			won, err := store.ResolveAs(e.Admin(), tx, row, capturemod.PendingStatusNoise, capturemod.KindPersonal,
 				"test", true, capturemod.VerdictMeasurement{})
 			if err == nil && !won {
@@ -100,7 +100,7 @@ func seedDueMail(t *testing.T, e *integration.Env, address string, n int) ids.UU
 	for i := 1; i < n; i++ {
 		seedImportedMail(t, e, address, fmt.Sprintf("Nachricht %d", i))
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(),
 			`UPDATE activity SET created_at = now() - interval '8 days' WHERE counterparty_email = $1`, address); err != nil {
 			return err
@@ -184,7 +184,7 @@ func TestEligibleMailBehindAFullBatchUnderTheStatutoryFloorIsDestroyedInOnePass(
 	const held = "einkauf@kunde.example"
 	heldCount := sweepBatch + 1
 	first := seedDueMail(t, e, held, heldCount)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE activity
 			   SET retention_class = 'commercial_correspondence', retention_class_at = now(),
@@ -197,7 +197,7 @@ func TestEligibleMailBehindAFullBatchUnderTheStatutoryFloorIsDestroyedInOnePass(
 	// The floor is a compiled-in pack and the default build declares none, and
 	// then this mail is destroyable and there is no shield to test.
 	var open bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		policy, err := privacy.ResolveFloorPolicy(context.Background(), tx, identity.CountryOf)
 		if err != nil {
 			return err
@@ -224,7 +224,7 @@ func TestAHeldMessageIsKeptWhileTheMailBehindItIsDestroyed(t *testing.T) {
 	e := integration.Setup(t)
 	const held = "gegner@kanzlei.example"
 	heldMail := seedDueMail(t, e, held, 1)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_retention_evidence
 			  (activity_id, basis, decided_by_name, reason, qualified_at)

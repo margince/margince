@@ -31,7 +31,7 @@ import (
 // with no enabled automation rows (B-E15.4 gating).
 func seedStarterAutomations(t *testing.T, e *SearchEnv) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return automation.SeedStarterAutomationsTx(context.Background(), tx)
 	})
 	if err != nil {
@@ -45,7 +45,7 @@ func seedStarterAutomations(t *testing.T, e *SearchEnv) {
 // its own Match semantic must enable it explicitly.
 func enableStageChangeCreateTask(t *testing.T, e *SearchEnv) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO automation (key, name, trigger, action, params, enabled)
 			VALUES ('stage_change_create_task', 'Follow up on stage changes',
@@ -66,7 +66,7 @@ func enableLeadRouting(t *testing.T, e *SearchEnv, params map[string]any) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO automation (key, name, trigger, action, params, enabled)
 			VALUES ('assign_lead_owner', 'Assign new leads an owner', '{"event_type":"lead.created"}', '{"kind":"assign_owner"}',
@@ -103,7 +103,7 @@ func TestWorkflowRouteLeadAssignsExactlyOnce(t *testing.T) {
 	var runs int
 	var owner *ids.UUID
 	var applied []byte
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT owner_id FROM lead WHERE id = $1`, leadID).Scan(&owner); err != nil {
 			return err
@@ -165,7 +165,7 @@ func TestWorkflowEngineHonorsAutomationInstances(t *testing.T) {
 	ownerOf := func(leadID ids.UUID) *ids.UUID {
 		t.Helper()
 		var owner *ids.UUID
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
 				`SELECT owner_id FROM lead WHERE id = $1`, leadID).Scan(&owner)
 		})
@@ -184,7 +184,7 @@ func TestWorkflowEngineHonorsAutomationInstances(t *testing.T) {
 
 	// A PAUSED instance (the contract's created-paused shape) is silent too.
 	var automationID ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO automation (key, name, trigger, action, params, enabled)
 			VALUES ('assign_lead_owner', 'Assign new leads an owner', '{"event_type":"lead.created"}', '{"kind":"assign_owner"}',
@@ -202,7 +202,7 @@ func TestWorkflowEngineHonorsAutomationInstances(t *testing.T) {
 
 	// Enabled: the next event fires exactly once, honoring the instance
 	// params — the configured pool of one (rep3) is where the lead lands.
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE automation SET enabled = true WHERE id = $1`, automationID)
 		return err
 	})
@@ -216,7 +216,7 @@ func TestWorkflowEngineHonorsAutomationInstances(t *testing.T) {
 		t.Fatalf("enabled instance assigned %v — the instance's owner pool did not reach the run", got)
 	}
 	var runs int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM workflow_run WHERE handler = 'assign_lead_owner'`).Scan(&runs)
 	})
@@ -263,7 +263,7 @@ func TestWorkflowStageChangeMatchGuardsSemantic(t *testing.T) {
 	}
 
 	var tasks int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity WHERE kind = 'task' AND subject LIKE 'Plan the next step%'`).Scan(&tasks)
 	})
@@ -276,7 +276,7 @@ func TestWorkflowStageChangeMatchGuardsSemantic(t *testing.T) {
 		t.Fatalf("stage-change tasks = %d, want 1 (closed moves end the cadence)", tasks)
 	}
 	var links int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity_link WHERE deal_id = $1`, dealID).Scan(&links)
 	})

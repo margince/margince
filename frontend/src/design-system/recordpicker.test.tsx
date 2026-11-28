@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import { meFixture } from "../testing/mefixture";
 import { Field } from "./atoms";
@@ -264,7 +265,7 @@ describe("RecordPicker", () => {
     // way, which is the part this spec has always been about.
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe(
-        "The request failed. No cause reported.",
+        englishCopy["common.errorNoCause"],
       ),
     );
     expect(screen.queryByText("search down")).toBeNull();
@@ -459,17 +460,13 @@ describe("RecordPicker", () => {
 
     await user.type(screen.getByRole("searchbox"), "weber");
     await waitFor(() =>
-      expect(
-        screen.getByText("The request failed. No cause reported."),
-      ).toBeTruthy(),
+      expect(screen.getByText(englishCopy["common.errorNoCause"])).toBeTruthy(),
     );
 
     rerender(
       <RecordPicker label="Search…" searchTargets={working} onPick={vi.fn()} />,
     );
-    expect(
-      screen.queryByText("The request failed. No cause reported."),
-    ).toBeNull();
+    expect(screen.queryByText(englishCopy["common.errorNoCause"])).toBeNull();
   });
 
   it("never submits an enclosing form when Enter is pressed in its search box", async () => {

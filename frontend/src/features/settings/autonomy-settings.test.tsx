@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { AutonomySettingsCard } from "./autonomy-settings";
 
@@ -332,9 +333,7 @@ describe("AutonomySettingsCard", () => {
     refusing = true;
     await act(() => client.refetchQueries({ queryKey: ["autonomy"] }));
 
-    expect(
-      await screen.findByText("Could not load this view. Reload the page."),
-    ).not.toBeNull();
+    expect(await screen.findByText(englishCopy["common.error"])).not.toBeNull();
     expect(screen.queryByText(/have not reviewed any of these/i)).toBeNull();
   });
 

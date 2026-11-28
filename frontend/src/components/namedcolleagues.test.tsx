@@ -5,6 +5,7 @@ import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { namedColleaguesFirst } from "./assigneepicker";
 import {
   assignedRecord,
@@ -70,7 +71,7 @@ it("names each colleague on the records once, with every role they hold, and lea
   await waitFor(() =>
     expect(result.current.get("priya")).toEqual([
       "Partner management",
-      "Delivery lead",
+      englishCopy["recordRoles.builtin.delivery_lead"],
     ]),
   );
   expect([...result.current.keys()]).toEqual(["priya"]);

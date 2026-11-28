@@ -79,7 +79,7 @@ func TestUnverifiedNoticeCorrectionRollsBackAndRejectsMalformedCursors(t *testin
 	seedDirectSenderDuty(t, e, "unknown_legacy", "blocked", "connector:gmail")
 	task := noticeSourceDataTask(func() time.Time { return clocktest.Now(t) })
 	interrupted := errors.New("interrupt correction")
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 1}); err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func TestUnverifiedNoticeCorrectionRollsBackAndRejectsMalformedCursors(t *testin
 	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'privacy_notice_case'`); got != 0 {
 		t.Fatal("audit escaped rollback")
 	}
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 1, Cursor: json.RawMessage(`"bad cursor"`)})
 		return err
 	})

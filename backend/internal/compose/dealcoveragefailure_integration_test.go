@@ -36,13 +36,13 @@ func TestCaptureObservationFailureLeavesTheWorklistSnapshotUsable(t *testing.T) 
 		t.Fatal(err)
 	}
 	cards.WithMailCoverage(func(ctx context.Context, _ *time.Time, _ time.Time) (crmcontracts.MailCaptureCoverage, error) {
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, "SELECT 1 / 0")
 			return err
 		})
 		return crmcontracts.MailCaptureCoverage{}, err
 	})
-	err := database.WithWorkspaceSnapshot(reader, e.Pool, func(ctx context.Context) error {
+	err := database.WithSnapshot(reader, e.Pool, func(ctx context.Context) error {
 		moves, err := cards.CurrentMoves(ctx, []ids.UUID{e.booked})
 		if err != nil {
 			return err
@@ -51,7 +51,7 @@ func TestCaptureObservationFailureLeavesTheWorklistSnapshotUsable(t *testing.T) 
 		if !found || move.MailCoverage == nil || move.MailCoverage.State != crmcontracts.MailCaptureCoverageStateUnknown {
 			t.Fatalf("failed observation removed recorded work: %+v", moves)
 		}
-		return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var readable int
 			if err := tx.QueryRow(ctx, "SELECT 1").Scan(&readable); err != nil {
 				return err

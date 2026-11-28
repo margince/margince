@@ -36,7 +36,7 @@ import (
 func countRows(t *testing.T, e *integration.Env, query string, args ...any) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting: %v", err)
@@ -51,7 +51,7 @@ func TestErasureRemovesTheSubjectFromTheRelationshipGraph(t *testing.T) {
 
 	var contact ids.UUID
 	var activityID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
@@ -93,7 +93,7 @@ func TestErasureRemovesTheSubjectFromTheRelationshipGraph(t *testing.T) {
 		t.Fatalf("seeding the subject: %v", err)
 	}
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(e.Admin(), tx, []ids.UUID{activityID})
 	}); err != nil {
 		t.Fatalf("folding the edge: %v", err)

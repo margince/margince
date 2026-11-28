@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -58,6 +60,7 @@ func (h Handlers) SubmitWebForm(w http.ResponseWriter, r *http.Request, formKey 
 // plain form post. The page is in the language the edge bound for the
 // visitor, and names the reason only where the visitor can act on it.
 func (h Handlers) AnswerRefusal(w http.ResponseWriter, r *http.Request, err error) {
+	ratelimit.SetRefusalHeaders(w.Header(), err)
 	if !wantsPage(r) {
 		writeErr(w, r, err)
 		return

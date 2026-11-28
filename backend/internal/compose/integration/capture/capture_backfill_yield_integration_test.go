@@ -302,7 +302,7 @@ func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
 // human typed in.
 func seedForeignCounterparties(t *testing.T, e *integration.SearchEnv) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, q := range []string{
 			`INSERT INTO contact (full_name, source, captured_by)
 			   VALUES ('Other Connection One', 'capture', 'connector:gmail'),
@@ -326,7 +326,7 @@ func seedForeignCounterparties(t *testing.T, e *integration.SearchEnv) {
 
 func readBackfillYieldColumns(t *testing.T, e *integration.SearchEnv, id ids.UUID) (contacts, companies int) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
 			SELECT contacts_created, companies_created FROM capture_backfill WHERE id = $1`, id).
 			Scan(&contacts, &companies)
@@ -462,7 +462,7 @@ func TestBackfillYieldsSurviveACancelUnderTheRunningPage(t *testing.T) {
 		t.Fatalf("after a mid-page cancel contacts_created=%d companies_created=%d, want 1/1 for the message committed before cancellation", contacts, companies)
 	}
 	var later int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT count(*) FROM contact_email WHERE lower(email)='dave@globex.example' AND archived_at IS NULL`).Scan(&later)
 	}); err != nil {
 		t.Fatal(err)
@@ -520,7 +520,7 @@ func TestBackfillYieldsAreCreditedOnceAtTheRetryCeiling(t *testing.T) {
 // readRunAndYields reads the run's state and its committed yield columns.
 func readRunAndYields(t *testing.T, e *integration.SearchEnv, id ids.UUID) (status string, contacts, companies int) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
 			SELECT status, contacts_created, companies_created FROM capture_backfill WHERE id = $1`, id).
 			Scan(&status, &contacts, &companies)
@@ -536,7 +536,7 @@ func readRunAndYields(t *testing.T, e *integration.SearchEnv, id ids.UUID) (stat
 // climbs the ladder and ends the run — the interleaving that double-credited.
 func seedBackfillFailuresAtCeiling(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, execErr := tx.Exec(e.Admin(), `
 			UPDATE capture_backfill SET consecutive_failures = 9 WHERE id = $1`, id)
 		return execErr
@@ -597,7 +597,7 @@ func TestRetriedCreationCreditsCountOnce(t *testing.T) {
 			contacts, companies, afterContacts, afterCompanies)
 	}
 	rollback := errors.New("rollback credit")
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		disposition, err := creditDispositionTx(e.Admin(), tx, run.ID)
 		if err != nil {
 			return err
@@ -617,7 +617,7 @@ func TestRetriedCreationCreditsCountOnce(t *testing.T) {
 		t.Fatalf("rolled-back credit changed counters or ledger: counters=%d/%d ledger=%d/%d", finalContacts, finalCompanies, finalLedgerContacts, finalLedgerCompanies)
 	}
 
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(e.Admin(), `UPDATE capture_backfill SET contacts_created = contacts_created + 100 WHERE id = $1`, run.ID); err != nil {
 			return err
 		}
@@ -703,7 +703,7 @@ func loseTheCount(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 func readCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) (int, int) {
 	t.Helper()
 	var contacts, companies int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
 			SELECT count(*) FILTER (WHERE kind = 'contact'),
 			       count(*) FILTER (WHERE kind = 'company_queued')
@@ -724,7 +724,7 @@ func creditDispositionTx(ctx context.Context, tx pgx.Tx, run ids.UUID) (ids.UUID
 
 func replayCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		disposition, err := creditDispositionTx(e.Admin(), tx, id)
 		if err != nil {
 			return err

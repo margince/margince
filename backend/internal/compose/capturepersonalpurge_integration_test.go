@@ -173,7 +173,7 @@ func TestAnotherSeatsPersonalMailIsNotDestroyed(t *testing.T) {
 func archiveAuditRows(t *testing.T, e *integration.Env, activityID ids.UUID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM audit_log
 			  WHERE entity_type = 'activity' AND entity_id = $1 AND action = 'archive'`,
@@ -259,7 +259,7 @@ func resolvePersonal(t *testing.T, e *integration.Env, from string, activityID, 
 func resolveSenderAs(t *testing.T, e *integration.Env, from string, activityID, owner ids.UUID, byOwner bool, status, kind string) {
 	t.Helper()
 	store := capture.NewPendingStore(InstallationDB(e.Pool))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_pending_counterparty
 			       (email, domain, activity_id, owner_id, status, next_attempt_at)
@@ -281,7 +281,7 @@ func resolveSenderAs(t *testing.T, e *integration.Env, from string, activityID, 
 	if row.ID == ids.Nil {
 		t.Fatalf("the ledger handed out no row for %s", from)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		won, err := store.ResolveAs(e.Admin(), tx, row,
 			status, kind, "test", byOwner,
 			capture.VerdictMeasurement{})
@@ -301,7 +301,7 @@ func resolveSenderAs(t *testing.T, e *integration.Env, from string, activityID, 
 // its direction alone and not by `counterparty_outbound_attested`.
 func unattest(t *testing.T, e *integration.Env, activityID ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET counterparty_outbound_attested = false WHERE id = $1`, activityID)
 		return err
@@ -313,7 +313,7 @@ func unattest(t *testing.T, e *integration.Env, activityID ids.UUID) {
 // ageOneActivity backdates a single message without touching a verdict.
 func ageOneActivity(t *testing.T, e *integration.Env, activityID ids.UUID, age time.Duration) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET created_at = now() - $2::interval WHERE id = $1`,
 			activityID, age.String())
@@ -327,7 +327,7 @@ func ageOneActivity(t *testing.T, e *integration.Env, activityID ids.UUID, age t
 // the age it means rather than about whichever of the two happens to be newer.
 func agePersonalMail(t *testing.T, e *integration.Env, activityID ids.UUID, from string, age time.Duration) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(),
 			`UPDATE activity SET created_at = now() - $2::interval WHERE id = $1`,
 			activityID, age.String()); err != nil {
@@ -355,7 +355,7 @@ func overruleAsBusiness(t *testing.T, e *integration.Env, seat ids.UUID, address
 func eraseAudits(t *testing.T, e *integration.Env, activityID ids.UUID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM audit_log WHERE action = 'erase' AND entity_type = 'activity' AND entity_id = $1`,
 			activityID).Scan(&n)
@@ -417,7 +417,7 @@ func TestPersonalMailAnOpenRequestIsAboutSurvivesItsWindow(t *testing.T) {
 func seatsDueForPersonalSweep(t *testing.T, e *integration.Env) []ids.UUID {
 	t.Helper()
 	var seats []ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		seats, err = capture.SeatsWithPersonalMailDueTx(
 			context.Background(), tx, capture.DefaultPersonalPurgeWindows(), 100)

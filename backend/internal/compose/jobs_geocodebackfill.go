@@ -78,7 +78,7 @@ type geocodeBackfillWorker struct{ pool *pgxpool.Pool }
 // nomination harmless — but a half-committed pass that logged success would
 // misreport what it did.
 func (w *geocodeBackfillWorker) Work(ctx context.Context, _ *river.Job[GeocodeBackfillArgs]) error {
-	workspaces, err := enumerateWorkspaces(ctx, w.pool)
+	workspaces, err := database.LiveWorkspaces(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

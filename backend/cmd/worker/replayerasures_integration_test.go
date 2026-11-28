@@ -275,7 +275,7 @@ func seedContactWithChatAccount(t *testing.T, e *integration.Env) ids.UUID {
 func countRows(t *testing.T, e *integration.Env, query string, contact ids.UUID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, contact).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting rows: %v", err)

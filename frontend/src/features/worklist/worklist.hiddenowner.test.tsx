@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { day, renderWorklist, stub } from "../../testing/worklist.testkit";
 
 // Broad visibility diagnostics must not describe a personal or named queue.
@@ -54,13 +55,15 @@ describe("the hidden-backlog panel is about the reader", () => {
     await screen.findByRole("button", { name: "Add note" });
     // The receipt is the LAST panel on the page, below the one under test, so
     // the wait covers that panel's own position rather than only a neighbour's.
-    await screen.findByRole("heading", { name: "Change history" });
+    await screen.findByRole("heading", {
+      name: englishCopy["worklist.handled.title"],
+    });
 
     // The panel is absent, and — the half that actually holds — it never ASKS.
     // The endpoint answers about the authenticated principal, so a request made
     // from a colleague's page is already the wrong question; the drawn panel is
     // only where the wrong answer would have shown up.
-    expect(screen.queryByText("Hidden from the Worklist")).toBeNull();
+    expect(screen.queryByText(englishCopy["worklist.hidden.title"])).toBeNull();
     expect(hiddenRequests()).toEqual([]);
   });
 
@@ -89,9 +92,9 @@ describe("the hidden-backlog panel is about the reader", () => {
     // its first tick and the case passes against a page that has not rendered.
     // That is the defect this anchor replaces, and it is the same one the
     // sibling case above hit.
-    await screen.findByText("Nothing is waiting on you.");
+    await screen.findByText(englishCopy["worklist.clear"]);
 
-    expect(screen.queryByText("Hidden from the Worklist")).toBeNull();
+    expect(screen.queryByText(englishCopy["worklist.hidden.title"])).toBeNull();
     expect(hiddenRequests()).toEqual([]);
   });
 
@@ -99,10 +102,12 @@ describe("the hidden-backlog panel is about the reader", () => {
     const user = userEvent.setup();
     stub(day({ scope_options: ["mine", "team", "all"] }));
     renderWorklist("en");
-    await screen.findByText("Nothing is waiting on you.");
+    await screen.findByText(englishCopy["worklist.clear"]);
     expect(hiddenRequests()).toEqual([]);
     await user.click(screen.getAllByRole("button", { name: "All" })[0]);
-    expect(await screen.findByText("Hidden from the Worklist")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["worklist.hidden.title"]),
+    ).toBeTruthy();
     await waitFor(() => expect(hiddenRequests().length).toBeGreaterThan(0));
   });
 });

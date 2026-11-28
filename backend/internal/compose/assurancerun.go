@@ -91,7 +91,7 @@ func (h assuranceRunHandlers) StartForecastAssuranceRun(w http.ResponseWriter, r
 		RequestedBy: requestedBy(ctx),
 	}
 	var started bool
-	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		var err error
 		started, err = h.enqueue.EnqueueTxUnique(ctx, tx, args, assuranceRunInsertOpts())
 		return err

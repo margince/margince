@@ -31,7 +31,7 @@ type capturedEnds struct {
 func endsOf(t *testing.T, env captureEnv, messageID string) capturedEnds {
 	t.Helper()
 	var ends capturedEnds
-	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT direction, coalesce(counterparty_email, ''), counterparty_outbound_attested
 			  FROM activity WHERE source_id = $1`, messageID).
@@ -183,7 +183,7 @@ func TestAPlantedSentCopyDoesNotAttestAColleaguesMail(t *testing.T) {
 	const msgID = "colleagues-own@myco.example"
 	raw := emailCC(secondSeatAddress, "Colleague", "buyer@customer.example", "other@customer.example", msgID)
 	colleague(t, raw)
-	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `UPDATE activity SET direction = 'outbound', counterparty_email = 'buyer@customer.example'
 			WHERE source_id = $1`, msgID); err != nil {

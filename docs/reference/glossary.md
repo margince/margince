@@ -86,6 +86,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Material | Google's Material Symbols icon set, the source of the web app's filled status marks. |
 | MCP | Model Context Protocol: how an AI agent connects to Margince's tools. |
 | mdy | The date order month, day, year, as a setting value. |
+| Messenger | The record action for messages sent through a connected personal account. |
 | Microsoft | The company behind Microsoft 365 mail and calendars. |
 | milestone | A GitHub group of issues planned for one month, named `YYYY-MM`. |
 | multi-select | A custom field type that holds several choices at once. |

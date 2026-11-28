@@ -31,6 +31,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -70,12 +71,7 @@ func (r *Registry) BackfillCredentials(ctx context.Context) (int, error) {
 	if r.vault == nil {
 		return 0, errors.New("capture: cannot backfill connector credentials without a keyvault")
 	}
-	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; this reads every tenant before entering each workspace's own GUC.
-	rows, err := r.db.Pool().Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL ORDER BY created_at`)
-	if err != nil {
-		return 0, fmt.Errorf("capture: listing workspaces for credential backfill: %w", err)
-	}
-	workspaces, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	workspaces, err := database.LiveWorkspaces(ctx, r.db.Pool())
 	if err != nil {
 		return 0, err
 	}

@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Ellipsis } from "lucide-react";
 import { expect, screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { Badge, Button } from "./atoms";
 import { Panel, PanelBody } from "./panel";
 import { RecordDetails } from "./recorddetails";
@@ -128,7 +129,9 @@ export const DetailsOpen: Story = {
     );
     await expect(await canvas.findByText("VAT ID")).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "Hide empty fields" }),
+      canvas.getByRole("button", {
+        name: englishCopy["record.details.hideEmpty"],
+      }),
     ).toHaveAttribute("aria-expanded", "true");
   },
 };

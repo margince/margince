@@ -49,7 +49,7 @@ func owedSweepContext(e *integration.Env) context.Context {
 func declinedUnder(t *testing.T, e *integration.Env, id ids.UUID, column string) string {
 	t.Helper()
 	var ruleset *string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT `+pgx.Identifier{column}.Sanitize()+` FROM activity WHERE id = $1`, id).Scan(&ruleset)
 	})

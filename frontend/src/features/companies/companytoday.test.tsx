@@ -128,7 +128,9 @@ describe("what needs a contact on this account today", () => {
     show({ ...BASE, sections_omitted: ["activities"] });
 
     expect(withheldLine().textContent).toContain(en["today.source.activities"]);
-    expect(screen.queryByText("Last exchange")).toBeNull();
+    expect(
+      screen.queryByText(en["analytics.accounts.lastExchange"]),
+    ).toBeNull();
   });
 
   // Whose move it is and the open-risk tile both read `state_strip`
@@ -299,7 +301,9 @@ describe("the moves on the list, and the foot under them", () => {
     // brief drawer and the handler opened the composer instead — the label
     // and the handler moved together (aiscope.test.tsx pins the
     // drawer).
-    fireEvent.click(screen.getByRole("button", { name: "Prepare meeting" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: en["today.meeting.prepare"] }),
+    );
     expect(prepared).toHaveBeenCalledWith("a-1");
   });
 
@@ -384,11 +388,7 @@ describe("the account scan on the needs list", () => {
         },
       },
     );
-    expect(
-      screen.getByText(
-        "Margince is analyzing this company’s exchanges and deals.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(en["today.scan.reading"])).toBeTruthy();
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
   });
 
@@ -411,17 +411,13 @@ describe("the account scan on the needs list", () => {
     expect(screen.getByText("Confirm the depot installation")).toBeTruthy();
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.getByText("Written by Margince")).toBeTruthy();
+    expect(screen.getByText(en["co.brief.by.model"])).toBeTruthy();
     expect(
       screen.getByText(
         "Analyzed 14 exchanges in the last 180 days and 2 open deals",
       ),
     ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "The company has changed since. It is analyzed again within the hour.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(en["today.scan.stale"])).toBeTruthy();
   });
 
   it("says when a read the budget put off resumes", () => {
@@ -504,7 +500,7 @@ describe("the account scan on the needs list", () => {
       },
     );
     expect(screen.getByText(/No model is configured here/)).toBeTruthy();
-    expect(screen.queryByText("Written by Margince")).toBeNull();
+    expect(screen.queryByText(en["co.brief.by.model"])).toBeNull();
   });
 });
 

@@ -238,7 +238,7 @@ func (r registeredReport) specFor(ctx context.Context, pool *pgxpool.Pool) (repo
 		return spec, true, nil
 	}
 	var deal, company []fieldcatalog.Column
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		if deal, err = multiselectColumns(ctx, tx, datasource.EntityDeal); err != nil {
 			return err

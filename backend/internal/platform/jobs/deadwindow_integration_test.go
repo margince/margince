@@ -61,7 +61,7 @@ func TestTheDeadBannerCountsTheWindowAndTheReportCountsTheWeek(t *testing.T) {
 	})
 
 	// A window that ends between the two.
-	health, err := jobs.WorkspaceHealth(ctx, pool, ws.String(), nil, 24*time.Hour)
+	health, err := jobs.ReadHealth(ctx, pool, nil, 24*time.Hour)
 	if err != nil {
 		t.Fatalf("reading job health: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestTheDeadBannerCountsTheWindowAndTheReportCountsTheWeek(t *testing.T) {
 	// An hour ago is now outside the window, and the banner goes quiet while
 	// the report figure does not move. This is the case the whole change is
 	// about: the same rows, read as history.
-	health, err = jobs.WorkspaceHealth(ctx, pool, ws.String(), nil, time.Minute)
+	health, err = jobs.ReadHealth(ctx, pool, nil, time.Minute)
 	if err != nil {
 		t.Fatalf("reading job health on a one-minute window: %v", err)
 	}

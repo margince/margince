@@ -181,7 +181,7 @@ func (s *Store) EverRun(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	var ever bool
-	err := database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		var err error
 		ever, err = s.EverRunTx(ctx, tx)
 		return err

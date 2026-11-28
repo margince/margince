@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -99,8 +100,8 @@ func predictEveryPart(
 		if report, err = refinePrediction(ctx, partSource, partWriters, object, report); err != nil {
 			return migration.Report{}, err
 		}
-		report = withSkippedLines(report, object, skipped(object))
-		report = withWarnings(report, object, newTagWarnings(writers.tags.missing, writers.tagFirstNamedBy, object))
+		report = importwire.WithSkippedLines(report, object, skipped(object))
+		report = importwire.WithWarnings(report, object, newTagWarnings(writers.tags.missing, writers.tagFirstNamedBy, object))
 	}
 	for i := range report.Objects {
 		report.Objects[i].File = fileOf[report.Objects[i].Object]

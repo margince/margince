@@ -209,7 +209,7 @@ it("tells a captured file from an upload and says where it came from", async () 
   expect(
     screen.getByText("From laura@buyer.example · Re: MSA"),
   ).toBeInTheDocument();
-  expect(screen.getByText("Uploaded here")).toBeInTheDocument();
+  expect(screen.getByText(en["dealfiles.origin.upload"])).toBeInTheDocument();
 });
 
 // A Docs or Drive link a mail mentioned is a row with no bytes. Its name opens
@@ -317,7 +317,7 @@ it("offers Delete on an upload and no Hide", async () => {
   );
   expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Hide from this deal" }),
+    screen.queryByRole("button", { name: en["files.hide"] }),
   ).not.toBeInTheDocument();
 });
 
@@ -506,8 +506,12 @@ it("withholds the upload and the row verbs on a deal this caller may not write",
   render(<DealFiles deal={dealOf({ owner_id: "u-other", writable: false })} />);
 
   expect(await screen.findByText("MSA-redline.docx")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Add document" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Capture a chat" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: en["docs.add.action"] }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: en["chatCapture.action"] }),
+  ).toBeNull();
   expect(
     screen.queryByRole("button", { name: /Actions for MSA-redline/ }),
   ).toBeNull();
@@ -519,7 +523,9 @@ it("opens Capture a chat on a deal this caller may write", async () => {
 
   await userEvent
     .setup()
-    .click(await screen.findByRole("button", { name: "Capture a chat" }));
+    .click(
+      await screen.findByRole("button", { name: en["chatCapture.action"] }),
+    );
   expect(await screen.findByLabelText("Screenshot")).toBeInTheDocument();
 });
 

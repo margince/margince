@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { useRoute } from "../lib/router";
 import { GroupedTimelineList } from "./timeline";
 import type { TimelineEntry } from "./timelineentry";
@@ -60,8 +61,12 @@ it("reveals either thread part without navigating away from the record", async (
   expect(rows).toHaveLength(4);
   expect(within(rows[1]).getByText("Send quote")).toBeTruthy();
   expect(within(rows[2]).getByText("Review")).toBeTruthy();
-  const older = screen.getByRole("button", { name: "Earlier messages below" });
-  const newer = screen.getByRole("button", { name: "Later messages above" });
+  const older = screen.getByRole("button", {
+    name: englishCopy["timeline.group.olderPart"],
+  });
+  const newer = screen.getByRole("button", {
+    name: englishCopy["timeline.group.newerPart"],
+  });
   const olderScroll = vi.fn();
   const newerScroll = vi.fn();
   rows[3].scrollIntoView = olderScroll;

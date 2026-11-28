@@ -1,166 +1,91 @@
 <!-- describes: backend/internal/modules/chatlinks backend/internal/compose/chatsync backend/internal/compose/chatsummary backend/internal/compose/dispactapp backend/internal/platform/lastseen -->
 # How chat channel links work
 
-A deal or a project can be linked to one private channel of a team chat (Dispact). Margince keeps a
-card in the channel and posts what happens on the record. The posts are built from the live records,
-and only from what the whole workspace may read. In the other direction, Margince reads the channel's
-talk and files a short AI summary on the record when the talk matters. To set it up, read
-[connect-dispact.md](../how-to/connect-dispact.md).
+A channel association connects a company, deal or project to a provider destination. Attended
+[Messenger](../handbook/messenger.md) is separate: it uses a member's personal authorization and
+creates no automatic CRM transcript. Channel sync uses a shared bot connection, independently
+controlled incoming recaps and outgoing CRM posts. The
+[handbook](../handbook/chat-channels.md) describes the record controls; the
+[provider contracts](../reference/messaging-provider-contracts.md) describe supported installations.
 
-## Two tables, and why only two
+## Associations and handoff
 
-- `chat_link` is one record's channel: the channel, the level it posts at, the card it keeps, and how far
-  the channel's history has been read.
-- `chat_post_item` is one event bound for a channel, keyed on `(link_id, event_id)`. A replayed event
-  adds nothing.
+The chat-link module owns association, root, delivery and member-consent records. Its generated
+[entity model](../reference/entity-model/chatlinks.md) names the tables and their relationships.
+Private message bodies are fetched on demand, rather than stored in these records.
 
-A post has no table of its own. The items one post carried share its id and the chat's message id, and
-that is enough to rewrite the post later. The bot connection reuses `channel_connection`, beside
-Telegram. No chat text and no activity text is stored in either table. A post is built from the live
-records when it is sent.
+A company may have its own channel before a deal exists. A deal can carry its association into a
+project that has none. An existing project association takes precedence and is preserved. Company
+History aggregates eligible child activities through the existing activity walk; it neither grants
+child-record access nor creates a broadcast route from that aggregate.
 
-## One deal, one project, one channel
+A shared room requires an explicit root binding. An unrelated root or a mention of a record does
+not establish one. Association identity includes the provider connection and immutable destination;
+replacement associations cannot consume work claimed against an earlier link.
 
-A deal and its project share a channel. Linking a deal whose project has no channel also links the
-project. When a deal gets a project later, the deal's channel takes the project in, unless that
-project already has a channel of its own.
+Unlink and archival retire association work. A surviving deal or project carrier can retain its
+association through the existing lifecycle writer. Prior eligible recaps remain subject to CRM
+visibility, provenance, restriction and retention. Ended sync records coverage actually observed;
+it cannot describe provider changes after disconnection.
 
-Archiving a deal or project takes it out of its link. A link that still carries a live record stays
-with it. A link left with none is retired, which frees the channel. `cg:chat-links` does this on
-`deal.archived`, `project.archived` and `retention.applied`. A restore does not bring the link back.
+## From a CRM event to a provider post
 
-## From an event to a post
+The chat event consumer resolves record associations and records eligible events in the durable
+queue. Event tiers control frequency; message detail separately controls summary length. The
+[catalog](../../backend/internal/compose/chatsync/sync.go) and
+[renderer](../../backend/internal/compose/chatsync/render.go) own those decisions.
 
-1. The consumer `cg:chat-links` finds the deals and projects an event touches. An offer or contract
-   reaches its deal. An activity reaches the records it is linked to. A deal reaches its project.
-2. Each event has a tier. Stage, offer, contract and phase steps are **milestones**. Owner changes, the
-   value, close date and name of a deal, and notes, meetings and mail are **important**. The rest is
-   **everything**. A test fails when the catalog gets an event that has no tier and is not ignored.
-3. The link's level decides which tiers it keeps: `everything`, `important` (the default), `milestones`,
-   or `silent`, which keeps none. Every event still schedules a flush, so the card stays current.
-4. The flush waits two minutes, so many changes in a row become one post.
+A native delivery resolves the complete channel audience and current record readers before building
+content. Every included activity must satisfy its content gate for that audience. Incomplete source
+bodies stay pending with an explanation. The shared summary engine reads the complete bounded
+source and preserves decisions, conditions and open questions. Source and audience are checked
+again after model work. The outgoing preview uses this same engine without posting or changing the
+queue.
 
-## Who may read what reaches the channel
+Delivery claims commit before the provider call. An uncertain acknowledgement blocks later sends
+for the association, even if a changed overview would otherwise produce a new request key. Receipts
+record confirmed sends; an unknown result is not a delivered result. Explicit human review can stop
+retrying uncertain updates. Restarting an uncertain overview requires a separate confirmation and a
+new card generation.
 
-A channel is read by everyone in it, guests included. So an activity reaches it only when the whole
-workspace may read it. The function `sharedActivity` decides this, and a test fails when the engine
-reads activity text in any other place. It is asked when the event is recorded and again right before the
-post is sent.
+When local restrictions withdraw content, successful provider rewrites are recorded separately from
+unverified withdrawals. A removed connection or successful unlink does not prove provider erasure.
+Incoming chat-origin notes are excluded from outgoing summaries to prevent a loop.
 
-When an activity's audience narrows after it was posted, or it is archived or restricted, its item is
-taken out. The next flush rewrites that post without it. A restriction (`retention.restricted`) rides the
-contact stream, so `cg:chat-links` reads that stream too. The events that narrow an activity are one list,
-`events.NarrowsActivity`, which the voice-copy recheck reads as well. The deal value stays off the card,
-because it is hidden from members who may not see it.
+## From a provider thread to History
 
-## Who a new channel is opened to
+Signed provider notices carry scope and message identifiers, not a stored transcript. They queue
+the same durable pull used by polling. Provider signatures, installation identity and replay checks
+run before an event can affect a link. Teams also maintains metadata-only Graph subscriptions and
+tracks bounded subscription leases for cleanup after disconnection.
 
-A channel Margince creates is opened to every live member who may open the record, at most 50. The
-record's owner and the member linking it come first. Each member is judged by the record's own read
-admission (`auth.AdmitReaders`) under their live grants, in `chatsync.Viewers`. Members over the 50 are
-counted as `skipped_over_cap`, and members the chat does not know as `not_in_chat`.
+The native root ledger separates scan progress from each root's processing state. A read must prove
+a complete bounded thread before summarization. Missing pages and outages do not prove deletion.
+Explicit tombstones can withdraw derived content. A post-model canonical reread prevents filing a
+summary from a source that changed while the model ran.
 
-## Messages from the chat itself
+A correction revises the existing recap under its stable source identity. Human edits are preserved
+and marked for review when the source changes. Archiving does not allow the worker to resurrect the
+recap. The activity write checks the live association and current authority in its transaction,
+then commits the note, audit and outbox event together.
 
-An activity the chat delivered (`source_system = dispact`) is never posted back, so a note filed from a
-channel cannot loop into the same channel.
+Legacy Dispact sequence-based episode processing remains available for existing associations. Its
+cursor and posted card are preserved during upgrade. Canonical capabilities are verified before
+using immutable IDs and complete-thread reads; missing capabilities are not inferred from a
+successful legacy read.
 
-## From the channel's talk to a note
+Recap metadata exposes provider, recorded channel name, coverage and source-change markers.
+Provider source bindings and URLs are withheld from ordinary activity projections. Opening a source
+requires a fresh CRM read plus the connected member's current provider access. The returned proof
+is short-lived and bound to that member and activity.
 
-The job `chat_pull_sweep` runs every minute and enqueues one `chat_pull` for each live Dispact bot. The
-pull is unique per bot while it waits or runs, so any caller that wants a channel read again enqueues the
-same job.
+## Filing a chosen message
 
-### Push, then pull
-
-A Dispact notice carries no message text. It only says that a channel has news, so the receiver
-(`chatsync.Receiver`) checks the signature and enqueues that same `chat_pull`. The pull then reads the
-history after the cursor, as it does on a timer. Ten notices while one pull waits make one pull. A
-notice that comes while the pull runs finds the job still running and adds nothing, so the pull checks
-when it ends whether a notice came after it started, and runs once more if one did.
-
-`channel.archived` pauses the channel's link through `MarkChannelGone`, the same write a `404` from the
-chat makes. A notice can be lost, and the chat still serves an archived channel's history and takes the
-bot's posts. So each pull also reads every linked channel and pauses the link of an archived one. Only the chat's
-own answer pauses a link: an archived channel, or a refusal such as `channel_not_found`. A bare `404`,
-`403` or `5xx`, which a proxy in front of the chat may send, leaves the link active, because a paused
-link is never read again. A notice is matched only to the links of the connected bot, and its `workspace_id` must be
-that bot's team, so a notice for another team cannot reach this installation's links.
-
-### The cadence switch
-
-The function `SweepDue` decides when the sweep reads a bot. Each valid notice records its time. While
-the last one is under an hour old, the sweep reads the bot only when an hour has passed since the sweep
-last read it. That hourly read catches what a lost notice missed and closes episodes whose quiet time
-ended with no new message. Once the last notice is an hour old, the sweep reads every minute again. A
-broken push therefore falls back to polling without anyone acting.
-
-The two times live in Redis with a time to live of one hour (`platform/lastseen`), not in a column. A
-notice can come every two minutes per busy channel, and a write per notice to `channel_connection`
-would cost a row version, a WAL record and an audit question each time. A Redis key costs none of that,
-and losing it only means the sweep polls every minute until the next notice. When the worker cannot
-read Redis, the sweep reads every minute.
-
-For each active link, the pull reads the channel's history after the link's `history_cursor`, at most
-five pages of 99 messages. It skips the bot's own posts, the chat's notices about the channel and its
-members (`notices` in `compose/chatsync/episodes.go`), and talk from before the link was made. A message
-with any other label, such as a shared file, is talk. Then it cuts the messages into episodes:
-
-- An episode is a run of messages with less than 30 minutes between them, all on one day (UTC). A
-  thread's replies are talk like any other, so a thread answered within the half hour stays in its
-  episode.
-- An episode is closed when the next message starts another one, when its last message is 30 minutes
-  old, or when its day has ended.
-- When a read stops at the page cap, its last episode stays open, because its talk may go on in the
-  next page. An episode that alone fills the whole read is filed anyway, so one very long day cannot
-  stall the link.
-
-Each closed episode is judged in order by the `chat_summary` task's `episode` site
-(`compose/chatsummary`). The messages are read again from the chat for this and are held only in
-memory. The model reads each message with its number, the message whose thread it answers, and where
-its author stands: `colleague`, `outside` or `unknown`. An author is a colleague when their chat email
-is a seat's proven address or on an own domain; an unlisted own subdomain is unknown. The email itself
-is never sent. A file is named by its name and type, at most ten per message, never its content. When the model says the talk matters, the title and summary are filed as one note on the
-link's deal and project, under the system actor `system:chat_links`. The note's
-`(source_system, source_id)` is `dispact` and `<channel slug>:<first seq>:<record type>:<record id>`, which
-the activity table holds unique. Before it files, the engine looks for a note of the same talk on the
-record under any key, including the older `<channel slug>:<first seq>` without a record. So a replay, or
-the same record linked to the channel again, files nothing twice. A record that takes the channel over
-files its own note. A project that already holds the talk through another deal's note is left off the
-new one. No other writer
-may stamp `source_system = dispact`, so no one can claim a summary's key before it is written. The note
-is filed in one transaction that first checks the link is still live and still names the same deal and
-project, so an unlink during the model call files nothing.
-
-After each episode the cursor moves to its last message, under the condition that it still holds the
-value the pull read. A second pull that moved it first wins, and this one stops. The first open episode
-stops the pull, so the cursor never passes talk that was not judged. An irrelevant episode files nothing,
-and the cursor moves past it. With no model bound, or an answer the site refuses, the episode is passed
-over the same way, so a channel never waits for a model. A model that asks to wait stops the pull until
-the next tick.
-
-No episode is stored. The cursor marks the end of what was judged, and the note keeps only its
-summary. Its `raw` payload holds the message count, the time of the last message and a link to the
-first one, which the API serves as `chat_episode`. Undo is archiving the note: the cursor never goes
-back, so nothing is filed again.
-
-## The talk so far
-
-Linking an existing channel asks `summarize_history`. When it is true, the link has
-`backfill_requested`, and its first pull reads the talk from before the link instead. The link queues
-that pull in its own transaction, so it does not wait for the sweep. A pull that was already running
-folds the new one into itself, so it runs once more when it finds a link it did not read. It judges only the
-five latest closed episodes, skips the older talk, moves the cursor to where the link began, and clears
-the request. A long history is read 50 pages a tick. A channel Margince created never asks.
-
-## Filing one message
-
-`POST /channel-links/{record_type}/{id}/notes`, and the MCP action `file_channel_message`, file a summary
-of one message, or of the message and the replies in its thread that follow it, as the caller. The
-message is named by its seq, `#slug:seq`, the chat's `<m:#slug:seq|…>` mention or its link, and must be in
-the record's own channel. Filing the same message again returns the note already filed. A thread longer
-than five pages answers `422` `channel_thread_too_long` and files nothing, because a part of it would
-take the thread's key for good.
+The channel-note operation accepts a provider-native message reference in the record's linked
+channel. The source locator resolves its root; canonical reads prove both the selected message and
+the complete bounded thread. Message-only and whole-thread selections use separate durable keys.
+Repeated selection returns the existing note, while a source change or narrowed authority during
+summarization refuses the write. This explicit operation does not enable recurring reads or backfill.
 
 ## The Margince app in Dispact
 

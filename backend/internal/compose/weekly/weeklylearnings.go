@@ -67,7 +67,7 @@ func (e *Engine) RecordLearnings(
 	}
 
 	wrote := false
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		// The owner check IS the row scope: a review belongs to the rep whose
 		// week it was, and the id alone must not reach anybody else's. FOR
 		// UPDATE so two passes racing produce one set of learnings.

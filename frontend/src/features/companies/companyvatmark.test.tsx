@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { VatMark } from "./companyvatmark";
 
@@ -151,7 +152,7 @@ describe("the VAT mark beside the number", () => {
     // different facts, and the mark must not spend the second on the first.
     expect(
       await screen.findByRole("button", {
-        name: "VAT ID: not yet checked with the register",
+        name: englishCopy["co.vat.markUnchecked"],
       }),
     ).toBeInTheDocument();
   });
@@ -306,7 +307,7 @@ describe("the VAT mark beside the number", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", {
-        name: "VAT ID: not yet checked with the register",
+        name: englishCopy["co.vat.markUnchecked"],
       }),
     ).toBeNull();
   });

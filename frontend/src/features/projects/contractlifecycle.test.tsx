@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   ContractCancelModal,
@@ -386,7 +387,11 @@ describe("ContractStatusModal", () => {
 
     await user.click(await screen.findByRole("combobox"));
     await user.click(screen.getByRole("option", { name: "Expired" }));
-    await user.click(screen.getByRole("button", { name: "Change status" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["contracts.statusChange.submit"],
+      }),
+    );
 
     await waitFor(() => expect(posted).not.toBeNull());
     const sent = posted as unknown as {
@@ -425,7 +430,11 @@ describe("ContractStatusModal", () => {
 
     // The Select opens seeded with the row's own status (active) — untouched.
     await screen.findByRole("combobox");
-    await user.click(screen.getByRole("button", { name: "Change status" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["contracts.statusChange.submit"],
+      }),
+    );
 
     expect(posted).toBe(false);
   });
@@ -491,7 +500,9 @@ describe("ContractCancelModal", () => {
     );
     await pickOnCalendar(user, /^Takes effect/, "Tuesday, 1 September 2026");
     await user.click(
-      screen.getByRole("button", { name: "Record cancellation" }),
+      screen.getByRole("button", {
+        name: englishCopy["contracts.cancel.submit"],
+      }),
     );
 
     await waitFor(() => expect(posted).not.toBeNull());
@@ -533,7 +544,9 @@ describe("ContractCancelModal", () => {
     );
     await user.type(screen.getByLabelText(/^Takes effect/), "01/09/2026");
     await user.click(
-      screen.getByRole("button", { name: "Record cancellation" }),
+      screen.getByRole("button", {
+        name: englishCopy["contracts.cancel.submit"],
+      }),
     );
 
     expect(posted).toBe(false);

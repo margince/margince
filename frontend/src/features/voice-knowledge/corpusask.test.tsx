@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AskMarginceModal } from "./corpusask";
 
@@ -570,7 +571,7 @@ describe("AskMarginceModal", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "This set is still being read",
+        name: englishCopy["corpusAsk.notReadyTitle"],
       }),
     ).toBeTruthy();
     // Nothing is wrong with the question, and the reader is not sent looking
@@ -605,7 +606,9 @@ describe("AskMarginceModal", () => {
     // A reader who cannot choose the model is told who can, and given no link.
     expect(screen.getByText(/An administrator can choose one/)).toBeTruthy();
     expect(
-      screen.queryByRole("link", { name: "Choose an embedding model" }),
+      screen.queryByRole("link", {
+        name: englishCopy["health.setup.search.action"],
+      }),
     ).toBeNull();
   });
 
@@ -628,7 +631,7 @@ describe("AskMarginceModal", () => {
     await askAbout(user, "how long are messages kept");
 
     const link = await screen.findByRole("link", {
-      name: "Choose an embedding model",
+      name: englishCopy["health.setup.search.action"],
     });
     expect(link.getAttribute("href")).toBe("/#/settings/models/tiers");
     expect(screen.queryByText(/An administrator can choose one/)).toBeNull();

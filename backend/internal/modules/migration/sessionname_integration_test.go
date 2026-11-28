@@ -161,10 +161,10 @@ func TestAStoppedCommitWithoutItsFileCannotResume(t *testing.T) {
 	}
 }
 
-// openerWith is the caller of ctx under another identity holding only grant.
-func openerWith(ctx context.Context, id string, grant principal.ObjectGrant) context.Context {
+// openerWith is the caller of ctx as another seat holding only grant.
+func openerWith(ctx context.Context, seat ids.UUID, grant principal.ObjectGrant) context.Context {
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: id, SeatType: principal.SeatFull,
+		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{ImportRunObject: grant}, RowScope: principal.RowScopeAll,
 		},
@@ -175,10 +175,10 @@ func TestTheOpenerOfADraftDiscardsItWithTheGrantThatOpenedIt(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	createOnly := principal.ObjectGrant{Create: true}
-	opener := openerWith(ctx, "human:"+ids.NewV7().String(), createOnly)
+	opener := openerWith(ctx, ids.NewV7(), createOnly)
 	draft := newDraft(opener, t, s, "")
 
-	other := openerWith(ctx, "human:"+ids.NewV7().String(), createOnly)
+	other := openerWith(ctx, ids.NewV7(), createOnly)
 	if err := s.DiscardOwnDraft(other, draft.SourceRef); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("discarding someone else's draft = %v, want permission denied", err)
 	}

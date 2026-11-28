@@ -43,7 +43,7 @@ func TestSettlingAClaimReachesTheContactRead(t *testing.T) {
 	}
 
 	var rows []crmcontracts.ConversationClaim
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		rows, err = store.ClaimsForContact(e.Admin(), tx, ids.From[ids.ContactKind](contact), nil, 20)
 		return err

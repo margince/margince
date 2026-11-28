@@ -175,13 +175,22 @@ func TestAFlushPostsTheCardAndOnePostWithOnlyWhatTheWorkspaceMayRead(t *testing.
 
 func TestANoteNarrowedAfterPostingIsRewrittenOutOfItsPost(t *testing.T) {
 	e := setupFlush(t)
+	e.store.WithMemberAuthority(func(ctx context.Context, _ pgx.Tx) (context.Context, error) { return ctx, nil })
 	e.handle(t, "activity.captured", "activity", e.shared, `{"kind":"note"}`)
 	e.handle(t, "deal.stage_changed", "deal", e.deal, `{"to_stage_name":"Proposal"}`)
 	e.flush(t)
 
 	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, e.shared)
 	e.handle(t, "activity.updated", "activity", e.shared, `{"changed_fields":{"audience":"participants"}}`)
+	review, err := e.store.DeliveryReview(e.member(), "deal", e.deal)
+	if err != nil || review.Copies.UnverifiedWithdrawals != 1 || review.Copies.ConfirmedRedactions != 0 {
+		t.Fatalf("withdrawal was confirmed before provider response: %+v %v", review.Copies, err)
+	}
 	e.flush(t)
+	review, err = e.store.DeliveryReview(e.member(), "deal", e.deal)
+	if err != nil || review.Copies.UnverifiedWithdrawals != 0 || review.Copies.ConfirmedRedactions != 1 {
+		t.Fatalf("provider rewrite lost its evidence: %+v %v", review.Copies, err)
+	}
 
 	rewritten, ok := e.chat.Updated(dispacttest.TS(2))
 	if !ok {
@@ -192,6 +201,13 @@ func TestANoteNarrowedAfterPostingIsRewrittenOutOfItsPost(t *testing.T) {
 	}
 	if n := len(postTexts(e.chat)); n != 2 {
 		t.Fatalf("the withdrawal posted anew: %d posts", n)
+	}
+	if err := e.store.Unlink(e.member(), "deal", e.deal); err != nil {
+		t.Fatal(err)
+	}
+	state, err := e.store.GetState(e.member(), "deal", e.deal)
+	if err != nil || state.LastSync == nil || state.LastSync.ConfirmedRedactions != 1 || state.LastSync.LastPosted == nil {
+		t.Fatalf("unlink lost delivery evidence: %+v %v", state.LastSync, err)
 	}
 }
 

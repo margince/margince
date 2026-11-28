@@ -43,7 +43,7 @@ import (
 // members become visible at once.
 func (w *siteDeepReadWorker) stageSiteLeads(ctx context.Context, readID ids.UUID, claim contacts.SiteReadClaim, found []siteContact, bundleID ids.UUID) ([]ids.UUID, error) {
 	var proposalIDs []ids.UUID
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
 		proposalIDs, err = w.stageSiteLeadsInTx(ctx, tx, readID, claim, found, bundleID)
 		return err

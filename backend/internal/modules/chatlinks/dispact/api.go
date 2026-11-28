@@ -14,8 +14,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -48,68 +48,22 @@ func New(doer HTTPDoer, address, token string) *Client {
 	return &Client{http: doer, address: strings.TrimRight(address, "/"), token: token}
 }
 
-// Bot is the bot the token belongs to.
-type Bot struct {
-	ID     string `json:"bot_id"`
-	Name   string `json:"team"`
-	TeamID string `json:"team_id"`
-}
-
-// Channel is one channel as the bot sees it.
-type Channel struct {
-	Slug        string `json:"slug"`
-	Name        string `json:"name"`
-	IsPrivate   bool   `json:"is_private"`
-	IsArchived  bool   `json:"is_archived"`
-	BotIsMember bool   `json:"bot_is_member"`
-}
-
-// Message is one channel message from the history read. TS is Dispact's
-// encoding of Seq; ThreadTS is the TS of the thread's first message.
-type Message struct {
-	TS         string
-	Seq        int64
-	ThreadTS   string
-	ReplyCount int
-	UserName   string
-	UserEmail  string
-	Text       string
-	PostedAt   time.Time
-	EditedAt   time.Time
-	Subtype    string
-	IsBot      bool
-	Files      []File
-}
-
-// File is a file attached to a message, as the history read lists it. Its
-// content is never read.
-type File struct {
-	Name     string
-	MimeType string
-}
-
-// HistoryPage is one page of a channel's history, oldest first.
-type HistoryPage struct {
-	Messages   []Message
-	NextCursor *int64
-}
-
-// Posted is the chat's answer to a post. ID is the message's TS, the handle
-// an edit names it by.
-type Posted struct {
-	ID  string
-	Seq int64
-}
-
-// MemberResult says what happened to each email a channel was opened to.
-type MemberResult struct {
-	Added, AlreadyMember []string
-	// NotInChat have no active chat account: unknown, a guest, or deactivated.
-	NotInChat []string
-	// NotAdded have an account the chat would not add: outside the app's
-	// audience, a scope the bot lacks, or a failed add.
-	NotAdded []string
-}
+// Bot retains the shared installation-identity shape for existing Dispact callers.
+type (
+	Bot = chatwire.Bot
+	// Channel retains native channel identity independently of its mutable display name.
+	Channel = chatwire.Channel
+	// Message retains native identifiers used to detect source changes.
+	Message = chatwire.Message
+	// File retains native attachment metadata needed for source recaps.
+	File = chatwire.File
+	// HistoryPage retains legacy cursors separately from canonical root checkpoints.
+	HistoryPage = chatwire.HistoryPage
+	// Posted retains the native receipt used for source and update operations.
+	Posted = chatwire.Posted
+	// MemberResult keeps membership failures distinct from successful additions.
+	MemberResult = chatwire.MemberResult
+)
 
 // Me reads the bot the token belongs to and its team.
 func (c *Client) Me(ctx context.Context) (Bot, error) {
@@ -148,6 +102,7 @@ func (c *Client) CreateChannel(ctx context.Context, externalKey, name string) (C
 func (c *Client) Channels(ctx context.Context) ([]Channel, error) {
 	var out struct {
 		Channels []struct {
+			NativeID   string `json:"id"`
 			Name       string `json:"name"`
 			IsPrivate  bool   `json:"is_private"`
 			IsArchived bool   `json:"is_archived"`
@@ -159,7 +114,7 @@ func (c *Client) Channels(ctx context.Context) ([]Channel, error) {
 	channels := make([]Channel, 0, len(out.Channels))
 	for _, ch := range out.Channels {
 		channels = append(channels, Channel{
-			Slug: ch.Name, Name: ch.Name, IsPrivate: ch.IsPrivate, IsArchived: ch.IsArchived,
+			Slug: ch.Name, Name: ch.Name, NativeID: ch.NativeID, IsPrivate: ch.IsPrivate, IsArchived: ch.IsArchived,
 			// A private channel is listed only to its members.
 			BotIsMember: ch.IsPrivate,
 		})
@@ -353,9 +308,11 @@ func refusalKind(code string) error {
 		return ErrNotMember
 	case "channel_not_found", "message_not_found", "is_archived":
 		return ErrChannelGone
+	case "thread_too_long":
+		return chatwire.ErrThreadTooLong
 	case CodeNameTaken, "invalid_name":
 		return ErrNameRefused
-	case "internal_error", "channel_create_failed", "":
+	case "internal_error", "channel_create_failed", "thread_changed", "audience_changed", "audience_incomplete", "thread_not_found", "":
 		return ErrUnreachable
 	default:
 		return ErrRequestRejected

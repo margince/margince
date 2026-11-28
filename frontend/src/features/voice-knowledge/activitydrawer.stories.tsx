@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { browserZone } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -271,7 +272,7 @@ export const MeetingNotesNeedConnection: Story = {
   },
   play: async ({ canvasElement }) => {
     const hint = await within(canvasElement.ownerDocument.body).findByText(
-      "Notes are attached. Connect meeting notes to read them.",
+      englishCopy["activity.notes.connectHint"],
     );
     await waitFor(() => expect(hint).toBeVisible());
   },

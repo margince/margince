@@ -4,6 +4,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { type ListColumn, ListTable } from "./listtable";
 
 afterEach(() => {
@@ -77,7 +78,7 @@ describe("a short list that hides its chrome", () => {
     render(<Short rows={[]} />);
     expect(
       screen
-        .getByRole("button", { name: "Show archived" })
+        .getByRole("button", { name: englishCopy["list.showArchived"] })
         .getAttribute("aria-pressed"),
     ).toBe("false");
     expect(screen.queryByRole("searchbox")).toBeNull();
@@ -85,7 +86,9 @@ describe("a short list that hides its chrome", () => {
 
   it("draws no switch for a list that offers no archiving", () => {
     render(<Short rows={testRows(3)} archivable={false} />);
-    expect(screen.queryByRole("button", { name: "Show archived" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["list.showArchived"] }),
+    ).toBeNull();
   });
 
   it("says it is empty in one line, with no table of headings", () => {

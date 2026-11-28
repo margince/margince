@@ -62,7 +62,7 @@ func (e *BriefEngine) MarkUnsnoozed(ctx context.Context, itemID ids.UUID) (Brief
 	}
 
 	var item BriefRunItem
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		owner, err := lockItemForMark(ctx, tx, itemID, &item)
 		if err != nil {
 			return err

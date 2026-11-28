@@ -44,8 +44,8 @@ func TestSnapshotsAndBoundedReadsShareCapacityBeforeBorrowing(t *testing.T) {
 	for range 2 {
 		go func() {
 			finished <- WithReadAdmission(ctx, pool, func(ctx context.Context) error {
-				return WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
-					return WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+				return WithSnapshot(ctx, pool, func(ctx context.Context) error {
+					return WithTx(ctx, pool, func(tx pgx.Tx) error {
 						if _, err := tx.Exec(ctx, "SELECT 1"); err != nil {
 							return err
 						}
@@ -82,7 +82,7 @@ func TestSnapshotsAndBoundedReadsShareCapacityBeforeBorrowing(t *testing.T) {
 		admission.slots.Release(1)
 		t.Fatal("two snapshots did not fill the heavy-read allowance on a four-connection pool")
 	}
-	if err := WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := WithTx(ctx, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, "SELECT 1")
 		return err
 	}); err != nil {
@@ -90,7 +90,7 @@ func TestSnapshotsAndBoundedReadsShareCapacityBeforeBorrowing(t *testing.T) {
 	}
 	ordinary, stop := context.WithTimeout(ctx, time.Second)
 	defer stop()
-	if err := WithWorkspaceSnapshot(ordinary, pool, func(context.Context) error { return nil }); err != nil {
+	if err := WithSnapshot(ordinary, pool, func(context.Context) error { return nil }); err != nil {
 		t.Fatalf("ordinary snapshot took heavy-read capacity: %v", err)
 	}
 	if err := BindTo(pool, ids.From[ids.WorkspaceKind](workspace)).Bounded(time.Second).Tx(ordinary, func(pgx.Tx) error { return nil }); err != nil {

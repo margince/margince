@@ -137,7 +137,7 @@ func (s *Store) SaveOutcome(ctx context.Context, runID ids.UUID, res Result) err
 			runID, status, res.Final, traceJSON, pendingJSON, approvalID, res.DegradeReason).
 			Scan(&o.spec, &o.triggerRef, &o.passportID, &o.startedAt, &o.finishedAt, &o.degradeReason, &result, &o.attempt)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("runner: run %s not visible in this workspace", runID)
+			return fmt.Errorf("runner: run %s not visible in this company", runID)
 		}
 		if err != nil {
 			return fmt.Errorf("runner: save outcome: %w", err)

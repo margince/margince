@@ -48,7 +48,7 @@ it("tells the owner why Margince changed nothing and which sources it read", asy
     "Sources: mail not read on time, calls private, left out, notes read",
   );
   expect(sub).toContain("Next check on");
-  expect(sub).not.toContain("Only the deal’s owner sees why");
+  expect(sub).not.toContain(en["changes.check.ownerOnly"]);
 });
 
 it("gives a colleague when the check ran and no reason", async () => {

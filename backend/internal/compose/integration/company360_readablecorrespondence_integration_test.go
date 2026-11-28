@@ -59,7 +59,7 @@ func (f accountFixture) accountPage(reader context.Context, t *testing.T) crmcon
 func (f accountFixture) accountWorklistTouch(reader context.Context, t *testing.T) company360.LastTouch {
 	t.Helper()
 	var touch company360.LastTouch
-	if err := database.WithWorkspaceTx(reader, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, f.e.Pool, func(tx pgx.Tx) error {
 		touched, err := company360.LastTouchFor(reader, tx, []ids.CompanyID{companyIDOf(f.account)}, roomFixedNow, company360.AssembleOptions{})
 		touch = touched[companyIDOf(f.account)]
 		return err

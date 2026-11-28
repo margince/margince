@@ -17,6 +17,7 @@ import {
   RetractRecordedRequest,
 } from "../features/contacts/retractrequest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { useSendPermission } from "../lib/usesendpermission";
 import {
   allowedPreview,
@@ -122,17 +123,19 @@ it.each([
     }
     const user = userEvent.setup();
     await user.click(
-      screen.getByRole("button", { name: "Take back this request" }),
+      screen.getByRole("button", {
+        name: englishCopy["consent.retractRequest"],
+      }),
     );
     await user.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
-        name: "Take back this request",
+        name: englishCopy["consent.retractRequest"],
       }),
     );
     await waitFor(() => expect(withdrawn).toBe(true));
     await waitFor(() => expect(preview).toHaveBeenCalledTimes(2));
     expect(
-      screen.getByText("Checking whether this message can be sent…"),
+      screen.getByText(englishCopy["sendPermission.checking"]),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("status")).not.toHaveTextContent("ready");
     const answerRecheck = finishRecheck;
@@ -150,7 +153,7 @@ it.each([
       ),
     );
     expect(
-      await screen.findByText("No recorded reason to contact this recipient"),
+      await screen.findByText(englishCopy["sendPermission.unproven"]),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("status")).not.toHaveTextContent("ready");
     const answerInitial = finishInitial;
@@ -160,7 +163,7 @@ it.each([
     );
     expect(screen.getByLabelText("status")).not.toHaveTextContent("ready");
     expect(
-      screen.getByText("No recorded reason to contact this recipient"),
+      screen.getByText(englishCopy["sendPermission.unproven"]),
     ).toBeInTheDocument();
     expect(preview).toHaveBeenCalledTimes(2);
   },
@@ -199,14 +202,14 @@ it("keeps the current recipient's refusal when an older response arrives", async
   await waitFor(() => expect(preview).toHaveBeenCalledTimes(1));
   rerender(view(nextAddress));
   expect(
-    await screen.findByText("No recorded reason to contact this recipient"),
+    await screen.findByText(englishCopy["sendPermission.unproven"]),
   ).toBeInTheDocument();
   const answerOlder = finishOlder;
   if (!answerOlder) throw new Error("Older preview is missing");
   await act(async () => answerOlder(jsonResponse(allowedPreview([address]))));
   expect(screen.getByLabelText("status")).not.toHaveTextContent("ready");
   expect(
-    screen.getByText("No recorded reason to contact this recipient"),
+    screen.getByText(englishCopy["sendPermission.unproven"]),
   ).toBeInTheDocument();
 });
 

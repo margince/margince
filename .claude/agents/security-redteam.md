@@ -27,12 +27,14 @@ Redteam against the architecture `AGENTS.md` states: the isolation rule, the wri
 shape and the agent surface.
 
 
-- **Tenant isolation (highest priority).** Every tenant query must go through
-  `database.WithWorkspaceTx`; there is no raw-pool path for tenant data. Core carries no
-  row-level security: the workspace bound on the context and the predicates in
-  `platform/auth` are the isolation, so a missing predicate is a cross-workspace read.
-  Hunt for: a query that skips `WithWorkspaceTx`, a path with no workspace bound on the
-  context, a cross-workspace id accepted from the body, a join that widens row scope.
+- **Data isolation (highest priority).** Every module statement must go through
+  `database.WithTx`, inside the transaction that also writes the audit and outbox
+  rows; there is no raw-pool path for domain data. Core carries no row-level
+  security: the predicates in `platform/auth` are the isolation, so a missing
+  predicate is a cross-record read.
+  Hunt for: a query that skips `WithTx`, a statement on the bare pool, an id
+  accepted from the body that reaches a record the caller cannot see, a join that
+  widens row scope.
   Also hunt for a missing `EnsureVisible` on any path that **returns a
   record** (including replay/conflict/error paths; rule 3).
 - **AuthZ.** Every store entry point is `auth.Require` (scope ∧ tier) + object RBAC +

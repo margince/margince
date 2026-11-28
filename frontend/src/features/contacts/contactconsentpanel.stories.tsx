@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -45,7 +46,7 @@ export const ReadOnly: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).findByRole("button", {
-        name: "Manage consent and proof history",
+        name: englishCopy["consent.manage"],
       }),
     ).resolves.toBeVisible();
   },

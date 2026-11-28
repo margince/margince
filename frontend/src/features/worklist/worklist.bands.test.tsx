@@ -80,7 +80,7 @@ describe("an empty band draws nothing", () => {
     renderWorklist("en");
 
     expect(await screen.findByText("Send the retrofit quote")).toBeTruthy();
-    expect(headings()).toContain("Keep momentum");
+    expect(headings()).toContain(en["worklist.band.keep_momentum"]);
   });
 });
 
@@ -163,7 +163,11 @@ describe("a page that loads only appends", () => {
 
     await screen.findByText("Another overdue task");
     expect(ranks()).toEqual(["1", "2", "3", "4"]);
-    expect(headings()).toEqual(["Now", "Keep momentum", "More in your list"]);
+    expect(headings()).toEqual([
+      "Now",
+      en["worklist.band.keep_momentum"],
+      en["worklist.band.more"],
+    ]);
   });
 
   // A frozen walk re-reads each row's facts, so a later page can still name a
@@ -228,7 +232,9 @@ describe("a page that loads only appends", () => {
 
     const overdue = await screen.findByText("An older overdue task");
     const section = overdue.closest(".worklist-queue-band");
-    expect(section?.querySelector("h3")?.textContent).toBe("More in your list");
+    expect(section?.querySelector("h3")?.textContent).toBe(
+      en["worklist.band.more"],
+    );
     expect(section?.querySelector("h4")).toBeNull();
   });
 });
@@ -340,7 +346,10 @@ describe("the day a run of work is due", () => {
     const subHeadings = screen
       .getAllByRole("heading", { level: 4 })
       .map((node) => node.textContent);
-    expect(subHeadings).toEqual(["Due tomorrow", "Due this week"]);
+    expect(subHeadings).toEqual([
+      en["worklist.dueGroup.tomorrow"],
+      en["worklist.dueGroup.this_week"],
+    ]);
 
     // The rows themselves all still draw: a grouping that hides work would be
     // a worse failure than one that labels it wrongly.

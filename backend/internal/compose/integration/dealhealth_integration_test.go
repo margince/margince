@@ -231,7 +231,7 @@ func TestImportedWinsDoNotSetTheStagePace(t *testing.T) {
 	seedFourDayWins(t, e, owner, pipeline, open, won)
 	run := SeedIDRow(t, owner, healthImportRunSQL)
 	objects := maps.Clone(AdminPerms.Objects)
-	objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	importer := e.As(e.AdminUser, nil, principal.Permissions{RoleKeys: AdminPerms.RoleKeys, Objects: objects, RowScope: principal.RowScopeAll})
 	importer = storekit.WithImportRun(storekit.WithBatch(importer, run), run)
 	closed := clocktest.Now(t)

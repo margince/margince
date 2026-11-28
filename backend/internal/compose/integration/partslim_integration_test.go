@@ -119,7 +119,7 @@ func seedSlimAttachment(
 func payloadOf(t *testing.T, e *Env, sourceID string) string {
 	t.Helper()
 	var payload string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT payload #>> '{}' FROM raw_capture WHERE source_id = $1`, sourceID).Scan(&payload)
 	}); err != nil {
@@ -131,7 +131,7 @@ func payloadOf(t *testing.T, e *Env, sourceID string) string {
 func outcomeOf(t *testing.T, e *Env, sourceID string) string {
 	t.Helper()
 	var outcome *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT parts_slim_outcome FROM raw_capture WHERE source_id = $1`,
 			sourceID).Scan(&outcome)
@@ -163,7 +163,7 @@ func TestAConsideredOriginalSaysWhatCameOut(t *testing.T) {
 		int64(len(provablePDF)), "application/pdf"); err != nil {
 		t.Fatalf("staging the provable bytes: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := seedSlimOriginal(ctx, tx, provable, slimMessage(provablePDF)); err != nil {
 			return err
 		}
@@ -204,7 +204,7 @@ func TestTheSweepSlimsOnlyWhatItCanProve(t *testing.T) {
 		t.Fatalf("staging the provable bytes: %v", err)
 	}
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := seedSlimOriginal(ctx, tx, provable, slimMessage(provablePDF)); err != nil {
 			return err
 		}
@@ -267,7 +267,7 @@ func TestTheSweepConsidersEachOriginalOnce(t *testing.T) {
 	if err := blob.Put(ctx, key, bytes.NewReader(pdf), int64(len(pdf)), "application/pdf"); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := seedSlimOriginal(ctx, tx, sourceID, slimMessage(pdf)); err != nil {
 			return err
 		}
@@ -308,7 +308,7 @@ func TestTheSweepRemovesNothingWithoutAnObjectStore(t *testing.T) {
 	const sourceID = "nostore-msg"
 	original := slimMessage(pdf)
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := seedSlimOriginal(ctx, tx, sourceID, original); err != nil {
 			return err
 		}
@@ -336,7 +336,7 @@ func TestTheSweepRemovesNothingWithoutAnObjectStore(t *testing.T) {
 		t.Errorf("an original was rewritten on a deployment with no object store")
 	}
 	var stamped int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM raw_capture WHERE parts_slimmed_at IS NOT NULL`).Scan(&stamped)
 	}); err != nil {
@@ -362,7 +362,7 @@ func TestASlimmedOriginalRestoresToWhatTheProviderSent(t *testing.T) {
 	if err := blob.Put(ctx, key, bytes.NewReader(pdf), int64(len(pdf)), "application/pdf"); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := seedSlimOriginal(ctx, tx, sourceID, original); err != nil {
 			return err
 		}
@@ -430,7 +430,7 @@ func TestTheExportRestoresASlimmedOriginal(t *testing.T) {
 		[]byte("To: "+subject+"\r\nSubject: Quarterly figures"), 1)
 
 	var contact string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx,
 			`INSERT INTO contact (full_name, source, captured_by)
 			 VALUES ('Restore Subject', 'manual', 'human:seed') RETURNING id`).Scan(&contact); err != nil {
