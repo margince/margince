@@ -14,7 +14,7 @@ func ActivityClocksTask() datatask.Task {
 	audit := datatask.AuditPolicy{Reason: clockRefoldAuditReason}
 	return datatask.Task{
 		ID: "core/1792846717_task_activity_clocks", Version: 2,
-		Title: systemtext.Literal("datatask.title.core.1792846717_task_activity_clocks"), Requires: []string{"core/1795832146"},
+		Title: systemtext.Literal("datatask.title.core.1792846717_task_activity_clocks"), Requires: []string{"core/1795846282"},
 		Steps: []datatask.Step{
 			clockRefoldStep("contacts", storekit.ClockContacts, storekit.ClockNotFolded, audit),
 			clockRefoldStep("companies", storekit.ClockCompanies, storekit.ClockNotFolded, audit),
