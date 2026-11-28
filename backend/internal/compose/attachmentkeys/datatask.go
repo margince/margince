@@ -17,9 +17,9 @@ import (
 // DataTask binds older attachment owners without changing the files.
 func DataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795850100_attachment_owner_keys", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795850100_attachment_owner_keys"),
-		Requires: []string{"core/1795850103"},
+		ID: "core/1795862828_attachment_owner_keys", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795862828_attachment_owner_keys"),
+		Requires: []string{"core/1795862831"},
 		Steps: []datatask.Step{{
 			Name: "key_attachment_owners", Limit: 500, MinLimit: 10,
 			Audit: datatask.AuditPolicy{Reason: "the trigger keys new attachments, and deletion of an orphan follows the same ON DELETE CASCADE rule without an audit row"},

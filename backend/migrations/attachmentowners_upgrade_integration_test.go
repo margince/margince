@@ -25,7 +25,7 @@ func TestAttachmentOwnerUpgradeKeepsLegacyRowsWritableAndRefusesNewOrphans(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	through := namespaceThroughVersion(t, core, "1795850103")
+	through := namespaceThroughVersion(t, core, "1795862831")
 	before := through
 	before.Migrations = before.Migrations[:len(before.Migrations)-4]
 	if _, err := dbmigrate.Up(ctx, conn, before); err != nil {
