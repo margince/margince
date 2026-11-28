@@ -259,6 +259,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 - `deal_room_participant_capability_check`: `CHECK ((capability = ANY (ARRAY['view', 'comment'])))`
 - `deal_room_participant_email_norm`: `CHECK ((email = lower(email)))`
+- `deal_room_participant_email_one_spelling`: `CHECK (is_identifier_text(email))`
 - `deal_room_participant_preview_named`: `CHECK (((NOT preview) OR (invited_by IS NOT NULL)))`
 - `deal_room_participant_preview_reads_only`: `CHECK (((NOT preview) OR (capability = 'view')))`
 - `uq_deal_room_participant_in_room`: `UNIQUE (id, room_id)`

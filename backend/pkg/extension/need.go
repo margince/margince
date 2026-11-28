@@ -4,7 +4,7 @@
 package extension
 
 // What a unit asks the core to lend it. A need is a capability the core owns,
-// its AI models or its object store. The unit names it with a reason in
+// its AI models, its object store or its member roster. The unit names it with a reason in
 // Extension.Needs. The core grants what is named and answers ErrNotDeclared to
 // the rest. The settings page lists each need to the admin who installs the unit.
 
@@ -26,6 +26,8 @@ const (
 	CapabilityModels Capability = "models"
 	// CapabilityObjects admits Runtime.Objects.
 	CapabilityObjects Capability = "objects"
+	// CapabilityMembers admits Core.Members.
+	CapabilityMembers Capability = "members"
 )
 
 // Need is one capability a unit declares, with the one sentence that tells the
@@ -39,9 +41,9 @@ type Need struct {
 // not one printable sentence.
 func (n Need) Validate() error {
 	switch n.Capability {
-	case CapabilityModels, CapabilityObjects:
+	case CapabilityModels, CapabilityObjects, CapabilityMembers:
 	default:
-		return fmt.Errorf("extension: %q is not a capability; declare %q or %q", string(n.Capability), CapabilityModels, CapabilityObjects)
+		return fmt.Errorf("extension: %q is not a capability; declare %q, %q or %q", string(n.Capability), CapabilityModels, CapabilityObjects, CapabilityMembers)
 	}
 	if err := Description(n.Reason).Validate(); err != nil {
 		return fmt.Errorf("extension: the reason for needing %q: %w", string(n.Capability), err)
