@@ -7,9 +7,9 @@ package compose
 
 // The extension job seam, exercised end to end over a real migrated Postgres
 // and a real River runner: a composed declaration becomes a cadenced
-// dispatcher and a workspace child, the fan-out reaches every live tenant, the
-// tick runs pinned to its own workspace under the authority of the JOB, and the
-// two shapes this seam must never run are refused at boot.
+// dispatcher and a child, the tick runs pinned to the installation's workspace
+// under the authority of the job, and the two shapes this seam must never run
+// are refused at boot.
 
 import (
 	"bytes"
@@ -283,52 +283,42 @@ func TestAnInstallationWithNoAgentSeatStillTicks(t *testing.T) {
 	}
 }
 
-// TestChildrenUseByArgsUniqueness pins the trap the fan-out dies on.
-//
-// sweepInsertOpts — the shared periodic-pass policy — is ByState ONLY, so every
-// child of one kind has the SAME unique key whatever workspace it names: N
-// children collapse to one row, River reports no error, and the fan-out is
-// silently a single-tenant pass. workspaceSweepOpts adds ByArgs, which puts the
-// workspace in the key.
-//
-// Asserted twice on purpose. The first arm is the property (ByArgs is on), the
-// second is the consequence (three tenants get three rows) — the property alone
-// would still pass if the seam stopped calling this builder, and the
-// consequence alone would not say which of the two builders produced it.
+// TestChildrenUseByArgsUniqueness pins the unique key of a tick. sweepInsertOpts,
+// the shared periodic-pass policy, is ByState only, and workspaceSweepOpts adds
+// ByArgs. A tick of a job whose previous tick is still running must not start a
+// second one, and the in-flight window is what enforces that.
 func TestChildrenUseByArgsUniqueness(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
-	live := seedWorkspaces(t, e, 2)
 
 	decl := testJobDecl()
 	composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
 
 	opts := workspaceSweepOpts(decl.ChildKind())
 	if !opts.UniqueOpts.ByArgs {
-		t.Fatal("the child's insert options do not deduplicate ByArgs — every workspace's child would share one unique key and the fan-out would collapse to a single row")
+		t.Fatal("the child's insert options do not deduplicate ByArgs")
 	}
 	if len(opts.UniqueOpts.ByState) == 0 {
-		t.Fatal("the child's insert options carry no in-flight state window — a tick would re-enqueue a workspace whose pass is still running")
+		t.Fatal("the child's insert options carry no in-flight state window — a tick would re-enqueue a pass that is still running")
 	}
 	if sweepInsertOpts().UniqueOpts.ByArgs {
-		t.Fatal("sweepInsertOpts now deduplicates ByArgs — this test's whole premise is that it does not; re-read the fan-out's uniqueness argument")
+		t.Fatal("sweepInsertOpts now deduplicates ByArgs — this test's premise is that it does not")
 	}
 
 	startRunner(t, e.Pool)
-	if got := awaitRows(t, e.Pool, decl.ChildKind(), len(live)); got != len(live) {
-		t.Fatalf("child rows: got %d, want %d — a collapse to 1 is the ByState-only signature", got, len(live))
+	if got := awaitRows(t, e.Pool, decl.ChildKind(), 1); got != 1 {
+		t.Fatalf("child rows: got %d, want one for the installation", got)
 	}
 }
 
-// TestHandlerSeesAPinnedWorkspace: the runner binds the tenant from the child
-// row's own args BEFORE the handler is entered, so a unit's tick can never see
-// a global scope. It matters more for a job than for a served tool: a tool call
+// TestHandlerSeesAPinnedWorkspace: the runner binds the installation's
+// workspace before the handler is entered, so a unit's tick can never see a
+// global scope. It matters more for a job than for a served tool: a tool call
 // arrives on a request whose tenant authentication already resolved, and a tick
-// has no caller at all, so if the runner did not pin it nothing would.
+// has no caller at all.
 func TestHandlerSeesAPinnedWorkspace(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
-	live := seedWorkspaces(t, e, 1)
 
 	decl := testJobDecl()
 	var mu sync.Mutex
@@ -347,23 +337,18 @@ func TestHandlerSeesAPinnedWorkspace(t *testing.T) {
 	})
 	_, sub := startRunner(t, e.Pool)
 	awaitKindCompleted(t, sub, decl.ChildKind())
-	// Every tick of the fan-out, not just the first: one pinned handler and one
-	// unpinned would still satisfy an any-of assertion.
-	awaitRows(t, e.Pool, decl.ChildKind(), len(live))
 	waitUntil(t, func() bool {
 		mu.Lock()
 		defer mu.Unlock()
-		return len(pinned) == len(live)
-	}, "every tick to run under its own pinned workspace")
+		return len(pinned) == 1
+	}, "the tick to run under the installation's workspace")
 	mu.Lock()
 	defer mu.Unlock()
 	if unpinned != 0 {
 		t.Fatalf("%d tick(s) ran with no workspace bound — a handler must never see a global scope", unpinned)
 	}
-	for _, ws := range live {
-		if !pinned[ws] {
-			t.Fatalf("workspace %s never saw a pinned tick", ws)
-		}
+	if !pinned[e.WS] {
+		t.Fatalf("the tick ran under %v, want the installation's %s", pinned, e.WS)
 	}
 }
 
