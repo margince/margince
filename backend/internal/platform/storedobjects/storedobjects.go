@@ -123,6 +123,16 @@ func RecordTx(ctx context.Context, tx pgx.Tx, kind Kind, key string) error {
 	return nil
 }
 
+// RecordDeletionTx queues removed bytes without taking back a reaper's claim.
+// It commits with the row removal and keeps existing tombstones intact.
+func RecordDeletionTx(ctx context.Context, tx pgx.Tx, kind Kind, key string) error {
+	if !declared(kind) {
+		return fmt.Errorf("record a deleted object: %q is not a declared kind", kind)
+	}
+	_, err := tx.Exec(ctx, `SELECT record_stored_object_intent(@kind,@key,true)`, pgx.NamedArgs{"kind": string(kind), storageKeyArg: key})
+	return err
+}
+
 // Clear retires a key, on the CALLER's transaction.
 //
 // ON THE CALLER'S, so the clear and the owning row commit together: a clear that

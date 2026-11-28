@@ -14,8 +14,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 
-	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -27,26 +27,21 @@ import (
 var subjectAttachmentsWhere = `(entity_type = 'contact' AND entity_id = $1)
 	   OR (entity_type = 'activity' AND entity_id IN (` + subjectOnlyDestroyable + `))`
 
-// eraseAttachments queues the objects only the matched attachments name for
+// eraseAttachments removes matching files; their delete trigger queues the bytes for
 // the stored-object reap, then deletes their rows, in the caller's transaction.
 // The queue entry commits or rolls back with the row delete. So a failed
 // erasure leaves every object where its row still points.
 //
 // No object store refuses the erasure. Only a role with a store runs the reap,
 // so nothing would delete the bytes the erasure certifies as gone.
-func (e *Eraser) eraseAttachments(ctx context.Context, tx pgx.Tx, reason, cause, where string, args ...any) error {
+func eraseAttachments(ctx context.Context, tx pgx.Tx, blob blobstore.Store, reason, cause, where string, args ...any) error {
 	keys, err := soleHeldObjects(ctx, tx, where, args...)
 	if err != nil {
 		return err
 	}
 	if len(keys) > 0 {
-		if e.blob == nil {
+		if blob == nil {
 			return fmt.Errorf("privacy: %d attachment object(s) to purge but no object store is configured", len(keys))
-		}
-		for _, key := range keys {
-			if err := storedobjects.RecordTx(ctx, tx, storedobjects.KindAttachment, key); err != nil {
-				return fmt.Errorf("privacy: queueing an attachment object for deletion: %w", err)
-			}
 		}
 		destroyedOutside(tx, armAttachmentObject)
 	}

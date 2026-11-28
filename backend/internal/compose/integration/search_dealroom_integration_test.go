@@ -288,7 +288,7 @@ func TestARoomPartReadWithoutDealReadAnswersTheSameForAMissingAndAnExistingId(t 
 	participant := e.SeedID(t, `INSERT INTO deal_room_participant (id, room_id, email, full_name, source, captured_by)
 	                            VALUES ($1, $2, 'buyer@room.test', 'Buyer', 'manual', 'human:x')`, f.first)
 	attachment := e.SeedID(t, `INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key, source, captured_by)
-	                           VALUES ($1, 'deal_room', $2, 'terms.pdf', 'k/terms', 'manual', 'human:x')`, f.first)
+	                           VALUES ($1, 'deal', (SELECT deal_id FROM deal_room WHERE id=$2), 'terms.pdf', 'k/terms', 'manual', 'human:x')`, f.first)
 	document := e.SeedID(t, `INSERT INTO deal_room_document (id, room_id, attachment_id, group_key, title, source, captured_by)
 	                         VALUES ($1, $2, $3, 'commercial', 'Terms', 'manual', 'human:x')`, f.first, attachment)
 

@@ -193,7 +193,7 @@ func TestABouncedNoticeDeletesTheLeadAndLeavesARecordNamingNobody(t *testing.T) 
 		t.Fatal("the site read does not hold Anna, so this test cannot show her leaving it")
 	}
 	messageID := e.WsScalar(t, `SELECT message_id FROM comms_outbound WHERE template_key = 'privacy_notice'`)
-	if err := newBounceSink(e.Pool).RecordBounce(e.Admin(), connector.BounceReport{
+	if err := newBounceSink(e.Pool, nil).RecordBounce(e.Admin(), connector.BounceReport{
 		MessageID: messageID, Recipient: annasAddress, Kind: connector.BounceHard,
 	}); err != nil {
 		t.Fatalf("recording the bounce: %v", err)

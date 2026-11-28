@@ -129,7 +129,7 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	if err := redactEvidenceQuoting(ctx, tx, []ids.UUID{id}, act.collateralReason, act.cause); err != nil {
 		return err
 	}
-	if err := e.eraseAttachments(ctx, tx, act.collateralReason, act.cause, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
+	if err := eraseAttachments(ctx, tx, e.blob, act.collateralReason, act.cause, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
 		return err
 	}
 	if err := clearExtensionRows(ctx, tx, e.extensions, act.collateralReason, act.cause,

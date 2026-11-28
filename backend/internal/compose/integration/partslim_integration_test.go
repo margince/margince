@@ -101,17 +101,18 @@ func seedSlimOriginal(ctx context.Context, tx pgx.Tx, sourceID string, raw []byt
 }
 
 // seedSlimAttachment writes the row the sweep's join finds. entity_type is the
-// contact arm so the fixture needs no activity: the sweep reads neither column.
+// contact arm with a real parent; the sweep reads neither owner column.
 func seedSlimAttachment(
 	ctx context.Context, tx pgx.Tx, sourceID, key string, size int64, sum string,
 ) error {
 	_, err := tx.Exec(ctx, `
+		WITH parent AS (INSERT INTO contact(full_name,source,captured_by) VALUES('Buyer','manual','human:test') RETURNING id)
 		INSERT INTO attachment (entity_type, entity_id, filename, content_type,
 		                        byte_size, storage_key, checksum, source, captured_by,
 		                        category, external_source_id, external_part_id)
-		VALUES ('contact', gen_random_uuid(), 'figures.pdf', 'application/pdf',
+		SELECT 'contact', parent.id, 'figures.pdf', 'application/pdf',
 		        $1, $2, $3, 'email', 'connector:test', 'email_attachment',
-		        'email:' || $4, 'part:1')`, size, key, sum, sourceID)
+		        'email:' || $4, 'part:1' FROM parent`, size, key, sum, sourceID)
 	return err
 }
 

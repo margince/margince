@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -114,14 +115,14 @@ func newGraphCalOAuth(c GraphConfig) graphcal.OAuth {
 // through Settings be connected at all — the transport asks the registry whether
 // a connector exists before it will run the consent flow.
 func registerMicrosoftConnectors(
-	reg *capture.Registry, resolve appResolver, g GraphConfig, pool *pgxpool.Pool, tuning connector.BackfillTuning,
+	reg *capture.Registry, resolve appResolver, g GraphConfig, pool *pgxpool.Pool, blob blobstore.Store, tuning connector.BackfillTuning,
 ) {
 	if !appReachable(resolve, g.canSync()) {
 		return
 	}
 	reg.Register(graph.New(newGraphAuthorizer(resolve, g), graph.NewAPI(nil, "")).
 		WithBackfillTuning(tuning).
-		WithBounceSink(newBounceSink(pool)).WithSharedMailboxes(graph.SharedMailboxConfig{}))
+		WithBounceSink(newBounceSink(pool, blob)).WithSharedMailboxes(graph.SharedMailboxConfig{}))
 	reg.Register(graphcal.New(newGraphCalAuthorizer(resolve, g), graphcal.NewAPI(nil, "")))
 }
 
@@ -197,7 +198,7 @@ func WithGraphCapture(c GraphConfig) Option {
 		if s.apiBaseURL == "" {
 			s.apiBaseURL = c.APIBaseURL
 		}
-		registerMicrosoftConnectors(s.connectorHandlers.registry, s.microsoftAppResolver, c, pool, connector.BackfillTuning{})
+		registerMicrosoftConnectors(s.connectorHandlers.registry, s.microsoftAppResolver, c, pool, s.blob, connector.BackfillTuning{})
 		s.microsoftCredentials = s.microsoftAppResolver
 		s.graphAPI = graph.NewAPI(nil, "")
 		s.graphCalAPI = graphcal.NewAPI(nil, "")
