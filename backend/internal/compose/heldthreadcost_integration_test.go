@@ -87,6 +87,8 @@ func activityForThread(t *testing.T, e *integration.Env, threadKey string) ids.U
 // heldThreadReadCost is the statements one read spends, and the rows it found.
 func heldThreadReadCost(t *testing.T, e *integration.Env, user ids.UUID) (int64, int) {
 	t.Helper()
+	// Both queue sizes pay for the same cold installation check.
+	database.ForgetInstallationProofs()
 	metered, meter := database.WithStatementMeter(purgeCtx(e, user))
 	// One default page holds every thread seeded here, so the count is the
 	// whole queue's.

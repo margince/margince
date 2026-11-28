@@ -88,8 +88,12 @@ func MeetingCopyHasInternalNotesTx(ctx context.Context, tx pgx.Tx, id ids.Activi
 	if err := requireFoldActor(ctx, "checks a meeting copy"); err != nil {
 		return false, err
 	}
+	// Read legacy audit proof after taking the lock so a waited-out edit is visible.
+	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.IncludeArchived); err != nil {
+		return false, err
+	}
 	var notes bool
-	err := tx.QueryRow(ctx, `SELECT a.meeting_notes IS NOT NULL OR (`+meetingoutcome.RecordBodySQL("a")+`) IS NOT NULL FROM activity a WHERE a.id=$1 FOR UPDATE`, id.UUID).Scan(&notes)
+	err := tx.QueryRow(ctx, `SELECT a.meeting_notes IS NOT NULL OR (`+meetingoutcome.RecordBodySQL("a")+`) IS NOT NULL FROM activity a WHERE a.id=$1`, id.UUID).Scan(&notes)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, apperrors.ErrNotFound
 	}

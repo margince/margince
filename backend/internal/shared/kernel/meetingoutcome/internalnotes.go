@@ -5,9 +5,14 @@ package meetingoutcome
 
 import "strings"
 
+const userWorkActorSQL = `actor_type IN ('human','agent')`
+
 // BodyAuthoredSQL recognizes an earlier body edit by a signed user or agent.
 // Calendar rendering and capture writes are not evidence of rep notes.
-const BodyAuthoredSQL = `(edit.actor_type IN ('human','agent') AND (edit.after ? 'body' OR edit.before ? 'body'))`
+const BodyAuthoredSQL = `(edit.` + userWorkActorSQL + ` AND (edit.after ? 'body' OR edit.before ? 'body'))`
+
+// UserWorkSQL keeps calendar repair from replacing work a member or agent recorded.
+func UserWorkSQL(alias string) string { return alias + "." + userWorkActorSQL }
 
 // LegacyManualNotes says whether body is the older manual meeting notes field.
 func LegacyManualNotes(sourceSystem *string, hasInvitation bool, capturedBy *string) bool {
