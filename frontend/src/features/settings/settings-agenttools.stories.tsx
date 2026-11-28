@@ -284,7 +284,14 @@ export const VietnameseTools: Story = {
 };
 export const VietnameseSearch: Story = {
   render: story([], "vi", [
-    { ...TOOLS[0], name: "find_records", title: "Find records" },
+    {
+      description: "Find records by name.",
+      required_scope: "read",
+      tier: "auto_execute",
+      egress: false,
+      name: "find_records",
+      title: "Find records",
+    },
   ]),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

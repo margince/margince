@@ -11,4 +11,3 @@ CREATE FUNCTION fold_identifier(value text) RETURNS text
 CREATE FUNCTION identifier_spelling_row_id(value text) RETURNS uuid
  LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
  RETURN substr(encode(sha256(convert_to(value, 'UTF8')), 'hex'), 1, 32)::uuid;
-CREATE INDEX idx_own_domain_spelling_cursor ON workspace_email_domain (identifier_spelling_row_id(domain));

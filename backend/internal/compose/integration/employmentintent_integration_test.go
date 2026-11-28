@@ -87,7 +87,7 @@ func TestAUserEndedEmploymentBlocksBothImportAndCapture(t *testing.T) {
 	}
 }
 
-func TestEmploymentUserDecisionsUseTheSameAuthorityForPeopleAndMCP(t *testing.T) {
+func TestEmploymentUserDecisionsUseTheSameAuthorityForMembersAndMCP(t *testing.T) {
 	e := Setup(t)
 	for _, c := range []struct {
 		actor    string

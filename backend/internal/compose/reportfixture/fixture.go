@@ -3,6 +3,7 @@
 
 //go:build integration
 
+// Package reportfixture seeds reports through their real stores and catalogs.
 package reportfixture
 
 // A registered count or breakdown meets the report engine. The kind's read
@@ -23,11 +24,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
-	"github.com/margince/margince/backend/pkg/extension"
 )
 
-const Table = "ext_reportdemo_visit"
+const visitTable = "ext_reportdemo_visit"
 
 type Fixture struct {
 	E       *integration.Env
@@ -40,11 +39,7 @@ func Prepare(t *testing.T, register func(*testing.T)) Fixture {
 	e := integration.Setup(t)
 	register(t)
 	owner := integration.OwnerConn(t)
-	if _, err := owner.Exec(context.Background(), `ALTER TABLE ext.`+Table+` ADD COLUMN owner_id uuid; CREATE INDEX ON ext.`+Table+`(owner_id)`); err != nil {
-		t.Fatal(err)
-	}
-	kinds := []extension.RecordKindDeclaration{{Kind: "visit", DisplayName: "Visit", Table: Table, OwnerColumn: "owner_id", NaturalKey: []string{"code"}, Fields: []extension.RecordKindField{{Name: "code", Label: "Code"}, {Name: "site", Label: "Site", Reportable: true}}}}
-	recordkinds.Register("reportdemo", kinds)
+	prepareVisitKind(t)
 	catalog := customfields.NewService(e.Pool, integration.SchemaPool(t))
 	field, err := catalog.Create(e.As(e.Rep1, nil, integration.CustomFieldAdminPerms), customfields.FieldSpec{Object: "deal", Label: "Visit", Type: customfields.TypeRecord, Options: []string{"ext:reportdemo:visit"}, Source: "manual"})
 	if err != nil {
@@ -70,7 +65,7 @@ func Prepare(t *testing.T, register func(*testing.T)) Fixture {
 		{"north", e.Rep1, e.Rep1, 6, false}, {"south", e.Rep2, e.Rep1, 2, false}, {"north", e.Rep1, e.Rep2, 1, false}, {"north", e.Rep3, e.Rep3, 1, false}, {"archived", e.Rep1, e.Rep1, 1, true},
 	} {
 		id := ids.NewV7()
-		if _, err := owner.Exec(context.Background(), `INSERT INTO ext.`+Table+`(id,code,site,owner_id) VALUES($1,$2,$3,$4)`, id, id.String(), part.site, part.owner); err != nil {
+		if _, err := owner.Exec(context.Background(), `INSERT INTO ext.`+visitTable+`(id,code,site,owner_id) VALUES($1,$2,$3,$4)`, id, id.String(), part.site, part.owner); err != nil {
 			t.Fatal(err)
 		}
 		for i := range part.count {
@@ -80,7 +75,7 @@ func Prepare(t *testing.T, register func(*testing.T)) Fixture {
 			}
 		}
 		if part.archive {
-			if _, err := owner.Exec(context.Background(), `UPDATE ext.`+Table+` SET archived_at=now() WHERE id=$1`, id); err != nil {
+			if _, err := owner.Exec(context.Background(), `UPDATE ext.`+visitTable+` SET archived_at=now() WHERE id=$1`, id); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -97,7 +92,7 @@ func SeedVisits(t *testing.T, site string, live, archived int) {
 			archivedAt = "now()"
 		}
 		if _, err := owner.Exec(context.Background(),
-			`INSERT INTO ext.`+Table+` (code, site, archived_at) VALUES ($1, $2, CASE WHEN $3::text IS NULL THEN NULL ELSE now() END)`,
+			`INSERT INTO ext.`+visitTable+` (code, site, archived_at) VALUES ($1, $2, CASE WHEN $3::text IS NULL THEN NULL ELSE now() END)`,
 			fmt.Sprintf("%s-%d", site, i), site, archivedAt); err != nil {
 			t.Fatalf("seeding a visit: %v", err)
 		}
@@ -131,9 +126,9 @@ func PrepareTable(t *testing.T) {
 	for _, stmt := range []string{
 		`CREATE SCHEMA IF NOT EXISTS ext`,
 		`GRANT USAGE ON SCHEMA ext TO margince_app`,
-		`DROP TABLE IF EXISTS ext.` + Table,
-		`CREATE TABLE ext.` + Table + ` (id uuid PRIMARY KEY DEFAULT uuidv7(), archived_at timestamptz, code text NOT NULL UNIQUE, site text, tier integer NOT NULL DEFAULT 2)`,
-		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.` + Table + ` TO margince_app`,
+		`DROP TABLE IF EXISTS ext.` + visitTable,
+		`CREATE TABLE ext.` + visitTable + ` (id uuid PRIMARY KEY DEFAULT uuidv7(), archived_at timestamptz, code text NOT NULL UNIQUE, site text, tier integer NOT NULL DEFAULT 2)`,
+		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.` + visitTable + ` TO margince_app`,
 	} {
 		if _, err := owner.Exec(ctx, stmt); err != nil {
 			t.Fatalf("preparing the visit table (%s): %v", stmt, err)

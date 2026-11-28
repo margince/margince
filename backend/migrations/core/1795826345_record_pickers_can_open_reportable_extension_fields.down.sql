@@ -7,5 +7,4 @@ DO $$ BEGIN
 END $$;
 ALTER TABLE custom_field DROP CONSTRAINT custom_field_reportable_type_check;
 ALTER TABLE custom_field ADD CONSTRAINT custom_field_reportable_type_check
- CHECK (NOT reportable OR (object IN ('deal', 'company') AND type IN ('picklist', 'boolean'))) NOT VALID;
-ALTER TABLE custom_field VALIDATE CONSTRAINT custom_field_reportable_type_check;
+ CHECK (NOT reportable OR (object IN ('deal', 'company') AND type IN ('picklist', 'boolean')));

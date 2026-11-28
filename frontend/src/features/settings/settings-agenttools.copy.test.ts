@@ -17,7 +17,9 @@ it("has a catalog title for every published core tool", () => {
   const keyOf: Translator = (key) => key;
   const english: Translator = (key) => en[key];
   for (const tool of tools) {
-    expect(agentToolTitle(english, tool.name, tool.title)).toBe(tool.title);
+    expect(agentToolTitle(english, tool.name, tool.title)).toBe(
+      tool.title.replaceAll("'", "’"),
+    );
     expect(agentToolTitle(keyOf, tool.name, tool.title)).toBe(
       `tools.name.${tool.name}`,
     );

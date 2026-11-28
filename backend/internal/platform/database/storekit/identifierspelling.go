@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -128,8 +127,8 @@ func (c IdentifierColumn) repairRow(ctx context.Context, tx pgx.Tx, row identifi
 		if rollback := child.Rollback(ctx); rollback != nil {
 			return false, false, fmt.Errorf("identifier repair rollback: %w", rollback)
 		}
-		var pg *pgconn.PgError
-		if errors.As(err, &pg) && (pg.Code == "23505" || pg.Code == "23514") {
+		_, check := CheckViolation(err)
+		if IsUniqueViolation(err) || check {
 			return false, true, nil
 		}
 		if errors.Is(err, pgx.ErrNoRows) {

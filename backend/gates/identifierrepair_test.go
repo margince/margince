@@ -47,3 +47,12 @@ func TestEveryCheckedIdentifierColumnHasALegacyRepair(t *testing.T) {
 		t.Errorf("checked identifier %s has no legacy repair", key)
 	}
 }
+
+func identifierRepairAuditTypes(t *testing.T) []string {
+	t.Helper()
+	var kinds []string
+	for _, column := range identifierspellings.Columns() {
+		kinds = append(kinds, column.Object)
+	}
+	return kinds
+}

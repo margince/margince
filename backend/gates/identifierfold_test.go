@@ -124,20 +124,22 @@ func manualIdentifierFolds(file *ast.File) []identifierFold {
 				return false
 			}
 			parents = append(parents, context)
+			words := []string{context}
 			switch n := node.(type) {
 			case *ast.AssignStmt:
 				for _, left := range n.Lhs {
-					context += " " + foldNodeText(left)
+					words = append(words, foldNodeText(left))
 				}
 			case *ast.ValueSpec:
 				for _, left := range n.Names {
-					context += " " + left.Name
+					words = append(words, left.Name)
 				}
 			case *ast.CaseClause:
 				for _, value := range n.List {
-					context += " " + foldNodeText(value)
+					words = append(words, foldNodeText(value))
 				}
 			}
+			context = strings.Join(words, " ")
 			call, ok := node.(*ast.CallExpr)
 			if !ok {
 				return true
@@ -178,13 +180,12 @@ func TestAddressAndDomainFoldsUseTheirSharedOwner(t *testing.T) {
 		if strings.Contains(filepath.ToSlash(path), "/shared/kernel/values/") || strings.Contains(filepath.ToSlash(path), "/shared/kernel/correspondence/") {
 			return nil
 		}
-		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}
 		for _, fold := range manualIdentifierFolds(file) {
-			t.Errorf("%s: hand-written address/domain fold; use correspondence.Fold or owndomain.Fold, or values.LegacyIdentifierKey for an explicitly retained legacy lookup", fset.Position(fold.call.Pos()))
+			t.Errorf("%s: hand-written address/domain fold; use correspondence.Fold or owndomain.Fold, or values.LegacyIdentifierKey for an explicitly retained legacy lookup", gatekit.SourceFileSet().Position(fold.call.Pos()))
 		}
 		return nil
 	})
@@ -197,6 +198,7 @@ func TestAddressAndDomainFoldsUseTheirSharedOwner(t *testing.T) {
 }
 
 func TestTheAddressFoldCensusReadsAliasesAndSplitBindings(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		body string
 		want int

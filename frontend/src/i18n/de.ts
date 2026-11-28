@@ -33,7 +33,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tools.name.commit_import": "Einen Import bestätigen",
   "tools.name.create_record": "Einen Datensatz erstellen",
   "tools.name.decide_approvals":
-    "Vorgemerkte Aktionen genehmigen oder ablehnen",
+    "Vorgemerkte Aktionen freigeben oder ablehnen",
   "tools.name.draft_outbound": "Eine E-Mail oder Folge-E-Mails entwerfen",
   "tools.name.enrich": "Unternehmensdaten von der Website ergänzen",
   "tools.name.find_records": "Datensätze finden",
@@ -59,7 +59,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tools.name.read_workspace": "Die Unternehmenseinstellungen lesen",
   "tools.name.resolve_duplicates":
     "Zwei Datensätze zusammenführen oder ein markiertes Paar verwerfen",
-  "tools.name.run_research": "KI-Aufgaben für deinen Benutzer ausführen",
+  "tools.name.run_research": "KI-Aufgaben für dich ausführen",
   "tools.name.schedule_meeting": "Zu einem Termin einladen",
   "tools.name.send_outbound": "Eine Nachricht senden",
   "tools.name.update_record": "Einen Datensatz aktualisieren",
@@ -15797,6 +15797,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.capture_exclusion": "Erfassungsausschluss",
   "audit.kind.capture_pending_counterparty": "Neue Absendeadresse zur Prüfung",
   "audit.kind.capture_personal_sweep": "Bereinigung privater Mails",
+  "audit.kind.company_domain_disposition":
+    "Entscheidung zur Unternehmensdomain",
   "audit.kind.capture_settings": "Erfassungseinstellungen",
   "audit.kind.chat_link": "Chat-Verknüpfung",
   "audit.kind.commission": "Provision",

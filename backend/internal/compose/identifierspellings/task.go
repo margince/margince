@@ -32,7 +32,7 @@ func DataTask() datatask.Task {
 	for _, column := range Columns() {
 		steps = append(steps, columnStep(column))
 	}
-	return datatask.Task{ID: "core/1795826348_identifier_spellings", Version: 1, Title: systemtext.Literal("datatask.title.core.1795826348_identifier_spellings"), Requires: []string{"core/1795828836"}, Steps: steps}
+	return datatask.Task{ID: "core/1795826348_identifier_spellings", Version: 1, Title: systemtext.Literal("datatask.title.core.1795826348_identifier_spellings"), Requires: []string{"core/1795830905"}, Steps: steps}
 }
 
 func columnStep(column storekit.IdentifierColumn) datatask.Step {
