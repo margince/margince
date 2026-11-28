@@ -304,6 +304,9 @@ export const VietnameseSearch: Story = {
         ),
       }),
     );
-    await canvas.findByText(/Find records/);
+    await canvas.findByText(
+      `${vietnameseCopy["tools.sourceTitle"]}: Find records`,
+      { exact: true },
+    );
   },
 };
