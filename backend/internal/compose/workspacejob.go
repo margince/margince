@@ -48,10 +48,9 @@ var everyWorkspaceKinds = map[string]bool{
 	SuppressionJournalArgs{}.Kind():     true,
 }
 
-// searchBoundKinds are the jobs that bind a workspace through the search store
-// and answer an installation with no live workspace themselves: the re-embed
-// hands its marker back and cancels. The middleware would fail such a job
-// before it could.
+// searchBoundKinds bind a workspace through the search store. With no live
+// workspace, the re-embed hands its marker back and cancels. The middleware
+// would fail such a job before it could.
 var searchBoundKinds = map[string]bool{
 	EmbedReindexArgs{}.Kind(): true,
 }

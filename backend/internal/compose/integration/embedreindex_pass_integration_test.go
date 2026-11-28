@@ -76,8 +76,8 @@ func setupReembedFleet(t *testing.T) *reembedFleetEnv {
 // case goes with the enumeration — there is no per-tenant enqueue left to skip.
 func TestEmbedReindexRebuildsTheCorpusInOnePassAndHandsTheMarkerBack(t *testing.T) {
 	re := setupReembedFleet(t)
-	// An archived workspace still exists, deliberately: the pass must not grow
-	// work with it, which a fan-out did by construction. Nothing below counts
+	// An archived workspace still exists. The pass must not grow work with it,
+	// which a fan-out did by construction. Nothing below counts
 	// jobs per tenant.
 	SeedExtraWorkspace(t, re.Owner, "reindex-archived", true)
 
