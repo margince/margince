@@ -830,3 +830,62 @@ func TestTheBreadcrumbKeepsNoPartOfTheRefusedRecord(t *testing.T) {
 		t.Errorf("the breadcrumb stored a provider-supplied identifier: %q", stored)
 	}
 }
+
+// A withdrawal that has not committed yet holds the record that is landing on
+// the credential, and its commit refuses it. Without the lock the record would
+// land under a deposit that is already being removed.
+func TestARecordWaitsForAWithdrawalInFlightAndIsThenRefused(t *testing.T) {
+	e := setupIngress(t)
+	err := ingestDuringWithdrawal(t, e, func() error {
+		_, err := e.ingestingRuntime().Ingest(context.Background(), extension.UserID(e.member.String()),
+			aProviderRecord("ws-7:9001", "outside@example.test"))
+		return err
+	})
+	if !errors.Is(err, extension.ErrForbidden) {
+		t.Fatalf("err = %v, want ErrForbidden once the withdrawal committed", err)
+	}
+	if got := e.countAsWorkspace(t,
+		`SELECT count(*) FROM activity WHERE source_system = $1`, ingressProbeSource); got != 0 {
+		t.Errorf("activity rows = %d, want none after the withdrawal", got)
+	}
+}
+
+// ingestDuringWithdrawal opens the member's withdrawal, runs ingest while it is
+// open, and commits it only once ingest waits on it. A finished ingest before
+// that fails the test: it means the write did not wait for the withdrawal.
+func ingestDuringWithdrawal(t *testing.T, e *ingressEnv, ingest func() error) error {
+	t.Helper()
+	ctx := context.Background()
+	withdrawal, err := e.Pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := withdrawal.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("ending the withdrawal: %v", err)
+		}
+	})
+	var withdrawer int32
+	if err := withdrawal.QueryRow(ctx,
+		`DELETE FROM extension_secret WHERE extension_name = $1 AND user_id = $2 RETURNING pg_backend_pid()`,
+		ingressUnit, e.member).Scan(&withdrawer); err != nil {
+		t.Fatalf("starting the withdrawal: %v", err)
+	}
+	probe, err := e.Pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer probe.Release()
+	var landed error
+	returned := make(chan struct{})
+	go func() {
+		defer close(returned)
+		landed = ingest()
+	}()
+	testdb.AwaitQueuedBehind(t, probe.Conn(), withdrawer, 1, returned, "the ingest")
+	if err := withdrawal.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	<-returned
+	return landed
+}

@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -127,27 +128,61 @@ func memberConsentedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.U
 		return false, nil
 	}
 	var consented bool
-	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM extension_secret s
-			JOIN app_user u ON u.id = s.user_id
-			WHERE s.extension_name = $1
-			  AND s.user_id = $2
-			  AND s.key = ANY($3)
-			  AND (u.service_extension IS NULL OR u.service_extension = $1)
-		)`, unit, member, declared).Scan(&consented)
+	err := tx.QueryRow(ctx, memberConsentedSQL, unit, member, declared).Scan(&consented)
 	return consented, err
 }
+
+// memberConsentHeldTx is memberConsentedTx for a write that acts on the answer.
+// It locks the deposit, so a withdrawal still in flight waits for this
+// transaction to end, and one that committed first refuses it.
+func memberConsentHeldTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
+	declared := declaredUserSecretKeys(unit)
+	if len(declared) == 0 {
+		return false, nil
+	}
+	var one int
+	err := tx.QueryRow(ctx, memberConsentHeldSQL, unit, member, declared).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+const memberDepositSQL = `
+	SELECT 1 FROM extension_secret s
+	JOIN app_user u ON u.id = s.user_id
+	WHERE s.extension_name = $1
+	  AND s.user_id = $2
+	  AND s.key = ANY($3)
+	  AND (u.service_extension IS NULL OR u.service_extension = $1)`
+
+const (
+	memberConsentedSQL   = `SELECT EXISTS (` + memberDepositSQL + `)`
+	memberConsentHeldSQL = memberDepositSQL + ` LIMIT 1 FOR SHARE OF s`
+)
 
 // memberConnectedTx reports whether the member is active now and holds one of
 // the unit's user-scoped secrets. A member who has left keeps the credential
 // they deposited. A door that acts for a named member asks this, not the deposit.
 func memberConnectedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
+	return memberLiveAndTx(ctx, tx, unit, member, memberConsentedTx)
+}
+
+// memberConnectedHeldTx is memberConnectedTx for a write made on the member's
+// authority in the same transaction: it locks the deposit like memberConsentHeldTx.
+func memberConnectedHeldTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
+	return memberLiveAndTx(ctx, tx, unit, member, memberConsentHeldTx)
+}
+
+func memberLiveAndTx(
+	ctx context.Context, tx pgx.Tx, unit string, member ids.UUID,
+	consented func(context.Context, pgx.Tx, string, ids.UUID) (bool, error),
+) (bool, error) {
 	var live bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = $1 AND `+workforce.LiveMemberSQL("u")+`)`, member).Scan(&live); err != nil || !live {
 		return false, err
 	}
-	return memberConsentedTx(ctx, tx, unit, member)
+	return consented(ctx, tx, unit, member)
 }
 
 // liveMemberPrincipal resolves what the member may do now, per call, so a
