@@ -1,0 +1,7 @@
+SET LOCAL lock_timeout = '5s';
+
+ALTER TABLE consent_event VALIDATE CONSTRAINT consent_event_contact_id_fkey;
+ALTER TABLE consent_qualifying_event VALIDATE CONSTRAINT consent_qualifying_event_contact_fkey;
+ALTER TABLE consent_qualifying_event VALIDATE CONSTRAINT consent_qualifying_event_lead_id_fkey;
+ALTER TABLE contact_acquisition_evidence VALIDATE CONSTRAINT contact_acquisition_evidence_contact_id_fkey;
+ALTER TABLE provider_run VALIDATE CONSTRAINT provider_run_contact_id_fkey;

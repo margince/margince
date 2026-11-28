@@ -4255,7 +4255,7 @@ public.consent_event.captured_by text NOT NULL gen=- def=-
 public.consent_event.confirm_ip text gen=- def=-
 public.consent_event.confirm_user_agent text gen=- def=-
 public.consent_event.consent_event_consent_text_version_id_fkey FOREIGN KEY (consent_text_version_id) REFERENCES consent_text_version(id) ON DELETE RESTRICT
-public.consent_event.consent_event_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.consent_event.consent_event_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE RESTRICT
 public.consent_event.consent_event_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE RESTRICT
 public.consent_event.consent_event_new_state_check CHECK ((new_state = ANY (ARRAY['granted'::text, 'withdrawn'::text])))
 public.consent_event.consent_event_pkey PRIMARY KEY (id)
@@ -4340,10 +4340,10 @@ public.consent_qualifying_event acl=margince_owner=arwdDxt/margince_owner,margin
 public.consent_qualifying_event.about_deal_id uuid gen=- def=-
 public.consent_qualifying_event.asks_for_quote boolean NOT NULL gen=- def=false
 public.consent_qualifying_event.captured_by text NOT NULL gen=- def=-
-public.consent_qualifying_event.consent_qualifying_event_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.consent_qualifying_event.consent_qualifying_event_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE RESTRICT
 public.consent_qualifying_event.consent_qualifying_event_evidence CHECK ((((kind = ANY (ARRAY['in_person'::text, 'requested_by_subject'::text])) AND (note IS NOT NULL)) OR ((kind <> ALL (ARRAY['in_person'::text, 'requested_by_subject'::text])) AND (source_entity_type IS NOT NULL) AND (source_entity_id IS NOT NULL))))
 public.consent_qualifying_event.consent_qualifying_event_kind_check CHECK ((kind = ANY (ARRAY['inbound_message'::text, 'inquiry'::text, 'active_deal'::text, 'in_person'::text, 'meeting'::text, 'requested_by_subject'::text])))
-public.consent_qualifying_event.consent_qualifying_event_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.consent_qualifying_event.consent_qualifying_event_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE RESTRICT
 public.consent_qualifying_event.consent_qualifying_event_one_subject CHECK ((num_nonnulls(contact_id, lead_id) = 1))
 public.consent_qualifying_event.consent_qualifying_event_pkey PRIMARY KEY (id)
 public.consent_qualifying_event.consent_qualifying_event_source_entity_type_check CHECK ((source_entity_type = ANY (ARRAY['activity'::text, 'deal'::text])))
@@ -4519,7 +4519,7 @@ public.contact.visibility text NOT NULL gen=- def='workspace'::text
 public.contact_acquisition_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact_acquisition_evidence.captured_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_acquisition_evidence.captured_by text NOT NULL gen=- def=-
-public.contact_acquisition_evidence.contact_acquisition_evidence_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.contact_acquisition_evidence.contact_acquisition_evidence_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE RESTRICT
 public.contact_acquisition_evidence.contact_acquisition_evidence_kind CHECK ((kind = ANY (ARRAY['subject_initiated'::text, 'customer_contract'::text, 'requested_quote_or_meeting'::text, 'in_person_permission'::text, 'referral'::text, 'event_or_form'::text, 'public_or_business_source'::text, 'purchased_or_imported'::text, 'unknown_legacy'::text, 'crm_migration'::text, 'mailbox_history'::text])))
 public.contact_acquisition_evidence.contact_acquisition_evidence_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.contact_acquisition_evidence.contact_acquisition_evidence_pkey PRIMARY KEY (id)
@@ -9604,7 +9604,7 @@ public.provider_run.provider_job_id text gen=- def=-
 public.provider_run.provider_run_attempt_count_check CHECK ((attempt_count >= 0))
 public.provider_run.provider_run_claims_unwritten_shape CHECK (((NOT claims_unwritten) OR (state = 'completed'::text)))
 public.provider_run.provider_run_connection_version_js_safe CHECK (((connection_version >= '-9007199254740991'::bigint) AND (connection_version <= '9007199254740991'::bigint)))
-public.provider_run.provider_run_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.provider_run.provider_run_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE RESTRICT
 public.provider_run.provider_run_external_correlation_id_key UNIQUE (external_correlation_id)
 public.provider_run.provider_run_pkey PRIMARY KEY (id)
 public.provider_run.provider_run_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES app_user(id) ON DELETE SET NULL
