@@ -51,23 +51,34 @@ var openVsClosedSetups = []openVsClosedSetup{
 	{"openrouter_cloud.yaml", "open (gpt-oss) with Mistral on the upper tiers and closed Claude on signal extraction", true},
 }
 
-// openVsClosedPricedOn is the day whose price rows the page uses. A rate row
-// takes effect on its own date, so a later row would move every cost here.
+// openVsClosedPricedOn is only the date SeedModelRates stamps on its rows.
+// It selects no rate: a cost moves when a row's amount in pricing.go moves.
 var openVsClosedPricedOn = time.Date(2026, 11, 28, 0, 0, 0, 0, time.UTC)
 
-var openVsClosedGrade = map[string]string{
-	"certified": "Ready", "supported_degraded": "Usable with care", "not_supported": "Not reliable yet",
+// openVsClosedGrade names a band the way the certification page does, and
+// reports a band it does not know as absent.
+func openVsClosedGrade(band string) (string, bool) {
+	switch band {
+	case "certified":
+		return "Ready", true
+	case "supported_degraded":
+		return "Usable with care", true
+	case "not_supported":
+		return "Not reliable yet", true
+	}
+	return "", false
 }
 
 // costMicro is what one run of a feature's test cases costs at list price, in
-// micro-USD, from the mean tokens its record measured. Cache discounts are
-// left out: the cheapest bucket is not the one a first call pays.
+// micro-USD. It prices the mean tokens the record measured through the
+// product's own PriceCall. A model's long-prompt band then applies as it does
+// in the cost report. The cache buckets are left out: a first call pays none.
 func costMicro(rec aicert.Record, rates map[string]ai.ModelRate) (int64, bool) {
 	rate, ok := rates[rec.Provider+"/"+rec.ServedModel]
 	if !ok {
 		return 0, false
 	}
-	return (int64(rec.MeanTokensIn)*rate.InputPerMTokMicroUSD + int64(rec.MeanTokensOut)*rate.OutputPerMTokMicroUSD) / 1_000_000, true
+	return ai.PriceCall(ai.Usage{TokensIn: rec.MeanTokensIn, TokensOut: rec.MeanTokensOut}, rate), true
 }
 
 func usd(micro int64) string { return fmt.Sprintf("$%.4f", float64(micro)/1e6) }
@@ -81,7 +92,7 @@ type openVsClosedRow struct {
 
 func TestTheOpenVsClosedPageIsPublished(t *testing.T) {
 	cert := readWhichAIPayload[whichAICert](t, "ai-certification.json")
-	records, err := aicert.LoadRecords(filepath.Join("records"))
+	records, err := aicert.LoadRecords("records")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +118,7 @@ func TestTheOpenVsClosedPageIsPublished(t *testing.T) {
 			rows := map[string]openVsClosedRow{}
 			for _, task := range s.Tasks {
 				row := openVsClosedRow{label: task.Label, model: task.Model.Model, grade: "Not measured"}
-				if g, ok := openVsClosedGrade[task.Band]; ok {
+				if g, ok := openVsClosedGrade(task.Band); ok {
 					row.grade = g
 					row.stale = task.State != "current"
 				}
@@ -199,7 +210,8 @@ func renderOpenVsClosed(setups map[string]map[string]openVsClosedRow, titles map
 	p.WriteString("\nCost basis: one run is the mean tokens that feature's test cases used, priced at the list price in " +
 		"[`pricing.go`](../../backend/internal/modules/ai/pricing.go): input and output only, no cache discount. " +
 		"It compares models on equal work. It is not a forecast of a bill, because a real workspace calls the " +
-		"features in a different mix.\n\n")
+		"features in a different mix. The last column compares only the features both setups price, " +
+		"so its Gemini total differs from row to row.\n\n")
 
 	for _, s := range openVsClosedSetups {
 		if s.open {
@@ -208,30 +220,44 @@ func renderOpenVsClosed(setups map[string]map[string]openVsClosedRow, titles map
 	}
 
 	p.WriteString("## How to read the comparison\n\n")
-	p.WriteString("- The judges differ. A second model scores answer quality, and each family was scored by its own " +
-		"judge. Compare the grades with that in mind, and trust \"tries right\" in " +
-		"[ai-certification.md](ai-certification.md) most, because a mechanical check decides it.\n")
-	p.WriteString("- A feature with no price is left out of the total, and the table says how many. " +
-		"A setup that cannot carry a feature at all reads \"Not measured\".\n")
-	p.WriteString("- Open weights are measured through a broker here. The grade belongs to the model, and the " +
-		"serving, speed and price of a host you run yourself are separate measurements.\n")
+	p.WriteString("- The judge can differ from one result to the next. A second model scores answer quality, and " +
+		"[ai-certification.md](ai-certification.md) names the judge of each result. Trust \"tries right\" there " +
+		"most, because a mechanical check decides it.\n")
+	p.WriteString("- A feature with no price is left out of the total, and the table says how many.\n")
+	p.WriteString("- \"Not measured\" means no test ran. It is not a failed test. " +
+		"Gemma 4 document extraction reads so because the binding declares no attachment input, " +
+		"and the runner refuses the test before it calls a model.\n")
+	p.WriteString("- A grade belongs to the setup that was tested: this model, served through the broker with its " +
+		"own routing. The same model on a host you run yourself needs its own measurement.\n")
 	return []byte(p.String())
 }
 
 func writeOpenVsClosedFeatures(p *strings.Builder, open whichAISetup, rows, base map[string]openVsClosedRow, std whichAISetup) {
 	fmt.Fprintf(p, "## Feature by feature: %s\n\nThe standard is %s.\n\n", open.Title, std.Title)
 	p.WriteString("| Feature | Gemini | Open setup | Cost of one run: Gemini | Cost of one run: open |\n|---|---|---|---:|---:|\n")
-	var behind []string
+	var behind, behindOld []string
 	for _, t := range std.Tasks {
 		b, o := rowOrNotMeasured(base, t.Task), rowOrNotMeasured(rows, t.Task)
 		fmt.Fprintf(p, "| %s | %s (`%s`) | %s (`%s`) | %s | %s |\n", t.Label,
 			gradeCell(b), b.model, gradeCell(o), o.model, costCell(b), costCell(o))
 		if b.grade == "Ready" && o.grade != "Ready" {
-			behind = append(behind, t.Label)
+			if b.stale || o.stale {
+				behindOld = append(behindOld, t.Label)
+			} else {
+				behind = append(behind, t.Label)
+			}
 		}
 	}
-	fmt.Fprintf(p, "\nGemini is Ready and this setup is not on %d features:\n\n", len(behind))
-	for _, label := range behind {
+	writeGapList(p, "\nGemini is Ready and this setup is not, on measurements that are both current:\n\n", behind)
+	writeGapList(p, "Gemini is Ready and this setup is not, but one of the two measurements waits for a re-check:\n\n", behindOld)
+}
+
+func writeGapList(p *strings.Builder, lead string, labels []string) {
+	if len(labels) == 0 {
+		return
+	}
+	p.WriteString(lead)
+	for _, label := range labels {
 		fmt.Fprintf(p, "- %s\n", label)
 	}
 	p.WriteString("\n")

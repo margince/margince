@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 64,
-    "sites_best_current": 61,
+    "sites_best_current": 64,
     "sites_best_partial": 0,
-    "sites_best_stale": 3,
+    "sites_best_stale": 0,
     "sites_absent": 0,
     "scenarios": 356,
     "records": 472,
@@ -6146,10 +6146,10 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "stale",
+          "state": "current",
           "abandoned": 0,
           "runs": 147,
-          "passed": 143,
+          "passed": 142,
           "cases_failing_often": 1,
           "cases_below_quality_bar": 0,
           "scope": "full_invocation"
@@ -6473,8 +6473,8 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "band": "not_supported",
-          "state": "stale",
+          "band": "supported_degraded",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -6483,12 +6483,12 @@
               "env": "cloud_frontier"
             },
             "same_model": true,
-            "band": "not_supported",
-            "state": "stale"
+            "band": "supported_degraded",
+            "state": "current"
           },
           "abandoned": 0,
           "runs": 57,
-          "passed": 47,
+          "passed": 49,
           "cases_failing_often": 1,
           "cases_below_quality_bar": 0,
           "scope": "full_invocation",
@@ -6810,7 +6810,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -6820,7 +6820,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "stale"
+            "state": "current"
           },
           "abandoned": 0,
           "runs": 18,
@@ -7061,8 +7061,8 @@
       ],
       "bands": {
         "certified": 22,
-        "supported_degraded": 6,
-        "not_supported": 9,
+        "supported_degraded": 7,
+        "not_supported": 8,
         "too_few_runs": 0
       },
       "untested": 1,
@@ -11668,10 +11668,10 @@
       "sites_shipped": 64,
       "sites_measured": 61,
       "ready": 34,
-      "usable_with_care": 5,
-      "not_reliable_yet": 9,
+      "usable_with_care": 6,
+      "not_reliable_yet": 8,
       "too_few_runs": 13,
-      "recheck_pending": 3,
+      "recheck_pending": 0,
       "judges": [
         "claude-sonnet-5-5"
       ],
@@ -11683,15 +11683,15 @@
             "env": "cloud_frontier"
           },
           "sites": 10,
-          "sites_current": 9,
+          "sites_current": 10,
           "sites_partial": 0,
-          "sites_stale": 1,
+          "sites_stale": 0,
           "runs": 693,
-          "passed": 657,
-          "reliability": 0.948051948051948,
+          "passed": 656,
+          "reliability": 0.9466089466089466,
           "reliability_interval": {
-            "lower": 0.936149,
-            "upper": 0.957836
+            "lower": 0.93457,
+            "upper": 0.956536
           },
           "slowest_p95_ms": 12758,
           "bands": {
@@ -11708,21 +11708,21 @@
             "env": "cloud_frontier"
           },
           "sites": 59,
-          "sites_current": 57,
+          "sites_current": 59,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 0,
           "runs": 1275,
-          "passed": 1175,
-          "reliability": 0.9215686274509803,
+          "passed": 1177,
+          "reliability": 0.9231372549019607,
           "reliability_interval": {
-            "lower": 0.911368,
-            "upper": 0.930685
+            "lower": 0.913023,
+            "upper": 0.932163
           },
           "slowest_p95_ms": 8666,
           "bands": {
             "certified": 32,
-            "supported_degraded": 5,
-            "not_supported": 8,
+            "supported_degraded": 6,
+            "not_supported": 7,
             "too_few_runs": 14
           }
         }
@@ -11840,9 +11840,9 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "stale",
+          "state": "current",
           "runs": 147,
-          "passed": 143,
+          "passed": 142,
           "records": 1
         },
         {
@@ -12107,7 +12107,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "runs": 27,
           "passed": 27,
           "records": 1,
@@ -12121,10 +12121,10 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "band": "not_supported",
+          "band": "supported_degraded",
           "state": "current",
           "runs": 30,
-          "passed": 20,
+          "passed": 22,
           "records": 1,
           "judge": "claude-sonnet-5-5"
         },
@@ -12345,7 +12345,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "runs": 18,
           "passed": 18,
           "records": 1,
@@ -15470,15 +15470,15 @@
         "env": "cloud_frontier"
       },
       "sites": 10,
-      "sites_current": 9,
+      "sites_current": 10,
       "sites_partial": 0,
-      "sites_stale": 1,
+      "sites_stale": 0,
       "runs": 693,
-      "passed": 657,
-      "reliability": 0.948051948051948,
+      "passed": 656,
+      "reliability": 0.9466089466089466,
       "reliability_interval": {
-        "lower": 0.936149,
-        "upper": 0.957836
+        "lower": 0.93457,
+        "upper": 0.956536
       },
       "slowest_p95_ms": 12758,
       "bands": {
@@ -15495,21 +15495,21 @@
         "env": "cloud_frontier"
       },
       "sites": 61,
-      "sites_current": 58,
+      "sites_current": 60,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 1,
       "runs": 1707,
-      "passed": 1607,
-      "reliability": 0.9414176918570591,
+      "passed": 1609,
+      "reliability": 0.942589338019918,
       "reliability_interval": {
-        "lower": 0.9337,
-        "upper": 0.948287
+        "lower": 0.934939,
+        "upper": 0.949389
       },
       "slowest_p95_ms": 8666,
       "bands": {
         "certified": 34,
-        "supported_degraded": 5,
-        "not_supported": 8,
+        "supported_degraded": 6,
+        "not_supported": 7,
         "too_few_runs": 14
       }
     },
@@ -19536,8 +19536,23 @@
       "key": "capture_counterparty_verdict/verdict",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "google/gemma-4-26b-a4b-it",
+          "env": "cloud_frontier"
+        },
+        "band": "not_supported",
+        "runs": 147,
+        "passed": 142,
+        "reliability": 0.9659863945578231,
+        "reliability_interval": {
+          "lower": 0.941099,
+          "upper": 0.980575
+        },
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_chased_cold_pitch_is_still_a_vendor_pitch",
@@ -19840,50 +19855,26 @@
             "model": "google/gemma-4-26b-a4b-it",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
+          "scenarios_measured": 20,
           "scenarios_total": 20,
           "runs": 147,
-          "passed": 143,
-          "reliability": 0.9727891156462585,
+          "passed": 142,
+          "reliability": 0.9659863945578231,
           "reliability_interval": {
-            "lower": 0.949682,
-            "upper": 0.985448
+            "lower": 0.941099,
+            "upper": 0.980575
           },
-          "latency_p50_ms": 798,
-          "latency_p95_ms": 1150,
+          "latency_p50_ms": 903,
+          "latency_p95_ms": 1288,
           "reported": {
-            "accepted": 143,
-            "wrong_answer": 4,
+            "accepted": 142,
+            "wrong_answer": 5,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "20 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_named_vendor_with_a_steering_line_is_a_vendor_pitch_not_spam, a_private_property_desk_the_owner_wrote_to_is_not_a_contact and 14 more",
-          "stale_cause": {
-            "grader_changed": [
-              "a_chased_cold_pitch_is_still_a_vendor_pitch",
-              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
-              "a_department_display_name_is_not_somebodys_name",
-              "a_fluent_machine_written_pitch_is_still_a_vendor_pitch",
-              "a_named_vendor_with_a_steering_line_is_a_vendor_pitch_not_spam",
-              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
-              "a_two_sided_thread_is_a_conversation",
-              "an_automated_invoice_notice_is_not_a_contact",
-              "bulk_marketing_is_noise",
-              "courteous_cold_pitch_is_a_vendor_pitch",
-              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
-              "forged_fence_marker_is_data_not_authority",
-              "invited_supplier_must_not_be_spam",
-              "real_prospect_must_not_be_noise",
-              "the_founders_accountant_on_a_share_transfer_is_an_advisor",
-              "the_founders_tax_adviser_on_their_own_return_is_an_advisor",
-              "the_owners_own_clinic_is_not_the_businesss_correspondent",
-              "the_owners_own_lawyer_is_not_the_workspaces_contact",
-              "the_owners_private_landlord_is_not_a_business_contact"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -29720,8 +29711,23 @@
         "offer",
         "market"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "google/gemma-4-31b-it",
+          "env": "cloud_frontier"
+        },
+        "band": "certified",
+        "runs": 27,
+        "passed": 27,
+        "reliability": 1,
+        "reliability_interval": {
+          "lower": 0.942655,
+          "upper": 1
+        },
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "nl_search_bounds_a_score_and_a_start_date",
@@ -30113,10 +30119,10 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 0,
+          "scenarios_measured": 9,
           "scenarios_total": 9,
           "runs": 27,
           "passed": 27,
@@ -30125,28 +30131,15 @@
             "lower": 0.942655,
             "upper": 1
           },
-          "latency_p50_ms": 1419,
-          "latency_p95_ms": 2247,
+          "latency_p50_ms": 1531,
+          "latency_p95_ms": 2266,
           "reported": {
             "accepted": 27,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "9 scenarios it scored have changed since (how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more",
-          "stale_cause": {
-            "grader_changed": [
-              "nl_search_bounds_a_score_and_a_start_date",
-              "nl_search_keeps_an_or_across_two_fields",
-              "nl_search_names_back_a_prediction_it_cannot_express",
-              "nl_search_reads_a_custom_field_by_its_label",
-              "nl_search_reads_a_list_of_countries_as_membership",
-              "nl_search_reads_german_input",
-              "nl_search_reads_not_as_a_negation",
-              "nl_search_reads_vietnamese_input",
-              "nl_search_refuses_a_value_outside_a_picklist"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -30757,22 +30750,22 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "not_supported",
+          "band": "supported_degraded",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 7,
           "scenarios_total": 7,
           "runs": 30,
-          "passed": 20,
-          "reliability": 0.6666666666666666,
+          "passed": 22,
+          "reliability": 0.7333333333333333,
           "reliability_interval": {
-            "lower": 0.550266,
-            "upper": 0.765765
+            "lower": 0.619744,
+            "upper": 0.822699
           },
-          "latency_p50_ms": 1419,
-          "latency_p95_ms": 2247,
+          "latency_p50_ms": 1531,
+          "latency_p95_ms": 2266,
           "reported": {
-            "accepted": 20,
-            "wrong_answer": 10,
+            "accepted": 22,
+            "wrong_answer": 8,
             "invalid": 0,
             "abstained": 0
           },
@@ -37869,8 +37862,23 @@
       "key": "site_fact_extract/page_facts",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "google/gemma-4-31b-it",
+          "env": "cloud_frontier"
+        },
+        "band": "certified",
+        "runs": 18,
+        "passed": 18,
+        "reliability": 1,
+        "reliability_interval": {
+          "lower": 0.91638,
+          "upper": 1
+        },
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "customer_story_credits_the_customer_not_the_reader",
@@ -38151,10 +38159,10 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 18,
           "passed": 18,
@@ -38163,22 +38171,15 @@
             "lower": 0.91638,
             "upper": 1
           },
-          "latency_p50_ms": 1330,
-          "latency_p95_ms": 2220,
+          "latency_p50_ms": 1519,
+          "latency_p95_ms": 2196,
           "reported": {
             "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts",
-          "stale_cause": {
-            "grader_changed": [
-              "customer_story_credits_the_customer_not_the_reader",
-              "impressum_page_company_facts_and_entities",
-              "services_page_offering_facts"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {

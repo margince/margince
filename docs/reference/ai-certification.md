@@ -38,7 +38,7 @@ from a ready-made setup instead, go to [Can I use this model setup?](#can-i-use-
 | Family | Models we tested | Can I trust it? | In plain words | Tries right | Quality scored by |
 |---|---|---|---|---|---|
 | Gemini | `gemini-3.1-flash-lite`, `gemini-3.8-flash` | 🟡 Mostly | Ready in 43 of the 64 places we tested; 5 more work if someone looks over the result; 16 more right every time, on too few tries to grade alone. Re-check pending for 3 of these, measured on an older version of the product. | 1677 of 1683 | `claude-sonnet-5-5` |
-| Gemma | `gemma-4-26b-a4b-it`, `gemma-4-31b-it` | 🟡 Mostly | Ready in 34 of the 61 places we tested; 5 more work if someone looks over the result; 9 not reliable yet; 13 more right every time, on too few tries to grade alone. Re-check pending for 3 of these, measured on an older version of the product. | 1612 of 1719 | `claude-sonnet-5-5` |
+| Gemma | `gemma-4-26b-a4b-it`, `gemma-4-31b-it` | 🟡 Mostly | Ready in 34 of the 61 places we tested; 6 more work if someone looks over the result; 8 not reliable yet; 13 more right every time, on too few tries to grade alone. | 1613 of 1719 | `claude-sonnet-5-5` |
 | Claude | `claude-haiku-5-5`, `claude-sonnet-5-5` | 🟡 Mostly | Ready in 38 of the 55 places we tested; 1 more work if someone looks over the result; 16 more right every time, on too few tries to grade alone. Re-check pending for 19 of these, measured on an older version of the product. | 1474 of 1491 | `gemini-3.1-flash-lite`, `gemini-3.8-flash` |
 | GPT | `gpt-6-luna`, `gpt-6-sol`, `gpt-oss-120b` | 🔴 Not yet | Ready in 27 of the 60 places we tested; 7 more work if someone looks over the result; 13 not reliable yet; 13 more right every time, on too few tries to grade alone. Re-check pending for 27 of these, measured on an older version of the product. | 1414 of 1545 | `claude-sonnet-4-6`, `claude-sonnet-5-5` |
 | Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-medium-3-5` | 🔴 Not yet | Ready in 15 of the 41 places we tested; 6 more work if someone looks over the result; 9 not reliable yet; 11 more right every time, on too few tries to grade alone. Re-check pending for 41 of these, measured on an older version of the product. | 648 of 708 | `claude-sonnet-4-6`, `claude-sonnet-5-5` |
@@ -55,7 +55,7 @@ A model setup picks which AI model runs each feature, so the same feature can be
 ready under one setup and not under another. Each one is a ready-made
 [preset file](../../config/presets/README.md) an operator copies into the configuration.
 
-86 of the 235 grades below were measured on an older version of the product and
+83 of the 235 grades below were measured on an older version of the product and
 are waiting to be re-checked; each is marked below.
 
 | Model setup | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
@@ -65,7 +65,7 @@ are waiting to be re-checked; each is marked below.
 | [Anthropic Claude](#anthropic-claude) | global cloud | 34 | 3 | 0 | 1 | 34 of 38 features ready (13 re-checks pending) |
 | [OpenAI GPT-6, through OpenRouter](#openai-gpt-6-through-openrouter) | global cloud | 19 | 3 | 3 | 13 | 19 of 38 features ready (re-check pending) |
 | [Open models from OpenAI and Mistral, through OpenRouter](#open-models-from-openai-and-mistral-through-openrouter) | global cloud | 12 | 8 | 15 | 3 | 12 of 38 features ready (14 re-checks pending) |
-| [Gemma 4 you could run yourself, through OpenRouter](#gemma-4-you-could-run-yourself-through-openrouter) | global cloud | 22 | 6 | 9 | 1 | 22 of 38 features ready (3 re-checks pending) |
+| [Gemma 4 you could run yourself, through OpenRouter](#gemma-4-you-could-run-yourself-through-openrouter) | global cloud | 22 | 7 | 8 | 1 | 22 of 38 features ready |
 | [Mistral models in the EU, through OpenRouter](#mistral-models-in-the-eu-through-openrouter) | EU-hosted cloud | 11 | 2 | 12 | 13 | 11 of 38 features ready (re-check pending) |
 | [Gemma 4 on your own server, through Ollama](#gemma-4-on-your-own-server-through-ollama) | your own servers | 0 | 0 | 0 | 38 | 0 of 38 features ready |
 | [Qwen3 on your own server, through vLLM](#qwen3-on-your-own-server-through-vllm) | your own servers | 0 | 0 | 0 | 38 | 0 of 38 features ready |
@@ -606,7 +606,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### Gemma 4 you could run yourself, through OpenRouter
 
-Your data goes to: global cloud. 22 of 38 features ready (3 re-checks pending). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
+Your data goes to: global cloud. 22 of 38 features ready. Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -623,11 +623,11 @@ Your data goes to: global cloud. 22 of 38 features ready (3 re-checks pending). 
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium</sub> | Right every time (15 of 15, at least 90%); scored by `claude-sonnet-5-5` |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium</sub> | Not measured yet: no test of `document_extract/cards`, `document_extract/chat`, `document_extract/fields` on this model |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Right every time (12 of 12, at least 87%) |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small</sub> | Right in 143 of 147 tries (at least 94%); one test case wrong too often · re-check pending |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small</sub> | Right in 142 of 147 tries (at least 94%); one test case wrong too often |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · premium</sub> | Right in 106 of 123 tries (at least 81%); one test case wrong too often; answer quality below the bar in 3 test cases; scored by `claude-sonnet-5-5` |
 | Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, ✅ Ready</sub> | Right in 81 of 87 tries (at least 88%); one test case wrong too often; answer quality below the bar in 2 test cases; scored by `claude-sonnet-5-5` |
 | Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Right every time (12 of 12, at least 87%) |
-| Natural-language search <sub>`nl_search`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right in 47 of 57 tries (at least 75%); one test case wrong too often; scored by `claude-sonnet-5-5` · re-check pending |
+| Natural-language search <sub>`nl_search`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right in 49 of 57 tries (at least 79%); one test case wrong too often; scored by `claude-sonnet-5-5` |
 | Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (15 of 15, at least 90%); scored by `claude-sonnet-5-5` |
 | Onboarding read <sub>`cold_start`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (33 of 33, at least 95%); tested on one model call of it; scored by `claude-sonnet-5-5` |
 | Proposing a report setup or sales goals <sub>`report_setup`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (18 of 18, at least 91%); scored by `claude-sonnet-5-5` |
@@ -643,7 +643,7 @@ Your data goes to: global cloud. 22 of 38 features ready (3 re-checks pending). 
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>gemma-4-26b-a4b-it · local_small</sub> | Right in 285 of 288 tries (at least 97%) |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ⚠️ Usable with care<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, ✅ Ready</sub> | Right in 30 of 36 tries (at least 73%); tested on one model call of it |
 | Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (12 of 12, at least 87%); answer quality below the bar in one test case; scored by `claude-sonnet-5-5` |
-| Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (18 of 18, at least 91%); tested on one model call of it; scored by `claude-sonnet-5-5` · re-check pending |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (18 of 18, at least 91%); tested on one model call of it; scored by `claude-sonnet-5-5` |
 | Website research <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · premium</sub> | Right in 14 of 24 tries (at least 45%); one test case wrong too often; answer quality below the bar in one test case; scored by `claude-sonnet-5-5` |
 | Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (15 of 15, at least 90%); scored by `claude-sonnet-5-5` |
 | Weekly review narrative <sub>`weekly_review`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (24 of 24, at least 93%); scored by `claude-sonnet-5-5` |
@@ -669,7 +669,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `brief_ranking` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | current |
 | `capture_classify` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | current |
 | `capture_confidentiality_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ✅ Ready | current |
-| `capture_counterparty_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
+| `capture_counterparty_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | current |
 | `cert_judge` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | current |
 | `chat_summary` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | current |
 | `chat_task_reading` | `local_small` | `google/gemma-4-26b-a4b-it` | ✅ Ready | current |
@@ -681,7 +681,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `draft_reply` | `cheap_cloud` | `google/gemma-4-31b-it` | ⚠️ Usable with care | current |
 | `enrich` | `local_small` | `google/gemma-4-26b-a4b-it` | ✅ Ready | current |
 | `growth_fit` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | current |
-| `nl_search` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
+| `nl_search` | `cheap_cloud` | `google/gemma-4-31b-it` | ⚠️ Usable with care | current |
 | `offer_draft` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | current |
 | `owed_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ⚠️ Usable with care | current |
 | `propose_roles` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | current |
@@ -693,7 +693,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `rewrite` | `premium` | `google/gemma-4-31b-it` | ⚠️ Usable with care | current |
 | `signal_extract` | `frontier` | `google/gemma-4-31b-it` | ❌ Not reliable yet | current |
 | `site_extract` | `premium` | `google/gemma-4-31b-it` | ❌ Not reliable yet | current |
-| `site_fact_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
+| `site_fact_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | current |
 | `site_triage` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | current |
 | `stage_evidence_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | current |
 | `summarize` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | current |
@@ -1203,12 +1203,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Gemma
 
-🟡 Mostly: Ready in 34 of the 61 places we tested; 5 more work if someone looks over the result; 9 not reliable yet; 13 more right every time, on too few tries to grade alone. Re-check pending for 3 of these, measured on an older version of the product.
+🟡 Mostly: Ready in 34 of the 61 places we tested; 6 more work if someone looks over the result; 8 not reliable yet; 13 more right every time, on too few tries to grade alone.
 
 | Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
-| `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 10 | 5 | 2 | 3 | 0.95 [0.94, 0.96] |
-| `google/gemma-4-31b-it` | `cloud_frontier` | 59 | 32 | 5 | 8 | 0.92 [0.91, 0.93] |
+| `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 10 | 5 | 2 | 3 | 0.95 [0.93, 0.96] |
+| `google/gemma-4-31b-it` | `cloud_frontier` | 59 | 32 | 6 | 7 | 0.92 [0.91, 0.93] |
 
 <details>
 <summary>Best model for each place</summary>
@@ -1222,7 +1222,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (39 of 39, at least 95%) | `claude-sonnet-5-5` |
 | [`capture_classify/deal_topic`](#capture_classifydeal_topic) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | ✅ Ready | Right every time (18 of 18, at least 91%) | `claude-sonnet-5-5` |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | ✅ Ready | Right in 285 of 288 tries (at least 97%) | checked mechanically |
-| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | ❌ Not reliable yet · re-check pending | Right in 143 of 147 tries (at least 94%) | checked mechanically |
+| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | ❌ Not reliable yet | Right in 142 of 147 tries (at least 94%) | checked mechanically |
 | [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (12 of 12, at least 87%) | checked mechanically |
 | [`chat_summary/episode`](#chat_summaryepisode) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (18 of 18, at least 91%) | `claude-sonnet-5-5` |
 | [`chat_task_reading/chat_tasks`](#chat_task_readingchat_tasks) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | ✅ Ready | Right every time (18 of 18, at least 91%) | `claude-sonnet-5-5` |
@@ -1240,8 +1240,8 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ⚠️ Usable with care | Right every time (33 of 33, at least 95%) | `claude-sonnet-5-5` |
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (12 of 12, at least 87%) | checked mechanically |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (24 of 24, at least 93%) | `claude-sonnet-5-5` |
-| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready · re-check pending | Right every time (27 of 27, at least 94%) | `claude-sonnet-5-5` |
-| [`nl_search/search_data_plan`](#nl_searchsearch_data_plan) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ❌ Not reliable yet | Right in 20 of 30 tries (at least 55%) | `claude-sonnet-5-5` |
+| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (27 of 27, at least 94%) | `claude-sonnet-5-5` |
+| [`nl_search/search_data_plan`](#nl_searchsearch_data_plan) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ⚠️ Usable with care | Right in 22 of 30 tries (at least 61%) | `claude-sonnet-5-5` |
 | [`offer_draft/draft`](#offer_draftdraft) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (15 of 15, at least 90%) | `claude-sonnet-5-5` |
 | [`owed_verdict/owed`](#owed_verdictowed) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (27 of 27, at least 94%) | checked mechanically |
 | [`propose_roles/committee`](#propose_rolescommittee) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (18 of 18, at least 91%) | `claude-sonnet-5-5` |
@@ -1256,7 +1256,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`rewrite/rewrite`](#rewriterewrite) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ⚠️ Usable with care | Right every time (48 of 48, at least 96%) | `claude-sonnet-5-5` |
 | [`signal_extract/thread_events`](#signal_extractthread_events) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ❌ Not reliable yet | Right in 178 of 192 tries (at least 89%) | `claude-sonnet-5-5` |
 | [`site_extract/profile`](#site_extractprofile) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ❌ Not reliable yet | Right in 14 of 24 tries (at least 45%) | `claude-sonnet-5-5` |
-| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready · re-check pending | Right every time (18 of 18, at least 91%) | `claude-sonnet-5-5` |
+| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (18 of 18, at least 91%) | `claude-sonnet-5-5` |
 | [`site_triage/triage`](#site_triagetriage) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (15 of 15, at least 90%) | `claude-sonnet-5-5` |
 | [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (36 of 36, at least 95%) | `claude-sonnet-5-5` |
 | [`summarize/company_ask`](#summarizecompany_ask) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | Right every time (21 of 21, at least 92%) | `claude-sonnet-5-5` |
@@ -1499,9 +1499,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | | |
 |---|---:|
 | Shipped invocation sites | 64 |
-| … best state `current` | 61 |
+| … best state `current` | 64 |
 | … best state `partial` | 0 |
-| … best state `stale` | 3 |
+| … best state `stale` | 0 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 356 |
 | Committed records | 472 |
@@ -1509,13 +1509,13 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 #### Why the stale records went stale
 
-Counted per record (one task and binding pair) over the 301 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 483 `stale_cause` entries are these 301 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
+Counted per record (one task and binding pair) over the 298 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 480 `stale_cause` entries are these 298 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
 | the case | 114 | The test case changed. Re-certify: the old result measured a different case. |
 | **the prompt this build sends** | 230 | The product changed. The band measured the old prompt, so it says nothing about the new one. Re-certify: a drop then is the cost of that change and not the model. |
-| how a run is graded | 299 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
+| how a run is graded | 296 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -1580,7 +1580,7 @@ Which model to run each site on, and what that choice rests on.
 | [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 [0.96, 1.00] | `current` | 10 | 10 |
 | [`capture_classify/deal_topic`](#capture_classifydeal_topic) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `certified` | 1.00 [0.92, 1.00] | `current` | 3 | 7 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.99, 1.00] | `current` | 24 | 9 |
-| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | - | - | - | `stale` | 20 | 9 |
+| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `not_supported` | 0.97 [0.94, 0.98] | `current` | 20 | 9 |
 | [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 2 | 16 |
 | [`chat_summary/episode`](#chat_summaryepisode) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 [0.92, 1.00] | `current` | 3 | 7 |
 | [`chat_task_reading/chat_tasks`](#chat_task_readingchat_tasks) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `certified` | 1.00 [0.92, 1.00] | `current` | 3 | 5 |
@@ -1601,7 +1601,7 @@ Which model to run each site on, and what that choice rests on.
 | [`draft_reply/reply`](#draft_replyreply) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 [0.97, 1.00] | `current` | 6 | 16 |
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 4 | 10 |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 [0.94, 1.00] | `current` | 2 | 15 |
-| [`nl_search/filter_propose`](#nl_searchfilter_propose) | - | - | - | `stale` | 9 | 15 |
+| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 [0.94, 1.00] | `current` | 9 | 15 |
 | [`nl_search/search_data_plan`](#nl_searchsearch_data_plan) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.93, 1.00] | `current` | 7 | 6 |
 | [`offer_draft/draft`](#offer_draftdraft) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 [0.90, 1.00] | `current` | 5 | 15 |
 | [`owed_verdict/owed`](#owed_verdictowed) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 [0.94, 1.00] | `current` | 9 | 10 |
@@ -1617,7 +1617,7 @@ Which model to run each site on, and what that choice rests on.
 | [`rewrite/rewrite`](#rewriterewrite) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.88, 1.00] | `current` | 4 | 8 |
 | [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.99, 1.00] | `current` | 57 | 15 |
 | [`site_extract/profile`](#site_extractprofile) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.90, 1.00] | `current` | 5 | 12 |
-| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | - | - | - | `stale` | 3 | 15 |
+| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 [0.92, 1.00] | `current` | 3 | 15 |
 | [`site_triage/triage`](#site_triagetriage) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 [0.90, 1.00] | `current` | 5 | 15 |
 | [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.96, 1.00] | `current` | 12 | 15 |
 | [`summarize/company_ask`](#summarizecompany_ask) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.95, 1.00] | `current` | 3 | 15 |
@@ -1673,8 +1673,8 @@ record's own p50 and p95 are in the site tables.
 | `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 9 | 0 | 0 | 9 | 201 | 201 | 1.00 [0.99, 1.00] | 10554ms | 5 | 4 | 0 | 0 |
 | `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 41 | 0 | 0 | 41 | 699 | 696 | 1.00 [0.99, 1.00] | 10104ms | 17 | 18 | 5 | 1 |
 | `gemini` | `gemini-3.8-flash` | `cloud_frontier` | 54 | 52 | 0 | 2 | 1044 | 1041 | 1.00 [0.99, 1.00] | 40459ms | 31 | 18 | 5 | 0 |
-| `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 10 | 9 | 0 | 1 | 693 | 657 | 0.95 [0.94, 0.96] | 12758ms | 5 | 0 | 2 | 3 |
-| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 61 | 58 | 0 | 3 | 1707 | 1607 | 0.94 [0.93, 0.95] | 8666ms | 34 | 14 | 5 | 8 |
+| `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 10 | 10 | 0 | 0 | 693 | 656 | 0.95 [0.93, 0.96] | 12758ms | 5 | 0 | 2 | 3 |
+| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 61 | 60 | 0 | 1 | 1707 | 1609 | 0.94 [0.93, 0.95] | 8666ms | 34 | 14 | 6 | 7 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 41 | 0 | 0 | 41 | 615 | 488 | 0.79 [0.77, 0.81] | 83052ms | 7 | 8 | 6 | 20 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 0 | 0 | 6 | 174 | 156 | 0.90 [0.86, 0.92] | 5038ms | 4 | 0 | 0 | 2 |
 | `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 45 | 0 | 0 | 45 | 711 | 658 | 0.93 [0.91, 0.94] | 13541ms | 14 | 13 | 8 | 10 |
@@ -1768,7 +1768,6 @@ model, real network).
 | `capture_counterparty_verdict/verdict` | `anthropic · claude-haiku-5-5 · cloud_frontier` | 20 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_named_vendor_with_a_steering_line_is_a_vendor_pitch_not_spam, a_private_property_desk_the_owner_wrote_to_is_not_a_contact and 14 more |
 | `capture_counterparty_verdict/verdict` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 20 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_named_vendor_with_a_steering_line_is_a_vendor_pitch_not_spam, a_private_property_desk_the_owner_wrote_to_is_not_a_contact and 14 more |
 | `capture_counterparty_verdict/verdict` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 19 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_trade_offices_city_mailbox_names_a_place_not_a_contact and 13 more; the provider's wire translation changed since the run (it also scored a_numbered_support_queue_is_one_desk, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, which the corpus no longer holds) |
-| `capture_counterparty_verdict/verdict` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 20 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_named_vendor_with_a_steering_line_is_a_vendor_pitch_not_spam, a_private_property_desk_the_owner_wrote_to_is_not_a_contact and 14 more |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 20 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_named_vendor_with_a_steering_line_is_a_vendor_pitch_not_spam, a_private_property_desk_the_owner_wrote_to_is_not_a_contact and 14 more |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 13 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_trade_offices_city_mailbox_names_a_place_not_a_contact, a_two_sided_thread_is_a_conversation, an_automated_invoice_notice_is_not_a_contact and 7 more; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, courteous_cold_pitch_is_spam, which the corpus no longer holds) |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | 13 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_trade_offices_city_mailbox_names_a_place_not_a_contact, a_two_sided_thread_is_a_conversation, an_automated_invoice_notice_is_not_a_contact and 7 more; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, courteous_cold_pitch_is_spam, which the corpus no longer holds) |
@@ -1933,7 +1932,6 @@ model, real network).
 | `nl_search/filter_propose` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more; the provider's wire translation changed since the run |
 | `nl_search/filter_propose` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more; the provider's wire translation changed since the run; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 |
 | `nl_search/filter_propose` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 9 scenarios it scored have changed since (how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more |
-| `nl_search/filter_propose` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 9 scenarios it scored have changed since (how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more |
 | `nl_search/filter_propose` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_reads_a_country_as_its_iso_code, which the corpus no longer holds) |
 | `nl_search/filter_propose` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_reads_a_country_as_its_iso_code, which the corpus no longer holds) |
 | `nl_search/filter_propose` | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | 9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_reads_a_country_as_its_iso_code, which the corpus no longer holds) |
@@ -2035,7 +2033,6 @@ model, real network).
 | `site_fact_extract/page_facts` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts; the provider's wire translation changed since the run |
 | `site_fact_extract/page_facts` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts; the provider's wire translation changed since the run |
 | `site_fact_extract/page_facts` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
-| `site_fact_extract/page_facts` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
 | `site_fact_extract/page_facts` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 |
 | `site_fact_extract/page_facts` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 |
 | `site_fact_extract/page_facts` | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 |
@@ -2515,7 +2512,7 @@ Records (9):
 #### `capture_counterparty_verdict`
 
 <details>
-<summary><code>capture_counterparty_verdict/verdict</code>: 20 scenario(s), 9 record(s), best state stale</summary>
+<summary><code>capture_counterparty_verdict/verdict</code>: 20 scenario(s), 9 record(s), best state current</summary>
 
 ##### `capture_counterparty_verdict/verdict`
 
@@ -2553,7 +2550,7 @@ Records (9):
 | `anthropic · claude-haiku-5-5 · cloud_frontier` | `stale` | 0/20 | `certified` | checked mechanically | 147 | 146 | 0.99 [0.98, 1.00] | 1307ms | 2024ms | 146 | 1 | 0 | 0 |
 | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/20 | `certified` | checked mechanically | 144 | 144 | 1.00 [0.99, 1.00] | 727ms | 1083ms | 144 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/20 | `certified` | checked mechanically | 153 | 150 | 0.98 [0.96, 0.99] | 994ms | 1376ms | 150 | 3 | 0 | 0 |
-| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/20 | `not_supported` | checked mechanically | 147 | 143 | 0.97 [0.95, 0.99] | 798ms | 1150ms | 143 | 4 | 0 | 0 |
+| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `current` | 20/20 | `not_supported` | checked mechanically | 147 | 142 | 0.97 [0.94, 0.98] | 903ms | 1288ms | 142 | 5 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/20 | `certified` | checked mechanically | 144 | 144 | 1.00 [0.99, 1.00] | 1093ms | 1722ms | 144 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/20 | `not_supported` | `claude-sonnet-4-6` | 63 | 51 | 0.81 [0.74, 0.86] | 1563ms | 2411ms | 51 | 12 | 0 | 0 |
 | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/20 | `not_supported` | `claude-sonnet-4-6` | 60 | 56 | 0.93 [0.88, 0.96] | 2349ms | 3927ms | 56 | 4 | 0 | 0 |
@@ -3275,7 +3272,7 @@ Records (15):
 Certified without the company context production prepends (`offer`, `market`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>nl_search/filter_propose</code>: 9 scenario(s), 15 record(s), best state stale</summary>
+<summary><code>nl_search/filter_propose</code>: 9 scenario(s), 15 record(s), best state current</summary>
 
 ##### `nl_search/filter_propose`
 
@@ -3306,7 +3303,7 @@ Records (15):
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/9 | `certified` | `claude-sonnet-5-5` | 27 | 27 | 1.00 [0.94, 1.00] | 1311ms | 1637ms | 27 | 0 | 0 | 0 |
 | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/9 | `certified` | `claude-sonnet-4-6` | 27 | 27 | 1.00 [0.94, 1.00] | 2577ms | 4324ms | 27 | 0 | 0 | 0 |
 | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/9 | `certified` | `claude-sonnet-5-5` | 27 | 27 | 1.00 [0.94, 1.00] | 2912ms | 7973ms | 27 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/9 | `certified` | `claude-sonnet-5-5` | 27 | 27 | 1.00 [0.94, 1.00] | 1419ms | 2247ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 9/9 | `certified` | `claude-sonnet-5-5` | 27 | 27 | 1.00 [0.94, 1.00] | 1531ms | 2266ms | 27 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/9 | `not_supported` | `claude-sonnet-4-6` | 39 | 30 | 0.77 [0.67, 0.84] | 2327ms | 4395ms | 30 | 9 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/9 | `certified` | `claude-sonnet-4-6` | 33 | 33 | 1.00 [0.95, 1.00] | 1328ms | 1907ms | 33 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/9 | `certified` | `claude-sonnet-4-6` | 33 | 33 | 1.00 [0.95, 1.00] | 1428ms | 1980ms | 33 | 0 | 0 | 0 |
@@ -3344,7 +3341,7 @@ Records (6):
 | `anthropic · claude-sonnet-5-5 · cloud_frontier` | `stale` | 0/7 | `certified` | `gemini-3.8-flash` | 21 | 21 | 1.00 [0.93, 1.00] | 2549ms | 4198ms | 21 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 7/7 | `supported_degraded` | `claude-sonnet-5-5` | 39 | 28 | 0.72 [0.62, 0.80] | 1089ms | 1572ms | 28 | 11 | 0 | 0 |
 | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 7/7 | `certified` | `claude-sonnet-5-5` | 21 | 21 | 1.00 [0.93, 1.00] | 2912ms | 7973ms | 21 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 7/7 | `not_supported` | `claude-sonnet-5-5` | 30 | 20 | 0.67 [0.55, 0.77] | 1419ms | 2247ms | 20 | 10 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 7/7 | `supported_degraded` | `claude-sonnet-5-5` | 30 | 22 | 0.73 [0.62, 0.82] | 1531ms | 2266ms | 22 | 8 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/7 | `not_supported` | `claude-sonnet-5-5` | 51 | 13 | 0.25 [0.19, 0.34] | 1450ms | 4270ms | 13 | 38 | 0 | 0 |
 
 </details>
@@ -3913,7 +3910,7 @@ Records (12):
 #### `site_fact_extract`
 
 <details>
-<summary><code>site_fact_extract/page_facts</code>: 3 scenario(s), 15 record(s), best state stale</summary>
+<summary><code>site_fact_extract/page_facts</code>: 3 scenario(s), 15 record(s), best state current</summary>
 
 ##### `site_fact_extract/page_facts`
 
@@ -3938,7 +3935,7 @@ Records (15):
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `too_few_runs` | `claude-sonnet-5-5` | 9 | 9 | 1.00 [0.85, 1.00] | 1281ms | 1764ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `too_few_runs` | `claude-sonnet-5-5` | 9 | 9 | 1.00 [0.85, 1.00] | 2427ms | 3596ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | `claude-sonnet-5-5` | 18 | 18 | 1.00 [0.92, 1.00] | 2179ms | 3843ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | `claude-sonnet-5-5` | 18 | 18 | 1.00 [0.92, 1.00] | 1330ms | 2220ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | `claude-sonnet-5-5` | 18 | 18 | 1.00 [0.92, 1.00] | 1519ms | 2196ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | `claude-sonnet-4-6` | 21 | 14 | 0.67 [0.53, 0.78] | 4673ms | 83052ms | 14 | 6 | 1 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `not_supported` | `claude-sonnet-4-6` | 9 | 6 | 0.67 [0.45, 0.83] | 1517ms | 1732ms | 6 | 3 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `not_supported` | `claude-sonnet-4-6` | 9 | 6 | 0.67 [0.45, 0.83] | 1850ms | 2365ms | 6 | 3 | 0 | 0 |

@@ -12,10 +12,10 @@ This page sets the open-weight model setups beside the closed ones, with Gemini 
 | Google Gemini | closed | 28 | 9 | 1 | 0 | $0.0666 | 1.0× |
 | Anthropic Claude | closed | 34 | 3 | 0 | 1 | $0.2525 | 3.8× |
 | OpenAI GPT-6, through OpenRouter | closed | 19 | 3 | 3 | 13 | $0.0246 (28 of 38 features priced) | 0.4× |
-| Gemma 4 you could run yourself, through OpenRouter | open (Gemma 4) | 22 | 6 | 9 | 1 | $0.0140 (37 of 38 features priced) | 0.2× |
+| Gemma 4 you could run yourself, through OpenRouter | open (Gemma 4) | 22 | 7 | 8 | 1 | $0.0140 (37 of 38 features priced) | 0.2× |
 | Open models from OpenAI and Mistral, through OpenRouter | open (gpt-oss) with Mistral on the upper tiers and closed Claude on signal extraction | 12 | 8 | 15 | 3 | $0.0307 (35 of 38 features priced) | 0.5× |
 
-Cost basis: one run is the mean tokens that feature's test cases used, priced at the list price in [`pricing.go`](../../backend/internal/modules/ai/pricing.go): input and output only, no cache discount. It compares models on equal work. It is not a forecast of a bill, because a real workspace calls the features in a different mix.
+Cost basis: one run is the mean tokens that feature's test cases used, priced at the list price in [`pricing.go`](../../backend/internal/modules/ai/pricing.go): input and output only, no cache discount. It compares models on equal work. It is not a forecast of a bill, because a real workspace calls the features in a different mix. The last column compares only the features both setups price, so its Gemini total differs from row to row.
 
 ## Feature by feature: Gemma 4 you could run yourself, through OpenRouter
 
@@ -28,7 +28,7 @@ The standard is Google Gemini.
 | Morning brief ranking | Ready (`gemini-3.8-flash`) | Ready (`google/gemma-4-31b-it`) | $0.0008 | $0.0001 |
 | Message classification | Ready (`gemini-3.1-flash-lite`) | Not reliable yet (`google/gemma-4-26b-a4b-it`) | $0.0003 | $0.0001 |
 | Thread confidentiality check | Ready (`gemini-3.1-flash-lite`) | Ready (`google/gemma-4-26b-a4b-it`) | $0.0004 | $0.0001 |
-| First-time sender check | Ready · re-check pending (`gemini-3.1-flash-lite`) | Not reliable yet · re-check pending (`google/gemma-4-26b-a4b-it`) | $0.0007 | $0.0002 |
+| First-time sender check | Ready · re-check pending (`gemini-3.1-flash-lite`) | Not reliable yet (`google/gemma-4-26b-a4b-it`) | $0.0007 | $0.0002 |
 | Certification judging | Ready (`gemini-3.8-flash`) | Ready (`google/gemma-4-31b-it`) | $0.0006 | $0.0001 |
 | Chat channel summary | Usable with care (`gemini-3.1-flash-lite`) | Ready (`google/gemma-4-31b-it`) | $0.0006 | $0.0004 |
 | Chat and open tasks | Usable with care (`gemini-3.1-flash-lite`) | Ready (`google/gemma-4-26b-a4b-it`) | $0.0003 | $0.0001 |
@@ -40,7 +40,7 @@ The standard is Google Gemini.
 | Reply drafting | Usable with care (`gemini-3.8-flash`) | Usable with care (`google/gemma-4-31b-it`) | $0.0037 | $0.0010 |
 | Signature enrichment | Ready (`gemini-3.1-flash-lite`) | Ready (`google/gemma-4-26b-a4b-it`) | $0.0007 | $0.0001 |
 | Company fit assessment | Ready (`gemini-3.8-flash`) | Ready (`google/gemma-4-31b-it`) | $0.0039 | $0.0007 |
-| Natural-language search | Ready · re-check pending (`gemini-3.8-flash`) | Not reliable yet · re-check pending (`google/gemma-4-31b-it`) | $0.0061 | $0.0017 |
+| Natural-language search | Ready · re-check pending (`gemini-3.8-flash`) | Usable with care (`google/gemma-4-31b-it`) | $0.0061 | $0.0017 |
 | Offer drafting | Ready (`gemini-3.1-flash-lite`) | Ready (`google/gemma-4-31b-it`) | $0.0004 | $0.0003 |
 | Unanswered-message triage | Ready (`gemini-3.1-flash-lite`) | Usable with care (`google/gemma-4-26b-a4b-it`) | $0.0006 | $0.0001 |
 | Buying-role reading | Ready (`gemini-3.1-flash-lite`) | Ready (`google/gemma-4-31b-it`) | $0.0004 | $0.0002 |
@@ -52,7 +52,7 @@ The standard is Google Gemini.
 | Rewriting | Ready (`gemini-3.8-flash`) | Usable with care (`google/gemma-4-31b-it`) | $0.0010 | $0.0002 |
 | Signal extraction | Ready (`gemini-3.8-flash`) | Not reliable yet (`google/gemma-4-31b-it`) | $0.0040 | $0.0010 |
 | Website research | Ready (`gemini-3.8-flash`) | Not reliable yet (`google/gemma-4-31b-it`) | $0.0013 | $0.0002 |
-| Website fact extraction | Usable with care · re-check pending (`gemini-3.1-flash-lite`) | Ready · re-check pending (`google/gemma-4-31b-it`) | $0.0005 | $0.0003 |
+| Website fact extraction | Usable with care · re-check pending (`gemini-3.1-flash-lite`) | Ready (`google/gemma-4-31b-it`) | $0.0005 | $0.0003 |
 | Website triage | Ready (`gemini-3.1-flash-lite`) | Ready (`google/gemma-4-31b-it`) | $0.0002 | $0.0001 |
 | Stage evidence extraction | Ready (`gemini-3.1-flash-lite`) | Ready (`google/gemma-4-31b-it`) | $0.0003 | $0.0002 |
 | Record summary | Usable with care (`gemini-3.8-flash`) | Ready (`google/gemma-4-31b-it`) | $0.0021 | $0.0004 |
@@ -62,13 +62,11 @@ The standard is Google Gemini.
 | What last week taught | Ready (`gemini-3.1-flash-lite`) | Ready (`google/gemma-4-31b-it`) | $0.0003 | $0.0002 |
 | Weekly review narrative | Ready (`gemini-3.1-flash-lite`) | Ready (`google/gemma-4-31b-it`) | $0.0002 | $0.0002 |
 
-Gemini is Ready and this setup is not on 13 features:
+Gemini is Ready and this setup is not, on measurements that are both current:
 
 - Message classification
-- First-time sender check
 - Checking the dates, amount and chances of a deal
 - Document extraction
-- Natural-language search
 - Unanswered-message triage
 - Assessing a sales report
 - Checking whether the reply answered the request
@@ -77,6 +75,11 @@ Gemini is Ready and this setup is not on 13 features:
 - Website research
 - Meeting follow-up extraction
 - Voice DNA build
+
+Gemini is Ready and this setup is not, but one of the two measurements waits for a re-check:
+
+- First-time sender check
+- Natural-language search
 
 ## Feature by feature: Open models from OpenAI and Mistral, through OpenRouter
 
@@ -123,28 +126,32 @@ The standard is Google Gemini.
 | What last week taught | Ready (`gemini-3.1-flash-lite`) | Ready (`openai/gpt-oss-120b`) | $0.0003 | $0.0001 |
 | Weekly review narrative | Ready (`gemini-3.1-flash-lite`) | Usable with care (`openai/gpt-oss-120b`) | $0.0002 | $0.0001 |
 
-Gemini is Ready and this setup is not on 17 features:
+Gemini is Ready and this setup is not, on measurements that are both current:
 
 - Message classification
-- First-time sender check
 - Document extraction
 - Company fit assessment
-- Natural-language search
 - Offer drafting
 - Buying-role reading
-- Assessing a sales report
 - Checking whether the reply answered the request
 - Rewriting
 - Signal extraction
-- Website research
 - Stage evidence extraction
-- Tag suggestions
-- Meeting follow-up extraction
 - Voice DNA build
 - Weekly review narrative
 
+Gemini is Ready and this setup is not, but one of the two measurements waits for a re-check:
+
+- First-time sender check
+- Natural-language search
+- Assessing a sales report
+- Website research
+- Tag suggestions
+- Meeting follow-up extraction
+
 ## How to read the comparison
 
-- The judges differ. A second model scores answer quality, and each family was scored by its own judge. Compare the grades with that in mind, and trust "tries right" in [ai-certification.md](ai-certification.md) most, because a mechanical check decides it.
-- A feature with no price is left out of the total, and the table says how many. A setup that cannot carry a feature at all reads "Not measured".
-- Open weights are measured through a broker here. The grade belongs to the model, and the serving, speed and price of a host you run yourself are separate measurements.
+- The judge can differ from one result to the next. A second model scores answer quality, and [ai-certification.md](ai-certification.md) names the judge of each result. Trust "tries right" there most, because a mechanical check decides it.
+- A feature with no price is left out of the total, and the table says how many.
+- "Not measured" means no test ran. It is not a failed test. Gemma 4 document extraction reads so because the binding declares no attachment input, and the runner refuses the test before it calls a model.
+- A grade belongs to the setup that was tested: this model, served through the broker with its own routing. The same model on a host you run yourself needs its own measurement.

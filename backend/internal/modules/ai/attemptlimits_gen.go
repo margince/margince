@@ -82,6 +82,7 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
 		{provider: "gemini", model: "gemini-3.8-flash"},
+		{provider: "openai_compatible", model: "google/gemma-4-31b-it"},
 		{provider: "openai_compatible", model: "mistralai/mistral-medium-3-5"},
 		{provider: "openai_compatible", model: "openai/gpt-6-luna"},
 		{provider: "openai_compatible", model: "openai/gpt-6-sol"},
