@@ -27,6 +27,7 @@ const note: components["schemas"]["Activity"] = {
   occurred_precision: "instant",
   links: [],
   source: "manual",
+  captured_by: "agent:passport",
   is_done: false,
   offers_email: false,
   created_at: "2026-10-20T10:00:00Z",
