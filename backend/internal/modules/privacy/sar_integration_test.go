@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -79,8 +80,11 @@ func setupSARIdentifiers(t *testing.T) *sarIdentifierEnv {
 
 	ws, user := ids.NewV7(), ids.NewV7()
 	contact := ids.New[ids.ContactKind]()
-	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
+	var created time.Time
+	if err := owner.QueryRow(ctx, `INSERT INTO workspace (id) VALUES ($1) RETURNING created_at`, ws).Scan(&created); err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.RecordInstallationTx(ctx, owner, ws, created); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,

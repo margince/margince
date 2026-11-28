@@ -6,7 +6,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
-import { type Locale, LocaleProvider, translate } from "../../i18n";
+import {
+  type Locale,
+  LocaleProvider,
+  translate,
+  translatePlural,
+} from "../../i18n";
 import { en as englishCopy } from "../../i18n/en";
 import { approvalHref, LinkedApprovalDrawer } from "./approvaldrawer";
 
@@ -108,7 +113,9 @@ const commitmentLabels: ReadonlyArray<{ locale: Locale; label: string }> = [
   { locale: "de", label: "Aufgabe erstellen" },
   {
     locale: "vi",
-    label: translate("vi", "approval.commitment.createTask_one"),
+    label: translatePlural("vi", "approval.commitment.createTask", 1, {
+      count: "1",
+    }),
   },
 ];
 it.each(commitmentLabels)(
