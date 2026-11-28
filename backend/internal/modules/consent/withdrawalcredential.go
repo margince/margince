@@ -291,10 +291,12 @@ func resolveWithdrawalTokenTx(ctx context.Context, tx pgx.Tx, token string) (Wit
 		leadID    *ids.UUID
 		purposeID *ids.UUID
 	)
+	// Resolving is using: the stamp is what the subject's access export reports
+	// as the link's last use. Like a passport's, it is a read model with no audit.
 	err := tx.QueryRow(ctx, `
-		SELECT id, address, contact_id, lead_id, scope, purpose_id
-		  FROM withdrawal_credential
-		 WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()`,
+		UPDATE withdrawal_credential SET last_used_at = now()
+		 WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()
+		RETURNING id, address, contact_id, lead_id, scope, purpose_id`,
 		hashPublicToken(token)).Scan(
 		&ref.CredentialID, &ref.Address, &contactID, &leadID, &ref.Scope, &purposeID)
 	if errors.Is(err, pgx.ErrNoRows) {

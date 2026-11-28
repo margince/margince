@@ -423,6 +423,9 @@ func (s *VoiceStore) ArchiveProfile(ctx context.Context, id ids.UUID, ifVersion 
 		if err != nil {
 			return err
 		}
+		if err := archiveProfileHistory(ctx, tx, id, archived.ArchivedAt); err != nil {
+			return err
+		}
 		auditID, err := storekit.Audit(ctx, tx, "archive", "voice_profile", id,
 			map[string]any{"scope": before.Scope, "status": before.Status, "profile_version": before.ProfileVersion}, nil)
 		if err != nil {
@@ -435,4 +438,20 @@ func (s *VoiceStore) ArchiveProfile(ctx context.Context, id ids.UUID, ifVersion 
 		return VoiceProfile{}, err
 	}
 	return archived, nil
+}
+
+// archiveProfileHistory retires a profile's builds, versions and deltas with
+// it, so no pending build runs for it and no history read lists it. They are
+// the profile's own parts, so the profile's archive audit covers them.
+func archiveProfileHistory(ctx context.Context, tx pgx.Tx, profileID ids.UUID, at *time.Time) error {
+	for _, retire := range []string{
+		`UPDATE voice_build SET archived_at = $2 WHERE voice_profile_id = $1 AND archived_at IS NULL`,
+		`UPDATE voice_profile_version SET archived_at = $2 WHERE voice_profile_id = $1 AND archived_at IS NULL`,
+		`UPDATE voice_profile_delta SET archived_at = $2 WHERE voice_profile_id = $1 AND archived_at IS NULL`,
+	} {
+		if _, err := tx.Exec(ctx, retire, profileID, at); err != nil {
+			return fmt.Errorf("archive the voice profile's history: %w", err)
+		}
+	}
+	return nil
 }
