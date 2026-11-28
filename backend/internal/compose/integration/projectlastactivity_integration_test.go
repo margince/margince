@@ -160,10 +160,9 @@ func TestProjectLastActivity_CountsOnlyDirectlyLinkedActivities(t *testing.T) {
 	if got := projectClock(e.Admin(), t, e, project.ID); got != nil {
 		t.Fatalf("project.last_activity_at = %v after a call on its DEAL, want NULL — the clock counts direct links only", got)
 	}
-	// The derivation itself, not only the stored column: a call on the deal
-	// never reaches the project's trigger, so widening last_activity_of_project
-	// to walk the deals would leave the column NULL here and only surface on the
-	// next backfill or rebuild.
+	// Check the derivation as well as the stored column. This call never reaches
+	// the project's trigger. A derivation that walks deals would leave the
+	// column NULL here but change it on the next backfill or rebuild.
 	owner := OwnerConn(t)
 	var derived *time.Time
 	if err := owner.QueryRow(context.Background(),
