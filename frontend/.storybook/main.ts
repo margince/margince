@@ -6,8 +6,8 @@ const config: StorybookConfig = {
   stories: ["../src/**/*.mdx", "../src/**/*.stories.@(ts|tsx)"],
   addons: ["@storybook/addon-docs", "@storybook/addon-a11y"],
   framework: { name: "@storybook/react-vite", options: {} },
-  // Test mode keeps the MDX page, its blocks, the docs addon and autodocs, so it
-  // registers and checks what a full build does; only docgen and tree-shaking go.
+  // Test mode keeps the MDX page, its blocks, the docs addon and autodocs.
+  // So it registers and checks what a full build does; only docgen and tree-shaking go.
   build: {
     test: {
       disableMDXEntries: false,
