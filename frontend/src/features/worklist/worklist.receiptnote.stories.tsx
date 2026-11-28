@@ -31,6 +31,7 @@ const note: components["schemas"]["Activity"] = {
   offers_email: false,
   created_at: "2026-10-20T10:00:00Z",
   updated_at: "2026-10-20T10:00:00Z",
+  captured_by: "agent:passport-test",
   recorded_by_agent: true,
   created_by: {
     actor_type: "agent",
@@ -40,7 +41,7 @@ const note: components["schemas"]["Activity"] = {
 };
 
 export default {
-  title: "Worklist/Change history/AI-written note",
+  title: "Records/Worklist/Change history/AI-written note",
   component: ReceiptNote,
 } satisfies Meta<typeof ReceiptNote>;
 
