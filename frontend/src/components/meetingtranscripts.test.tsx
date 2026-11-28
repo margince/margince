@@ -212,7 +212,9 @@ it("retries an original file upload without creating a second transcript", async
   );
   await user.click(dialog.getByRole("button", { name: en["log.save"] }));
   await dialog.findByText(en["meeting.transcriptFileRetry"]);
-  await user.click(dialog.getAllByRole("button", { name: en["common.close"] })[0]);
+  await user.click(
+    dialog.getAllByRole("button", { name: en["common.close"] })[0],
+  );
   await user.click(
     screen.getByRole("button", { name: en["meeting.transcripts"] }),
   );

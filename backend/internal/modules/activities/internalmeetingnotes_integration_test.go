@@ -16,6 +16,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+func (e *sendEnv) exec(t *testing.T, sql string, args ...any) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), sql, args...); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func capturedMeetingForNotes(t *testing.T, e *sendEnv, customer ids.UUID) ids.ActivityID {
 	t.Helper()
 	id := ids.From[ids.ActivityKind](ids.NewV7())

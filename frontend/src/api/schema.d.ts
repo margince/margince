@@ -46234,7 +46234,7 @@ export interface components {
              */
             channel_provider?: components["schemas"]["ProviderRef"] | null;
             subject?: string | null;
-            /** @description Internal meeting notes, separate from the calendar description and from any transcript. Visible only with the meeting content. An empty string clears earlier notes. */
+            /** @description Internal meeting notes, separate from the calendar description and from any transcript. Earlier rep-authored calendar notes are resolved here from their audit proof. Earlier rep-authored calendar notes are resolved here from their audit proof. Visible only with the meeting content. An empty string clears earlier notes. */
             meeting_notes?: string | null;
             body?: string | null;
             /** @description Whether an AI model rewrote the subject or body before it was saved, so a reader sees the words as AI-assisted. Set when the activity is logged and kept through later edits: a human who tidies model words still saved model words. Absent means false. Withheld with the content. */

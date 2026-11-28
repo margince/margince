@@ -42046,8 +42046,7 @@ components:
         subject: {type: [string, 'null']}
         meeting_notes:
           type: [string, 'null']
-          maxLength: 20000
-          description: Internal meeting notes, separate from the calendar description and from any transcript. Visible only with the meeting content. An empty string clears earlier notes.
+          description: Internal meeting notes, separate from the calendar description and from any transcript. Earlier rep-authored calendar notes are resolved here from their audit proof. Earlier rep-authored calendar notes are resolved here from their audit proof. Visible only with the meeting content. An empty string clears earlier notes.
         body: {type: [string, 'null']}
         ai_assisted:
           type: boolean

@@ -2055,7 +2055,7 @@ type Activity struct {
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
 
-	// MeetingNotes Internal meeting notes, separate from the calendar description and from any transcript. Visible only with the meeting content. An empty string clears earlier notes.
+	// MeetingNotes Internal meeting notes, separate from the calendar description and from any transcript. Earlier rep-authored calendar notes are resolved here from their audit proof. Earlier rep-authored calendar notes are resolved here from their audit proof. Visible only with the meeting content. An empty string clears earlier notes.
 	MeetingNotes *string `json:"meeting_notes,omitempty"`
 
 	// MeetingNotesConnection A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.

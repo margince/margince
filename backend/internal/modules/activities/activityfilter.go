@@ -342,7 +342,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		// recognize an item by. The wildcard is escaped, so a caller typing %
 		// searches for a percent sign rather than matching everything.
 		pos := arg("%" + storekit.EscapeLike(*in.Query) + "%")
-		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\' OR ("+meetingoutcome.ReadNotesSQL("a")+") ILIKE $%d ESCAPE '\\')", pos, pos, pos))
+		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\' OR (%s) ILIKE $%d ESCAPE '\\')", pos, pos, meetingoutcome.ReadNotesSQL("a"), pos))
 	}
 	where = append(where, occurredWindowClauses(in, arg)...)
 	if in.OpenStatusOnly {

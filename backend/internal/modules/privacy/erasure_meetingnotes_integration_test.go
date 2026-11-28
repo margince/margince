@@ -17,14 +17,16 @@ import (
 
 func TestUnlinkedMeetingNotesLoseSubjectMentionsWithoutChangingTheInvitation(t *testing.T) {
 	env := setupSARIdentifiers(t)
-	ordinary, held, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	ordinary, held, deal, pipeline, stage := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	ctx := context.Background()
-	mustExec(ctx, t, env.owner, `INSERT INTO company(id,display_name,legal_hold,source,captured_by) VALUES($1,'Held account',true,'manual','system:test')`, company)
+	mustExec(ctx, t, env.owner, `INSERT INTO pipeline(id,name) VALUES($1,'Meetings')`, pipeline)
+	mustExec(ctx, t, env.owner, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES($1,$2,'Open',0,'open',10)`, stage, pipeline)
+	mustExec(ctx, t, env.owner, `INSERT INTO deal(id,name,pipeline_id,stage_id,legal_hold,source,captured_by) VALUES($1,'Held renewal',$2,$3,true,'manual','system:test')`, deal, pipeline, stage)
 	for _, id := range []ids.UUID{ordinary, held} {
 		mustExec(ctx, t, env.owner, `INSERT INTO activity(id,kind,subject,body,meeting_notes,source,source_system,captured_by,meeting_status)
  VALUES($1,'meeting','Calendar review','Provider agenda','Anna Example approved the renewal','gcal','gcal','connector:gcal','held')`, id)
 	}
-	mustExec(ctx, t, env.owner, `INSERT INTO activity_link(activity_id,entity_type,company_id) VALUES($1,'company',$2)`, held, company)
+	mustExec(ctx, t, env.owner, `INSERT INTO activity_link(activity_id,entity_type,deal_id) VALUES($1,'deal',$2)`, held, deal)
 	var changed []ids.UUID
 	if err := env.db.Tx(env.ctx, func(tx pgx.Tx) error {
 		var err error

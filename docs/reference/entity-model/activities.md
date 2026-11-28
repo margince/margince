@@ -6,7 +6,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-93 columns · primary key `(id)` · referenced by 52 foreign keys
+94 columns · primary key `(id)` · referenced by 52 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -55,6 +55,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `kind` | `text` | yes | Points at `activity_kind.kind`. |
 | `language` | `text` |  | What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. |
 | `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
+| `meeting_notes` | `text` |  | Internal meeting notes, separate from the calendar description and from any transcript. |
 | `meeting_status` | `text` |  | Set only when kind=meeting. |
 | `meeting_wall` | `timestamp without time zone` |  |  |
 | `meeting_zone` | `text` |  |  |
@@ -143,6 +144,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_meeting_intent_kind`: `CHECK (((meeting_wall IS NULL) OR ((kind = 'meeting') AND (occurred_precision = 'instant'))))`
 - `activity_meeting_intent_pair`: `CHECK (valid_intent_time(meeting_wall, meeting_zone))`
 - `activity_meeting_no_overlap`: `EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC', occurred_at), (timezone('UTC', occurred_at) + (( CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)::double precision * '00:00:01'::interval)), '[)') WITH &&) WHERE (((kind = 'meeting') AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled')))`
+- `activity_meeting_notes_kind`: `CHECK (((meeting_notes IS NULL) OR ((kind = 'meeting') AND (char_length(meeting_notes) <= 20000))))`
 - `activity_meeting_status_check`: `CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked', 'held', 'no_show', 'canceled']))))`
 - `activity_message_has_provider`: `CHECK (((kind = 'message') = (channel_provider IS NOT NULL)))`
 - `activity_not_derived_from_itself`: `CHECK (((source_activity_id IS NULL) OR (source_activity_id <> id)))`

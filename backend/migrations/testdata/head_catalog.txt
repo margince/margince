@@ -42,6 +42,7 @@ CASE
     WHEN booking_interval_exact THEN duration_seconds
     ELSE 3600
 END)::double precision * '00:00:01'::interval)), '[)'::text) WITH &&) WHERE (((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled'::text)))
+public.activity.activity_meeting_notes_kind CHECK (((meeting_notes IS NULL) OR ((kind = 'meeting'::text) AND (char_length(meeting_notes) <= 20000))))
 public.activity.activity_meeting_status_check CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text]))))
 public.activity.activity_message_has_provider CHECK (((kind = 'message'::text) = (channel_provider IS NOT NULL)))
 public.activity.activity_no_company_meeting_on_rekind CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()
@@ -135,6 +136,7 @@ public.activity.language text gen=- def=-
 public.activity.legal_entity_id uuid gen=- def=-
 public.activity.meeting_intent_insert CREATE TRIGGER meeting_intent_insert BEFORE INSERT ON public.activity FOR EACH ROW WHEN ((new.meeting_wall IS NOT NULL)) EXECUTE FUNCTION maintain_intent_times('meeting_wall', 'meeting_zone', 'occurred_at')
 public.activity.meeting_intent_update CREATE TRIGGER meeting_intent_update BEFORE UPDATE OF meeting_wall, meeting_zone, occurred_at, meeting_status ON public.activity FOR EACH ROW WHEN ((((new.meeting_wall IS NOT NULL) OR (old.meeting_wall IS NOT NULL)) AND ((new.meeting_status IS NULL) OR (new.meeting_status = 'booked'::text) OR (old.meeting_status IS NULL) OR (old.meeting_status = 'booked'::text) OR (new.meeting_wall IS DISTINCT FROM old.meeting_wall) OR (new.meeting_zone IS DISTINCT FROM old.meeting_zone) OR (new.occurred_at IS DISTINCT FROM old.occurred_at)))) EXECUTE FUNCTION maintain_intent_times('meeting_wall', 'meeting_zone', 'occurred_at')
+public.activity.meeting_notes text gen=- def=-
 public.activity.meeting_status text gen=- def=-
 public.activity.meeting_wall timestamp without time zone gen=- def=-
 public.activity.meeting_zone text gen=- def=-
@@ -671,7 +673,7 @@ BEGIN
     -- callers erase as they lift, and a lift that leaves the body readable is
     -- not a completion of the erasure — it is a way to undo the restriction
     -- and keep the data.
-    IF NEW.body IS NOT NULL OR NEW.raw IS NOT NULL
+    IF NEW.body IS NOT NULL OR NEW.meeting_notes IS NOT NULL OR NEW.raw IS NOT NULL
        OR NEW.counterparty_email IS NOT NULL
        -- The byline a record was imported with names a human exactly as the
        -- body does. Cleared outright by every writer, so null is the test —
@@ -686,7 +688,7 @@ BEGIN
        -- second copy of a Go constant, drifting the first time somebody edits
        -- one of them.
        OR (OLD.subject IS NOT NULL AND NEW.subject IS NOT DISTINCT FROM OLD.subject) THEN
-      RAISE EXCEPTION 'activity % may only leave restriction by being erased: clear body, raw, counterparty_email and source_author_name, and replace the subject, in the same statement', OLD.id
+      RAISE EXCEPTION 'activity % may only leave restriction by being erased: clear body, meeting_notes, raw, counterparty_email and source_author_name, and replace the subject, in the same statement', OLD.id
         USING ERRCODE = 'check_violation',
               CONSTRAINT = 'activity_restriction_lift_erases';
     END IF;
