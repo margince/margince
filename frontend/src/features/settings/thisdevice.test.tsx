@@ -100,6 +100,27 @@ async function page() {
 }
 
 describe("installing from the row", () => {
+  it("installs through the new API without waiting for a browser offer", async () => {
+    const install = vi.fn(async () => undefined);
+    const prior = Object.getOwnPropertyDescriptor(navigator, "install");
+    Object.defineProperty(navigator, "install", {
+      configurable: true,
+      value: install,
+    });
+    try {
+      const ThisDevicePanel = await page();
+      render(<ThisDevicePanel />);
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", INSTALL));
+      expect(install).toHaveBeenCalledTimes(1);
+      expect(screen.getByText(en["settings.installAppInstalled"])).toBeTruthy();
+      expect(screen.queryByRole("button", INSTALL)).toBeNull();
+    } finally {
+      if (prior) Object.defineProperty(navigator, "install", prior);
+      else Reflect.deleteProperty(navigator, "install");
+    }
+  });
+
   it("waits on the browser's dialog, then reads installed once the reader accepts", async () => {
     const ThisDevicePanel = await page();
     const browser = offer();

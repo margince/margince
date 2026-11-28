@@ -97,6 +97,161 @@ async function promptFrom(
   return outcome;
 }
 
+describe("the Web Install API", () => {
+  it("keeps a cancellation without an older offer dismissed", async () => {
+    device({
+      install: vi
+        .fn()
+        .mockRejectedValue(new DOMException("closed", "AbortError")),
+    });
+    const { state } = await page();
+    expect(await promptFrom(state())).toBe("dismissed");
+    expect(state().kind).toBe("dismissed");
+  });
+
+  it("starts either browser call before yielding the user gesture", async () => {
+    const install = vi.fn(async () => undefined);
+    device({ install });
+    const { state } = await page();
+    let pending: Promise<InstallOutcome> | undefined;
+    await act(async () => {
+      const current = state();
+      if (current.kind !== "available")
+        throw new Error("install was not available");
+      pending = current.prompt();
+      expect(install).toHaveBeenCalledTimes(1);
+      await pending;
+    });
+    device({ install: undefined });
+    const legacyPage = await page();
+    const legacy = offer("accepted");
+    await act(async () => {
+      const current = legacyPage.state();
+      if (current.kind !== "available")
+        throw new Error("install was not available");
+      const answer = current.prompt();
+      expect(legacy.prompt).toHaveBeenCalledTimes(1);
+      await answer;
+    });
+  });
+
+  it("refreshes when a saved action finds the app now running installed", async () => {
+    const install = vi.fn();
+    device({ install });
+    displayMode(false);
+    const { state } = await page();
+    const available = state();
+    displayMode(true);
+    expect(await promptFrom(available)).toBe("accepted");
+    expect(install).not.toHaveBeenCalled();
+    expect(state().kind).toBe("installed");
+  });
+
+  it("keeps an external installation when a pending request later rejects", async () => {
+    let reject: (reason: unknown) => void = () => undefined;
+    const install = vi.fn(
+      () =>
+        new Promise((_, no) => {
+          reject = no;
+        }),
+    );
+    device({ install });
+    const { state } = await page();
+    await act(async () => {
+      const available = state();
+      if (available.kind !== "available")
+        throw new Error("install was not available");
+      const pending = available.prompt();
+      window.dispatchEvent(new Event("appinstalled"));
+      reject(new DOMException("closed", "AbortError"));
+      expect(await pending).toBe("accepted");
+    });
+    expect(state().kind).toBe("installed");
+  });
+
+  it("offers installation before a prompt event and calls the browser only on request", async () => {
+    const install = vi.fn(async function (this: Navigator) {
+      expect(this).toBe(navigator);
+    });
+    device({ install });
+    const { state } = await page();
+    expect(state().kind).toBe("available");
+    expect(install).not.toHaveBeenCalled();
+    expect(await promptFrom(state())).toBe("accepted");
+    expect(install).toHaveBeenCalledExactlyOnceWith();
+    expect(state().kind).toBe("installed");
+  });
+
+  it("prefers the new API when the browser also supplies the older offer", async () => {
+    const install = vi.fn(async () => undefined);
+    device({ install });
+    const { state } = await page();
+    const legacy = offer("accepted");
+    expect(await promptFrom(state())).toBe("accepted");
+    expect(install).toHaveBeenCalledTimes(1);
+    expect(legacy.prompt).not.toHaveBeenCalled();
+  });
+
+  it("keeps a cancellation dismissed until the browser offers again", async () => {
+    device({
+      install: vi.fn(async () => {
+        throw new DOMException("cancelled", "AbortError");
+      }),
+    });
+    const warn = vi.spyOn(console, "warn");
+    const { state } = await page();
+    offer("accepted");
+    expect(await promptFrom(state())).toBe("dismissed");
+    expect(state().kind).toBe("dismissed");
+    expect(warn).not.toHaveBeenCalled();
+    const legacy = offer("accepted");
+    expect(await promptFrom(state())).toBe("accepted");
+    expect(legacy.prompt).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a failed API call distinct from cancellation and offers the fallback on the next click", async () => {
+    const refusal = new DOMException("unavailable", "NotSupportedError");
+    device({ install: vi.fn().mockRejectedValue(refusal) });
+    const { state } = await page();
+    const legacy = offer("accepted");
+    await expect(promptFrom(state())).rejects.toBe(refusal);
+    expect(state().kind).toBe("available");
+    expect(legacy.prompt).not.toHaveBeenCalled();
+    expect(await promptFrom(state())).toBe("accepted");
+    expect(legacy.prompt).toHaveBeenCalledTimes(1);
+  });
+
+  it("points to the browser menu after a failure without an older offer", async () => {
+    const refusal = new DOMException("invalid manifest", "DataError");
+    const install = vi.fn().mockRejectedValue(refusal);
+    device({ install });
+    const { state } = await page();
+    await expect(promptFrom(state())).rejects.toBe(refusal);
+    expect(state().kind).toBe("dismissed");
+    expect(install).toHaveBeenCalledTimes(1);
+    const legacy = offer("accepted");
+    expect(await promptFrom(state())).toBe("accepted");
+    expect(legacy.prompt).toHaveBeenCalledTimes(1);
+  });
+
+  it("still uses the older offer when install is not a function", async () => {
+    device({ install: true });
+    const { state } = await page();
+    expect(state().kind).toBe("unavailable");
+    const legacy = offer("accepted");
+    expect(await promptFrom(state())).toBe("accepted");
+    expect(legacy.prompt).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not offer installation to an installed app even when the API exists", async () => {
+    device({ install: vi.fn() });
+    displayMode(true);
+    const { state } = await page();
+    expect(state().kind).toBe("installed");
+    expect(navigator.install).not.toHaveBeenCalled();
+  });
+});
+
 describe("the install state", () => {
   it("has nothing to offer until the browser offers", async () => {
     displayMode(false);

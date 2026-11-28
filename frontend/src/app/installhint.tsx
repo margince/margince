@@ -76,6 +76,7 @@ export function InstallHint({
   if (
     route.screen !== "home" ||
     !coarse ||
+    (install.kind === "available" && install.browserOffered === false) ||
     ahead ||
     !installHintDue(record, today, now) ||
     (install.kind !== "available" && install.kind !== "manual-ios")
