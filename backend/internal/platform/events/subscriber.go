@@ -24,8 +24,8 @@ const envelopeField = "v"
 
 // Handler processes one delivered envelope. Returning nil acks the entry;
 // returning an error leaves it pending, and the reclaim pass re-delivers
-// it after minIdle (events.md §3 at-least-once). Handlers therefore run
-// under Dedupe and effect idempotently.
+// it after minIdle: delivery is at least once. Handlers therefore effect
+// idempotently, and NewSubscriber runs them under dedupe.
 type Handler func(ctx context.Context, env kevents.Envelope) error
 
 // Subscriber consumes one events.md §4.3 consumer group across its
@@ -63,16 +63,16 @@ type Subscriber struct {
 	pauseEvery time.Duration
 }
 
-// NewSubscriber wires a handler to a consumer group. The consumer name is
-// host+pid: stable enough to reclaim its own pending entries after a
-// restart, unique enough that replicas never collide.
+// NewSubscriber wires a handler to a consumer group, behind the group's
+// dedupe. The consumer name is host+pid: stable enough to reclaim its own
+// pending entries after a restart, unique enough that replicas never collide.
 func NewSubscriber(rdb *redis.Client, group kevents.Group, handler Handler, log *slog.Logger) *Subscriber {
 	host, _ := os.Hostname()
 	return &Subscriber{
 		rdb:      rdb,
 		group:    group,
 		consumer: fmt.Sprintf("%s-%d", host, os.Getpid()),
-		handler:  handler,
+		handler:  dedupe(rdb, group.Name, handler),
 		log:      log.With("group", group.Name),
 		block:    2 * time.Second,
 		minIdle:  5 * time.Minute,
@@ -289,14 +289,14 @@ func (s *Subscriber) handle(ctx context.Context, stream string, entry redis.XMes
 
 // leavesOut reports whether the group leaves an event unhandled. That is a type
 // its handler does not act on, or an import for a group that ignores history.
-// It is acked before Dedupe runs, so it leaves no mark and is not redelivered.
+// It is acked before dedupe runs, so it leaves no mark and is not redelivered.
 func (s *Subscriber) leavesOut(env kevents.Envelope) bool {
 	return !s.group.Types.Has(env.Type) || kevents.SkipsImported(s.group.Name) && kevents.IsImported(env)
 }
 
 func (s *Subscriber) ack(ctx context.Context, stream string, entryIDs ...string) {
 	if err := s.rdb.XAck(ctx, stream, s.group.Name, entryIDs...).Err(); err != nil && ctx.Err() == nil {
-		// A lost ack means one redelivery, which Dedupe absorbs. Log so a
+		// A lost ack means one redelivery, which dedupe absorbs. Log so a
 		// systematic ack failure is visible.
 		s.log.Warn("bus: XACK failed; entries will re-deliver", "stream", stream, "entries", entryIDs, "error", err)
 	}

@@ -36,13 +36,12 @@ package integration
 // absent one, so the gap is an issue with a design question in it rather than a
 // green test with nothing behind it.
 //
-// What this measures, precisely: engine.HandleEvent(ctx, env) is the exact call
-// the cg:workflows redis subscriber makes once it decodes an envelope off the
-// bus (cmd/worker's runSubscriber wraps this same method in events.Dedupe). It
-// is synchronous — Match every registered handler, Plan the matching ones,
-// claim the (handler, key) row, Apply the effect — all DB-bound work whose cost
-// is the variable, dataset-dependent quantity the 200ms budget actually
-// targets. Two timestamps bracket exactly that call, nothing else.
+// What this measures: engine.HandleEvent(ctx, env) is the call the
+// cg:workflows redis subscriber makes, behind its dedupe, once it decodes an
+// envelope off the bus. It is synchronous: it matches every registered
+// handler, plans the matching ones, claims the (handler, key) row and applies
+// the effect. That DB-bound work, whose cost depends on the dataset, is what
+// the 200ms budget targets. Two timestamps bracket that call and nothing else.
 //
 // What this deliberately excludes, and why: the cg:workflows redis
 // relay+subscriber transport (event_outbox → platform/events.Relay → Redis

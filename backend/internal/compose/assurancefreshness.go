@@ -14,7 +14,7 @@ package compose
 // Coalesced: one read of the stream is one statement, one row per distinct
 // subject, so a burst of edits to one deal writes one row. A redelivered event
 // marks its subject again, which can make it out of date but never current.
-// So events.Dedupe in front of it is a cache and not the guarantee.
+// So the subscriber's dedupe in front of it is a cache and not the guarantee.
 
 import (
 	"context"

@@ -31,8 +31,8 @@ shape. A handler that reaches for SQL skips both the audit and the gate.
 
 **Every event goes out through the outbox.** `platform/events.Relay` ships it; domain code never
 sends an XADD of its own. The bus sends each event at least once, so every handler that reads events
-runs through `events.Dedupe`. A handler that expects each event to come once breaks the first time an
-event comes twice.
+runs behind the dedupe that `events.NewSubscriber` puts around it. A handler that expects each event
+to come once breaks the first time an event comes twice.
 
 **Trace the request from start to end.** The HTTP code makes one `correlation_id` per request;
 `Audit()` returns the audit row ID; `Emit()` links both. A trace that starts at the event is missing

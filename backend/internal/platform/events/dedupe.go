@@ -19,17 +19,13 @@ import (
 // pins 96h against the ≥72h retention default).
 const DedupeTTL = 96 * time.Hour
 
-// Dedupe is the at-least-once safety net (events.md §3): it wraps a
-// handler so a redelivered event_id is not re-processed by its consumer
-// group. The order is run-THEN-mark, and the order is load-bearing: a
-// mark written before the effect would, on a crash in between, survive as
-// a claim with no effect — the redelivery would be swallowed and the
-// event silently dropped. Marking after means a crash can only cause a
-// re-run, which the authoritative idempotency layer (effects upsert by
-// natural key — uq_activity_source and kin) absorbs as a no-op. This
-// wrapper is therefore an optimization over that layer, never a
-// correctness substitute for it.
-func Dedupe(rdb *redis.Client, group string, next Handler) Handler {
+// dedupe wraps a handler so its consumer group skips a redelivered event_id.
+// NewSubscriber applies it, so every subscriber's handler runs behind it.
+// The mark goes in after the handler succeeds. A mark written first would, on a
+// crash in between, swallow the redelivery and drop the event. A late mark can
+// only cause a re-run, which the effect's upsert by natural key absorbs. So
+// dedupe saves work over that layer and never replaces it.
+func dedupe(rdb *redis.Client, group string, next Handler) Handler {
 	return func(ctx context.Context, env kevents.Envelope) error {
 		key := dedupeKey(group, env)
 		seen, err := rdb.Exists(ctx, key).Result()

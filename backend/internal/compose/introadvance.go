@@ -44,7 +44,7 @@ package compose
 // the claim stays checkable. Sender authentication belongs to capture.
 //
 // Idempotency is the ask's own status: the UPDATE matches only `introduced` or
-// `name_dropped`. events.Dedupe in front is a cache, not the guarantee.
+// `name_dropped`. The subscriber's dedupe in front is a cache, not the guarantee.
 
 import (
 	"context"

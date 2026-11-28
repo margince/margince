@@ -121,19 +121,60 @@ func TestAFailedBatchFallsBackToOneEntryAtATime(t *testing.T) {
 	}
 }
 
+// A burst the relay publishes a second time comes back as one full read. The
+// subscriber drops it before the batch handler it was given, as it does for
+// one entry.
+func TestABatchSubscriberDropsARepublishedBurst(t *testing.T) {
+	e := setup(t)
+	const burst = 3
+	e.stageBurst(t, burst)
+
+	group := kevents.Group{Name: "cg:graph-edge", Streams: []string{batchStream}}
+	var effects atomic.Int32
+	count := func(context.Context, kevents.Envelope) error {
+		effects.Add(1)
+		return nil
+	}
+	s := NewSubscriber(e.rdb, group, count, testLogger()).WithBatch(func(_ context.Context, envs []kevents.Envelope) error {
+		effects.Add(int32(len(envs)))
+		return nil
+	})
+	s.block = 100 * time.Millisecond
+	consumeUntil(t, s, 5*time.Second, func() bool { return effects.Load() >= burst && e.pending(t, group.Name) == 0 })
+
+	// The relay crashed after its XADDs and before its stamps.
+	if _, err := e.pool.Exec(t.Context(), `UPDATE event_outbox SET published_at = NULL`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.relay(t).relayBatch(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	last, err := e.rdb.XRevRangeN(t.Context(), batchStream, "+", "-", 1).Result()
+	if err != nil || len(last) != 1 {
+		t.Fatalf("reading the stream's last entry: %v", err)
+	}
+	consumeUntil(t, s, 5*time.Second, func() bool {
+		groups, err := e.rdb.XInfoGroups(t.Context(), batchStream).Result()
+		return err == nil && len(groups) == 1 && groups[0].LastDeliveredID == last[0].ID && groups[0].Pending == 0
+	})
+	if got := effects.Load(); got != burst {
+		t.Fatalf("%d events took effect, want %d — the republished burst must be absorbed", got, burst)
+	}
+}
+
 func TestTheBatchDedupeAndThePerEventDedupeShareTheirMarks(t *testing.T) {
 	e := setup(t)
 	envs := e.stageBurst(t, 3)
 	const group = "cg:graph-edge"
 
 	// The first event was processed one at a time, before the batch.
-	if err := Dedupe(e.rdb, group, func(context.Context, kevents.Envelope) error { return nil })(t.Context(), envs[0]); err != nil {
+	if err := dedupe(e.rdb, group, func(context.Context, kevents.Envelope) error { return nil })(t.Context(), envs[0]); err != nil {
 		t.Fatal(err)
 	}
 
 	var got []ids.UUID
 	fail := true
-	batch := DedupeBatch(e.rdb, group, func(_ context.Context, fresh []kevents.Envelope) error {
+	batch := dedupeBatch(e.rdb, group, func(_ context.Context, fresh []kevents.Envelope) error {
 		if fail {
 			return errors.New("transient effect failure")
 		}
@@ -161,7 +202,7 @@ func TestTheBatchDedupeAndThePerEventDedupeShareTheirMarks(t *testing.T) {
 
 	// And the other way round: what the batch marked, the per-event path skips.
 	var ran atomic.Int32
-	if err := Dedupe(e.rdb, group, func(context.Context, kevents.Envelope) error {
+	if err := dedupe(e.rdb, group, func(context.Context, kevents.Envelope) error {
 		ran.Add(1)
 		return nil
 	})(t.Context(), envs[2]); err != nil {
@@ -225,7 +266,7 @@ func TestTheBatchDedupeFailsClosedWhenRedisDoes(t *testing.T) {
 	const group = "cg:graph-edge"
 
 	var ran atomic.Int32
-	all := DedupeBatch(e.rdb, group, func(context.Context, []kevents.Envelope) error {
+	all := dedupeBatch(e.rdb, group, func(context.Context, []kevents.Envelope) error {
 		ran.Add(1)
 		return nil
 	})
@@ -241,7 +282,7 @@ func TestTheBatchDedupeFailsClosedWhenRedisDoes(t *testing.T) {
 
 	down := redis.NewClient(&redis.Options{Addr: "127.0.0.1:1", MaxRetries: -1, DialTimeout: 100 * time.Millisecond})
 	t.Cleanup(func() { _ = down.Close() }) //craft:ignore swallowed-errors a client that never connected has nothing to flush
-	if err := DedupeBatch(down, group, func(context.Context, []kevents.Envelope) error {
+	if err := dedupeBatch(down, group, func(context.Context, []kevents.Envelope) error {
 		t.Error("the effect ran although the dedupe check failed")
 		return nil
 	})(t.Context(), envs); err == nil {
@@ -250,7 +291,7 @@ func TestTheBatchDedupeFailsClosedWhenRedisDoes(t *testing.T) {
 
 	lost := redis.NewClient(e.rdb.Options())
 	fresh := e.stageBurst(t, 1)
-	err := DedupeBatch(lost, group, func(context.Context, []kevents.Envelope) error {
+	err := dedupeBatch(lost, group, func(context.Context, []kevents.Envelope) error {
 		return lost.Close() // the store goes away between the effect and its mark
 	})(t.Context(), fresh)
 	if err == nil {

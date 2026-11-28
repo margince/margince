@@ -210,27 +210,21 @@ func TestRelayCrashBeforeStampRepublishes_atLeastOnce(t *testing.T) {
 		t.Fatalf("restart after crash should re-publish the entry (≥ once): got %v", got)
 	}
 
-	// The duplicate is the consumer's problem by design — Dedupe absorbs it.
+	// The duplicate is the consumer's problem by design, and the subscriber
+	// absorbs it: the handler it is given runs once for the event.
 	var effects atomic.Int32
-	handler := Dedupe(e.rdb, "cg:read-model", func(context.Context, kevents.Envelope) error {
+	group := kevents.Group{Name: "cg:read-model", Streams: []string{"gw:events:crm:deal"}}
+	s := NewSubscriber(e.rdb, group, func(context.Context, kevents.Envelope) error {
 		effects.Add(1)
 		return nil
+	}, testLogger())
+	s.block = 100 * time.Millisecond
+	consumeUntil(t, s, 5*time.Second, func() bool {
+		pending, err := e.rdb.XPending(t.Context(), "gw:events:crm:deal", group.Name).Result()
+		return err == nil && pending.Count == 0 && effects.Load() >= 1
 	})
-	entries, err := e.rdb.XRange(t.Context(), "gw:events:crm:deal", "-", "+").Result()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, entry := range entries {
-		decoded, err := decodeEnvelope(entry)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := handler(t.Context(), decoded); err != nil {
-			t.Fatal(err)
-		}
-	}
 	if effects.Load() != 1 {
-		t.Fatalf("dedupe let the re-published event take effect %d times, want 1", effects.Load())
+		t.Fatalf("the re-published event took effect %d times, want 1", effects.Load())
 	}
 }
 
@@ -408,7 +402,7 @@ func TestDedupeMarksOnlyAfterTheEffectSucceeded(t *testing.T) {
 	markKey := dedupeKey("cg:context-graph", env)
 
 	var calls atomic.Int32
-	handler := Dedupe(e.rdb, "cg:context-graph", func(context.Context, kevents.Envelope) error {
+	handler := dedupe(e.rdb, "cg:context-graph", func(context.Context, kevents.Envelope) error {
 		if calls.Add(1) == 1 {
 			return errors.New("transient effect failure")
 		}
