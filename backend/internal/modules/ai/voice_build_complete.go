@@ -302,49 +302,46 @@ const staleQueuedAge = time.Minute
 
 // DueDeferredBuilds finds due deferrals, lost queued jobs and running builds with no session owner.
 func (s *VoiceStore) DueDeferredBuilds(ctx context.Context) ([]VoiceBuildRef, error) {
-	workspaces, err := database.LiveWorkspaces(ctx, s.db.Pool())
-	if err != nil {
+	wsID, ok, err := database.LiveWorkspace(ctx, s.db.Pool())
+	if err != nil || !ok {
 		return nil, err
 	}
 	var due []VoiceBuildRef
-	var errs error
-	for _, wsID := range workspaces {
-		wsCtx := principal.WithWorkspaceID(ctx, wsID)
-		err := s.db.Tx(wsCtx, func(tx pgx.Tx) error {
-			now := s.now().UTC()
-			wsRows, err := tx.Query(ctx, `
-				SELECT id, voice_profile_id, requested_by FROM voice_build
-				WHERE archived_at IS NULL
-				  AND ((status = 'deferred' AND next_attempt_at <= $1)
-				       OR (status = 'queued' AND created_at <= $2)
+	wsCtx := principal.WithWorkspaceID(ctx, wsID)
+	err = s.db.Tx(wsCtx, func(tx pgx.Tx) error {
+		now := s.now().UTC()
+		wsRows, err := tx.Query(ctx, `
+			SELECT id, voice_profile_id, requested_by FROM voice_build
+			WHERE archived_at IS NULL
+			  AND ((status = 'deferred' AND next_attempt_at <= $1)
+			       OR (status = 'queued' AND created_at <= $2)
 			       OR status = 'running')`, now, now.Add(-staleQueuedAge))
-			if err != nil {
-				return err
-			}
-			refs, err := pgx.CollectRows(wsRows, func(row pgx.CollectableRow) (VoiceBuildRef, error) {
-				ref := VoiceBuildRef{Workspace: wsID}
-				err := row.Scan(&ref.BuildID, &ref.ProfileID, &ref.RequestedBy)
-				return ref, err
-			})
-			if err != nil {
-				return err
-			}
-			for _, ref := range refs {
-				free, err := s.db.WorkLeaseAvailable(wsCtx, tx, "voice_build", ref.BuildID)
-				if err != nil {
-					return err
-				}
-				if free {
-					due = append(due, ref)
-				}
-			}
-			return nil
+		if err != nil {
+			return err
+		}
+		refs, err := pgx.CollectRows(wsRows, func(row pgx.CollectableRow) (VoiceBuildRef, error) {
+			ref := VoiceBuildRef{Workspace: wsID}
+			err := row.Scan(&ref.BuildID, &ref.ProfileID, &ref.RequestedBy)
+			return ref, err
 		})
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("voice: deferred-build walk in workspace %s: %w", wsID, err))
+			return err
 		}
+		for _, ref := range refs {
+			free, err := s.db.WorkLeaseAvailable(wsCtx, tx, "voice_build", ref.BuildID)
+			if err != nil {
+				return err
+			}
+			if free {
+				due = append(due, ref)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return due, fmt.Errorf("voice: deferred-build scan: %w", err)
 	}
-	return due, errs
+	return due, nil
 }
 
 func (outcome VoiceBuildOutcome) statsJSON() ([]byte, error) {

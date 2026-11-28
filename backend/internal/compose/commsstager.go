@@ -77,10 +77,6 @@ func NewDeliveryStager(pool *pgxpool.Pool, runner *jobs.Runner) DeliveryMachiner
 }
 
 func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.DeliveryRequest) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("comms: staging a delivery outside workspace context")
-	}
 	id, err := s.store.StageTx(ctx, tx, comms.StageInput{
 		ActivityID:      in.ActivityID,
 		Provider:        in.Provider,
@@ -181,7 +177,7 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 		}
 	}
 	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
-		Workspace: ws, DeliveryID: id.String(),
+		DeliveryID: id.String(),
 	}, sendInsertOpts())
 }
 
@@ -257,10 +253,6 @@ func (s commsStager) RecordUnheldRefusalTx(ctx context.Context, tx pgx.Tx, refus
 // (comms/sendseam.go) — a second job kind would be a second path to keep in step
 // with the first, and the channel is the one that would fall behind.
 func (s commsStager) StageChannelTx(ctx context.Context, tx pgx.Tx, in activities.ChannelDeliveryRequest) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("comms: staging a channel delivery outside workspace context")
-	}
 	id, err := s.store.StageChannelTx(ctx, tx, comms.StageChannelInput{
 		ActivityID:     in.ActivityID,
 		Provider:       in.Provider,
@@ -289,7 +281,7 @@ func (s commsStager) StageChannelTx(ctx context.Context, tx pgx.Tx, in activitie
 		return &pendingReviewError{set: set, cause: err}
 	}
 	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
-		Workspace: ws, DeliveryID: id.String(),
+		DeliveryID: id.String(),
 	}, sendInsertOpts())
 }
 

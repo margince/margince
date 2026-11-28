@@ -10,7 +10,6 @@ package compose
 // and retention service compose builds for production.
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -53,7 +52,7 @@ func voiceLearnedFromMail(t *testing.T) learnedMail {
 		t.Fatal(err)
 	}
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{judgeScore: 0.9, quote: quote}, slog.New(slog.DiscardHandler))
-	if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+	if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 		t.Fatalf("rebuilding: %v", err)
 	}
 	if status := env.e.WsScalar(t, `SELECT status FROM voice_profile WHERE id = $1`, env.profile.ID); status != "ready" {

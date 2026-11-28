@@ -32,15 +32,11 @@ import (
 
 // ChatLinkFlushArgs posts what one chat link has pending and refreshes its card.
 type ChatLinkFlushArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-	LinkID    ids.UUID `json:"link_id"`
+	LinkID ids.UUID `json:"link_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (ChatLinkFlushArgs) Kind() string { return "chat_link_flush" }
-
-// WorkspaceID binds the flush to its tenant (jobs.WorkspaceScoped).
-func (a ChatLinkFlushArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // Link names the link the flush posts for.
 func (a ChatLinkFlushArgs) Link() ids.UUID { return a.LinkID }
@@ -56,15 +52,11 @@ func (ChatPullSweepArgs) FleetWide() {}
 
 // ChatPullArgs reads the linked channels of one Dispact bot.
 type ChatPullArgs struct {
-	Workspace    ids.UUID `json:"workspace_id"`
 	ConnectionID ids.UUID `json:"connection_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (ChatPullArgs) Kind() string { return "chat_pull" }
-
-// WorkspaceID binds the pull to its tenant (jobs.WorkspaceScoped).
-func (a ChatPullArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // Connection names the bot whose channels the pull reads.
 func (a ChatPullArgs) Connection() ids.UUID { return a.ConnectionID }
@@ -81,8 +73,8 @@ func (ChatPullArgs) InsertOpts() river.InsertOpts {
 func chatLinks(pool *pgxpool.Pool, vault func() keyvault.Vault, in chatsync.TxInserter, delay time.Duration, private bool) (*chatlinks.Store, *chatsync.LiveChats) {
 	return chatsync.Wire(InstallationDB(pool), vault, chatsync.Enqueuer{
 		Inserter: in, Delay: delay, MaxAttempts: oneOffJobMaxAttempts, States: activeSweepStates,
-		Job:  func(ws, link ids.UUID) river.JobArgs { return ChatLinkFlushArgs{Workspace: ws, LinkID: link} },
-		Pull: func(ws, bot ids.UUID) river.JobArgs { return ChatPullArgs{Workspace: ws, ConnectionID: bot} },
+		Job:  func(ws, link ids.UUID) river.JobArgs { return ChatLinkFlushArgs{LinkID: link} },
+		Pull: func(ws, bot ids.UUID) river.JobArgs { return ChatPullArgs{ConnectionID: bot} },
 	}, private)
 }
 
@@ -177,13 +169,11 @@ func registerChatLinkFlush(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 		flusher := chatsync.NewFlusher(pool, chats, store, cfg.SendOrigin.PublicBaseURL, log)
 		flusher.Lane = cfg.ChatSummaryBrain
 		addDeclaredWorker[ChatLinkFlushArgs](reg, &chatsync.Worker[ChatLinkFlushArgs]{
-			Bind:    workspaceJobCtx,
 			Flusher: flusher,
 		})
 		puller := chatsync.NewPuller(pool, store, chats, cfg.ChatSummaryBrain, log).WithNotificationOrigin(cfg.SendOrigin.PublicBaseURL)
 		puller.Reconfirm = channelReconfirmation(pool)
 		addDeclaredWorker[ChatPullArgs](reg, &chatsync.PullWorker[ChatPullArgs]{
-			Bind:   workspaceJobCtx,
 			Puller: puller, Marks: cfg.ChatPushMarks,
 		})
 		addDeclaredWorker[ChatPullSweepArgs](reg, &chatPullSweepWorker{
@@ -209,7 +199,7 @@ func (w *chatPullSweepWorker) Work(ctx context.Context, _ *river.Job[ChatPullSwe
 	cleanup, err := chatlinks.DueChannelWatchCleanup(ctx, w.pool)
 	scanErr = errors.Join(scanErr, err)
 	for _, work := range cleanup {
-		scanErr = errors.Join(scanErr, dispatchOne(ctx, w.pool, ChatPullArgs{Workspace: work.Workspace, ConnectionID: work.Connection}, nil))
+		scanErr = errors.Join(scanErr, dispatchOne(ctx, w.pool, ChatPullArgs{ConnectionID: work.Connection}, nil))
 	}
 	for _, provider := range []string{chatlinks.ProviderDispact, chatlinks.ProviderSlack, chatlinks.ProviderTeams} {
 		due, err := capture.DueChannelConnections(ctx, w.pool, provider)
@@ -218,7 +208,7 @@ func (w *chatPullSweepWorker) Work(ctx context.Context, _ *river.Job[ChatPullSwe
 			if !w.cadence.Due(ctx, d.ID) {
 				continue
 			}
-			if err := dispatchOne(ctx, w.pool, ChatPullArgs{Workspace: d.WorkspaceID, ConnectionID: d.ID}, nil); err != nil {
+			if err := dispatchOne(ctx, w.pool, ChatPullArgs{ConnectionID: d.ID}, nil); err != nil {
 				w.log.WarnContext(ctx, "chat pull enqueue failed", "connection", d.ID.String(), "err", err)
 				continue
 			}
@@ -242,7 +232,7 @@ func WithChatEvents(replays chatsync.Replays, marks chatsync.Marks) Option {
 				if s.chatPulls == nil {
 					return errors.New("chat links: this role queues no chat_pull")
 				}
-				args := ChatPullArgs{Workspace: ws, ConnectionID: connection}
+				args := ChatPullArgs{ConnectionID: connection}
 				return s.chatPulls.Enqueue(ctx, args, jobs.QueuedAsArgs(args, nil))
 			},
 		}

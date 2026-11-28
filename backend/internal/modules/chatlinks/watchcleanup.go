@@ -5,7 +5,6 @@ package chatlinks
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,31 +20,27 @@ type ChannelWatchCleanup struct {
 	Connection ids.UUID
 }
 
-// DueChannelWatchCleanup finds unused watch bindings through the live-workspace census.
+// DueChannelWatchCleanup finds the installation's unused watch bindings.
 func DueChannelWatchCleanup(ctx context.Context, pool *pgxpool.Pool) ([]ChannelWatchCleanup, error) {
-	workspaces, err := database.LiveWorkspaces(ctx, pool)
-	if err != nil {
-		return nil, err
+	workspace, ok, err := database.LiveWorkspace(ctx, pool)
+	if err != nil || !ok {
+		return []ChannelWatchCleanup{}, err
 	}
 	out := []ChannelWatchCleanup{}
-	var failures error
-	for _, workspace := range workspaces {
-		bound := principal.WithWorkspaceID(ctx, workspace)
-		err := database.WithTx(bound, pool, func(tx pgx.Tx) error {
-			rows, err := tx.Query(bound, `SELECT DISTINCT connection_id FROM chat_channel_watch WHERE retired_at IS NULL AND NOT `+watchUsedSQL)
-			if err != nil {
-				return err
-			}
-			connections, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-			if err != nil {
-				return err
-			}
-			for _, connection := range connections {
-				out = append(out, ChannelWatchCleanup{workspace, connection})
-			}
-			return nil
-		})
-		failures = errors.Join(failures, err)
-	}
-	return out, failures
+	bound := principal.WithWorkspaceID(ctx, workspace)
+	err = database.WithTx(bound, pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(bound, `SELECT DISTINCT connection_id FROM chat_channel_watch WHERE retired_at IS NULL AND NOT `+watchUsedSQL)
+		if err != nil {
+			return err
+		}
+		connections, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		if err != nil {
+			return err
+		}
+		for _, connection := range connections {
+			out = append(out, ChannelWatchCleanup{workspace, connection})
+		}
+		return nil
+	})
+	return out, err
 }

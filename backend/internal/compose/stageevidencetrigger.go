@@ -230,13 +230,8 @@ func (t *StageEvidenceTrigger) queueReading(
 	// worker would refuse every job this queued. The installation's own
 	// workspace is what every other trigger path binds (InstallationDB), and
 	// it is what the reading must run in.
-	wsID, err := t.workspace(ctx)
-	if err != nil {
-		return err
-	}
 	return pgx.BeginFunc(ctx, t.pool, func(tx pgx.Tx) error {
 		return t.read.EnqueueTx(ctx, tx, StageEvidenceReadArgs{
-			Workspace:  wsID.UUID,
 			DealID:     dealID.UUID,
 			ActivityID: activityID,
 		}, stageEvidenceReadInsertOpts())

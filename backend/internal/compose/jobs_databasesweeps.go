@@ -134,7 +134,7 @@ func NewPromiseKeptSweep(pool *pgxpool.Pool) promisekept.Sweep {
 }
 
 func (w promiseKeptWorker) Work(ctx context.Context, _ *river.Job[PromiseKeptSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.Pool, w.Workspace))
 }
 
 // InitiativeEnrolmentSweepArgs is the fleet job that dates sales initiative membership.
@@ -158,7 +158,7 @@ func (MeetingProfileRetractSweepArgs) FleetWide() {}
 type meetingProfileRetractWorker struct{ meetingprofile.Sweep }
 
 func (w meetingProfileRetractWorker) Work(ctx context.Context, _ *river.Job[MeetingProfileRetractSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.Pool, w.Workspace))
 }
 
 // TranscriptAudienceSweepArgs schedules one pass of transcriptaudience.Sweep.
@@ -173,12 +173,12 @@ func (TranscriptAudienceSweepArgs) FleetWide() {}
 type transcriptAudienceWorker struct{ transcriptaudience.Sweep }
 
 func (w transcriptAudienceWorker) Work(ctx context.Context, _ *river.Job[TranscriptAudienceSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.Pool, w.Workspace))
 }
 
 // initiativeEnrolmentSweepWorker hands each workspace to initiativeenrolment.Sweep.
 type initiativeEnrolmentSweepWorker struct{ initiativeenrolment.Sweep }
 
 func (w initiativeEnrolmentSweepWorker) Work(ctx context.Context, _ *river.Job[InitiativeEnrolmentSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.Pool, w.Workspace))
 }

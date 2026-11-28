@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAllowanceRecoveryLeavesIneligibleRequestersParkedWithoutFailing(t *testing.T) {
@@ -39,7 +40,7 @@ func TestAllowanceRecoveryLeavesIneligibleRequestersParkedWithoutFailing(t *test
 			read, args := startDeepRead(t, e, company)
 			next := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 			worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), budgetDeferringBrain{next: next})
-			if err := worker.run(context.Background(), args); err == nil {
+			if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err == nil {
 				t.Fatal("expected deferral")
 			}
 			runner, err := jobs.NewInserter(e.Pool, slog.New(slog.DiscardHandler))

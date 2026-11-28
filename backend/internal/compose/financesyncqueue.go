@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
@@ -33,7 +32,7 @@ type financeSyncQueue struct{ enqueue financeSyncEnqueuer }
 // QueueSync queues this workspace's pass. Unique while queued or running, so
 // a second press joins the first rather than reading the source twice.
 func (q financeSyncQueue) QueueSync(ctx context.Context) error {
-	return q.enqueue.Enqueue(ctx, FinanceSyncArgs{Workspace: storekit.MustWorkspace(ctx)},
+	return q.enqueue.Enqueue(ctx, FinanceSyncArgs{},
 		jobs.QueuedAs[FinanceSyncArgs](&river.InsertOpts{
 			MaxAttempts: oneOffJobMaxAttempts,
 			UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},

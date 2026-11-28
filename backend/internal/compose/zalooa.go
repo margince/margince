@@ -26,16 +26,12 @@ import (
 // ZaloOAIngestArgs names one webhook message the edge stored. The worker reads
 // it back by RawCaptureID.
 type ZaloOAIngestArgs struct {
-	Workspace    ids.UUID `json:"workspace_id"`
 	ConnectionID ids.UUID `json:"connection_id"`
 	RawCaptureID ids.UUID `json:"raw_capture_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (ZaloOAIngestArgs) Kind() string { return "zalo_oa_ingest" }
-
-// WorkspaceID binds the ingest to its tenant (jobs.WorkspaceScoped).
-func (a ZaloOAIngestArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // RawCapture names the stored message.
 func (a ZaloOAIngestArgs) RawCapture() ids.UUID { return a.RawCaptureID }
@@ -58,7 +54,7 @@ type zaloTokenRenewWorker struct {
 }
 
 func (w *zaloTokenRenewWorker) Work(ctx context.Context, _ *river.Job[ZaloTokenRenewArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.renewer.RenewWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.renewer.RenewWorkspace))
 }
 
 // registerZaloTokenRenew wires the renewal pass. It needs the vault, because the
@@ -84,7 +80,7 @@ func WithZaloOAEdge(inserter *jobs.Runner) Option {
 			DB:        db,
 			Inserter:  inserter,
 			Job: func(workspace, connection, rawCapture ids.UUID) river.JobArgs {
-				return ZaloOAIngestArgs{Workspace: workspace, ConnectionID: connection, RawCaptureID: rawCapture}
+				return ZaloOAIngestArgs{ConnectionID: connection, RawCaptureID: rawCapture}
 			},
 			MaxAttempts: oneOffJobMaxAttempts,
 			Log:         s.log,

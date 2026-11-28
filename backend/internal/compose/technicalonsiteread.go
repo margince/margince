@@ -33,7 +33,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // askWhatTheCompanyRuns queues the technical lookup for the company this read
@@ -56,12 +55,6 @@ func (w *siteDeepReadWorker) askWhatTheCompanyRuns(ctx context.Context, claim co
 	if claim.CompanyID == nil {
 		return
 	}
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		w.log.WarnContext(ctx, "technical lookup not queued after site read: no workspace on the job context",
-			"company", claim.CompanyID.String())
-		return
-	}
 	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
 	if err != nil {
 		w.log.WarnContext(ctx, "technical lookup not queued after site read",
@@ -73,7 +66,6 @@ func (w *siteDeepReadWorker) askWhatTheCompanyRuns(ctx context.Context, claim co
 	// button on a moment ago — joins that lookup instead of asking the same
 	// three services twice.
 	if _, err := client.Insert(ctx, TechnicalEnrichCompanyArgs{
-		Workspace: workspace,
 		CompanyID: *claim.CompanyID,
 	}, technicalInsertOpts()); err != nil {
 		w.log.WarnContext(ctx, "technical lookup not queued after site read",

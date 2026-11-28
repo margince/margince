@@ -163,9 +163,9 @@ func TestTheFanOutUnitSaysWhatOneChildStandsFor(t *testing.T) {
 	out := renderJobMetrics(t, jobs.Snapshot{})
 
 	names := map[jobs.FanOutUnit]string{
-		jobs.FanOutWorkspace:  "workspace",
-		jobs.FanOutConnection: "connection",
-		jobs.FanOutBuild:      "build",
+		jobs.FanOutInstallation: "installation",
+		jobs.FanOutConnection:   "connection",
+		jobs.FanOutBuild:        "build",
 	}
 	var sawUnit, sawNone int
 	for kind, spec := range jobs.Declared() {
@@ -194,7 +194,7 @@ func TestTheFanOutUnitSaysWhatOneChildStandsFor(t *testing.T) {
 // healthy.
 func TestAnUndeclaredKindWithRowsIsReportedSeparately(t *testing.T) {
 	out := renderJobMetrics(t, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "default", Kind: "a_kind_no_longer_declared", Untenanted: true, State: "available", Count: 4},
+		{Queue: "default", Kind: "a_kind_no_longer_declared", State: "available", Count: 4},
 	}})
 
 	if !strings.Contains(out, `margince_job_unrecognised_kind{kind="a_kind_no_longer_declared"} 4`) {
@@ -206,7 +206,7 @@ func TestAnUndeclaredKindWithRowsIsReportedSeparately(t *testing.T) {
 	}
 	// Still counted where it is actually sitting: the depth gauge answers how
 	// much work a queue is holding, and work of a retired kind is work.
-	if !strings.Contains(out, `margince_job_queue_depth{kind="a_kind_no_longer_declared",queue="default",workspace_id=""} 4`) {
+	if !strings.Contains(out, `margince_job_queue_depth{kind="a_kind_no_longer_declared",queue="default"} 4`) {
 		t.Errorf("the undeclared rows vanished from the queue they are actually in\ngot:\n%s", out)
 	}
 }
@@ -217,8 +217,8 @@ func TestAnUndeclaredKindWithRowsIsReportedSeparately(t *testing.T) {
 // retired kind's discarded backlog as nothing at all.
 func TestEveryStateOfAnUndeclaredKindIsCounted(t *testing.T) {
 	out := renderJobMetrics(t, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "default", Kind: "retired", Untenanted: true, State: "available", Count: 2},
-		{Queue: "other", Kind: "retired", Untenanted: true, State: "discarded", Count: 3},
+		{Queue: "default", Kind: "retired", State: "available", Count: 2},
+		{Queue: "other", Kind: "retired", State: "discarded", Count: 3},
 	}})
 
 	if !strings.Contains(out, `margince_job_unrecognised_kind{kind="retired"} 5`) {
@@ -245,7 +245,7 @@ func TestAnIdleFleetEmitsNoUnrecognisedKindSeries(t *testing.T) {
 func TestAFleetRunningOnlyDeclaredWorkStaysSilentToo(t *testing.T) {
 	var rows []jobs.StateRow
 	for kind := range jobs.Declared() {
-		rows = append(rows, jobs.StateRow{Queue: "default", Kind: kind, Untenanted: true, State: "available", Count: 1})
+		rows = append(rows, jobs.StateRow{Queue: "default", Kind: kind, State: "available", Count: 1})
 	}
 	out := renderJobMetrics(t, jobs.Snapshot{Rows: rows})
 
@@ -261,8 +261,8 @@ func TestAFleetRunningOnlyDeclaredWorkStaysSilentToo(t *testing.T) {
 // scrape rather than the single series.
 func TestAnUndeclaredKindsLabelCannotBreakTheWholeExposition(t *testing.T) {
 	out := renderJobMetrics(t, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "q", Kind: "a\tb", Untenanted: true, State: "available", Count: 1},
-		{Queue: "q", Kind: "<0x09>", Untenanted: true, State: "available", Count: 2},
+		{Queue: "q", Kind: "a\tb", State: "available", Count: 1},
+		{Queue: "q", Kind: "<0x09>", State: "available", Count: 2},
 	}})
 
 	if strings.Contains(out, `\t`) {
@@ -284,8 +284,8 @@ func TestAnUndeclaredKindsLabelCannotBreakTheWholeExposition(t *testing.T) {
 // longest family in the section.
 func TestTheCatalogueIsWrittenInAStableOrder(t *testing.T) {
 	snap := jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "q", Kind: "zeta_retired", Untenanted: true, State: "available", Count: 1},
-		{Queue: "q", Kind: "alpha_retired", Untenanted: true, State: "available", Count: 1},
+		{Queue: "q", Kind: "zeta_retired", State: "available", Count: 1},
+		{Queue: "q", Kind: "alpha_retired", State: "available", Count: 1},
 	}}
 	first := renderJobMetrics(t, snap)
 	for range 20 {

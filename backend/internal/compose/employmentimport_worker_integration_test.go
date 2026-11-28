@@ -6,7 +6,6 @@
 package compose
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -40,7 +39,7 @@ func TestEmploymentWorkerReconcilesRetainedClaimsWithoutVendorAccess(t *testing.
 		t.Fatal(err)
 	}
 	worker := employmentImportWorker{pool: e.Pool}
-	if err := worker.Work(context.Background(), nil); err != nil {
+	if err := worker.Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	report, err := store.PreviewEmploymentImport(e.Admin(), contact)
@@ -50,7 +49,7 @@ func TestEmploymentWorkerReconcilesRetainedClaimsWithoutVendorAccess(t *testing.
 	if len(report.Items) != 1 || report.Items[0].State != "linked" {
 		t.Fatalf("worker did not link retained evidence: %+v", report)
 	}
-	if err := worker.Work(context.Background(), nil); err != nil {
+	if err := worker.Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	replay, err := store.PreviewEmploymentImport(e.Admin(), contact)

@@ -62,7 +62,7 @@ type closeDateSweepWorker struct {
 }
 
 func (w *closeDateSweepWorker) Work(ctx context.Context, _ *river.Job[CloseDateSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.correctWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.correctWorkspace))
 }
 
 // closeDateWorkspaceWorker runs one workspace's pass.
@@ -96,7 +96,7 @@ type followUpReconcileWorker struct {
 }
 
 func (w *followUpReconcileWorker) Work(ctx context.Context, _ *river.Job[FollowUpReconcileArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.reconcileWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.reconcileWorkspace))
 }
 
 func (w *followUpReconcileWorker) reconcileWorkspace(ctx context.Context, workspace ids.UUID) error {

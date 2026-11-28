@@ -38,7 +38,7 @@ func (g *CaptureEnrichTrigger) requestContacts(ctx context.Context, env events.E
 		}
 	}
 	requested := false
-	err := runPerWorkspace(ctx, g.pool, func(ctx context.Context, workspace ids.UUID) error {
+	err := runInstallationPass(ctx, g.pool, func(ctx context.Context, workspace ids.UUID) error {
 		ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "agent:enrich")
 		return database.WithTx(ctx, g.pool, func(tx pgx.Tx) error {
 			changed, err := g.requestContactsTx(ctx, tx, env, target)

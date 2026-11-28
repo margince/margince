@@ -89,7 +89,7 @@ func (h importHandlers) testRun(
 func (h importHandlers) checkedTest(
 	ctx context.Context, run migration.Run, req crmcontracts.CreateImportRunRequest,
 ) (migration.Enqueue, migration.RunMapping, error) {
-	queue, ws, err := h.jobQueue(ctx)
+	queue, err := h.jobQueue()
 	if err != nil {
 		return nil, migration.RunMapping{}, err
 	}
@@ -107,7 +107,7 @@ func (h importHandlers) checkedTest(
 	if err := checkEveryPartsColumns(ctx, source, mapping); err != nil {
 		return nil, migration.RunMapping{}, err
 	}
-	return queue.validates(ws), mapping, nil
+	return queue.validates(), mapping, nil
 }
 
 // queueTest queues the test of the run at version. A run already being tested

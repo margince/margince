@@ -60,10 +60,10 @@ func TestADiscardedTickStaysFailedWhileTheNextIsInFlight(t *testing.T) {
 				if !ok {
 					t.Fatalf("no sweep reported for %s", kind)
 				}
-				if pass.Workspaces != 1 || pass.Failed != 1 {
+				if pass.Passes != 1 || pass.Failed != 1 {
 					t.Errorf("%s = %d/%d covered/failed, want 1/1: a successor still %s has no outcome "+
 						"yet, so the discard before it is still the latest answer",
-						kind, pass.Workspaces, pass.Failed, successor)
+						kind, pass.Passes, pass.Failed, successor)
 				}
 			}
 			unit, ok := unitFor(snap, "telegram_poll")
@@ -88,9 +88,10 @@ func TestARealDiscardStaysFailedBehindTheNextQueuedTick(t *testing.T) {
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &failingPassWorker{})
 	runner, err := jobs.New(pool, jobs.Config{
-		Queues:   map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 1}},
-		Workers:  workers,
-		TestOnly: true,
+		BindWorkspace: func(ctx context.Context, _ *rivertype.JobRow) (context.Context, error) { return ctx, nil },
+		Queues:        map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 1}},
+		Workers:       workers,
+		TestOnly:      true,
 	}, quietLogger())
 	if err != nil {
 		t.Fatalf("jobs.New: %v", err)

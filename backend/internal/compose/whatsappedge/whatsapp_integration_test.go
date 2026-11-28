@@ -124,7 +124,7 @@ func setup(t *testing.T) *env {
 		DB:        db,
 		Inserter:  inserter,
 		Job: func(ws, connection, raw ids.UUID) river.JobArgs {
-			return compose.WhatsAppIngestArgs{Workspace: ws, ConnectionID: connection, RawCaptureID: raw}
+			return compose.WhatsAppIngestArgs{ConnectionID: connection, RawCaptureID: raw}
 		},
 		MaxAttempts: 3,
 		Log:         slog.Default(),
@@ -172,7 +172,7 @@ func (e *env) rawRows(t *testing.T) int {
 }
 
 func (e *env) ingestJobs(t *testing.T) int {
-	return e.count(t, `SELECT count(*) FROM river_job WHERE kind = 'whatsapp_ingest' AND args->>'workspace_id' = $1`, e.ws.String())
+	return e.count(t, `SELECT count(*) FROM river_job WHERE kind = 'whatsapp_ingest'`)
 }
 
 func sign(secret string, body []byte) string {
@@ -575,7 +575,7 @@ func TestANumberDisconnectedAfterVerificationStoresNothing(t *testing.T) {
 		},
 		DB: db, Inserter: inserter, MaxAttempts: 3, Log: slog.Default(),
 		Job: func(ws, connection, raw ids.UUID) river.JobArgs {
-			return compose.WhatsAppIngestArgs{Workspace: ws, ConnectionID: connection, RawCaptureID: raw}
+			return compose.WhatsAppIngestArgs{ConnectionID: connection, RawCaptureID: raw}
 		},
 	})
 	body := batch(change(n.phoneID, msg("wamid.L1", "late")))

@@ -40,7 +40,7 @@ func TestASweepWhoseStoredZoneWillNotLoadRunsInUTCAndRecordsOneFault(t *testing.
 	corrector := NewCloseDateCorrector(e.Pool, slog.New(slog.DiscardHandler)).SetClock(func() time.Time { return at })
 
 	for range 2 {
-		err := runEach(context.Background(), e.Pool, []ids.UUID{e.WS}, func(ctx context.Context, ws ids.UUID) error {
+		err := runInstallationPass(context.Background(), e.Pool, func(ctx context.Context, ws ids.UUID) error {
 			return corrector.SweepWorkspace(principal.SystemActing(principal.WithWorkspaceID(ctx, ws), closeDateSweepActor))
 		})
 		if err != nil {
@@ -63,7 +63,7 @@ func TestASweepWhoseStoredZoneWillNotLoadRunsInUTCAndRecordsOneFault(t *testing.
 func TestAPassWhoseZoneLoadsRecordsNoFault(t *testing.T) {
 	e := integration.Setup(t)
 	corrector := NewCloseDateCorrector(e.Pool, slog.New(slog.DiscardHandler))
-	err := runEach(context.Background(), e.Pool, []ids.UUID{e.WS}, func(ctx context.Context, ws ids.UUID) error {
+	err := runInstallationPass(context.Background(), e.Pool, func(ctx context.Context, ws ids.UUID) error {
 		return corrector.SweepWorkspace(principal.SystemActing(principal.WithWorkspaceID(ctx, ws), closeDateSweepActor))
 	})
 	if err != nil {

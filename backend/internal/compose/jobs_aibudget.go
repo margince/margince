@@ -47,7 +47,7 @@ type aiBudgetResumeWorker struct {
 }
 
 func (w *aiBudgetResumeWorker) Work(ctx context.Context, _ *river.Job[AIBudgetResumeArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.resumeWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.resumeWorkspace))
 }
 
 func (w *aiBudgetResumeWorker) resumeWorkspace(ctx context.Context, workspace ids.UUID) error {
@@ -98,7 +98,7 @@ func (w *aiBudgetResumeWorker) resumeWorkspace(ctx context.Context, workspace id
 		if _, err := voice.GetProfile(userCtx, build.ProfileID); err != nil {
 			return false, err
 		}
-		inserted, err := runner.EnqueueTxUnique(ctx, tx, VoiceBuildArgs{Workspace: workspace, ProfileID: build.ProfileID.String(), BuildID: build.ID.String(), RequestedBy: build.RequestedBy.String()}, voiceBuildInsertOpts())
+		inserted, err := runner.EnqueueTxUnique(ctx, tx, VoiceBuildArgs{ProfileID: build.ProfileID.String(), BuildID: build.ID.String(), RequestedBy: build.RequestedBy.String()}, voiceBuildInsertOpts())
 		if err != nil || inserted {
 			return inserted, err
 		}

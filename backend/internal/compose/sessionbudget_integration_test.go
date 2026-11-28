@@ -117,7 +117,7 @@ func TestRunnerBindsTheSessionBudgetAndResumesWaitingWork(t *testing.T) {
 	defer cancelSnoozed()
 	completed, cancelCompleted := runner.SubscribeCompleted()
 	defer cancelCompleted()
-	if err := runner.Enqueue(t.Context(), KnowledgeIngestArgs{Workspace: o.e.WS, DocumentID: o.doc}, nil); err != nil {
+	if err := runner.Enqueue(t.Context(), KnowledgeIngestArgs{DocumentID: o.doc}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := runner.Start(t.Context()); err != nil {

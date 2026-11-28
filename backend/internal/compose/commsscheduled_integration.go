@@ -57,9 +57,13 @@ func driveScheduledSendAttempt(ctx context.Context, pool *pgxpool.Pool, workspac
 	// worker production does not have, and a message carrying an unsubscribe
 	// link refuses here for a reason no deployment would hit.
 	worker := newScheduledSendWorker(pool, NewDeliveryStager(pool, inserter), nil, origin, disabled...)
-	err = worker.Work(ctx, &river.Job[ScheduledSendArgs]{
+	bound, err := bindInstallation(ctx, pool)
+	if err != nil {
+		return err
+	}
+	err = worker.Work(bound, &river.Job[ScheduledSendArgs]{
 		JobRow: &rivertype.JobRow{Attempt: attempt, MaxAttempts: scheduledSendMaxAttempts},
-		Args:   ScheduledSendArgs{Workspace: workspace, ScheduledSendID: id.String()},
+		Args:   ScheduledSendArgs{ScheduledSendID: id.String()},
 	})
 	if _, ok := errors.AsType[*river.JobSnoozeError](err); ok {
 		// Its moment moved: the alarm asked to come back later, which is an
@@ -122,7 +126,11 @@ func DriveScheduledSendRecoveryForTest(ctx context.Context, pool *pgxpool.Pool, 
 	}
 	worker := newScheduledSendRecoveryWorker(
 		identity.NewService(pool), sendStore(pool, origin.sendPath()), NewScheduleTimer(inserter), slog.New(slog.DiscardHandler))
-	return worker.Work(ctx, &river.Job[ScheduledSendRecoveryArgs]{
+	bound, err := bindInstallation(ctx, pool)
+	if err != nil {
+		return err
+	}
+	return worker.Work(bound, &river.Job[ScheduledSendRecoveryArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 1},
 	})
 }

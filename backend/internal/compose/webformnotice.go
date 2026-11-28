@@ -83,7 +83,7 @@ func tellWebsiteLeadOwner(ctx context.Context, db *database.DB, formID, source i
 			if err != nil {
 				return err
 			}
-			return queue.EnqueueTx(bound, tx, SendNotificationEmailArgs{Workspace: noticeWorkspace(bound), NoticeID: noticeID.String()}, notificationMailOpts())
+			return queue.EnqueueTx(bound, tx, SendNotificationEmailArgs{NoticeID: noticeID.String()}, notificationMailOpts())
 		})
 	})
 }
