@@ -45,3 +45,30 @@ describe("a source holding a literal", () => {
     expect(mayHoldLiteral(source, PANE)).toBe(false);
   });
 });
+
+describe("a census file read for a token", () => {
+  it("matches a word only an identifier escape spells", () => {
+    expect(
+      mayHoldLiteral({ text: String.raw`const \u0062adge = 1;` }, /badge/),
+    ).toBe(true);
+    expect(
+      mayHoldLiteral({ text: String.raw`const \u{62}adge = 1;` }, /badge/),
+    ).toBe(true);
+  });
+
+  it("cooks a control escape to its character, not to its letter", () => {
+    expect(mayHoldLiteral({ text: String.raw`"bad\nge"` }, /badnge/)).toBe(
+      false,
+    );
+  });
+
+  it("ends a legacy octal escape at \\377", () => {
+    expect(mayHoldLiteral({ text: String.raw`"\400"` }, /^" 0"$/)).toBe(true);
+  });
+
+  it("reads an escape past the last code point as written", () => {
+    expect(mayHoldLiteral({ text: String.raw`"\u{110000}"` }, /badge/)).toBe(
+      false,
+    );
+  });
+});

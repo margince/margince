@@ -6,6 +6,7 @@
 // sends a literal takes that decision away. The rule reads every screen, so a
 // screen written tomorrow is in scope.
 
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { SCREEN_ROOTS } from "../../src/testing/screenfiles";
 import type { CensusFile, CensusRule } from "../tree";
 
@@ -25,7 +26,7 @@ export const rule: CensusRule = {
   name: "employmentprimary",
   corpus: (tree) => tree.files.filter(isScreen),
   visit: (file) =>
-    LITERAL.test(file.text)
+    mayHoldLiteral(file, LITERAL)
       ? [`${file.rel}: sends is_current_primary as a literal`]
       : [],
   advice:

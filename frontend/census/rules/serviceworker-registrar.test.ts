@@ -35,3 +35,26 @@ describe("the serviceworker-registrar rule", () => {
     ).toEqual(["src/lib/planted.ts names navigator.serviceWorker"]);
   });
 });
+
+describe("the serviceWorker prefilter", () => {
+  it("reads the worker container however it is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.ts"),
+          area: "src",
+          text: 'navigator.serviceWorker.register("/sw.js");\n',
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.ts"),
+          area: "src",
+          text: 'navigator.\\u0073erviceWorker.register("/sw.js");\n',
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

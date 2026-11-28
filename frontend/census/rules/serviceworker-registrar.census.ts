@@ -6,6 +6,7 @@
 
 import { join } from "node:path";
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { type CensusRule, srcDir } from "../tree";
 
 const registrar = join(srcDir, "lib", "pwa.ts");
@@ -39,7 +40,10 @@ export const rule: CensusRule = {
       : ["src/lib/pwa.ts was not read"]),
   ],
   visit: (file) => {
-    const names = file.source ? namesServiceWorker(file.source) : false;
+    const names =
+      file.source !== undefined &&
+      mayHoldLiteral(file, /serviceWorker/) &&
+      namesServiceWorker(file.source);
     if (file.path === registrar) {
       return names
         ? []

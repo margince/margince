@@ -56,3 +56,26 @@ describe("the document-list-keys rule", () => {
     ]);
   });
 });
+
+describe("the list-root prefilter", () => {
+  it("reads a hand-spelled key however its root is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.ts"),
+          area: "src",
+          text: 'q({ queryKey: ["companyDocuments", id] });\n',
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.ts"),
+          area: "src",
+          text: 'q({ queryKey: ["company\\x44ocuments", id] });\n',
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

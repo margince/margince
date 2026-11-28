@@ -4,7 +4,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
-import { plantedFindings, srcDir } from "../tree";
+import { plantedFindings, scriptsDir, srcDir } from "../tree";
 import {
   computedImports,
   ownWalks,
@@ -239,5 +239,45 @@ describe("a walker's own test", () => {
     ).toEqual([
       "scripts/lib/story-files.test.ts is listed as a walker's own test but finds the real tree through import.meta.url",
     ]);
+  });
+});
+
+describe("the walk prefilters", () => {
+  it("reads a test's own walk however readdirSync is spelled", () => {
+    const at = (call: string) =>
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.test.ts"),
+          area: "src",
+          text: `function walk(dir: string): string[] {\n  return ${call}(dir).flatMap((name) => walk(name));\n}\n`,
+        },
+      ]);
+    expect(at("readdirSync")).toHaveLength(1);
+    expect(at("r\\u0065addirSync")).toHaveLength(1);
+  });
+
+  it("reads a walker import however its module is spelled", () => {
+    const at = (module: string) =>
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.test.ts"),
+          area: "src",
+          text: `import { filesUnder } from "../../../scripts/lib/${module}";\n`,
+        },
+      ]);
+    expect(at("source-tree")).toHaveLength(1);
+    expect(at("source\\x2dtree")).toHaveLength(1);
+  });
+
+  it('reads a walker a "." specifier reaches from a folder named for it', () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(scriptsDir, "lib", "source-tree", "x.test.ts"),
+          area: "scripts",
+          text: 'import { filesUnder } from ".";\n',
+        },
+      ]),
+    ).toHaveLength(1);
   });
 });

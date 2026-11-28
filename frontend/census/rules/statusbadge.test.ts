@@ -47,3 +47,18 @@ describe("the statusbadge rule", () => {
     ).toEqual(["src/features/user.tsx:2"]);
   });
 });
+
+describe("the palette prefilter", () => {
+  it("reads a user of the palette however its import is spelled", () => {
+    const at = (from: string) =>
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.tsx"),
+          area: "src",
+          text: `import { StatusBadge } from "${from}";\nexport const map = { tone: "info" };\n`,
+        },
+      ]);
+    expect(at("../../design-system/statusbadge")).toHaveLength(1);
+    expect(at("../../design-system/st\\x61tusbadge")).toHaveLength(1);
+  });
+});

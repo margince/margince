@@ -57,3 +57,15 @@ describe("one clipboard spelling", () => {
     ).toEqual(["src/features/p.ts:1"]);
   });
 });
+
+describe("the clipboard prefilter", () => {
+  it("reads an access only an escape spells", () => {
+    const text =
+      "export const copy = () => navigator.\\u0063lipboard.writeText(x);\n";
+    expect(
+      plantedFindings(rule, [
+        { path: join(srcDir, "features", "p.ts"), area: "src", text },
+      ]),
+    ).toEqual(["src/features/p.ts:1"]);
+  });
+});

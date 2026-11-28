@@ -4,6 +4,7 @@
 // Null-only fallbacks leave unnamed leads blank and disagree with promotion.
 // Both fallback operators must use the shared owner in lib/.
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { parseSource } from "../../scripts/lib/source-tree";
 import type { CensusFile, CensusRule } from "../tree";
 
@@ -127,7 +128,10 @@ const judged = (file: CensusFile) =>
 export const rule: CensusRule = {
   name: "leadname-coverage",
   corpus: (tree) => tree.files.filter(judged),
-  visit: (file) => (file.source ? fallbacksOf(file.source, file.rel) : []),
+  visit: (file) =>
+    file.source && mayHoldLiteral(file, /full_name/)
+      ? fallbacksOf(file.source, file.rel)
+      : [],
   advice:
     "A lead's name is worked out in one place: call leadIdentityName() from " +
     "lib/leadname.ts instead of spelling `full_name ?? email` again. " +

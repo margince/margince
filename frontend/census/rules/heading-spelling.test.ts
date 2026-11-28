@@ -147,3 +147,26 @@ describe("heading spelling", () => {
     ).toEqual([]);
   });
 });
+
+describe("the heading prefilter", () => {
+  it("reads a raw heading however its tag is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.tsx"),
+          area: "src",
+          text: "export const A = () => <h2>t</h2>;\n",
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.tsx"),
+          area: "src",
+          text: 'export const B = () => el("\\x682");\n',
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

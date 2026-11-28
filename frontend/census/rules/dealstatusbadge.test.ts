@@ -68,3 +68,20 @@ describe("a record's status is never drawn as its stored code", () => {
     ]);
   });
 });
+
+describe("the status prefilter", () => {
+  it("reads a raw status however its field is spelled", () => {
+    const at = (text: string) => {
+      const tree = treeOf([
+        { path: join(srcDir, "features", "plant", "a.tsx"), area: "src", text },
+      ]);
+      return ruleFindings(rule, tree.files, tree);
+    };
+    expect(
+      at("export const A = () => <span>{row.status}</span>;\n"),
+    ).toHaveLength(1);
+    expect(
+      at("export const A = () => <span>{row.\\u0073tatus}</span>;\n"),
+    ).toHaveLength(1);
+  });
+});

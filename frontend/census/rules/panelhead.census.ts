@@ -15,6 +15,7 @@
 
 import ts from "typescript";
 import { selectorList } from "../../scripts/lib/css-rules";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { withoutComments } from "../../src/testing/css";
 import type { CensusFile, CensusRule } from "../tree";
 
@@ -103,6 +104,9 @@ export function headSubSelectors(css: string): readonly string[] {
     );
 }
 
+// A finding names a head component or the card-sub class.
+const HEAD_SPELLING = new RegExp([...HEAD_COMPONENTS, "card-sub"].join("|"));
+
 // Every .tsx under src and every module of an extension layer: a unit's
 // screen is shipped UI in the same bundle. The sheets are the core's.
 const isMarkup = (file: CensusFile) =>
@@ -132,7 +136,7 @@ export const rule: CensusRule = {
         (selector) => `${file.rel}: ${selector}`,
       );
     }
-    if (!file.source) return [];
+    if (!file.source || !mayHoldLiteral(file, HEAD_SPELLING)) return [];
     return [
       ...descriptionAttributes(file.source).map(
         ({ line, attribute }) =>

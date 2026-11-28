@@ -77,3 +77,26 @@ describe("the position-order rule", () => {
     ]);
   });
 });
+
+describe("the position prefilter", () => {
+  it("reads a position comparator however its field is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.ts"),
+          area: "src",
+          text: "rows.sort((a, b) => a.position - b.position);\n",
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.ts"),
+          area: "src",
+          text: "rows.sort((a, b) => a.\\u0070osition - b.\\u0070osition);\n",
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

@@ -11,6 +11,7 @@
 // untouched, so the call sites are read here. A mutationKey is a literal inside
 // a hook and exported by nothing, so it is read from source.
 
+import { cookedText, mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 import { screenCorpus } from "./screenfiles.census";
 
@@ -21,9 +22,12 @@ const count = (haystack: string, needle: string) =>
 
 /** Each email mutation key this screen spells more than once. */
 export function doubledKeys(file: CensusFile): string[] {
-  return KEYS.filter((key) => count(file.text, key) > 1).map(
-    (key) => `${file.rel} spells ${key} …] ${count(file.text, key)} times`,
-  );
+  // Cooked, so an escaped key counts; `"[\"email\", …]"` in a string cooks to one too and over-counts.
+  const text = cookedText(file);
+  return KEYS.flatMap((key) => {
+    const times = count(text, key);
+    return times > 1 ? [`${file.rel} spells ${key} …] ${times} times`] : [];
+  });
 }
 
 export const rule: CensusRule = {
@@ -32,7 +36,7 @@ export const rule: CensusRule = {
   // read the day it is written.
   corpus: (tree) =>
     screenCorpus(tree).filter((file) =>
-      KEYS.some((key) => file.text.includes(key)),
+      KEYS.some((key) => mayHoldLiteral(file, key)),
     ),
   visit: doubledKeys,
   advice:

@@ -5,6 +5,7 @@
 // so a tie-break added there reaches every screen that lists a pipeline.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 
 const OWNER = "src/lib/pipelines.queries.ts";
@@ -133,7 +134,9 @@ export const rule: CensusRule = {
       : [`${OWNER} holds no comparator this rule recognises`];
   },
   visit: (file) =>
-    file.rel === OWNER || file.source === undefined
+    file.rel === OWNER ||
+    file.source === undefined ||
+    !mayHoldLiteral(file, /position/)
       ? []
       : positionComparators(file.source).map(
           (line) => `${file.rel}:${line}: compares two rows by position`,

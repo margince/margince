@@ -6,6 +6,7 @@
 // id is a strip that skipped the type. The census takes it, so it fails.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { CONTACT_TABS } from "../../src/lib/contacttab";
 import { RECORD_TAB_ORDER } from "../../src/lib/recordtaborder";
 import type { CensusFile, CensusRule } from "../tree";
@@ -56,7 +57,8 @@ function tabListsIn(file: CensusFile): TabList[] {
     if (list) lists.push(list);
     ts.forEachChild(node, visit);
   };
-  if (file.source) visit(file.source);
+  if (file.source && mayHoldLiteral(file, /RecordTabId|overview/))
+    visit(file.source);
   return lists;
 }
 

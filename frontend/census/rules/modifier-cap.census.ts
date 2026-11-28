@@ -10,13 +10,14 @@
 // and stories, which name the key to drive it.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 
 const CTRL = /(?<![A-Za-z])Ctrl(?![A-Za-z])/;
 
 /** Whether a file can carry the offence: every match has the word in it. */
 export function maySpellCtrl(text: string): boolean {
-  return text.includes("Ctrl");
+  return mayHoldLiteral(text, "Ctrl");
 }
 
 function textOf(node: ts.Node): string | null {

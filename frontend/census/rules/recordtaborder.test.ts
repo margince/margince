@@ -37,3 +37,14 @@ describe("the recordtaborder rule", () => {
     expect(planted('const KINDS = ["overview", "unrelated"];')).toEqual([]);
   });
 });
+
+describe("the tab-list prefilter", () => {
+  it("reads a strip however its first tab is spelled", () => {
+    expect(
+      planted('const TABS = ["overview", "deals", "timeline"];'),
+    ).toHaveLength(2);
+    expect(
+      planted('const TABS = ["\\x6fverview", "deals", "timeline"];'),
+    ).toHaveLength(2);
+  });
+});

@@ -20,6 +20,7 @@
 
 import { join } from "node:path";
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { parseSource, scriptKindFor } from "../../scripts/lib/source-tree";
 import { type CensusFile, type CensusRule, srcDir } from "../tree";
 
@@ -71,7 +72,7 @@ function stringValue(attribute: ts.JsxAttributeLike): string | null {
  * A file that spells none of the three shapes is not parsed.
  */
 export function findTickSpellings(path: string, text: string): string[] {
-  if (!/role|aria-checked|checkbox|radio/.test(text)) return [];
+  if (!mayHoldLiteral({ text }, /role|aria-checked|checkbox|radio/)) return [];
   const source = parseSource(path, text);
   const found: string[] = [];
   // A non-TSX file is read again as TSX: JSX the first parse cannot see

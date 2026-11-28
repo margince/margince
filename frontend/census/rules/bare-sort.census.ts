@@ -13,6 +13,7 @@
 
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import {
   filesMatching,
   MODULE_FILE,
@@ -72,7 +73,7 @@ export const rule: CensusRule = {
       ? []
       : ["the corpus holds none of the census's own files"],
   visit: (file) =>
-    file.source === undefined
+    file.source === undefined || !mayHoldLiteral(file, /sort|toSorted/)
       ? []
       : bareSorts(file.source).map(
           (line) => `${file.rel}:${line}: sorts with no comparator`,

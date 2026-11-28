@@ -167,9 +167,24 @@ export function isKeyLiteral(node: ts.Node): node is ts.StringLiteralLike {
   );
 }
 
-// Comments are trivia and types are erased, so a key named only there is unseen.
+// One read per parse and edge kind, however many graphs reach the module.
+const modulesRead = {
+  values: new WeakMap<ts.SourceFile, Module>(),
+  static: new WeakMap<ts.SourceFile, Module>(),
+};
+
 function readModule(path: string, text: string, dynamicImports = true): Module {
   const source = parseSource(path, text);
+  const read = modulesRead[dynamicImports ? "values" : "static"];
+  const known = read.get(source);
+  if (known !== undefined) return known;
+  const module = moduleIn(source, dynamicImports);
+  read.set(source, module);
+  return module;
+}
+
+// Comments are trivia and types are erased, so a key named only there is unseen.
+function moduleIn(source: ts.SourceFile, dynamicImports: boolean): Module {
   const globs: (readonly string[])[] = [];
   const literals: string[] = [];
   const stems: string[] = [];
@@ -342,15 +357,19 @@ export function reachedModules(
   return reachedModulesIn(tree, extra);
 }
 
+// tsconfig.app.json does not change during a run.
+let appAliases: ReadonlyMap<string, string> | undefined;
+
 /** The modules the shipped bundle loads out of a tree the caller already read. */
 export function reachedModulesIn(
   tree: SourceTree,
   extra: { readonly catalogs?: ReadonlySet<string> } = {},
   entries: readonly string[] = bundleEntries(),
 ): ReadonlyMap<string, Module> {
+  appAliases ??= aliases();
   const graph = moduleGraph({
     tree,
-    aliases: aliases(),
+    aliases: appAliases,
     catalogs: extra.catalogs ?? new Set<string>(),
   });
   return graph.reach(entries);

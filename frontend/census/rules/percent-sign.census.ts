@@ -12,11 +12,12 @@
 // style value such as `${width}%` comes from no formatter and is not read.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 
 /** Whether a file can carry the offence: every match has a `%` in its text. */
 export function mayGlueAPercent(text: string): boolean {
-  return text.includes("%");
+  return mayHoldLiteral({ text }, /%/);
 }
 
 function isFormatterCall(node: ts.Node): boolean {

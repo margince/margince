@@ -51,3 +51,26 @@ describe("one count for a text limit", () => {
     ).toEqual(["src/features/p.ts:1"]);
   });
 });
+
+describe("the length prefilter", () => {
+  it("reads a unit count however length is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.ts"),
+          area: "src",
+          text: "if (name.length > TEXT_LIMITS.name) save();\n",
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.ts"),
+          area: "src",
+          text: "if (name.l\\u0065ngth > TEXT_LIMITS.name) save();\n",
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

@@ -14,6 +14,7 @@
 
 import { join } from "node:path";
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { type CensusFile, type CensusRule, repoRoot } from "../tree";
 
 export const corpusPath = join(
@@ -187,6 +188,10 @@ export const rule: CensusRule = {
       : [`fewer than ${FILE_FLOOR} source files were read`],
   visit: (file) => {
     if (!file.source) return [];
+    // A scale is reported only beside a minor-unit name; a cut-off parse always is.
+    if (!unfinished(file.source) && !mayHoldLiteral(file, MINOR_UNIT_NAME)) {
+      return [];
+    }
     const { findings, unreadable } = scaleFindings(file.source);
     if (unreadable) return [`${file.rel}: the parser could not finish it`];
     return findings.map(({ line, text }) => `${file.rel}:${line}: ${text}`);

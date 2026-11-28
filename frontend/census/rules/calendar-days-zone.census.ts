@@ -8,6 +8,7 @@
 // of a millisecond span (`Math.floor(x / 86_400_000)`) outside the owner.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { parseSource } from "../../scripts/lib/source-tree";
 import type { CensusFile, CensusRule } from "../tree";
 
@@ -67,14 +68,11 @@ function zonelessDayCounts(file: ts.SourceFile): string[] {
   return found;
 }
 
-// Every finding has `Math.floor` or `calendarDaysBetween` in its raw text, or
-// a `\u` escape spelling one of them.
-export function mayHoldFinding(text: string): boolean {
-  return (
-    text.includes("Math.floor") ||
-    text.includes("calendarDaysBetween") ||
-    text.includes("\\u")
-  );
+// Every finding has `Math.floor` or `calendarDaysBetween` in its raw or cooked text.
+export function mayHoldFinding(
+  source: string | Readonly<{ text: string }>,
+): boolean {
+  return mayHoldLiteral(source, /Math\.floor|calendarDaysBetween/);
 }
 
 export function findingsIn(path: string, text: string): string[] {
@@ -84,7 +82,7 @@ export function findingsIn(path: string, text: string): string[] {
 // Each top-level statement is judged on its own, so an exemption covers one
 // named function and not its file.
 function statementFindings(file: CensusFile): string[] {
-  if (!file.source || !mayHoldFinding(file.text)) return [];
+  if (!file.source || !mayHoldFinding(file)) return [];
   const source = file.source;
   const fromSrc = file.rel.replace(/^src\//, "");
   return source.statements.flatMap((statement) => {

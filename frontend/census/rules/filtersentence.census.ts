@@ -11,6 +11,7 @@
 
 import { relative, sep } from "node:path";
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { type CensusFile, type CensusRule, repoRoot } from "../tree";
 
 export const OWNER = "frontend/src/features/lists/filtersentence.ts";
@@ -65,7 +66,10 @@ const fromRepo = (file: CensusFile) =>
 const writersIn = (corpus: readonly CensusFile[]) =>
   new Map(
     corpus.flatMap((file): [string, string[]][] => {
-      const literals = file.source ? operatorLiterals(file.source) : [];
+      const literals =
+        file.source && mayHoldLiteral(file, OPERATOR_FAMILY)
+          ? operatorLiterals(file.source)
+          : [];
       return literals.length > 0 ? [[fromRepo(file), literals]] : [];
     }),
   );

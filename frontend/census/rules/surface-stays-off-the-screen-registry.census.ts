@@ -5,7 +5,7 @@
 // every unit, so a surface that reached the registry would import itself.
 
 import { join } from "node:path";
-import { reachedModulesIn } from "../../scripts/lib/bundle-reach";
+import { type Module, reachedModulesIn } from "../../scripts/lib/bundle-reach";
 import { MODULE_FILE } from "../../scripts/lib/source-tree";
 import { type CensusRule, type CensusTree, srcDir } from "../tree";
 
@@ -13,8 +13,12 @@ const surfaceEntry = join(srcDir, "surface", "index.ts");
 const extensionRoute = join(srcDir, "lib", "extensionscreen.ts");
 const screenRegistry = join(srcDir, "composition", "extscreens.gen.ts");
 
-const reachedFromSurface = (tree: CensusTree) =>
-  reachedModulesIn(
+const reached = new WeakMap<CensusTree, ReadonlyMap<string, Module>>();
+
+const reachedFromSurface = (tree: CensusTree) => {
+  const known = reached.get(tree);
+  if (known) return known;
+  const found = reachedModulesIn(
     new Map(
       tree.files
         .filter((file) => file.area === "src" && MODULE_FILE.test(file.path))
@@ -23,6 +27,9 @@ const reachedFromSurface = (tree: CensusTree) =>
     {},
     [surfaceEntry],
   );
+  reached.set(tree, found);
+  return found;
+};
 
 export const rule: CensusRule = {
   name: "surface-stays-off-the-screen-registry",

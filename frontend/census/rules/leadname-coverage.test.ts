@@ -116,3 +116,26 @@ describe("the leadname-coverage rule", () => {
     ).toEqual(["src/features/leads/leadname.ts:1"]);
   });
 });
+
+describe("the full_name prefilter", () => {
+  it("reads the fallback however its field is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.ts"),
+          area: "src",
+          text: "const n = lead.full_name ?? lead.email;\n",
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.ts"),
+          area: "src",
+          text: "const n = lead.full\\u005fname ?? lead.email;\n",
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

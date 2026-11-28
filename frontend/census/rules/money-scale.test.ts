@@ -87,3 +87,26 @@ describe("the money-scale rule", () => {
     ).toEqual(["src/features/y.ts: the parser could not finish it"]);
   });
 });
+
+describe("the minor-unit prefilter", () => {
+  it("reads a scale however the minor unit is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.ts"),
+          area: "src",
+          text: "const minorUnits = amount * 100;\n",
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.ts"),
+          area: "src",
+          text: "const m\\u0069norUnits = amount * 100;\n",
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

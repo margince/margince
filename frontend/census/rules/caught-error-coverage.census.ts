@@ -27,6 +27,7 @@
 // error itself and never its text, so no console sink is exempt.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusRule } from "../tree";
 
 // A cast, a parenthesis, `satisfies` and a non-null assertion all leave the
@@ -163,7 +164,7 @@ export const rule: CensusRule = {
         file.area === "src" &&
         /\.tsx?$/.test(file.path) &&
         !/\.test\.tsx?$/.test(file.path) &&
-        (file.text.includes("catch") || file.text.includes("error")),
+        mayHoldLiteral(file, /catch|error/),
     ),
   visit: (file) => (file.source ? disclosuresIn(file.rel, file.source) : []),
   advice:

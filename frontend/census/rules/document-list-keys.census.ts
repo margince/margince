@@ -8,6 +8,7 @@
 // Tests count: a test that spells a key by hand checks a key production may no longer use.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 
 const OWNER = "src/lib/attachmentkeys.ts";
@@ -20,6 +21,9 @@ const LIST_ROOTS = new Set([
 ]);
 // The attachments family, where the second segment names the list.
 const ATTACHMENT_LISTS = new Set(["contact", "activity"]);
+
+// A hand-spelled key names a list root or the attachments root.
+const LIST_SPELLING = new RegExp([...LIST_ROOTS, "attachments"].join("|"));
 
 function literalText(node: ts.Node | undefined): string | undefined {
   return node &&
@@ -64,7 +68,7 @@ export const rule: CensusRule = {
       : [`${OWNER} was not read`]),
   ],
   visit: (file: CensusFile) =>
-    file.rel === OWNER || !file.source
+    file.rel === OWNER || !file.source || !mayHoldLiteral(file, LIST_SPELLING)
       ? []
       : handSpelledLines(file.source).map(
           (line) =>

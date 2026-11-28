@@ -146,3 +146,26 @@ describe("the caught-error-coverage rule", () => {
     expect(plantedFindings(rule, [{ path, area: "src", text }])).toEqual([]);
   });
 });
+
+describe("the catch and error prefilter", () => {
+  it("reads a disclosed failure however its field is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.ts"),
+          area: "src",
+          text: "show(result.error.message);\n",
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.ts"),
+          area: "src",
+          text: "show(result.\\u0065rror.message);\n",
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

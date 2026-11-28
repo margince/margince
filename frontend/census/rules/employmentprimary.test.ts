@@ -29,3 +29,16 @@ describe("the employmentprimary rule", () => {
     ]);
   });
 });
+
+describe("an escaped field", () => {
+  it("fails as the literal it spells", () => {
+    const text = "save({ is_current\\u005fprimary: true });\n";
+    expect(
+      plantedFindings(rule, [
+        { path: join(srcDir, "features", "x", "rail.tsx"), area: "src", text },
+      ]),
+    ).toEqual([
+      "src/features/x/rail.tsx: sends is_current_primary as a literal",
+    ]);
+  });
+});

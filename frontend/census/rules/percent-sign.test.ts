@@ -59,3 +59,18 @@ describe("one percent spelling", () => {
     ).toEqual(["src/features/p.tsx:1"]);
   });
 });
+
+describe("the percent prefilter", () => {
+  it("reads a glued sign however it is spelled", () => {
+    const at = (sign: string) =>
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "p.tsx"),
+          area: "src",
+          text: `export const p = (n: number) => \`\${formatNumber(n, "en")}${sign}\`;\n`,
+        },
+      ]);
+    expect(at("%")).toHaveLength(1);
+    expect(at("\\x25")).toHaveLength(1);
+  });
+});
