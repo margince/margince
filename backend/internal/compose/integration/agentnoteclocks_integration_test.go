@@ -39,11 +39,19 @@ func TestAgentNotesLeaveEveryRecordClockQuiet(t *testing.T) {
 				t.Fatal(err)
 			}
 			records := map[string]ids.UUID{"contact": w.contact, "company": w.company, "deal": w.deal.UUID, "project": ids.UUID(project.Id)}
-			links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: w.contact}, {EntityType: "deal", EntityID: w.deal.UUID}, {EntityType: "project", EntityID: ids.UUID(project.Id)}}
+			links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: w.contact}, {EntityType: "deal", EntityID: w.deal.UUID}}
 			log := func(ctx context.Context, kind string, at time.Time) ids.UUID {
 				t.Helper()
+				actor, ok := principal.Actor(ctx)
+				if !ok {
+					t.Fatal("missing writer")
+				}
 				subject := "Buyer follow-up"
 				in := activities.LogActivityInput{Kind: kind, Subject: &subject, OccurredAt: &at, Source: "manual", Links: links}
+				projectLink := activities.ActivityLinkInput{EntityType: "project", EntityID: ids.UUID(project.Id)}
+				if actor.Type != principal.PrincipalAgent {
+					in.Links = append(in.Links, projectLink)
+				}
 				if kind == "email" || kind == "call" {
 					in.Direction = new("inbound")
 				}
@@ -51,9 +59,12 @@ func TestAgentNotesLeaveEveryRecordClockQuiet(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				actor, ok := principal.Actor(ctx)
-				if !ok {
-					t.Fatal("missing writer")
+				if actor.Type == principal.PrincipalAgent {
+					// Project filing carries a member-approved retention mark.
+					row, err = w.e.Activities.RelinkActivity(w.e.Admin(), ids.From[ids.ActivityKind](ids.UUID(row.Id)), activities.RelinkActivityInput{EntityType: projectLink.EntityType, EntityID: projectLink.EntityID})
+					if err != nil {
+						t.Fatal(err)
+					}
 				}
 				if actor.Type == principal.PrincipalAgent && (row.RecordedByAgent == nil || !*row.RecordedByAgent) {
 					t.Fatal("History must label the same activity as AI-written")
