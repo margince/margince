@@ -9,7 +9,7 @@ Each app has limits. Connecting an app does not turn on every feature or give ev
 
 | What you want | Where to go | What happens |
 |---|---|---|
-| Ask a colleague a question | Messenger beside Email | A small window opens over the record. You choose the people or conversation and send the message yourself. |
+| Ask a colleague a question | Messenger beside Email | A small window opens over the record. You choose the colleagues or conversation and send the message yourself. |
 | Keep key channel decisions on the record | Team chat on Overview | Margince reads the linked channel and saves relevant summaries to History when this setting is on. |
 | Tell the channel about changes in Margince | Manage on Team chat | Margince sends allowed record updates when you turn on this setting and approve the audience. |
 
@@ -31,10 +31,10 @@ Use a channel link when the team wants trial decisions saved on the deal over ti
 | Save clear channel summaries to History | Needs the updated Dispact connection | Needs a supported Slack connection; see below | A normal Teams channel after setup; private channels need the app added there too |
 | Send automatic CRM updates to the channel | After audience review | Private internal channels after audience review | A normal Teams channel after audience review |
 | Create a work channel from Margince | Available where setup allows it | Available where setup allows it | Cannot do this; create the channel in Teams, then link it |
-| Add people to the linked channel from Margince | Available where setup allows it | Available where setup allows it | Cannot do this; manage people in Teams |
+| Add colleagues to the linked channel from Margince | Available where setup allows it | Available where setup allows it | Cannot do this; manage members in Teams |
 | Link a Teams shared channel | — | — | Cannot do this |
 
-A normal Teams channel is open to the members of its team. Teams calls this a “standard” channel. A private channel is restricted to selected people within that team.
+A normal Teams channel is open to the members of its team. Teams calls this a “standard” channel. A private channel is restricted to selected members of that team.
 A shared channel is a separate Teams channel type. It is outside the current Margince channel-link support.
 
 Some limits come from the messaging app. Others are features Margince does not yet offer, such as creating Teams channels.
@@ -46,7 +46,7 @@ Your administrator connects the messaging app for shared channel work. You conne
 A shared connection does not let Margince send personal messages as you.
 
 Ask your administrator to check the shared connection before your team turns on automatic summaries or posts.
-Check the sender and recipient list before sending a personal message. Only people found in the messaging app can be added.
+Check the sender and recipient list before sending a personal message. Only colleagues found in the messaging app can be added.
 A company contact in Margince does not get a chat account or join a conversation because the company has a channel link.
 
 ### How do I open messaging settings?
@@ -66,14 +66,14 @@ The Dispact update only applies to Dispact. Slack and Teams have their own ways 
 ## What is different about Slack?
 
 Slack limits how quickly an app can read old messages and thread replies.
-Automatic summaries in Margince need either an app built for your own organisation or an app approved for the Slack app store.
+Automatic summaries in Margince need either an app built for your own company or an app approved for the Slack app store.
 A commercial app without that approval can have lower limits. The current Margince connection cannot give automatic complete channel summaries under those limits.
 
 That restriction applies to automatic channel summaries. Personal Messenger and allowed CRM posts have separate access checks.
 Ask your administrator whether the Slack connection supports automatic summaries before you use them.
 
 The shared Slack connection also needs permission to read the linked channel's replies.
-If the person who connected it loses channel access, incoming summaries pause. Another colleague's personal Messenger connection does not fix that shared connection.
+If the colleague who connected it loses channel access, incoming summaries pause. Another colleague's personal Messenger connection does not fix that shared connection.
 
 ## What is different about Teams?
 
