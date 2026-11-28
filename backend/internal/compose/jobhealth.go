@@ -138,10 +138,10 @@ func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Bounded, as the exposition endpoint bounds its own job read: an unbounded
-	// one holds a request thread and a pool connection for as long as the read
-	// takes, and no index covers it. The budget is larger than the scrape's 2s
-	// because an operator tolerates more latency than a scrape interval does.
+	// Bounded, as the exposition endpoint bounds its own job read. An unbounded
+	// one holds a request thread and a pool connection while the read runs, and
+	// no index covers it. The budget is larger than the scrape's 2s, because an
+	// operator tolerates more latency than a scrape interval does.
 	ctx, cancel := context.WithTimeout(ctx, jobHealthReadTimeout)
 	defer cancel()
 

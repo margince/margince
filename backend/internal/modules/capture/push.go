@@ -34,8 +34,8 @@ func BumpDueByMailbox(ctx context.Context, pool *pgxpool.Pool, provider, email s
 // once, which Graph's batched change notifications do.
 //
 // One scan serves the whole batch. A per-address loop would make the cost of
-// one public request grow with the batch size, which an unauthenticated caller
-// could use against the connection pool. Matching a set costs one predicate.
+// one public request grow with the batch size. An unauthenticated caller could
+// use that against the connection pool. Matching a set costs one predicate.
 func BumpDueByMailboxes(ctx context.Context, pool *pgxpool.Pool, provider string, emails []string) ([]DueConnection, error) {
 	if len(emails) == 0 {
 		return nil, nil

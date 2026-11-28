@@ -48,11 +48,11 @@ const (
 // installation-grain child names no key, since there is one of it.
 //
 // A unit with no key answers the empty string, and subWorkspaceFanOuts skips
-// it. That is right for the installation unit and wrong for any other, because
-// a unit added without a key would drop every kind declared with it out of the
-// unit gauges. TestEveryDeclaredFanOutUnitNamesAnArgsKey reads the units the
-// contract declares and catches that. The census then holds every declared
-// child to writing the key its dispatcher's unit names.
+// it. That is right for the installation unit and wrong for any other. A unit
+// added without a key would drop every kind declared with it out of the unit
+// gauges. TestEveryDeclaredFanOutUnitNamesAnArgsKey reads the declared units
+// and catches that. The census holds every declared child to writing the key
+// its dispatcher's unit names.
 //
 // The zero FanOutUnit, a kind that fans out to nothing, answers the empty
 // string too: it has no unit.

@@ -22,8 +22,8 @@ import (
 // counted as a fleet pass.
 //
 // Nothing enforces that a new fan-out remembers the tag. An untagged one is
-// absent from the sweep gauges, and deriving that obligation needs a static
-// notion of a fan-out insert that the tree does not support.
+// absent from the sweep gauges. Deriving that obligation needs a static notion
+// of a fan-out insert, which the tree does not support.
 const SweepTag = "sweep"
 
 // sweepTagPredicate is the tag test, spelled once. River stores tags in a
@@ -71,16 +71,17 @@ type StateRow struct {
 
 // SweepPass is one fleet-pass kind read as a whole: whether it has a surviving
 // tagged row, and whether the latest of those that ended failed. An installation
-// holds one company, so a kind has one pass: Passes is 1 when the kind has a
-// tagged row, and Failed is 1 when the latest ended one is dead.
+// holds one company, so a kind has one pass. Passes is 1 when the kind has a
+// tagged row. Failed is 1 when the latest ended one is dead.
 type SweepPass struct {
 	Kind   string
 	Passes int64
 	Failed int64
 }
 
-// SweepUnit is one fan-out kind read per fan-out unit, the grain the dispatcher
-// ran the pass at, for the kinds whose unit is finer than the installation.
+// SweepUnit is one fan-out kind read per fan-out unit, the grain the
+// dispatcher ran the pass at. It covers the kinds whose unit is finer than the
+// installation.
 //
 // It exists because SweepPass counts one pass per kind, and three dispatchers
 // fan out per connection and one per build. If one connection's child fails and
@@ -104,9 +105,9 @@ type SweepUnit struct {
 type Snapshot struct {
 	Rows   []StateRow
 	Sweeps []SweepPass
-	// Units is empty when no declared kind fans out below the installation,
-	// which is a legitimate fleet rather than a failed read — Stats returns
-	// the error for that.
+	// Units is empty when no declared kind fans out below the installation.
+	// That is a legitimate fleet, not a failed read. Stats returns the error
+	// for a failed read.
 	Units []SweepUnit
 	// Failures is the failing rows grouped by kind and by the sentence they
 	// recorded — the input the exposition classifies. Empty is a fleet with
@@ -151,10 +152,10 @@ func Stats(ctx context.Context, pool *pgxpool.Pool) (Snapshot, error) {
 // finer than the installation, paired with the args key that identifies one.
 // statsBySweepUnit joins the job table against the two arrays.
 //
-// It derives the pairs from the contract on every call, so a dispatcher that
+// It derives the pairs from the contract on every call. A dispatcher that
 // changes its fan_out_unit, or a new one that fans out per connection, is
-// enrolled by its declaration. Both arrays come from one pass, which keeps them
-// index-aligned.
+// enrolled by its declaration. Both arrays come from one pass, which keeps
+// them index-aligned.
 func subWorkspaceFanOuts() (kinds, argsKeys []string) {
 	return subWorkspaceFanOutsOf(FanOutUnits())
 }
@@ -196,7 +197,7 @@ func fanOutDispatcherKindsOf(table map[string]Spec) []string {
 func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 	// The age comes from the database's own now(), never the app clock, because
 	// the two differ by enough to move an exact assertion. The age has no
-	// coalesce: a group with nothing runnable answers NULL, which the reader
+	// coalesce. A group with nothing runnable answers NULL, which the reader
 	// carries as "no such job" and not as a measured zero.
 	const q = `
 		SELECT queue,
@@ -235,10 +236,10 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 // latest outcome is a failure.
 //
 // It reads the latest outcome per kind, never a batch. This table has no
-// "last pass": River resolves a uniqueness conflict with ON CONFLICT DO UPDATE
-// SET kind = EXCLUDED.kind, which writes neither created_at nor metadata, so a
-// child still active from the previous pass is deduplicated and produces no
-// row for the current one.
+// "last pass". River resolves a uniqueness conflict with ON CONFLICT DO UPDATE
+// SET kind = EXCLUDED.kind, which writes neither created_at nor metadata. A
+// child still active from the previous pass is therefore deduplicated and
+// produces no row for the current one.
 //
 // The sweep tag separates a fleet pass from a job someone triggered by hand. A
 // fan-out dispatcher's own row is excluded: it enqueues and does no work, and
@@ -248,8 +249,8 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 // any tagged row, a pending one included. The outcome reads the latest row in a
 // terminal state and ignores one still on its way. Reading both from the newest
 // row would let a tick that exhausted its attempts read as healthy while a
-// successor existed, and a periodic pass almost always has one. A later
-// completed run still supersedes an earlier failure.
+// successor existed. A periodic pass almost always has one. A later completed
+// run still supersedes an earlier failure.
 func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) {
 	dispatchers := fanOutDispatcherKinds()
 	const q = `
@@ -298,12 +299,12 @@ func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) 
 // The reading rule is the same: coverage from any tagged row of the unit, and
 // the outcome from the latest row of it that ended. Only the key it is latest
 // per changes, to args->>'connection_id' (or the build key) instead of the
-// kind. That removes the masking: an installation with a healthy connection and
-// a broken one is one healthy unit and one failed unit here, where the kind
-// pair sees only whichever child ran last.
+// kind. That removes the masking. An installation with a healthy connection
+// and a broken one is one healthy unit and one failed unit here. The kind pair
+// sees only whichever child ran last.
 //
 // The kind-to-key pairing arrives as two aligned arrays and is joined against,
-// not spliced into the SQL, so a kind name and an args key never reach the
+// not spliced into the SQL. A kind name and an args key never reach the
 // statement as text. The join also bounds the scan to the declared unit kinds.
 //
 // An empty pairing means the contract declares no such dispatcher, and the

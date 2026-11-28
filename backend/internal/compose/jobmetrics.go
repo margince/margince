@@ -297,9 +297,9 @@ func writeFamilyHeader(w io.Writer, name, help string) error {
 // with no constraint on them and direct app-role CRUD. A single raw-inserted
 // row could otherwise poison every scrape for every metric.
 // A control character outside those three is rewritten as a printable
-// <0xNN>, never dropped. Dropping is lossy: two malformed kind names that
-// differ only in a control byte would collapse to one label set, and
-// duplicate series make a scrape unparseable.
+// <0xNN>, never dropped. Dropping is lossy. Two malformed kind names that
+// differ only in a control byte would collapse to one label set, and a
+// duplicate series makes a scrape unparseable.
 //
 // A literal '<' is escaped the same way, and that is what makes the mapping
 // INJECTIVE rather than merely printable. Without it, a value containing

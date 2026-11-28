@@ -208,9 +208,9 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 		}
 	}
 	// No request ceiling: River's migrator and the index drop are DDL, and this
-	// role runs them. The migration ceiling still applies, because River's
-	// migrator takes the same locks as the files above, and an unbounded pool
-	// would leave this half of the deploy without a bound.
+	// role runs them. The migration ceiling still applies. River's migrator
+	// takes the same locks as the files above, so an unbounded pool would leave
+	// this half of the deploy without a bound.
 	riverPool, err := database.NewPool(ctx, riverMigrationDSN(dsn, ceiling))
 	if err != nil {
 		return fmt.Errorf("migrate: opening river pool: %w", err)
@@ -246,9 +246,8 @@ const upSummaryFormat = "applied %d core+custom+extension + %d river migration(s
 // dropRiverWorkspaceArgIndex removes the index an earlier release built over
 // the job args' workspace key. Nothing reads that key now.
 //
-// It lives here and not in a migration file because river_job does not exist
-// while the core lane runs, and dbmigrate wraps every migration in a
-// transaction.
+// It lives here and not in a migration file. river_job does not exist while
+// the core lane runs, and dbmigrate wraps every migration in a transaction.
 const dropRiverWorkspaceArgIndex = `DROP INDEX IF EXISTS river_job_workspace_arg`
 
 // reportExtensionNamespaces names the extension lanes BEFORE they are

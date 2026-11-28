@@ -10,8 +10,8 @@ package gates
 //
 // jobkinds_gen.go turns the fleet-wide kinds into a compile-time assertion, so
 // a declared kind is the compiler's to check. This file holds the two halves
-// that the assertions cannot reach: a type the contract has never heard of, and
-// a type that grows a workspace accessor back.
+// the assertions cannot reach. One is a type the contract has never heard of.
+// The other is a type that grows a workspace accessor back.
 
 import (
 	"go/ast"

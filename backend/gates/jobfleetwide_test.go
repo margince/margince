@@ -14,14 +14,14 @@ package gates
 //
 // "Reaches an insert" is interprocedural, since a dispatch travels through
 // package helpers, injected inserters and store transactions. So it is not
-// checkable on the syntax tree, and this gate is a closed allowlist instead: a
+// checkable on the syntax tree. This gate is a closed allowlist instead. A
 // FleetWide Work must call dispatchOnce, dispatchOne or runInstallationPass.
 //
 // A direct River insert is not in the set. The helpers are where a child's
 // insert options are built, which stamps the sweep tag and reads the declared
 // queue and attempt cap. A dispatcher that inserts around them enqueues a child
-// that neither sweep gauge sees. A fourth spelling is a finding on purpose, so
-// adding one takes a reviewer.
+// that neither sweep gauge sees. A fourth spelling is a finding, so adding one
+// takes a reviewer.
 //
 // # Kinds that do their own pass
 //
@@ -33,9 +33,9 @@ package gates
 //
 // Several dispatchers read tenant tables to find the units that have work, and
 // jobs.FleetWide permits that. The second arm prohibits a SQL write statement
-// in the dispatcher's own body, or in a helper method on the same worker that
-// its Work calls. No dispatcher writes inline today, so the first one that
-// does is a finding rather than a precedent.
+// in the dispatcher's own body, or in a helper method on its worker that Work
+// calls. No dispatcher writes inline today. The first one that does is a
+// finding and not a precedent.
 
 import (
 	"go/ast"

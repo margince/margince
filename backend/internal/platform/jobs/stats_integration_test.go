@@ -231,9 +231,9 @@ func TestStatsMeasuresTheAgeOfRunnableWorkOnlyAndInTheDatabasesOwnClock(t *testi
 }
 
 // TestSweepReadsAKindsLatestEndedOutcomeAndSurvivesADeduplicatedRetry seeds the
-// shape a rescued dispatcher produces: an older child still live, so it was
-// deduplicated out of the newer fan-out, beside a newer one that ended. The
-// kind reports one pass, and its outcome is the latest row that ended.
+// shape a rescued dispatcher produces. An older child is still live, so it was
+// deduplicated out of the newer fan-out, and a newer one has ended. The kind
+// reports one pass, and its outcome is the latest row that ended.
 func TestSweepReadsAKindsLatestEndedOutcomeAndSurvivesADeduplicatedRetry(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
@@ -271,8 +271,8 @@ func TestSweepReadsAKindsLatestEndedOutcomeAndSurvivesADeduplicatedRetry(t *test
 // clean. Read per connection, one unit of two is dead. Both readings are
 // asserted, so a change that fixed the masking in the kind pair would fail here.
 //
-// telegram_poll is used, not a made-up kind, because the unit read is derived
-// from the contract: a fixture kind would prove a query that never runs.
+// telegram_poll is used, not a made-up kind. The unit read is derived from the
+// contract, so a fixture kind would prove a query that never runs.
 func TestTheUnitPairSeesAFailedConnectionTheKindPairMasks(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()

@@ -5,8 +5,8 @@ package compose
 
 // How a scheduled pass reaches the installation: runInstallationPass runs it in
 // this process, and dispatchOnce / dispatchOne queue a child row. A failed pass
-// fails its row, because a failure logged inside a row River then records as
-// completed is success on the outside and silent failure within.
+// fails its row. A failure that is only logged would leave River recording the
+// row as completed.
 
 import (
 	"context"
@@ -223,10 +223,9 @@ func dispatchOnce(ctx context.Context, insert insertManyFunc, opts *river.Insert
 }
 
 // dispatchOne enqueues ONE fan-out child through the River client working the
-// current job. It serves the dispatchers that cannot use dispatchOnce because
-// they fan out per CONNECTION or per BUILD rather than once for the
-// installation: there is no one set to insert atomically, so they loop single
-// inserts instead.
+// current job. It serves the dispatchers that cannot use dispatchOnce, because
+// they fan out per connection or per build and not once for the installation.
+// There is no one set to insert, so they loop single inserts instead.
 //
 // The client is resolved per insert, and only inside the loop, for the reason
 // clientInsertMany states: river.ClientFromContext panics when there is none,
