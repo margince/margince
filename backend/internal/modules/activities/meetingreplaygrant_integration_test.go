@@ -11,9 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/clocktest"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"

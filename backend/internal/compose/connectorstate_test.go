@@ -170,9 +170,8 @@ func TestConnectStateWithoutChainSignsNoChainKeys(t *testing.T) {
 func TestASignedStateCarriesTheWorkspaceAnOlderReplicaRequires(t *testing.T) {
 	company := ids.MustParse("33333333-3333-3333-3333-333333333333")
 	s := newStateSigner([]byte("a-32-byte-or-longer-signing-key!!"))
-	s.company = func() ids.UUID { return company }
 
-	token := s.sign(connectState{User: ids.NewV7(), Provider: "gmail"}, time.Unix(1_700_000_060, 0))
+	token := s.sign(connectState{Workspace: company, User: ids.NewV7(), Provider: "gmail"}, time.Unix(1_700_000_060, 0))
 
 	payload, err := base64.RawURLEncoding.DecodeString(strings.SplitN(token, ".", 2)[0])
 	if err != nil {

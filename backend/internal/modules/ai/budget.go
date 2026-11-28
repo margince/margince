@@ -199,6 +199,7 @@ type StaticBudget int64
 // DefaultMonthlyTokens = 1 seat × 6M base × 2 safety factor.
 const DefaultMonthlyTokens = StaticBudget(12_000_000)
 
+// MonthlyTokenBudget is the fixed budget, whatever the call.
 func (b StaticBudget) MonthlyTokenBudget(context.Context) (int64, error) {
 	return int64(b), nil
 }

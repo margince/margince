@@ -36,7 +36,7 @@ func vanishedRowsTx(t *testing.T, body func(ctx context.Context, tx pgx.Tx)) {
 // row left to read; the run answers not-found rather than reading nothing.
 func TestARunOnAConnectionThatIsGoneAnswersNotFound(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
-	ws := tenantOf(t, ctx)
+	ws := tenantOf(ctx, t)
 	r := NewRegistry(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), nil, nil, nil)
 	gone := ids.NewV7()
 	if err := r.syncConnection(ctx, gone); !errors.Is(err, apperrors.ErrNotFound) {

@@ -80,7 +80,7 @@ func (h connectorHandlers) ConnectExtOauth(w http.ResponseWriter, r *http.Reques
 	}
 	flow := extOAuthStateProvider(provider)
 	nonce := setCSRFNonce(w, csrfCookieName(flow), extOAuthPathPrefix)
-	state := h.signer.sign(connectState{
+	state := h.signer.signFor(r.Context(), connectState{
 		User: actor.UserID, Provider: flow, Nonce: nonce, Version: stateVersionNamespacedCSRF,
 	}, time.Now().Add(connectStateTTL))
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ExtOAuthConnectResponse{

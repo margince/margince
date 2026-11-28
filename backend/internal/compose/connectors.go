@@ -233,7 +233,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		ReturnTo: ask.returnTo, Then: ask.then, WindowMonths: ask.windowMonths,
 		SharedConsent: sharesConsent(string(provider), ask.then),
 	}
-	authURL := h.mintConsent(w, app, st)
+	authURL := h.mintConsent(r.Context(), w, app, st)
 	if st.SharedConsent {
 		var err error
 		if authURL, err = withCalendarScopes(authURL, st.Then); err != nil {

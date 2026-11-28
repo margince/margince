@@ -245,10 +245,9 @@ func TestACoreWithNoAuthorityRefuses(t *testing.T) {
 // it produced. Without it, the whole attribution story could ship inert and
 // green, which is exactly how it was found.
 func TestTheRuntimeBindsTheUnitsAttribution(t *testing.T) {
-	invocation :=
-		principal.WithActor(context.Background(), principal.Principal{
-			Type: principal.PrincipalHuman, ID: "the-caller",
-		})
+	invocation := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "the-caller",
+	})
 
 	// The binding a served call has, minus a database: scoped refuses on an
 	// unwired ROLE before it binds anything, and &pgxpool.Pool{} is a handle

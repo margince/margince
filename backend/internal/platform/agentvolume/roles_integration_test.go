@@ -53,7 +53,6 @@ func TestUsageJudgesEachHolderByItsOwnRoles(t *testing.T) {
 	usage, err := meter.Usage(inWorkspace(t), []Holder{
 		{Subject: admin.String(), Roles: []string{"admin"}}, {Subject: rep.String(), Roles: []string{"rep"}},
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}

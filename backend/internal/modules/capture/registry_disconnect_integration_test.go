@@ -555,7 +555,7 @@ func withTenant(ctx context.Context, ws ids.UUID) context.Context {
 	return context.WithValue(ctx, tenantKey{}, ws)
 }
 
-func tenantOf(t *testing.T, ctx context.Context) ids.UUID {
+func tenantOf(ctx context.Context, t *testing.T) ids.UUID {
 	t.Helper()
 	ws, ok := ctx.Value(tenantKey{}).(ids.UUID)
 	if !ok {

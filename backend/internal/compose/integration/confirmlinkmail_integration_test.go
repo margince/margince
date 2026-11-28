@@ -140,5 +140,4 @@ func stagedConfirmSubject(t *testing.T, c *consentEnv) string {
 func installationContext(t *testing.T, c *consentEnv) context.Context {
 	t.Helper()
 	return context.Background()
-
 }

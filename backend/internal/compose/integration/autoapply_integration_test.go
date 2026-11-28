@@ -338,7 +338,6 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	// Same call, same source, both sides.
 	rbac, seat, err := identity.NewService(e.Pool).EffectiveAuthority(
 		context.Background(), e.Rep1)
-
 	if err != nil {
 		t.Fatalf("resolving the rep's own authority: %v", err)
 	}

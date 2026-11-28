@@ -37,6 +37,8 @@ import (
 // callback receives, proving the initiator and the completer are the same
 // browser (the signed state alone only proves the initiator).
 type connectState struct {
+	// Workspace is written for older replicas and never read back.
+	Workspace          ids.UUID
 	SlackHistory       *chatwire.HistoryProfile
 	MessagingWorkspace string
 	MessengerRecord    *messengerReturnRecord
@@ -89,21 +91,27 @@ type wireState struct {
 // stateSigner mints and verifies signed state tokens with an HMAC key.
 type stateSigner struct {
 	key []byte
-	// company names the installation's company for the compatibility field of
-	// the wire form. Nil, or a failed lookup, writes the zero id.
-	company func() ids.UUID
+	// pool names the installation's company in the compatibility field of the
+	// wire form. Nil writes the zero id.
+	pool *pgxpool.Pool
 }
 
 // forInstallation is s naming pool's live company in the states it signs.
 func (s stateSigner) forInstallation(pool *pgxpool.Pool) stateSigner {
-	s.company = func() ids.UUID {
-		company, err := database.ProvenWorkspace(context.Background(), pool)
-		if err != nil {
-			return ids.UUID{}
-		}
-		return company.UUID
-	}
+	s.pool = pool
 	return s
+}
+
+// signFor signs st with the live company of the request ctx, which the wire
+// form carries for older replicas. A failed lookup writes the zero id: nothing
+// reads the field.
+func (s stateSigner) signFor(ctx context.Context, st connectState, exp time.Time) string {
+	if s.pool != nil {
+		if company, err := database.ProvenWorkspace(ctx, s.pool); err == nil {
+			st.Workspace = company.UUID
+		}
+	}
+	return s.sign(st, exp)
 }
 
 // newStateSigner refuses a key below the floor rather than trusting whoever
@@ -127,12 +135,8 @@ func (s stateSigner) usable() bool { return len(s.key) >= minStateKeyLen }
 // sign returns `base64url(payload).base64url(hmac(payload))`, binding the
 // tuple until exp.
 func (s stateSigner) sign(st connectState, exp time.Time) string {
-	var company ids.UUID
-	if s.company != nil {
-		company = s.company()
-	}
 	payload, _ := json.Marshal(wireState{ //nolint:errchkjson // string/int-only struct never errors
-		Workspace:    company.String(),
+		Workspace:    st.Workspace.String(),
 		SlackHistory: st.SlackHistory, MessagingWorkspace: st.MessagingWorkspace, MessengerRecord: st.MessengerRecord,
 		User:         st.User.String(),
 		Provider:     st.Provider,

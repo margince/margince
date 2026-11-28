@@ -127,16 +127,16 @@ func (h connectorHandlers) chainAfterConnect(ctx context.Context, w http.Respons
 		return
 	}
 	next := connectState{User: st.User, Provider: st.Then, ReturnTo: st.ReturnTo, WindowMonths: held}
-	http.Redirect(w, r, h.mintConsent(w, app, next), http.StatusFound)
+	http.Redirect(w, r, h.mintConsent(ctx, w, app, next), http.StatusFound)
 }
 
 // mintConsent opens one provider's consent. CSRF: a random nonce goes into both
 // a SameSite=Lax cookie and the signed state. The callback requires them to
 // match, so a victim can't complete an attacker-initiated flow.
-func (h connectorHandlers) mintConsent(w http.ResponseWriter, app oauthApp, st connectState) string {
+func (h connectorHandlers) mintConsent(ctx context.Context, w http.ResponseWriter, app oauthApp, st connectState) string {
 	st.Nonce = setCSRFNonce(w, csrfCookieName(st.Provider), connectorCookiePath)
 	st.Version = stateVersionNamespacedCSRF
-	state := h.signer.sign(st, time.Now().Add(connectStateTTL))
+	state := h.signer.signFor(ctx, st, time.Now().Add(connectStateTTL))
 	return app.authCodeURL(state, h.callbackURL(st.Provider))
 }
 

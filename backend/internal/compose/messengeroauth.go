@@ -139,7 +139,7 @@ func (s Server) ConnectMessenger(w http.ResponseWriter, r *http.Request, provide
 	}
 	st.MessagingWorkspace = app.Workspace
 	st.Nonce = setCSRFNonce(w, "messenger_csrf_"+string(provider), "/v1/messenger")
-	state := h.signer().sign(st, h.now().Add(connectStateTTL))
+	state := h.signer().signFor(r.Context(), st, h.now().Add(connectStateTTL))
 	target, err := url.Parse(app.Authorize(state, h.callbackURL(string(provider))))
 	if err != nil {
 		httperr.Write(w, r, messaging.ErrUnavailable)

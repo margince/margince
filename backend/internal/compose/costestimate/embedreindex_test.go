@@ -183,7 +183,7 @@ func (f *fakeRatesPerRow) RateFor(ctx context.Context, provider, model string, a
 	row := f.asked
 	f.asked++
 	if row >= len(f.sheets) {
-		return nil, nil
+		return nil, nil //nolint:nilnil // a row past the last sheet prices nothing
 	}
 	return f.sheets[row].RateFor(ctx, provider, model, at)
 }

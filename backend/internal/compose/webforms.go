@@ -100,7 +100,7 @@ func publicForms(forms webforms.Handlers) func(http.Handler) http.Handler {
 				Type: principal.PrincipalSystem,
 				ID:   "system:public_web_form",
 			})
-			company, err := forms.Workspace(ctx)
+			company, err := forms.Workspace(r.Context()) //nolint:contextcheck // the request's own context; r was rewritten above and the analyzer loses it
 			if err != nil {
 				forms.AnswerRefusal(w, r, err)
 				return

@@ -27,9 +27,8 @@ import (
 	// migrate resolving the vanilla stub would report "schema is at head"
 	// over a database missing every extension's schema.
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/term"
-
 	"github.com/margince/margince/composition"
+	"golang.org/x/term"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"

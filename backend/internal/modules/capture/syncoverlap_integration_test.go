@@ -130,7 +130,7 @@ func TestACompletedPullCanRecoverAFailureFromItsStartingSnapshot(t *testing.T) {
 func endCaptureSyncSession(ctx context.Context, t *testing.T, connection ids.UUID) {
 	t.Helper()
 	owner, _ := setupCaptureDB(t)
-	ws := tenantOf(t, ctx)
+	ws := tenantOf(ctx, t)
 	key := "capture:sync:" + ws.String() + ":" + connection.String()
 	var killed int
 	err := owner.QueryRow(ctx, `

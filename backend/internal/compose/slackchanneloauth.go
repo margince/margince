@@ -116,7 +116,7 @@ func (s Server) ConnectSlackChannels(w http.ResponseWriter, r *http.Request) {
 	state := connectState{User: actor.UserID, Provider: "channel:slack", Version: stateVersionNamespacedCSRF}
 	state.SlackHistory = profile
 	state.Nonce = setCSRFNonce(w, "channel_slack_csrf", "/v1/channel-providers/slack")
-	signed := h.signer().sign(state, h.now().Add(connectStateTTL))
+	signed := h.signer().signFor(r.Context(), state, h.now().Add(connectStateTTL))
 	httperr.WriteJSON(w, http.StatusOK, struct {
 		AuthorizeURL string `json:"authorize_url"`
 	}{app.AuthorizeBotURL(signed, s.slackChannelCallbackURL())})
