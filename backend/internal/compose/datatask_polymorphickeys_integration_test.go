@@ -155,6 +155,8 @@ func TestThePolymorphicKeysTaskKeysLiveRowsAndEndsTheRest(t *testing.T) {
 		}
 	}
 
+	// This fixture tests parent-key cleanup after proof has been removed.
+	e.WsExec(t, `DELETE FROM contact_acquisition_evidence WHERE contact_id = $1`, contact)
 	// The keys the task filled are the ones a delete now follows.
 	e.WsExec(t, `DELETE FROM contact WHERE id = $1`, contact)
 	e.WsExec(t, `DELETE FROM company WHERE id = $1`, company)
