@@ -46,8 +46,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tools.name.read_approval": "Xem đầy đủ một thao tác chờ duyệt",
   "tools.name.read_attention": "Xem việc cần chú ý",
   "tools.name.read_context": "Xem diễn biến đến nay",
-  "tools.name.read_details":
-    "Xem bảng thông tin hồ sơ và danh sách trong ngày",
+  "tools.name.read_details": "Xem bảng thông tin hồ sơ và danh sách trong ngày",
   "tools.name.read_forecast": "Xem dự báo và biến động",
   "tools.name.read_import": "Xem lượt nhập dữ liệu hoặc định dạng nhập",
   "tools.name.read_lists": "Tìm và xem danh sách",

@@ -8,6 +8,7 @@ package gates
 // Pages cannot promise indefinite free production seats.
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
+//nolint:misspell // These patterns must match German grant wording in its original spelling.
 var (
 	additionalGrantLine = regexp.MustCompile(`(?ms)^Additional Use Grant:[ \t]*(.*?)^Change Date:`)
 	freeProductionWords = regexp.MustCompile(`(?i)\bproduction\b|\b(?:produktiv|produktion)[a-z]*\b|\bechtbetrieb\b|sản xuất|vận hành thực tế`)
@@ -54,7 +56,7 @@ func TestNoMarkdownPageGrantsProductionSeatsTheLicenseWithholds(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, paragraph := range strings.Split(strings.ReplaceAll(string(raw), "\r\n", "\n"), "\n\n") {
+		for paragraph := range strings.SplitSeq(strings.ReplaceAll(string(raw), "\r\n", "\n"), "\n\n") {
 			if productionSeatPromise(paragraph) {
 				t.Errorf("%s promises free production seats beyond the finite trial; link LICENSING.md for the terms", file.path)
 			}
@@ -95,16 +97,16 @@ func TestTheProductionGrantCensusReadsWrappedAndTranslatedPromises(t *testing.T)
 func requireProductionTrialGrant(license string) error {
 	grant := additionalGrantLine.FindStringSubmatch(license)
 	if len(grant) != 2 {
-		return fmt.Errorf("LICENSE has no readable Additional Use Grant")
+		return errors.New("LICENSE has no readable Additional Use Grant")
 	}
 	trial, _, hosting := strings.Cut(strings.Join(strings.Fields(grant[1]), " "), "An Authorized Hosting Partner")
 	days := licensecheck.TrialLength / (24 * time.Hour)
 	if days <= 0 || licensecheck.TrialLength%(24*time.Hour) != 0 {
-		return fmt.Errorf("the trial runtime must use a whole positive number of days")
+		return errors.New("the trial runtime must use a whole positive number of days")
 	}
 	expected := fmt.Sprintf("You may make production use of the Licensed Work for one initial %d-day trial per installation, starting when its first workspace is created. The trial has no seat limit. After the trial, production use requires a commercial subscription from the Licensor. Changing the recorded creation date or modifying the trial checks does not extend this permission.", days)
 	if !hosting || strings.TrimSpace(trial) != expected {
-		return fmt.Errorf("the Additional Use Grant changed; review the finite-trial gate and runtime together")
+		return errors.New("the Additional Use Grant changed; review the finite-trial gate and runtime together")
 	}
 	return nil
 }

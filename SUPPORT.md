@@ -26,6 +26,6 @@ Two things must **not** go in a public issue:
 - **A Code of Conduct report.** Mail `conduct@gradion.com`; see the
   [Code of Conduct](CODE_OF_CONDUCT.md).
 
-Margince is under BUSL-1.1. Production use after the initial trial needs a commercial subscription; see
-[LICENSING.md](LICENSING.md) for the terms. Questions about a license or paid support go to
+Margince is under BUSL-1.1. Production use after the first trial needs a subscription from Gradion; see
+[LICENSING.md](LICENSING.md) for the rules. Questions about a license or support go to
 [gradion.com](https://gradion.com).

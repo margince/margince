@@ -108,7 +108,7 @@ Margince is source-available under the Business Source License 1.1 ([LICENSE](LI
 public. You may read, run and change it. [LICENSING.md](LICENSING.md) explains the license, and why you
 accept [CLA.md](CLA.md) to send code.
 
-- Production use after the initial 14-day trial needs a subscription from Gradion.
+- Production use after the first 14-day trial needs a subscription from Gradion.
 - To host it as a service for other companies, you need a hosting partner agreement with Gradion.
 - Each release becomes Apache 2.0 no later than two years after it ships.
 

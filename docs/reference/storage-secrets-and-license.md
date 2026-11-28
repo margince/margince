@@ -135,7 +135,7 @@ whose target holds the text `${none}` is refused as well. A removal is always wr
 setting is declared.
 
 This does not matter for the license. An installation that removes its license has stopped paying,
-and production use after the initial trial needs a license.
+and production use after the first trial needs a license.
 
 **A declaration does not replace the copy.** No part of the product changes either credential, and
 no role Margince ships with holds the grant to write one. A declaration that differs from the copy
@@ -239,7 +239,7 @@ posture.
 
 ### The trial
 
-A production installation with no token runs on the initial 14-day trial granted by
+A production installation with no token runs on the first 14-day trial granted by
 [LICENSE](../../LICENSE). `MARGINCE_ENV` fails closed, so
 an installation that names nothing is production. The trial starts when the installation's
 workspace is created: the earliest `created_at` in `workspace`, archived rows included. There is no

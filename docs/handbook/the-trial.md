@@ -4,9 +4,8 @@
 
 A Margince you set up yourself runs for 14 days with no licence. The days count from the day its
 first workspace was made, even if that workspace is archived now. While they run, everything works
-and seats have no limit. This is the initial production trial allowed by the
-[license](https://github.com/margince/margince/blob/main/LICENSING.md). After it ends, production use
-needs a commercial subscription.
+and seats have no limit. This is the first trial for real work allowed by the
+[license](https://github.com/margince/margince/blob/main/LICENSING.md). After it ends, you need a commercial subscription to keep using Margince.
 
 Members who may read the licence see how many days are left. Admin and Ops hold that right by
 default. Short lines round the agent in the sidebar show one mark for each day. A small label under
