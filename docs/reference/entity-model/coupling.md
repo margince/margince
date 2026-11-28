@@ -12,29 +12,29 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 |---|--:|--:|--:|--:|--:|
 | [activities](activities.md) | 33 | 424 | 32 | 41 | 20 |
 | [agents](agents.md) | 3 | 28 | 0 | 5 | 1 |
-| [ai](ai.md) | 12 | 191 | 0 | 3 | 0 |
+| [ai](ai.md) | 12 | 190 | 0 | 2 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 24 | 0 | 2 | 0 |
 | [approvals](approvals.md) | 3 | 51 | 6 | 8 | 2 |
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
 | [assurance](assurance.md) | 9 | 83 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 32 | 1 | 2 | 0 |
-| [capture](capture.md) | 25 | 275 | 7 | 27 | 14 |
+| [capture](capture.md) | 25 | 274 | 7 | 27 | 14 |
 | [chatlinks](chatlinks.md) | 10 | 146 | 0 | 9 | 6 |
 | [collections](collections.md) | 13 | 101 | 1 | 9 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 51 | 5 | 6 | 1 |
 | [compose](compose.md) | 44 | 396 | 11 | 30 | 26 |
-| [consent](consent.md) | 23 | 318 | 2 | 44 | 23 |
-| [contacts](contacts.md) | 50 | 720 | 76 | 38 | 14 |
+| [consent](consent.md) | 23 | 314 | 2 | 44 | 23 |
+| [contacts](contacts.md) | 50 | 718 | 76 | 37 | 14 |
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
-| [customfields](customfields.md) | 1 | 20 | 0 | 1 | 0 |
+| [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 93 | 0 | 8 | 1 |
 | [deals](deals.md) | 26 | 379 | 26 | 18 | 2 |
-| [finance](finance.md) | 5 | 76 | 0 | 3 | 0 |
+| [finance](finance.md) | 5 | 73 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 87 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 217 | 157 | 7 | 5 |
-| [initiatives](initiatives.md) | 5 | 40 | 0 | 2 | 1 |
+| [identity](identity.md) | 22 | 213 | 155 | 7 | 5 |
+| [initiatives](initiatives.md) | 5 | 39 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 59 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
 | [knowledge](knowledge.md) | 3 | 38 | 0 | 0 | 0 |
@@ -65,7 +65,6 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 - `voice_build.voice_build_requester_fkey`: `FOREIGN KEY (requested_by) REFERENCES app_user(id) ON DELETE SET NULL (requested_by)`
 - `voice_profile.voice_profile_owner_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
-- `voice_profile.voice_profile_team_fkey`: `FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE RESTRICT`
 
 ### aiactivity
 

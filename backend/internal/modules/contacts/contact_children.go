@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -157,7 +158,7 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 // restating it writes nothing new, so it passes as stored.
 func parseContactHandles(emails []ContactEmailInput, phones []ContactPhoneInput, held map[string]bool) error {
 	for i, e := range emails {
-		if stored := strings.ToLower(strings.TrimSpace(e.Email)); held[stored] {
+		if stored := correspondence.Fold(e.Email); held[stored] {
 			emails[i].Email = stored
 			continue
 		}

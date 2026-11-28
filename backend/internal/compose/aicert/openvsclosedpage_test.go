@@ -48,7 +48,7 @@ var openVsClosedSetups = []openVsClosedSetup{
 	{"anthropic_cloud.yaml", "closed", false},
 	{"openrouter_openai.yaml", "closed", false},
 	{"consumer_class_brokered.yaml", "open (Gemma 4)", true},
-	{"openrouter_cloud.yaml", "open (gpt-oss) with Mistral on the upper tiers", true},
+	{"openrouter_cloud.yaml", "open (gpt-oss) with Mistral on the upper tiers and closed Claude on signal extraction", true},
 }
 
 // openVsClosedPricedOn is the day whose price rows the page uses. A rate row
@@ -76,7 +76,7 @@ func usd(micro int64) string { return fmt.Sprintf("$%.4f", float64(micro)/1e6) }
 type openVsClosedRow struct {
 	label, model, grade string
 	costMicro           int64
-	costed              bool
+	costed, stale       bool
 }
 
 func TestTheOpenVsClosedPageIsPublished(t *testing.T) {
@@ -109,6 +109,7 @@ func TestTheOpenVsClosedPageIsPublished(t *testing.T) {
 				row := openVsClosedRow{label: task.Label, model: task.Model.Model, grade: "Not measured"}
 				if g, ok := openVsClosedGrade[task.Band]; ok {
 					row.grade = g
+					row.stale = task.State != "current"
 				}
 				if rec, ok := byKey[task.Task+"|"+task.Model.Provider+"|"+task.Model.Model+"|"+task.Model.Env]; ok {
 					row.costMicro, row.costed = costMicro(rec, rates)
@@ -224,7 +225,7 @@ func writeOpenVsClosedFeatures(p *strings.Builder, open whichAISetup, rows, base
 	for _, t := range std.Tasks {
 		b, o := rowOrNotMeasured(base, t.Task), rowOrNotMeasured(rows, t.Task)
 		fmt.Fprintf(p, "| %s | %s (`%s`) | %s (`%s`) | %s | %s |\n", t.Label,
-			b.grade, b.model, o.grade, o.model, costCell(b), costCell(o))
+			gradeCell(b), b.model, gradeCell(o), o.model, costCell(b), costCell(o))
 		if b.grade == "Ready" && o.grade != "Ready" {
 			behind = append(behind, t.Label)
 		}
@@ -239,6 +240,15 @@ func rowOrNotMeasured(rows map[string]openVsClosedRow, task string) openVsClosed
 		return r
 	}
 	return openVsClosedRow{grade: "Not measured", model: "no model bound"}
+}
+
+// gradeCell keeps the re-check marker the certification page shows, so an old
+// measurement does not read as a current one.
+func gradeCell(r openVsClosedRow) string {
+	if r.stale {
+		return r.grade + " · re-check pending"
+	}
+	return r.grade
 }
 
 func costCell(r openVsClosedRow) string {

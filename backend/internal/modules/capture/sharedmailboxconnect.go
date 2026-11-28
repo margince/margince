@@ -173,7 +173,7 @@ func upsertSharedConnectionTx(ctx context.Context, tx pgx.Tx, in sharedUpsert) (
 		                                credential_ref, status, share_acknowledged_at, backup_owner_id)
 		VALUES (@provider, NULL, @by, @readers, @address, @visibility, @ref, 'connected', now(), @backup)
 		ON CONFLICT (provider, lower(account_label)) WHERE user_id IS NULL
-		DO UPDATE SET credential_ref = EXCLUDED.credential_ref, auth = NULL, status = 'connected', archived_at = NULL,
+		DO UPDATE SET credential_ref = EXCLUDED.credential_ref, auth = NULL, status = 'connected',
 		              connected_at = now(), connected_by = EXCLUDED.connected_by,
 		              backup_owner_id = EXCLUDED.backup_owner_id, generation = capture_connection.generation + 1
 		RETURNING id`, pgx.StrictNamedArgs{

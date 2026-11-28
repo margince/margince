@@ -188,6 +188,8 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// leave a consumer unable to tell a notice moving from the routing that
 		// decides where the next one goes.
 		"preference_changed": true,
+		// The identifier stream distinguishes a stored spelling correction from other changes.
+		"spelling_changed": true,
 		// A rep vouched that a machine-level refusal may be overruled for one
 		// category. The verb carries its object for the same reason
 		// suppression_lifted's does: this stream also carries "changed" and

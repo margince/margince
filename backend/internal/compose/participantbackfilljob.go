@@ -69,7 +69,7 @@ func newParticipantBackfillWorker(pool *pgxpool.Pool, log *slog.Logger) *partici
 // next tick simply re-selects whatever this one did not finish, because the
 // pass carries no cursor to lose.
 func (w *participantBackfillWorker) Work(ctx context.Context, _ *river.Job[ParticipantBackfillArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.backfillOneWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.backfillOneWorkspace))
 }
 
 func (w *participantBackfillWorker) backfillOneWorkspace(ctx context.Context, workspace ids.UUID) error {

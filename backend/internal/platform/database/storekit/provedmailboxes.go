@@ -41,7 +41,7 @@ func ProvedMailboxLabels(ctx context.Context, tx pgx.Tx) (map[ids.UUID][]string,
 
 func provedMailboxClause(alias string) string {
 	alias = pgx.Identifier{alias}.Sanitize()
-	return fmt.Sprintf(`(%[1]s.archived_at IS NULL AND coalesce(%[1]s.account_label,'') <> ''
+	return fmt.Sprintf(`(coalesce(%[1]s.account_label,'') <> ''
  AND %[1]s.status='connected' AND %[1]s.provider IN ('gmail','gcal','graph','graphcal'))`, alias)
 }
 

@@ -11,11 +11,11 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -43,7 +43,7 @@ func VisibleAddresses(ctx context.Context, tx pgx.Tx, addresses []string) (map[s
 	}
 	normalized := make([]string, 0, len(addresses))
 	for _, addr := range addresses {
-		if trimmed := strings.ToLower(strings.TrimSpace(addr)); trimmed != "" {
+		if trimmed := correspondence.Fold(addr); trimmed != "" {
 			normalized = append(normalized, trimmed)
 		}
 	}

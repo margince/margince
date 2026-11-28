@@ -281,7 +281,7 @@ func (p FieldPatch) auditDiff(was, now lockedField) (before, after map[string]an
 // keeps a total from counting a record twice, which rules out a multiselect.
 func reportable(f lockedField) bool {
 	return (f.Object == string(datasource.EntityDeal) || f.Object == string(datasource.EntityCompany)) &&
-		(f.Type == TypePicklist || f.Type == TypeBoolean)
+		(f.Type == TypePicklist || f.Type == TypeBoolean || (f.Object == string(datasource.EntityDeal) && f.Type == TypeRecord))
 }
 
 // Retire flips status to retired (CUSTOM-FIELDS-WIRE-4/AC-13): the field

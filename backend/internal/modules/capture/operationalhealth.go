@@ -32,7 +32,7 @@ func ReadOperationalCategoriesTx(ctx context.Context, tx pgx.Tx) (OperationalCat
  (SELECT count(*) FROM capture_thread_verdict WHERE `+threadOwedAnswerSQL+`),
  (SELECT count(*) FROM capture_thread_verdict WHERE status='unsure'),
  (SELECT count(*) FROM owners),
- (SELECT count(DISTINCT user_id) + count(*) FILTER (WHERE user_id IS NULL) FROM capture_connection WHERE unread_from IS NOT NULL AND archived_at IS NULL),
+ (SELECT count(DISTINCT user_id) + count(*) FILTER (WHERE user_id IS NULL) FROM capture_connection WHERE unread_from IS NOT NULL),
  (SELECT count(*) FROM capture_thread_verdict v WHERE status='pending' AND attempts >= $1 AND EXISTS (SELECT 1 FROM activity m WHERE `+HeldMessageSQL("v", "m")+`))`, PendingMaxAttempts).Scan(
 		&out.SenderReviews, &out.MachineThreads, &out.UncertainThreads, &out.OwnerReviewMailboxes, &out.UnreadMailboxes, &out.StalledThreads)
 	return out, err

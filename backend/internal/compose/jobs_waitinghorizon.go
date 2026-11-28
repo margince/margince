@@ -88,10 +88,7 @@ type waitingHorizonRefreshWorker struct {
 }
 
 func (w *waitingHorizonRefreshWorker) Work(ctx context.Context, _ *river.Job[WaitingHorizonRefreshArgs]) error {
-	wsCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	days, err := w.activities.RefreshWaitingHorizon(
 		principal.SystemActing(wsCtx, waitingHorizonRefreshActor), waitingHorizonStatementBudget())
 	if err != nil {

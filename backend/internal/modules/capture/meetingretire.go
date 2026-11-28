@@ -6,11 +6,11 @@ package capture
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -22,7 +22,7 @@ const calendarProvidersArg = "calendar_providers"
 // is the placeholder that binds calendarProviderNames.
 func calendarLiveSQL(seat, providers string) string {
 	return `EXISTS (SELECT 1 FROM capture_connection seat_calendar WHERE seat_calendar.user_id=` + seat + `
- AND seat_calendar.provider=ANY(` + providers + `) AND seat_calendar.status IN ('connected','error') AND seat_calendar.archived_at IS NULL)`
+ AND seat_calendar.provider=ANY(` + providers + `) AND seat_calendar.status IN ('connected','error'))`
 }
 
 // anotherLiveRosterSQL holds for a row that a seat besides the syncing one
@@ -73,7 +73,7 @@ func listedAndDeclined(listed []connector.MessageParticipant) (addresses, declin
 	addresses = make([]string, 0, len(listed))
 	declined = make([]string, 0, len(listed))
 	for _, p := range listed {
-		address := strings.ToLower(strings.TrimSpace(p.Email))
+		address := correspondence.Fold(p.Email)
 		addresses = append(addresses, address)
 		if p.Declined() {
 			declined = append(declined, address)

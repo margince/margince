@@ -325,7 +325,7 @@ var piiTables = map[string]piiHandling{
 	"conversation_claim": {
 		erasureWrite: true,
 		sarRead:      true,
-		sarWithholds: []string{"captured_by", "corrected_by_user_id", "taken_by_user_id"},
+		sarWithholds: []string{"captured_by", "taken_by_user_id"},
 	},
 	// A stage-evidence snippet quotes the message a claim about a deal was read
 	// from, so it goes when the message's text goes. The row stays.

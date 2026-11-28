@@ -333,9 +333,10 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		rateOn(day, providerOpenAICompatible, "z-ai/glm-5.2", 966_000, 3_036_000, 179_400, 0),
 		rateOn(day, providerOpenAICompatible, "nvidia/nemotron-3-ultra-550b-a55b", 600_000, 3_600_000, 200_000, 0),
 		rateOn(day, providerOpenAICompatible, "openai/gpt-oss-20b", 30_000, 130_000, 30_000, 0),
-		// Gemma 4, read on the broker's model list. It publishes no cached-input
-		// price for either, so 0 is "no cache discount".
-		rateOn(day, providerOpenAICompatible, "google/gemma-4-26b-a4b-it", 67_500, 225_000, 0, 0),
+		// Gemma 4, each row one broker endpoint's prices. The 26B row is the
+		// endpoint that also lists a cache-read price. The 31B endpoint lists
+		// none, so 0 there is "no cache discount".
+		rateOn(day, providerOpenAICompatible, "google/gemma-4-26b-a4b-it", 67_500, 225_000, 37_500, 0),
 		rateOn(day, providerOpenAICompatible, "google/gemma-4-31b-it", 200_000, 400_000, 0, 0),
 		// gpt-oss-120b publishes no cached-input price, unlike its 20b
 		// sibling; 0 here is "no cache discount", and the uncached input rate

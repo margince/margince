@@ -24,7 +24,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -47,7 +46,6 @@ func (e *documentReadEngine) start(w http.ResponseWriter, r *http.Request, id op
 	read, joined, err := e.activities.StartExtractionReadFor(r.Context(), attachmentID, question, requestedBy(r.Context()),
 		func(ctx context.Context, tx pgx.Tx, read activities.ExtractionRead) error {
 			return e.enqueue.EnqueueTx(ctx, tx, DocumentExtractArgs{
-				Workspace:        storekit.MustWorkspace(ctx),
 				AttachmentID:     attachmentID,
 				ExtractionReadID: read.ID,
 				RequestedBy:      read.RequestedBy,

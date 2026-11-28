@@ -55,7 +55,7 @@ func mailboxImporter(connection ids.UUID) importer {
 // one row the send and posture reads also pick, so no import names two
 // mailboxes for one delivery.
 const deliveringMailboxSQL = `c.id = coalesce(@delivering_connection::uuid, (SELECT m.id FROM capture_connection m
-	 WHERE m.user_id = @importer AND m.provider = @delivering_provider AND m.archived_at IS NULL
+	 WHERE m.user_id = @importer AND m.provider = @delivering_provider
 	 ORDER BY m.status = 'disconnected', m.default_sender DESC, m.created_at, m.id LIMIT 1))`
 
 // importerHoldsActivityTx answers whether the row is already this importer's:

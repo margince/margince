@@ -8,8 +8,7 @@
   },
   "ai": {
     "voice_build.voice_build_requester_fkey": "FOREIGN KEY (requested_by) REFERENCES app_user(id) ON DELETE SET NULL (requested_by)",
-    "voice_profile.voice_profile_owner_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT",
-    "voice_profile.voice_profile_team_fkey": "FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE RESTRICT"
+    "voice_profile.voice_profile_owner_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT"
   },
   "aiactivity": {
     "ai_task_run.ai_task_run_actor_user_id_fkey": "FOREIGN KEY (actor_user_id) REFERENCES app_user(id) ON DELETE SET NULL",

@@ -59,7 +59,7 @@ func (r *Registry) SetSignatureEnrichment(ctx context.Context, mb Mailbox, enabl
 		row := tx.QueryRow(ctx, `
 			UPDATE capture_connection
 			   SET signature_enrich_enabled = $3
-			 WHERE `+match.where+` AND archived_at IS NULL
+			 WHERE `+match.where+`
 			RETURNING (SELECT c.signature_enrich_enabled
 			             FROM capture_connection c WHERE c.id = capture_connection.id)`,
 			match.id, actor.UserID, enabled)

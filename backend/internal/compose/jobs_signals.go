@@ -53,7 +53,7 @@ type signalScanWorker struct {
 }
 
 func (w *signalScanWorker) Work(ctx context.Context, _ *river.Job[SignalScanArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.scanWorkspaceSignals))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.scanWorkspaceSignals))
 }
 
 // signalScanWorkspaceWorker runs both producers for one workspace.

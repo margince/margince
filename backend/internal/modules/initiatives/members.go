@@ -6,7 +6,6 @@ package initiatives
 import (
 	"context"
 	"fmt"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"slices"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -312,7 +312,7 @@ func (s *Store) ReplaceMembers(ctx context.Context, id ids.UUID, picked, exclude
 				}
 			}
 		}
-		tag, err := tx.Exec(ctx, `UPDATE sales_initiative SET version = version + 1, updated_at = now() WHERE id = $1 AND archived_at IS NULL AND version = $2`, id, versionOf(before))
+		tag, err := tx.Exec(ctx, `UPDATE sales_initiative SET version = version + 1, updated_at = now() WHERE id = $1 AND version = $2`, id, versionOf(before))
 		if err != nil {
 			return fmt.Errorf("bump initiative: %w", err)
 		}

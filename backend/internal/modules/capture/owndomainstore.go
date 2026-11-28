@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -334,7 +335,7 @@ const ownDomainWriteIdentity = "workspace_email_domain"
 // what to do about it rather than folded into something that silently matches
 // nothing.
 func ValidOwnDomain(raw string) (string, error) {
-	domain := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(raw), "@")))
+	domain := correspondence.Fold(strings.TrimPrefix(strings.TrimSpace(raw), "@"))
 	domain = strings.TrimSuffix(domain, ".")
 	switch {
 	case domain == "":

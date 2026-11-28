@@ -55,7 +55,7 @@ var ErrConnectorNotConfigured = errors.New("capture: no connector for this provi
 // 'reauth_required' mean there is nothing to send through.
 const sendableConnection = `
 	 WHERE user_id = $1 AND provider = $2
-	   AND status IN ('connected','error') AND archived_at IS NULL AND ($3::uuid IS NULL OR id = $3)
+	   AND status IN ('connected','error') AND ($3::uuid IS NULL OR id = $3)
 	 ORDER BY default_sender DESC, created_at, id LIMIT 1`
 
 // GrantedScopesFor reports the scopes the PROVIDER says one user's live
@@ -171,7 +171,7 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 			-- that quietly stopped filing with no way to see why is exactly
 			-- what saying so here prevents.
 			LEFT JOIN tag t ON t.id = c.context_tag_id
-			WHERE c.user_id = $1 AND c.archived_at IS NULL
+			WHERE c.user_id = $1
 			ORDER BY c.provider, c.created_at, c.id`, actor.UserID)
 		if err != nil {
 			return err
@@ -429,7 +429,7 @@ func (r *Registry) DueConnections(ctx context.Context, name string) ([]DueConnec
 			-- so the poll asks the question too. Same condition
 			-- seatLoginAddressTx reads one file over.
 			LEFT JOIN app_user u ON u.id = c.user_id AND `+workforce.LiveMemberSQL("u")+`
-			WHERE c.provider = $1 AND c.status IN ('connected','error') AND c.archived_at IS NULL
+			WHERE c.provider = $1 AND c.status IN ('connected','error')
 			  AND (u.id IS NOT NULL OR `+sharedMailboxLiveSQL+`)
 			  AND COALESCE(s.next_sync_at, now()) <= now()`, name)
 		if err != nil {
@@ -439,34 +439,29 @@ func (r *Registry) DueConnections(ctx context.Context, name string) ([]DueConnec
 	})
 }
 
-// collectDue is the RLS fleet-walk the poll (DueConnections) and the watch scan
-// (DueWatches) share: it enumerates every live workspace, enters each one's own
-// GUC, and appends the connection ids the per-workspace selector returns, tagged
-// with their workspace. Per-workspace errors are joined so one workspace's
-// failure never starves the rest of the fleet.
+// collectDue is the scan the poll (DueConnections) and the watch scan
+// (DueWatches) share. It enters the installation's workspace GUC and returns
+// the connection ids the selector picks, tagged with their workspace.
 func (r *Registry) collectDue(ctx context.Context, selector func(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error)) ([]DueConnection, error) {
-	workspaces, err := database.LiveWorkspaces(ctx, r.db.Pool())
-	if err != nil {
+	wsID, ok, err := database.LiveWorkspace(ctx, r.db.Pool())
+	if err != nil || !ok {
 		return nil, err
 	}
 	var due []DueConnection
-	var errs error
-	for _, wsID := range workspaces {
-		wsCtx := principal.WithWorkspaceID(ctx, wsID)
-		ws := ids.From[ids.WorkspaceKind](wsID)
-		err := r.db.Tx(wsCtx, func(tx pgx.Tx) error {
-			selected, err := selector(wsCtx, tx)
-			if err != nil {
-				return err
-			}
-			for _, id := range selected {
-				due = append(due, DueConnection{Workspace: ws, ID: id})
-			}
-			return nil
-		})
+	wsCtx := principal.WithWorkspaceID(ctx, wsID)
+	ws := ids.From[ids.WorkspaceKind](wsID)
+	err = r.db.Tx(wsCtx, func(tx pgx.Tx) error {
+		selected, err := selector(wsCtx, tx)
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("capture: fleet walk in workspace %s: %w", wsID, err))
+			return err
 		}
+		for _, id := range selected {
+			due = append(due, DueConnection{Workspace: ws, ID: id})
+		}
+		return nil
+	})
+	if err != nil {
+		return due, fmt.Errorf("capture: due scan: %w", err)
 	}
-	return due, errs
+	return due, nil
 }

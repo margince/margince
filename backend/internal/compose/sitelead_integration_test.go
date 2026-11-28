@@ -64,7 +64,7 @@ func runTeamDeepReadOn(t *testing.T, e *integration.Env, company ids.UUID, site 
 	t.Helper()
 	worker, svc := newDeepReadTestWorker(e, site, brain)
 	read, args := startDeepRead(t, e, company)
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)

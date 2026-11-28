@@ -71,7 +71,7 @@ func newRiskVerdictSweepWorker(pool *pgxpool.Pool, now func() time.Time, log *sl
 }
 
 func (w *riskVerdictSweepWorker) Work(ctx context.Context, _ *river.Job[RiskVerdictSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.recordWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.recordWorkspace))
 }
 
 func (w *riskVerdictSweepWorker) recordWorkspace(ctx context.Context, workspace ids.UUID) error {

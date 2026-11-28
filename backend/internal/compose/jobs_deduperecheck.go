@@ -32,7 +32,7 @@ func (DedupeRecheckArgs) FleetWide() {}
 type dedupeRecheckWorker struct{ pool *pgxpool.Pool }
 
 func (w *dedupeRecheckWorker) Work(ctx context.Context, _ *river.Job[DedupeRecheckArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.recheckWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.recheckWorkspace))
 }
 
 // recheckWorkspace closes before it scans, so a pair closed tonight is not

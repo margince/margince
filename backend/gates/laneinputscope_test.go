@@ -28,13 +28,12 @@ package gates
 // own scope. A script added to a lane's recipe next month arrives here as a
 // failure instead of as a lane that quietly stopped covering it.
 //
-// WHAT THIS CANNOT SEE, and it is the honest limit of reading a recipe: a
-// script's own dependencies. verify-boot.sh sourcing a helper elsewhere in the
-// tree is invisible here, because following that would mean interpreting shell.
-// The census counts what a lane names.
+// A script's own dependencies count too: a helper it `source`s is followed,
+// transitively, so an edit to the helper alone still runs the lane.
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -68,6 +67,10 @@ var scopeGuard = regexp.MustCompile(`needs\.changes\.outputs\.(\w+)`)
 // A repository script as a command names it: `./scripts/x.sh`,
 // `bash scripts/x.sh`, `node scripts/x.mjs`, `frontend/scripts/x.sh`.
 var scriptReference = regexp.MustCompile(`(?:frontend/)?scripts/[\w.-]+\.(?:sh|mjs|js|ts)`)
+
+// The helper a script line sources: `source "$DIR/lib-x.sh"`,
+// `. "$root/scripts/lib-x.sh"`. Every helper lives in scripts/.
+var sourcedHelper = regexp.MustCompile(`(?m)^\s*(?:source|\.)\s+[^\n#]*?([\w.-]+\.sh)\b`)
 
 // `make check-fe`, `make db-up && make migrate`.
 var makeInvocation = regexp.MustCompile(`\bmake\s+([a-z][a-z0-9-]*)`)
@@ -145,9 +148,9 @@ func filterScopes(t *testing.T, workflow workflowFile) map[string][]string {
 
 // flattenPatterns reads a scope's value: a list of patterns, and where one scope
 // is spelled as another plus extras, an ANCHOR standing for that other list.
-// Read as nodes rather than as decoded values so the alias is followed — the
-// `backend` scope is `*backend_db` plus the rulebooks, and a reader that stopped
-// at the alias would judge it against two paths.
+// Read as nodes rather than as decoded values so the alias is followed. The
+// `backend_lint` scope is `*backend_db` plus `tools/**`, and a reader that
+// stopped at the alias would judge it against one path.
 func flattenPatterns(node *yaml.Node) []string {
 	switch node.Kind {
 	case yaml.ScalarNode:
@@ -382,18 +385,23 @@ type filteredLane struct {
 // filteredLanes reads the merge gate for jobs guarded by a classifier scope. A
 // job that delegates to a reusable lane workflow carries no steps of its own, so
 // the callee's steps are read as the job's.
-func filteredLanes(t *testing.T, workflow workflowFile) []filteredLane {
+// filteredLanes takes the scopes read from the same workflow, so a job guarded
+// only by an output that filters no path is left out.
+func filteredLanes(t *testing.T, workflow workflowFile, scopes map[string][]string) []filteredLane {
 	t.Helper()
 	targets, vars := parseRecipes(t, rootMakefile)
 	var lanes []filteredLane
 	for name, job := range workflow.Jobs {
-		guarded := scopeGuard.FindAllStringSubmatch(job.If, -1)
-		if guarded == nil {
-			continue
-		}
 		lane := filteredLane{name: name}
-		for _, match := range guarded {
-			lane.scopes = append(lane.scopes, match[1])
+		// An output the classifier derives from the event alone, such as
+		// full_lane, filters no path, so a job it alone guards skips no edit.
+		for _, match := range scopeGuard.FindAllStringSubmatch(job.If, -1) {
+			if _, ok := scopes[match[1]]; ok {
+				lane.scopes = append(lane.scopes, match[1])
+			}
+		}
+		if lane.scopes == nil {
+			continue
 		}
 		commands := jobCommands(t, workflow, job.Uses, name)
 		inputs := map[string]bool{}
@@ -408,11 +416,41 @@ func filteredLanes(t *testing.T, workflow workflowFile) []filteredLane {
 				}
 			}
 		}
-		lane.inputs = sorted(inputs)
+		lane.inputs = withSourcedHelpers(t, sorted(inputs))
 		lanes = append(lanes, lane)
 	}
 	slices.SortFunc(lanes, func(a, b filteredLane) int { return strings.Compare(a.name, b.name) })
 	return lanes
+}
+
+// withSourcedHelpers adds every scripts/ helper the inputs source, and the
+// helpers those source in turn.
+func withSourcedHelpers(t *testing.T, inputs []string) []string {
+	t.Helper()
+	found := map[string]bool{}
+	queue := slices.Clone(inputs)
+	for len(queue) > 0 {
+		input := queue[0]
+		queue = queue[1:]
+		if found[input] {
+			continue
+		}
+		found[input] = true
+		if !strings.HasSuffix(input, ".sh") {
+			continue
+		}
+		body, err := gatekit.ReadFile(filepath.Join("..", input))
+		if err != nil {
+			t.Fatalf("reading %s, a script a lane runs: %v", input, err)
+		}
+		for _, match := range sourcedHelper.FindAllStringSubmatch(string(body), -1) {
+			helper := scriptsDirPrefix + match[1]
+			if _, err := os.Stat(filepath.Join("..", helper)); err == nil {
+				queue = append(queue, helper)
+			}
+		}
+	}
+	return sorted(found)
 }
 
 // jobCommands is every `run:` in the job, following a `uses:` into the reusable
@@ -454,17 +492,18 @@ func unscoped(lane filteredLane, scopes map[string][]string) []string {
 	return missing
 }
 
-// scopeClaims answers the pattern shapes the classifier uses: a literal path, a
-// tree, a glob in one directory, and a basename anywhere. An unknown shape
+// scopeClaims answers the pattern shapes the classifier uses. They are the
+// whole tree, a literal path, a tree with its directory, a glob in one
+// directory, and a basename anywhere. An unknown shape
 // claims nothing. This gate must not pass over patterns it never read.
 func scopeClaims(path string, patterns []string) bool {
 	for _, pattern := range patterns {
 		pattern = strings.Trim(pattern, "'")
 		switch {
-		case pattern == path:
+		case pattern == "**", pattern == path:
 			return true
 		case strings.HasSuffix(pattern, "/**") &&
-			strings.HasPrefix(path, strings.TrimSuffix(pattern, "**")):
+			(path == strings.TrimSuffix(pattern, "/**") || strings.HasPrefix(path, strings.TrimSuffix(pattern, "**"))):
 			return true
 		case globInOneDirectory(pattern, path):
 			return true
@@ -491,7 +530,7 @@ func TestEveryFilteredLaneRunsOnAChangeToTheScriptsItExecutes(t *testing.T) {
 	t.Parallel()
 	workflow := readWorkflow(t, classifierWorkflow)
 	scopes := filterScopes(t, workflow)
-	lanes := filteredLanes(t, workflow)
+	lanes := filteredLanes(t, workflow, scopes)
 
 	// A classifier that stopped being recognised, or a workflow whose jobs
 	// stopped being guarded, would leave nothing to judge and report a pass.
@@ -517,7 +556,7 @@ func TestEveryFilteredLaneRunsOnAChangeToTheScriptsItExecutes(t *testing.T) {
 func TestAScriptReachedOnlyThroughMakeIsStillALaneInput(t *testing.T) {
 	t.Parallel()
 	workflow := readWorkflow(t, classifierWorkflow)
-	lanes := filteredLanes(t, workflow)
+	lanes := filteredLanes(t, workflow, filterScopes(t, workflow))
 
 	// The defect this gate was written for was reached through `make`, not named
 	// in the workflow: live-boot's steps say `make seed-dev` and the seeder's
@@ -564,7 +603,7 @@ func TestTheCensusFailsOnAScopeThatOmitsAScriptItsLaneRuns(t *testing.T) {
 	t.Parallel()
 	workflow := readWorkflow(t, classifierWorkflow)
 	scopes := filterScopes(t, workflow)
-	lanes := filteredLanes(t, workflow)
+	lanes := filteredLanes(t, workflow, scopes)
 
 	// The gate's own falsification, and the defect it shipped against: take the
 	// live classifier, drop the scripts from one scope, and the lane that runs
@@ -575,7 +614,8 @@ func TestTheCensusFailsOnAScopeThatOmitsAScriptItsLaneRuns(t *testing.T) {
 		for name, patterns := range scopes {
 			kept := make([]string, 0, len(patterns))
 			for _, pattern := range patterns {
-				if !slices.Contains(lane.scopes, name) || !strings.HasPrefix(pattern, "scripts/") {
+				claimsScripts := strings.HasPrefix(pattern, "scripts/") || pattern == "**"
+				if !slices.Contains(lane.scopes, name) || !claimsScripts {
 					kept = append(kept, pattern)
 				}
 			}
@@ -591,9 +631,19 @@ func TestTheCensusFailsOnAScopeThatOmitsAScriptItsLaneRuns(t *testing.T) {
 			continue
 		}
 		if missing := unscoped(lane, narrowed); len(missing) == 0 {
-			t.Errorf("%s: %d root script(s) this lane runs stayed claimed after every 'scripts/…' pattern was removed from its scope %v — the matcher claims paths no pattern covers, so the census cannot fail",
+			t.Errorf("%s: %d root script(s) this lane runs stayed claimed after every 'scripts/…' and '**' pattern was removed from its scope %v — the matcher claims paths no pattern covers, so the census cannot fail",
 				lane.name, scripts, lane.scopes)
 		}
+	}
+}
+
+// A release script reaches lib-dist-version.sh only through its `source` line,
+// so an edit to the helper alone must still count as an edit to the script.
+func TestASourcedHelperIsStillALaneInput(t *testing.T) {
+	t.Parallel()
+	inputs := withSourcedHelpers(t, []string{"scripts/release-dist-version.sh"})
+	if !slices.Contains(inputs, "scripts/lib-dist-version.sh") {
+		t.Fatalf("the inputs of scripts/release-dist-version.sh are %v, want scripts/lib-dist-version.sh among them", inputs)
 	}
 }
 

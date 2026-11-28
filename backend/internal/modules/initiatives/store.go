@@ -140,7 +140,7 @@ func (s *Store) Update(ctx context.Context, id ids.UUID, in Definition, ifVersio
 		if err != nil {
 			return err
 		}
-		if err := storekit.EnsureIfMatch(ctx, tx, table, id, ifVersion); err != nil {
+		if err := storekit.EnsureIfMatchIn(ctx, tx, table, id, ifVersion, storekit.NoArchiveColumn); err != nil {
 			return err
 		}
 		leadRule, dealRule, err := ruleJSON(in)
@@ -167,7 +167,7 @@ func (s *Store) Update(ctx context.Context, id ids.UUID, in Definition, ifVersio
 			out = before
 			return err
 		}
-		tag, err := tx.Exec(ctx, `UPDATE sales_initiative SET name = $2, description = $3, owner_id = $4, objective_metric = $5, target_value = $6, deadline = $7, lead_rule = $8, deal_rule = $9, include_future = $10, version = version + 1, updated_at = now() WHERE id = $1 AND archived_at IS NULL AND version = $11`,
+		tag, err := tx.Exec(ctx, `UPDATE sales_initiative SET name = $2, description = $3, owner_id = $4, objective_metric = $5, target_value = $6, deadline = $7, lead_rule = $8, deal_rule = $9, include_future = $10, version = version + 1, updated_at = now() WHERE id = $1 AND version = $11`,
 			id, in.Name, in.Description, owner, in.Objective, in.Target, in.Deadline, leadRule, dealRule, include, versionOf(before))
 		if err != nil {
 			return fmt.Errorf("update initiative: %w", err)
@@ -207,7 +207,7 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 		if err != nil {
 			return err
 		}
-		if err := storekit.EnsureIfMatch(ctx, tx, table, id, ifVersion); err != nil {
+		if err := storekit.EnsureIfMatchIn(ctx, tx, table, id, ifVersion, storekit.NoArchiveColumn); err != nil {
 			return err
 		}
 		if before.Status != crmcontracts.SalesInitiativeStatusDraft {
@@ -229,7 +229,7 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 			id, members.Deals); err != nil {
 			return fmt.Errorf("freeze the baseline: %w", err)
 		}
-		tag, err := tx.Exec(ctx, `UPDATE sales_initiative SET status = 'live', launch_at = $2, version = version + 1, updated_at = now() WHERE id = $1 AND archived_at IS NULL AND version = $3`, id, now, versionOf(before))
+		tag, err := tx.Exec(ctx, `UPDATE sales_initiative SET status = 'live', launch_at = $2, version = version + 1, updated_at = now() WHERE id = $1 AND version = $3`, id, now, versionOf(before))
 		if err != nil {
 			return fmt.Errorf("launch initiative: %w", err)
 		}
@@ -275,7 +275,7 @@ func (s *Store) List(ctx context.Context, status *string) ([]crmcontracts.SalesI
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, `SELECT `+columns+` FROM sales_initiative WHERE archived_at IS NULL AND ($1::text IS NULL OR status = $1) AND `+scope+` ORDER BY created_at DESC, id DESC LIMIT 200`, args...)
+		rows, err := tx.Query(ctx, `SELECT `+columns+` FROM sales_initiative WHERE ($1::text IS NULL OR status = $1) AND `+scope+` ORDER BY created_at DESC, id DESC LIMIT 200`, args...)
 		if err != nil {
 			return fmt.Errorf("list initiatives: %w", err)
 		}
@@ -312,7 +312,7 @@ func readInitiative(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.S
 	if err != nil {
 		return crmcontracts.SalesInitiative{}, err
 	}
-	out, err := scanInitiative(tx.QueryRow(ctx, `SELECT `+columns+` FROM sales_initiative WHERE id = $1 AND archived_at IS NULL AND `+scope, args...))
+	out, err := scanInitiative(tx.QueryRow(ctx, `SELECT `+columns+` FROM sales_initiative WHERE id = $1 AND `+scope, args...))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.SalesInitiative{}, apperrors.ErrNotFound
 	}
@@ -320,7 +320,7 @@ func readInitiative(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.S
 }
 
 func lockInitiative(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.SalesInitiative, error) {
-	if _, err := storekit.LockRow(ctx, tx, table, id, storekit.LiveOnly); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, table, id, storekit.NoArchiveColumn); err != nil {
 		return crmcontracts.SalesInitiative{}, err
 	}
 	return readInitiative(ctx, tx, id)

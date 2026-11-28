@@ -29,7 +29,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -44,15 +43,11 @@ import (
 // company actually has rather than the one it had when the job was made. A
 // copy in the args would be the stale-coordinate bug moved one layer out.
 type GeocodeCompanyArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
 	CompanyID ids.UUID `json:"company_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (GeocodeCompanyArgs) Kind() string { return "geocode_company" }
-
-// WorkspaceID binds this lookup to its tenant (jobs.WorkspaceScoped).
-func (a GeocodeCompanyArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // GeocodeEnqueueFor builds the in-transaction enqueue the contacts store calls
 // when an address is written.
@@ -65,15 +60,7 @@ func GeocodeEnqueueFor(enqueue geocodeEnqueuer) contacts.GeocodeEnqueue {
 		return nil
 	}
 	return func(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
-		ws, ok := principal.WorkspaceID(ctx)
-		if !ok {
-			// No tenant bound means no job that could ever be worked: River
-			// scopes by workspace, and a row without one is a job nobody
-			// dequeues. Refusing is louder than inserting an orphan.
-			return errors.New("compose: geocoding a company outside any workspace")
-		}
 		return enqueue.EnqueueTx(ctx, tx, GeocodeCompanyArgs{
-			Workspace: ws,
 			CompanyID: companyID.UUID,
 		}, geocodeInsertOpts())
 	}
@@ -159,15 +146,10 @@ func newGeocodeWorker(pool *pgxpool.Pool, geocoder geocode.Client) *geocodeWorke
 // nothing is the one where there was nothing to ask about.
 func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeCompanyArgs]) error {
 	args := job.Args
-	// Bound through the shared helper, so the args' own WorkspaceID() IS the
-	// binding: a worker that picked its own could claim one workspace and work
-	// in another. Under a NEW name rather than reassigning ctx, because
-	// workspaceJobCtx returns a nil context alongside its error and the refusal
-	// below has to report through a context that exists.
-	wsCtx, err := workspaceJobCtx(ctx, args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	// Bound through the shared helper, under a new name. bindInstallation
+	// returns a nil context with its error, and the refusal below has to report
+	// through a context that exists.
+	wsCtx := ctx
 	// The lookup reads and writes under an actor of its own, and it needs one:
 	// AddressForGeocode takes company:read and RecordGeocode takes
 	// company:update, both of which refuse a context with no principal.
@@ -177,9 +159,7 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeCompanyA
 	// installation whose companies were seeded before the geocoder was
 	// configured — so the worker had never actually run.
 	wsCtx = geocodeJobActor(wsCtx)
-	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
-		return ids.From[ids.WorkspaceKind](args.Workspace), nil
-	}))
+	store := contacts.NewStore(InstallationDB(w.pool))
 	companyID := ids.From[ids.CompanyKind](args.CompanyID)
 
 	address, ok, err := store.AddressForGeocode(wsCtx, companyID)

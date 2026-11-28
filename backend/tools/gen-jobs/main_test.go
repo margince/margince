@@ -66,7 +66,7 @@ kinds:
     opts_owner: caller
     cadence: 24h
     fans_out_to: foo_workspace
-    fan_out_unit: workspace
+    fan_out_unit: installation
   foo_workspace:
     role: worker
     go_type: FooWorkspaceArgs
@@ -87,7 +87,7 @@ kinds:
     opts_owner: caller
     cadence: 24h
     fans_out_to: nobody
-    fan_out_unit: workspace
+    fan_out_unit: installation
 `, "nobody")
 }
 
@@ -101,7 +101,7 @@ kinds:
     timeout: 2m
     opts_owner: caller
     fans_out_to: foo_workspace
-    fan_out_unit: workspace
+    fan_out_unit: installation
   foo_workspace:
     role: worker
     go_type: FooWorkspaceArgs
@@ -158,7 +158,7 @@ kinds:
     timeout: 2m
     opts_owner: caller
     cadence: 24h
-    fan_out_unit: workspace
+    fan_out_unit: installation
 `, fanOutPairingRule)
 }
 
@@ -198,7 +198,7 @@ kinds:
     opts_owner: caller
     cadence: 24h
     fans_out_to: shared_child
-    fan_out_unit: workspace
+    fan_out_unit: installation
   bar:
     role: dispatcher
     go_type: BarArgs
@@ -230,7 +230,7 @@ kinds:
     opts_owner: caller
     cadence: 24h
     fans_out_to: shared_child
-    fan_out_unit: workspace
+    fan_out_unit: installation
   bar:
     role: dispatcher
     go_type: BarArgs
@@ -239,7 +239,7 @@ kinds:
     opts_owner: caller
     cadence: 24h
     fans_out_to: shared_child
-    fan_out_unit: workspace
+    fan_out_unit: installation
   shared_child:
     role: worker
     go_type: SharedChildArgs
@@ -367,7 +367,7 @@ kinds:
     opts_owner: caller
     cadence: {setting: installation.foo_seconds, off_at_zeroo: true}
     fans_out_to: foo_workspace
-    fan_out_unit: workspace
+    fan_out_unit: installation
   foo_workspace:
     role: worker
     go_type: FooWorkspaceArgs
@@ -391,7 +391,7 @@ kinds:
     opts_owner: caller
     cadence: {operator: Interval}
     fans_out_to: foo_workspace
-    fan_out_unit: workspace
+    fan_out_unit: installation
   foo_workspace:
     role: worker
     go_type: FooWorkspaceArgs
@@ -414,7 +414,7 @@ kinds:
     opts_owner: caller
     cadence: {setting: installation.foo_seconds, off_at_zero: true}
     fans_out_to: foo_workspace
-    fan_out_unit: workspace
+    fan_out_unit: installation
   foo_workspace:
     role: worker
     go_type: FooWorkspaceArgs
@@ -530,7 +530,7 @@ kinds:
     opts_owner: caller
     cadence: on_demand
     fans_out_to: a_workspace
-    fan_out_unit: workspace
+    fan_out_unit: installation
 `
 
 func mustParse(t *testing.T, src string) contract {
@@ -641,7 +641,7 @@ kinds:
     opts_owner: caller
     cadence: 1h
     fans_out_to: a_kind
-    fan_out_unit: workspace
+    fan_out_unit: installation
   a_kind:
     role: worker
     go_type: AKindArgs

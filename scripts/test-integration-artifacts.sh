@@ -182,7 +182,7 @@ keep_shard_evidence "$long/out" "$long/work" "$long/regex" "$long/logs" "$long/f
 # stand for it, and attempt 10 is newer than attempt 9.
 runs="$work/runs"
 for copy in integration-shard-1-attempt-1 integration-shard-1-attempt-2 integration-shard-2-attempt-1 \
-  integration-covdata-unit-attempt-9 integration-covdata-unit-attempt-10; do
+  unit-covdata-unit-attempt-9 unit-covdata-unit-attempt-10; do
   mkdir -p "$runs/$copy"
   echo "$copy" > "$runs/$copy/meta.txt"
 done
@@ -193,7 +193,7 @@ newest_attempt_artifacts "$runs" > /dev/null || fail "the attempts of each artif
 [[ ! -e "$runs/integration-shard-1/failure-summary.txt" ]] || fail "the red first attempt of shard 1 was merged into its re-run"
 [[ "$(cat "$runs/integration-shard-2/meta.txt")" == integration-shard-2-attempt-1 ]] \
   || fail "shard 2, which ran once, lost its only attempt"
-[[ "$(cat "$runs/integration-covdata-unit/meta.txt")" == integration-covdata-unit-attempt-10 ]] \
+[[ "$(cat "$runs/unit-covdata-unit/meta.txt")" == unit-covdata-unit-attempt-10 ]] \
   || fail "attempt 9 was read as newer than attempt 10"
 leftover="$(cd "$runs" && ls -d ./*-attempt-* 2> /dev/null || true)"
 [[ -z "$leftover" ]] || fail "older attempts stayed beside the newest: $leftover"

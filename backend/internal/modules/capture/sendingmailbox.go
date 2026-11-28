@@ -34,7 +34,7 @@ func (r *Registry) SendingMailboxes(ctx context.Context, userID ids.UserID, prov
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT id, provider, account_label, provider_scopes FROM capture_connection
-			 WHERE user_id = $1 AND provider = ANY($2) AND status IN ('connected','error') AND archived_at IS NULL
+			 WHERE user_id = $1 AND provider = ANY($2) AND status IN ('connected','error')
 			 ORDER BY default_sender DESC, created_at, id`, userID, providers)
 		if err != nil {
 			return err
@@ -59,7 +59,7 @@ func (r *Registry) arrivalMailboxes(ctx context.Context, userID ids.UserID, acti
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT c.id FROM capture_connection c
-			 WHERE c.user_id = $2 AND c.status IN ('connected','error') AND c.archived_at IS NULL
+			 WHERE c.user_id = $2 AND c.status IN ('connected','error')
 			   AND `+storekit.DeliveredBySQL("c", "$1::uuid")+`
 			 ORDER BY c.created_at, c.id`, activity, userID)
 		if err != nil {
@@ -175,7 +175,7 @@ func setDefaultSenderTx(ctx context.Context, tx pgx.Tx, user ids.UUID, match con
 		return err
 	}
 	tag, err := tx.Exec(ctx, `UPDATE capture_connection SET default_sender = true
-		 WHERE `+match.where+` AND status IN ('connected','error') AND archived_at IS NULL`, match.args...)
+		 WHERE `+match.where+` AND status IN ('connected','error')`, match.args...)
 	if err != nil {
 		return err
 	}

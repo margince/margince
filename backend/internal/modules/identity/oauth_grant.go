@@ -150,10 +150,6 @@ func issueGrant(ctx context.Context, tx pgx.Tx, in issueGrantInput) (grantID ids
 	if err := supersedePriorGrants(auditCtx, tx, in.ClientID, in.UserID); err != nil {
 		return ids.Nil, "", err
 	}
-	// oauth_grant.lent_passport_id and oauth_authorization_code.lent_passport_id
-	// are dead columns kept by the additive-only migration rule. Nothing writes
-	// them and nothing reads them: a connection's authority is the scopes its
-	// human ticked, and there is no second passport standing behind it.
 	err = tx.QueryRow(ctx, `
 		INSERT INTO oauth_grant (client_id, user_id, scopes, refresh_allowed, resource, work_areas)
 		VALUES ($1, $2, $3, $4, $5, $6)

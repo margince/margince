@@ -200,7 +200,7 @@ func (e *reconcileEnv) workOwnerNotices(t *testing.T) {
 		t.Fatal("owner notice job is not declared")
 	}
 	production := &approvalOwnerNoticeWorker{pool: e.Pool, now: func() time.Time { return clocktest.Now(t) }}
-	worker := rivertest.NewWorker(t, riverpgxv5.New(e.Pool), &river.Config{}, jobs.Govern(production, spec))
+	worker := rivertest.NewWorker(t, riverpgxv5.New(e.Pool), bindingConfig(e.Pool), jobs.Govern(production, spec))
 	for _, row := range page.Jobs {
 		tx, err := e.Pool.Begin(t.Context())
 		if err != nil {
@@ -244,7 +244,7 @@ func TestAnObsoleteOwnerAnnouncementCannotReplaceTheCurrentOwnersNotice(t *testi
 		t.Fatalf("current owner received %d notices", n)
 	}
 	production := &approvalOwnerNoticeWorker{pool: e.Pool, now: func() time.Time { return clocktest.Now(t) }}
-	if err := production.Work(t.Context(), &river.Job[ApprovalOwnerNoticeArgs]{Args: ApprovalOwnerNoticeArgs{Workspace: e.WS, ApprovalID: id.UUID, DeciderID: e.Rep2}}); err != nil {
+	if err := production.Work(boundBackground(t), &river.Job[ApprovalOwnerNoticeArgs]{Args: ApprovalOwnerNoticeArgs{ApprovalID: id.UUID, DeciderID: e.Rep2}}); err != nil {
 		t.Fatal(err)
 	}
 	if n := e.liveLines(t, e.Rep1, id); n != 1 {
@@ -263,7 +263,7 @@ func TestAnObsoleteOwnerAnnouncementCannotReplaceTheCurrentOwnersNotice(t *testi
 	if err := store.MarkRead(e.As(e.Rep1, nil, reconcilePerms), noticeID); err != nil {
 		t.Fatal(err)
 	}
-	if err := production.Work(t.Context(), &river.Job[ApprovalOwnerNoticeArgs]{Args: ApprovalOwnerNoticeArgs{Workspace: e.WS, ApprovalID: id.UUID, DeciderID: e.Rep1}}); err != nil {
+	if err := production.Work(boundBackground(t), &river.Job[ApprovalOwnerNoticeArgs]{Args: ApprovalOwnerNoticeArgs{ApprovalID: id.UUID, DeciderID: e.Rep1}}); err != nil {
 		t.Fatal(err)
 	}
 	if n := e.liveLines(t, e.Rep1, id); n != 1 {

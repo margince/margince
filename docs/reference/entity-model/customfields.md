@@ -6,7 +6,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 ## custom_field
 
-20 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -26,7 +26,6 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 | `slug` | `text` | yes | Admin-facing key the column_name derives from. |
 | `status` | `text`, default `'active'::text` | yes | retired = soft: hidden from the API and filtering, column and values preserved. |
 | `type` | `text` | yes | The supported field types. |
-| `archived_at` | `timestamp with time zone` |  | Base envelope field; stays null even when `status=retired`, because retiring is a status flip rather than an archive. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -43,7 +42,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 - `custom_field_activity_kinds_vocabulary`: `CHECK ((activity_kinds <@ ARRAY['call', 'email', 'meeting', 'message', 'note', 'task']))`
 - `custom_field_object_check`: `CHECK ((object = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'contract'])))`
 - `custom_field_pipeline_ids_check`: `CHECK (((pipeline_ids IS NULL) OR ((object = 'deal') AND (cardinality(pipeline_ids) > 0))))`
-- `custom_field_reportable_type_check`: `CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal', 'company'])) AND (type = ANY (ARRAY['picklist', 'boolean'])))))`
+- `custom_field_reportable_type_check`: `CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal', 'company'])) AND (type = ANY (ARRAY['picklist', 'boolean']))) OR ((object = 'deal') AND (type = 'record'))))`
 - `custom_field_status_check`: `CHECK ((status = ANY (ARRAY['active', 'retired'])))`
 - `custom_field_type_check`: `CHECK ((type = ANY (ARRAY['text', 'number', 'date', 'currency', 'picklist', 'multiselect', 'boolean', 'record', 'url'])))`
 - `custom_field_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`

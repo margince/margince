@@ -75,7 +75,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 	}
 	t.Cleanup(publicationPool.Close)
 	worker := &reportScheduleSweepWorker{pool: publicationPool, now: func() time.Time { return at }}
-	if err := worker.Work(context.Background(), nil); err != nil {
+	if err := worker.Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	complete, err := service.GetExecution(human, ids.UUID(request.Id))
@@ -159,7 +159,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 		t.Fatal(err)
 	}
 	at = schedule.NextDueAt
-	if err := worker.Work(context.Background(), nil); err != nil {
+	if err := worker.Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	runs, err := service.ListExecutions(human, ids.UUID(report.Id), nil, 30)
@@ -174,7 +174,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 		t.Fatalf("pause: %d %v", count, err)
 	}
 	at = at.AddDate(0, 0, 14)
-	if err := worker.Work(context.Background(), nil); err != nil {
+	if err := worker.Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	paused, err := service.ListSchedules(human, ids.UUID(report.Id))
@@ -190,7 +190,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := worker.Work(context.Background(), nil); err != nil {
+	if err := worker.Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	denied, err := service.GetExecution(human, ids.UUID(request.Id))

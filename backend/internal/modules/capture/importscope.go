@@ -27,7 +27,7 @@ func deliveringEntitySQL(row, delivered string) string {
 	(SELECT CASE WHEN count(DISTINCT c.legal_entity_id) = 1 AND count(*) = count(c.legal_entity_id)
 	              THEN (array_agg(c.legal_entity_id))[1] END
 	   FROM capture_connection c
-	  WHERE c.user_id = ` + row + `.user_id AND c.archived_at IS NULL
+	  WHERE c.user_id = ` + row + `.user_id
 	    AND ` + storekit.MailboxSQL("c") + ` IN (SELECT split_part(mark, ':', 1) FROM unnest(` + delivered + `) mark)))`
 }
 

@@ -55,7 +55,7 @@ func unreachableStore(t *testing.T) *search.Store {
 // finished.
 func TestEmbedReindexWorkerWithNoEmbedLaneFailsInsteadOfSittingQueued(t *testing.T) {
 	w := &embedReindexWorker{store: unreachableStore(t), embedder: nil}
-	err := w.Work(context.Background(), &river.Job[EmbedReindexArgs]{
+	err := w.Work(boundBackground(t), &river.Job[EmbedReindexArgs]{
 		// Not the last attempt: the release is the last attempt's business, so
 		// this exercises the guard and nothing after it.
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 25},
@@ -86,7 +86,7 @@ func TestEmbedReindexWorkerWithNoEmbedLaneFailsInsteadOfSittingQueued(t *testing
 // reads an outage where they should read a stuck marker.
 func TestEmbedReindexWorkerReportsAMarkerItCouldNotHandBack(t *testing.T) {
 	w := &embedReindexWorker{store: unreachableStore(t), embedder: fakeReindexEmbedder{}}
-	err := w.Work(context.Background(), &river.Job[EmbedReindexArgs]{
+	err := w.Work(boundBackground(t), &river.Job[EmbedReindexArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 3, MaxAttempts: 3},
 		Args:   EmbedReindexArgs{Run: ids.NewV7(), Identity: "fake/held@1024"},
 	})

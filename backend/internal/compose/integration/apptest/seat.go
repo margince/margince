@@ -97,7 +97,7 @@ func SeededRoles(t *testing.T, e *AppEnv) []SeededRole {
 func AssignRoleTo(t *testing.T, e *AppEnv, email string, keys ...string) {
 	t.Helper()
 	user := `(SELECT id FROM app_user WHERE email = $1)`
-	if _, err := e.Owner.Exec(t.Context(), `DELETE FROM role_assignment WHERE team_id IS NULL AND user_id = `+user, email); err != nil {
+	if _, err := e.Owner.Exec(t.Context(), `DELETE FROM role_assignment WHERE user_id = `+user, email); err != nil {
 		t.Fatalf("clearing the roles of %s: %v", email, err)
 	}
 	tag, err := e.Owner.Exec(t.Context(), `

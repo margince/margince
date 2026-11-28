@@ -237,15 +237,6 @@ type kindDef struct {
 // there is no such thing as a dispatcher whose rows name a tenant.
 func (k kindDef) fleetWide() bool { return k.Role == roleDispatcher || k.Fleet }
 
-// hasWorkspaceArg reports whether this kind's args name a workspace, which is
-// what decides whether the type can bind one. It is asked instead of the role
-// because a worker's tenant is a fact about its args, and ADR-0091 §8 is
-// removing those one module at a time.
-func (k kindDef) hasWorkspaceArg() bool {
-	_, ok := k.Args["Workspace"]
-	return ok
-}
-
 // sortedArgs is the deterministic order the emitted args list walks; Go map
 // iteration is not stable and an unsorted emitter drifts the drift gate.
 func (k kindDef) sortedArgs() []string {

@@ -190,17 +190,17 @@ type sweepWorker struct {
 // table is the content and the loop above is four assertions.
 func fleetWideShapesInTheTree() map[string]string {
 	return map[string]string{
-		"runPerWorkspace over the live fleet": `
+		"runInstallationPass over the live fleet": `
 			func (w *sweepWorker) Work(ctx context.Context, _ *river.Job[SweepArgs]) error {
-				return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.sweepWorkspace))
+				return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.sweepWorkspace))
 			}`,
-		"dispatchWith over an archived-inclusive enumeration": `
+		"dispatchOnce over an archived-inclusive enumeration": `
 			func (w *sweepWorker) Work(ctx context.Context, _ *river.Job[SweepArgs]) error {
-				workspaces, err := database.EveryWorkspace(ctx, w.pool)
+				workspaces, err := database.LiveWorkspace(ctx, w.pool)
 				if err != nil {
 					return jobs.FaultContext(ctx, err)
 				}
-				return jobs.FaultContext(ctx, dispatchWith(ctx, workspaces, clientInsertMany(ctx),
+				return jobs.FaultContext(ctx, dispatchOnce(ctx, workspaces, clientInsertMany(ctx),
 					workspaceSweepOpts(SweepWorkspaceArgs{}.Kind()),
 					func(ws ids.UUID) river.JobArgs { return SweepWorkspaceArgs{Workspace: ws} }))
 			}`,
@@ -230,12 +230,12 @@ func fleetWideShapesInTheTree() map[string]string {
 			}
 
 			func (w *sweepWorker) fanOut(ctx context.Context, args SweepArgs) error {
-				workspaces, err := database.LiveWorkspaces(ctx, w.pool)
+				workspaces, err := database.LiveWorkspace(ctx, w.pool)
 				if err != nil {
 					return err
 				}
 				return w.store.SeedFleet(ctx, args.Run, func(tx pgx.Tx) error {
-					return dispatchWith(ctx, workspaces, txInsertMany(tx),
+					return dispatchOnce(ctx, workspaces, txInsertMany(tx),
 						workspaceSweepOpts(SweepWorkspaceArgs{}.Kind()),
 						func(ws ids.UUID) river.JobArgs { return SweepWorkspaceArgs{Workspace: ws} })
 				})
@@ -246,7 +246,7 @@ func fleetWideShapesInTheTree() map[string]string {
 				if err != nil {
 					return jobs.FaultContext(ctx, err)
 				}
-				return jobs.FaultContext(ctx, runEach(ctx, due, w.sweepWorkspace))
+				return jobs.FaultContext(ctx, runInstallationPass(ctx, due, w.sweepWorkspace))
 			}`,
 	}
 }

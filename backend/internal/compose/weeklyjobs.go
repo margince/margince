@@ -77,7 +77,7 @@ type weeklyGenerateWorker struct {
 }
 
 func (w *weeklyGenerateWorker) Work(ctx context.Context, _ *river.Job[WeeklyReviewGenerateArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.measureOneWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.measureOneWorkspace))
 }
 
 func (w *weeklyGenerateWorker) measureOneWorkspace(ctx context.Context, workspace ids.UUID) error {

@@ -34,7 +34,7 @@ const DefaultPage = 200
 
 // Job is the args of the stage_evidence_reread job, which compose declares.
 type Job interface {
-	jobs.WorkspaceScoped
+	river.JobArgs
 	// SentFrom is the removed domain.
 	SentFrom() string
 	// PageAfter is the last activity the run before this one judged.
@@ -52,7 +52,6 @@ type Enqueuer interface {
 // The page, its readings and the next run commit together. A run that River
 // repeats queues the same args, and the inserts coalesce.
 type Worker[T Job] struct {
-	Bind func(context.Context, jobs.WorkspaceScoped) (context.Context, error)
 	Pool *pgxpool.Pool
 	Own  deals.OwnDomainReader
 	// Reads is false on a role with no model lane, which queues nothing.
@@ -70,10 +69,7 @@ type Worker[T Job] struct {
 
 // Work implements River's worker for one page.
 func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
-	bound, err := w.Bind(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	bound := ctx
 	if !w.Reads {
 		return nil
 	}

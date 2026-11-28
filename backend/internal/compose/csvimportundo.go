@@ -27,7 +27,7 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 		return
 	}
 
-	queue, ws, err := h.jobQueue(ctx)
+	queue, err := h.jobQueue()
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -38,7 +38,7 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 		httperr.Write(w, r, err)
 		return
 	}
-	undoing, err := migration.NewRunStore(h.db).ClaimUndo(ctx, run.ID, queue.undos(ws))
+	undoing, err := migration.NewRunStore(h.db).ClaimUndo(ctx, run.ID, queue.undos())
 	if err != nil {
 		httperr.Write(w, r, h.sessionRefusal(ctx, err))
 		return

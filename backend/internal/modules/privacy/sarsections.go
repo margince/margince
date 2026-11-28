@@ -306,7 +306,7 @@ func sarProvenanceSections(pkg *SARPackage, contactID ids.ContactID, external []
 		// source_entity_id is withheld for the reason the qualifying events
 		// withhold theirs: it points at rows whose own audience gating lives
 		// in the record sections, and a bare id would route around it.
-		{&pkg.AcquisitionEvidence, `SELECT kind, source_entity_type, purpose_claimed,
+		{&pkg.AcquisitionEvidence, `SELECT kind, source_entity_type,
 		          occurred_at, captured_at
 		   FROM contact_acquisition_evidence
 		   WHERE contact_id = $1`, nil},

@@ -117,7 +117,7 @@ type BackfillRun struct {
 func (r *Registry) connectionForUser(ctx context.Context, tx pgx.Tx, mailbox Mailbox, userID ids.UserID) (ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM capture_connection
-		WHERE provider = $1 AND user_id = $2 AND status IN ('connected','error') AND archived_at IS NULL
+		WHERE provider = $1 AND user_id = $2 AND status IN ('connected','error')
 		  AND ($3::uuid IS NULL OR id = $3)`,
 		mailbox.Provider, userID, mailboxIDArg(mailbox))
 	if err != nil {

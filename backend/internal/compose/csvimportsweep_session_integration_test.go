@@ -64,7 +64,7 @@ func leaveIdle(t *testing.T, e *integration.Env, id migration.RunID, age time.Du
 func sweepOnce(t *testing.T, e *integration.Env) {
 	t.Helper()
 	worker := &importRunSweepWorker{identity: identity.NewService(e.Pool), pool: e.Pool, log: slog.New(slog.DiscardHandler)}
-	if err := worker.Work(context.Background(), &river.Job[ImportRunSweepArgs]{JobRow: &rivertype.JobRow{Attempt: 1}}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[ImportRunSweepArgs]{JobRow: &rivertype.JobRow{Attempt: 1}}); err != nil {
 		t.Fatalf("one sweep pass: %v", err)
 	}
 }

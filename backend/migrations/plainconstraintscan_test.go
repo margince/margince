@@ -103,6 +103,11 @@ func TestAConstraintOnAPreExistingTableIsAddedNotValid(t *testing.T) {
 func checkPlainConstraintScans(t *testing.T, namespace string, dir fs.FS) {
 	t.Helper()
 	var examined, skipped int
+	// A rollback restores the validated check at its own schema version.
+	rollbackSwaps := map[string]string{
+		"core/1794412054_a_google_docs_connection_reads_meeting_notes.down.sql":        "capture_connection.capture_connection_provider_check",
+		"core/1795826345_record_pickers_can_open_reportable_extension_fields.down.sql": "custom_field.custom_field_reportable_type_check",
+	}
 	err := fs.WalkDir(dir, ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".sql") {
 			return err
@@ -117,11 +122,10 @@ func checkPlainConstraintScans(t *testing.T, namespace string, dir fs.FS) {
 		}
 		examined++
 		findings := scansUnderExclusiveLock(string(body))
-		// This rollback must restore validation at its own version boundary; splitting the swap changes that schema.
-		rollbackSwap := namespace == "core" && path == "1794412054_a_google_docs_connection_reads_meeting_notes.down.sql"
+		validatedCheck, rollbackSwap := rollbackSwaps[namespace+"/"+path]
 		restored := false
 		for _, finding := range findings {
-			if rollbackSwap && finding.table == "capture_connection" && finding.constraint == "capture_connection_provider_check" {
+			if rollbackSwap && finding.table+"."+finding.constraint == validatedCheck {
 				restored = true
 				continue
 			}
@@ -133,7 +137,7 @@ func checkPlainConstraintScans(t *testing.T, namespace string, dir fs.FS) {
 				namespace, path, finding.constraint, finding.table)
 		}
 		if rollbackSwap && !restored {
-			t.Error("the provider rollback scan exception is stale")
+			t.Error("the rollback validation exception is stale")
 		}
 		return nil
 	})

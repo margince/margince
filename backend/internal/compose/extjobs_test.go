@@ -137,7 +137,7 @@ func TestComposedJobSpecsDeclareBothKindsAndTheEdgeBetweenThem(t *testing.T) {
 	if dispatcher.Kind != d.DispatcherKind() || dispatcher.Role != jobs.Dispatcher {
 		t.Fatalf("dispatcher spec = %+v", dispatcher)
 	}
-	if dispatcher.FanOutTo != d.ChildKind() || dispatcher.FanOutUnit != jobs.FanOutWorkspace {
+	if dispatcher.FanOutTo != d.ChildKind() || dispatcher.FanOutUnit != jobs.FanOutInstallation {
 		t.Fatalf("the dispatcher declares no workspace fan-out edge to its child: %+v", dispatcher)
 	}
 	if dispatcher.Cadence.Fixed != d.Cadence || dispatcher.Timeout.Duration() != d.DispatcherTimeout {

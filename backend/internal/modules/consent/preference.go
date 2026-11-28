@@ -20,13 +20,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -197,7 +197,7 @@ type addressedContact struct {
 // core 0217 retired the policy that used to supply one — and the row-scope
 // probe below scopes it to the caller.
 func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (token string, found bool, err error) {
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = correspondence.Fold(email)
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		for pass := 0; ; pass++ {
 			holder, held, err := liveAddressHolderTx(ctx, tx, email)

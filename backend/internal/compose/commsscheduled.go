@@ -44,16 +44,12 @@ const scheduledSendMaxAttempts = 5
 // makes the uniqueness key name one moment of one message. Two alarms for the
 // same moment coalesce, and a move to an earlier moment still gets its own alarm.
 type ScheduledSendArgs struct {
-	Workspace       ids.UUID  `json:"workspace_id"`
 	ScheduledSendID string    `json:"scheduled_send_id"`
 	DueAt           time.Time `json:"due_at"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (ScheduledSendArgs) Kind() string { return "comms_scheduled_send" }
-
-// WorkspaceID binds this alarm to its tenant (jobs.WorkspaceScoped).
-func (a ScheduledSendArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // WithScheduleTimer wires the alarm a deferred send is accepted against.
 //
@@ -79,12 +75,7 @@ func NewScheduleTimer(runner *jobs.Runner) scheduleTimer {
 // ScheduleTx enqueues the alarm in the caller's transaction, so the row and its
 // timer commit together or not at all.
 func (t scheduleTimer) ScheduleTx(ctx context.Context, tx pgx.Tx, id ids.UUID, due time.Time) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("compose: scheduling a send outside workspace context")
-	}
 	return t.runner.EnqueueTx(ctx, tx, ScheduledSendArgs{
-		Workspace:       ws,
 		ScheduledSendID: id.String(),
 		// Postgres keeps microseconds, so a moment read back from the row
 		// keys the same as the one first written from Go.
@@ -147,10 +138,7 @@ func (w *scheduledSendWorker) Work(ctx context.Context, job *river.Job[Scheduled
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("comms_scheduled_send: scheduled send id: %w", err))
 	}
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 
 	// Who this message fires as. Read under a system scope, because resolving
 	// the scheduler is what tells us whose authority to adopt — the answer

@@ -26,13 +26,19 @@ func TestEveryDeclaredFanOutUnitNamesAnArgsKey(t *testing.T) {
 			declaredUnits[spec.FanOutUnit] = kind
 		}
 	}
-	if len(declaredUnits) < 2 {
+	if len(declaredUnits) < 3 {
 		t.Fatalf("only %d distinct fan-out unit(s) are declared; this gate would pass on a single grain and prove nothing about a second", len(declaredUnits))
 	}
 
 	keys := map[string]FanOutUnit{}
 	for unit, declaringKind := range declaredUnits {
 		key := unit.ArgsKey()
+		if unit == FanOutInstallation {
+			if key != "" {
+				t.Errorf("the installation unit answers %q; there is one installation, so it has nothing to group on", key)
+			}
+			continue
+		}
 		if key == "" {
 			t.Errorf("%s declares fan-out unit %d, which names no args key — every child of it would be grouped on nothing and vanish from the unit gauges", declaringKind, unit)
 			continue
@@ -100,7 +106,7 @@ func TestSubWorkspaceFanOutsSelectsExactlyTheFinerGrains(t *testing.T) {
 
 	var finerGrain int
 	for kind, unit := range FanOutUnits() {
-		if unit == FanOutWorkspace {
+		if unit == FanOutInstallation {
 			if slices.Contains(kinds, kind) {
 				t.Errorf("%s fans out per workspace but is read by the unit pair, where it would restate margince_sweep_workspaces exactly", kind)
 			}
@@ -129,7 +135,7 @@ func TestAWorkspaceGrainFanOutIsNotReadByTheUnitPair(t *testing.T) {
 	t.Parallel()
 
 	kinds, _ := subWorkspaceFanOutsOf(map[string]FanOutUnit{
-		"a_workspace_child":  FanOutWorkspace,
+		"a_workspace_child":  FanOutInstallation,
 		"a_connection_child": FanOutConnection,
 	})
 	if slices.Contains(kinds, "a_workspace_child") {
