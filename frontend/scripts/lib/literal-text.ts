@@ -49,8 +49,8 @@ export function cookedText(file: Readonly<{ text: string }>): string {
   return text;
 }
 
-// A token's text (a literal, an identifier) is a slice of its source, cooked or raw (a JSX attribute), so a miss in both rules out a parse.
-// It holds for a pattern that does not anchor to a literal's ends.
+// A token's text is a slice of its source, cooked or raw (a JSX attribute).
+// So a miss in both rules out a parse, for a pattern not anchored to a token's ends.
 export function mayHoldLiteral(
   source: string | Readonly<{ text: string }>,
   pattern: RegExp | string,

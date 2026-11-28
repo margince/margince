@@ -38,8 +38,8 @@ const inGraph = (file: CensusFile) =>
   file.area === "src" &&
   (MODULE_FILE.test(file.path) || file.path.endsWith(".css"));
 
-// The walk equals git under src/, so the tree answers there for every kind of
-// file it walks; the disk answers only for an asset the walk does not read.
+// The walk equals git under src/, so the tree answers there for each kind it
+// walks. The disk answers only for an asset the walk does not read.
 const treeReader = (tree: CensusTree): GraphReader => {
   const fromTree = (path: string) =>
     path.startsWith(`${SRC}${sep}`) && TREE_FILE.test(path);

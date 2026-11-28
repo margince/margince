@@ -578,14 +578,9 @@ describe("the native-control detector sees what it claims to", () => {
     expect(deriveDateHosts([file], new Set()).names.has("Probe")).toBe(host);
   });
 
-  // The line between what is derived and what is hand-written, which is the
-  // whole of this fix and belongs here rather than only in the pull request:
-  // DERIVE what is a restatement of the rule, HAND-WRITE what is a property of
-  // the language.
-  //
-  // The names are the rule, so the pre-filter derives them. Escapes are a
-  // property of the language: `'<sel\u0065ct>'` holds no verbatim `select`
-  // in its raw text but cooks to one, so the filter reads the cooked text too.
+  // The names are the rule, so the pre-filter derives them. Escapes belong to
+  // the language: `'<sel\u0065ct>'` cooks to `select`, so the filter reads
+  // cooked text.
   it("admits an escaped spelling, and does not admit an unrelated element", () => {
     expect(
       findNativeControls("probe.tsx", "const a = '<sel\\u0065ct>';"),

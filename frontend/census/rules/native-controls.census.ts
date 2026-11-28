@@ -54,16 +54,10 @@ import { type CensusRule, extensionsDir, repoRoot, srcDir } from "../tree";
 // The elements a native dropdown is made of.
 export const nativeControls = new Set(["select", "option", "optgroup"]);
 
-// The pre-filter's names come from the set above, not a second list. A second
-// list would miss an element added to the set. A file that spells only the new
-// name would be skipped before it is parsed.
-//
-// The filter reads cooked text as well as raw, so `'<sel\u0065ct>'`, whose
-// raw text holds no `select`, is a hit.
-//
-// A name counts only where no word character follows it, in a JSX tag, a
-// literal equal to the name, and the string scan. So `options` and `selected`
-// are not hits.
+// The names come from the set above, so an element added there is never
+// skipped before it is parsed. The filter also reads cooked text, so
+// `'<sel\u0065ct>'` is a hit. A name counts only before a non-word character,
+// so `options` and `selected` are not hits.
 export const prefilter = new RegExp(
   `(?:${[...nativeControls].join("|")})(?![A-Za-z0-9_])`,
 );
