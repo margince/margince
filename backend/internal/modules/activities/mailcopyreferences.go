@@ -32,6 +32,10 @@ func mailCopyReferencedTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bo
 		if ref.column == fieldMeetingID && (ref.table == "activity_link" || ref.table == "activity_identity" || ref.table == "activity_reader_state" || ref.table == "capture_import" || ref.table == "attachment" || ref.table == "activity_participant") {
 			continue
 		}
+		// The parent pair moved by the fold also drives this derived key.
+		if ref.table == "attachment" && ref.column == "owner_activity_id" {
+			continue
+		}
 		var exists bool
 		args := []any{id}
 		query := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE %s=$%d)`, pgx.Identifier{ref.table}.Sanitize(), pgx.Identifier{ref.column}.Sanitize(), len(args))

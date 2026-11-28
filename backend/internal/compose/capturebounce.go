@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -29,7 +30,10 @@ type commsBounceSink struct{ store *comms.Store }
 // module's address stop. comms owns the send ledger and knows a message died;
 // consent owns what may be written to whom. Neither imports the other, so the
 // edge is injected here like every other cross-module edge.
-type consentBounceObserver struct{ store *consent.Store }
+type consentBounceObserver struct {
+	store *consent.Store
+	blob  blobstore.Store
+}
 
 // A bounced website lead's notice deletes the lead instead of stopping the
 // address: the address is the lead's, and the lead is not kept untold. Staging
@@ -44,7 +48,7 @@ func (o consentBounceObserver) HardBounceTx(
 	if carried {
 		return privacy.EraseUntoldLeadTx(ctx, tx, privacy.UntoldLead{
 			LeadID: notice.LeadID, ApprovalID: notice.ApprovalID, DeliveryID: notice.DeliveryID,
-			Extensions: ExtensionData(),
+			Extensions: ExtensionData(), Blob: o.blob,
 		})
 	}
 	return consent.RecordHardBounceTx(ctx, tx, consent.HardBounceFact{
@@ -71,9 +75,9 @@ func (b commsBounceSink) RecordBounce(ctx context.Context, report connector.Boun
 // RecordBounce ever fires. A read-only store built elsewhere carrying a
 // suppression writer would be a capability nothing uses and everything has to
 // reason about.
-func newBounceSink(pool *pgxpool.Pool) commsBounceSink {
+func newBounceSink(pool *pgxpool.Pool, blob blobstore.Store) commsBounceSink {
 	return commsBounceSink{store: comms.NewStore(
 		InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool)),
-		comms.WithBounceObserver(consentBounceObserver{store: consent.NewStore(InstallationDB(pool))}),
+		comms.WithBounceObserver(consentBounceObserver{store: consent.NewStore(InstallationDB(pool)), blob: blob}),
 	)}
 }

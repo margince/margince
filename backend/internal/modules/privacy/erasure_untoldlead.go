@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -33,6 +34,8 @@ const untoldLeadReason = "the website lead could not be sent its privacy notice"
 
 // UntoldLead names a website lead whose notice failed, and what came with it.
 type UntoldLead struct {
+	// Blob is the configured file store; removal of stored bytes is refused without it.
+	Blob blobstore.Store
 	// LeadID is zero when no lead was kept: the page published no address, or
 	// the capture rolled back with the notice.
 	LeadID ids.LeadID
@@ -77,6 +80,15 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 		return nil
 	}
 	if err := withdrawRequestsOnLead(ctx, tx, in.LeadID.UUID); err != nil {
+		return err
+	}
+	// Scrub retained file history before the parent cascades remove its rows.
+	if err := eraseAttachments(ctx, tx, in.Blob, untoldLeadReason, causeUntoldLead, `
+ (entity_type='lead' AND entity_id=$1)
+ OR (entity_type='activity' AND entity_id IN (
+ SELECT a.id FROM comms_outbound o JOIN activity a ON a.id=o.activity_id
+ JOIN activity_link al ON al.activity_id=a.id AND al.lead_id=$1
+ WHERE o.id=$2 AND a.restricted_at IS NULL))`, in.LeadID.UUID, in.DeliveryID); err != nil {
 		return err
 	}
 	notices, err := deleteNoticeActivities(ctx, tx, in.DeliveryID, in.LeadID.UUID)

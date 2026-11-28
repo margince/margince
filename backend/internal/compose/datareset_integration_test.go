@@ -56,6 +56,8 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	}
 
 	contact := e.SeedContact(t, "Alice", nil)
+	e.WsExec(t, `INSERT INTO attachment(entity_type,entity_id,filename,storage_key,source,captured_by)
+ VALUES('contact',$1,'reset.txt','reset/attachment','manual','human:test')`, contact)
 	direction, subject := "inbound", "Signature source"
 	mail, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind: "email", Direction: &direction, Subject: &subject, Source: "manual",
@@ -91,6 +93,12 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 		t.Fatalf("sweep: %v", err)
 	}
 
+	if got := e.WsCount(t, "SELECT count(*) FROM attachment"); got != 0 {
+		t.Fatalf("reset kept file rows: %d", got)
+	}
+	if got := e.WsCount(t, "SELECT count(*) FROM stored_object_intent WHERE kind='attachment' AND storage_key='reset/attachment'"); got != 1 {
+		t.Fatalf("reset lost the file's cleanup intent: %d", got)
+	}
 	if got := e.WsCount(t, "SELECT count(*) FROM stored_object_intent WHERE kind = 'raw_original'"); got != 1 {
 		t.Fatalf("reset lost the original object's cleanup authority: %d", got)
 	}
@@ -333,6 +341,7 @@ const replySettledClear = "clears the reply-settled stamps on the deleted rows' 
 const strengthDatesRecompute = "recomputes the stored strength dates of the contacts the deleted rows reached, and refuses no delete; `contact` is not preserved, so the sweep deletes those rows too and the recompute is discarded with them"
 
 var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
+	"attachment attachment_deleted_object":     "records removed file keys and refuses no delete; reset preserves stored_object_intent so the cleanup worker can remove their bytes",
 	"raw_capture raw_original_object_retired":  "records retired object keys and refuses no delete; reset preserves stored_object_intent so the cleanup worker can remove their bytes",
 	"activity reopen_deleted_signature_source": "Maintains signature read requests and refuses no delete. Reset removes the contacts and their requests by cascade; TestSweepWorkspaceDataClearsDomainKeepsIdentity proves it with an actual mail source and read watermark.",
 	// Not a guard: the trigger counts fact writes and refuses no delete. Its

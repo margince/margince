@@ -75,6 +75,7 @@ var dealFKsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"deal_line_item.deal_id":                "the retired deal's own price composition; lines moved onto a survivor would change its mode and amount without anyone saying so, and its position order is unique per deal",
 	"deal_product.deal_id":                  "the retired deal's products, the companion of its lines and left with them for the same reason",
 	"deal.merged_into_id":                   "the redirect pointer, set on the retired deal by recordmerge.ArchiveMergedAway, whose statement takes its table as a parameter and so cannot be read as a deal write; TestDealMergeMovesTheFactsAndLeavesThePathOnTheLoser asserts it lands",
+	"attachment.owner_deal_id":              "a trigger fills it from entity_type and entity_id, and moveKindIDSingles moves that pair, so the key follows it to the survivor",
 	"signal.entity_deal_id":                 "a trigger fills it from entity_type and entity_id, and the shared kind-and-id move carries that pair, so the key follows it to the survivor",
 	"weekly_plan_commitment.linked_deal_id": "a trigger fills it from linked_record_type and linked_record_id, and the weekly plan's sweep reach declaration moves that pair, so the key follows it to the survivor",
 })

@@ -291,8 +291,6 @@ func columnBindings(col string, named map[string][]string) []string {
 // the same set as its CHECK. The reason says which side is wider. The waiver
 // goes stale the day the two agree.
 var namedVocabularyDrift = gatekit.Waive(map[string]string{
-	"attachment.entity_type": "the contract lists six record types and the CHECK admits seventeen; " +
-		"an attachment on a deal room or an offer reads back with a type the contract cannot name",
 	"capture_connection.provider": "the CHECK also admits offline_demo, telegram and whatsapp, " +
 		"which the contract's provider enum does not name",
 	"company_profile_field.source": "the contract shares one source enum with company_fact; technical_lookup " +
@@ -319,7 +317,7 @@ var namedVocabularyDrift = gatekit.Waive(map[string]string{
 
 // namedVocabularyDriftCeiling is how many named pairs may disagree. It only
 // moves down: fix a pair, delete its waiver, lower this number.
-const namedVocabularyDriftCeiling = 12
+const namedVocabularyDriftCeiling = 11
 
 func TestEveryColumnNamedGoTypeHoldsItsColumnsCheck(t *testing.T) {
 	t.Parallel()

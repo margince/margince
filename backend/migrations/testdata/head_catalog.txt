@@ -1783,10 +1783,48 @@ public.attachment.archived_at timestamp with time zone gen=- def=-
 public.attachment.attachment_byte_size_js_safe CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))
 public.attachment.attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text, 'link'::text])))
 public.attachment.attachment_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES contract(id) ON DELETE SET NULL
+public.attachment.attachment_deleted_object CREATE TRIGGER attachment_deleted_object AFTER DELETE ON public.attachment FOR EACH ROW EXECUTE FUNCTION queue_deleted_attachment_object()
 public.attachment.attachment_doc_state_check CHECK ((doc_state = ANY (ARRAY['draft'::text, 'current'::text, 'final'::text, 'superseded'::text])))
-public.attachment.attachment_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
+public.attachment.attachment_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text, 'activity'::text])))
 public.attachment.attachment_external_identity_complete CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))
 public.attachment.attachment_link_shape CHECK ((((category <> 'link'::text) OR (url IS NOT NULL)) AND ((url IS NULL) OR ((storage_key = ''::text) AND bytes_withheld AND (url ~ '^https?://'::text) AND (length(url) <= 2048)))))
+public.attachment.attachment_owner_activity_id_bound CHECK ((owner_unkeyed OR (NOT (owner_activity_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'activity'::text) THEN entity_id
+    ELSE NULL::uuid
+END))))
+public.attachment.attachment_owner_activity_id_fkey FOREIGN KEY (owner_activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.attachment.attachment_owner_company_id_bound CHECK ((owner_unkeyed OR (NOT (owner_company_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'company'::text) THEN entity_id
+    ELSE NULL::uuid
+END))))
+public.attachment.attachment_owner_company_id_fkey FOREIGN KEY (owner_company_id) REFERENCES company(id) ON DELETE CASCADE
+public.attachment.attachment_owner_contact_id_bound CHECK ((owner_unkeyed OR (NOT (owner_contact_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'contact'::text) THEN entity_id
+    ELSE NULL::uuid
+END))))
+public.attachment.attachment_owner_contact_id_fkey FOREIGN KEY (owner_contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.attachment.attachment_owner_deal_id_bound CHECK ((owner_unkeyed OR (NOT (owner_deal_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'deal'::text) THEN entity_id
+    ELSE NULL::uuid
+END))))
+public.attachment.attachment_owner_deal_id_fkey FOREIGN KEY (owner_deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.attachment.attachment_owner_lead_id_bound CHECK ((owner_unkeyed OR (NOT (owner_lead_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'lead'::text) THEN entity_id
+    ELSE NULL::uuid
+END))))
+public.attachment.attachment_owner_lead_id_fkey FOREIGN KEY (owner_lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.attachment.attachment_owner_project_id_bound CHECK ((owner_unkeyed OR (NOT (owner_project_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'project'::text) THEN entity_id
+    ELSE NULL::uuid
+END))))
+public.attachment.attachment_owner_project_id_fkey FOREIGN KEY (owner_project_id) REFERENCES project(id) ON DELETE CASCADE
+public.attachment.attachment_owner_shape CHECK ((owner_unkeyed OR (num_nonnulls(owner_contact_id, owner_company_id, owner_deal_id, owner_lead_id, owner_project_id, owner_activity_id) = 1)))
 public.attachment.attachment_pkey PRIMARY KEY (id)
 public.attachment.attachment_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES attachment(id) ON DELETE SET NULL (supersedes_id)
 public.attachment.attachment_supersedes_not_self CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))
@@ -1807,6 +1845,13 @@ public.attachment.external_part_id text gen=- def=-
 public.attachment.external_source_id text gen=- def=-
 public.attachment.filename text NOT NULL gen=- def=-
 public.attachment.id uuid NOT NULL gen=- def=uuidv7()
+public.attachment.owner_activity_id uuid gen=- def=-
+public.attachment.owner_company_id uuid gen=- def=-
+public.attachment.owner_contact_id uuid gen=- def=-
+public.attachment.owner_deal_id uuid gen=- def=-
+public.attachment.owner_lead_id uuid gen=- def=-
+public.attachment.owner_project_id uuid gen=- def=-
+public.attachment.owner_unkeyed boolean NOT NULL gen=- def=false
 public.attachment.pinned boolean NOT NULL gen=- def=false
 public.attachment.project_id uuid gen=- def=-
 public.attachment.source text NOT NULL gen=- def=-
@@ -1815,7 +1860,8 @@ public.attachment.supersedes_id uuid gen=- def=-
 public.attachment.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.attachment FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"title": 120, "source": 20000, "category": 20000, "checksum": 20000, "filename": 20000, "doc_state": 20000, "captured_by": 20000, "entity_type": 20000, "storage_key": 20000, "content_type": 20000, "declared_type": 20000, "external_part_id": 20000, "external_source_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"checksum":20000,"content_type":20000,"declared_type":20000,"doc_state":20000,"entity_type":20000,"external_part_id":20000,"external_source_id":20000,"filename":20000,"source":20000,"storage_key":20000,"title":120}')
 public.attachment.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.attachment FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "category": 20000, "checksum": 20000, "filename": 20000, "doc_state": 20000, "captured_by": 20000, "entity_type": 20000, "storage_key": 20000, "content_type": 20000, "declared_type": 20000, "external_part_id": 20000, "external_source_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"checksum":20000,"content_type":20000,"declared_type":20000,"doc_state":20000,"entity_type":20000,"external_part_id":20000,"external_source_id":20000,"filename":20000,"source":20000,"storage_key":20000,"title":120}')
 public.attachment.title text gen=- def=-
-public.attachment.trg_attachment_updated CREATE TRIGGER trg_attachment_updated BEFORE UPDATE ON public.attachment FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+public.attachment.trg_attachment_owner_keys CREATE TRIGGER trg_attachment_owner_keys BEFORE INSERT OR UPDATE ON public.attachment FOR EACH ROW EXECUTE FUNCTION trg_attachment_owner_keys()
+public.attachment.trg_attachment_updated CREATE TRIGGER trg_attachment_updated BEFORE UPDATE ON public.attachment FOR EACH ROW WHEN (((NOT (((((((old.owner_unkeyed IS DISTINCT FROM new.owner_unkeyed) OR (old.owner_contact_id IS DISTINCT FROM new.owner_contact_id)) OR (old.owner_company_id IS DISTINCT FROM new.owner_company_id)) OR (old.owner_deal_id IS DISTINCT FROM new.owner_deal_id)) OR (old.owner_lead_id IS DISTINCT FROM new.owner_lead_id)) OR (old.owner_project_id IS DISTINCT FROM new.owner_project_id)) OR (old.owner_activity_id IS DISTINCT FROM new.owner_activity_id))) OR ((to_jsonb(old.*) - ARRAY['owner_unkeyed'::text, 'owner_contact_id'::text, 'owner_company_id'::text, 'owner_deal_id'::text, 'owner_lead_id'::text, 'owner_project_id'::text, 'owner_activity_id'::text]) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['owner_unkeyed'::text, 'owner_contact_id'::text, 'owner_company_id'::text, 'owner_deal_id'::text, 'owner_lead_id'::text, 'owner_project_id'::text, 'owner_activity_id'::text])))) EXECUTE FUNCTION set_updated_at()
 public.attachment.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.attachment.url text gen=- def=-
 public.attachment_activity_ix CREATE INDEX attachment_activity_ix ON public.attachment USING btree (activity_id) WHERE (activity_id IS NOT NULL)
@@ -7109,7 +7155,14 @@ public.idx_attachment_extraction_activity_live CREATE INDEX idx_attachment_extra
 public.idx_attachment_extraction_activity_settled CREATE INDEX idx_attachment_extraction_activity_settled ON public.attachment_extraction USING btree (finished_at DESC) WHERE (status = ANY (ARRAY['done'::text, 'failed'::text]))
 public.idx_attachment_extraction_latest CREATE INDEX idx_attachment_extraction_latest ON public.attachment_extraction USING btree (attachment_id, created_at DESC)
 public.idx_attachment_held_copy CREATE INDEX idx_attachment_held_copy ON public.attachment USING btree (checksum, byte_size) WHERE ((checksum IS NOT NULL) AND (NOT bytes_withheld))
+public.idx_attachment_owner_activity CREATE INDEX idx_attachment_owner_activity ON public.attachment USING btree (owner_activity_id) WHERE (owner_activity_id IS NOT NULL)
+public.idx_attachment_owner_company CREATE INDEX idx_attachment_owner_company ON public.attachment USING btree (owner_company_id) WHERE (owner_company_id IS NOT NULL)
+public.idx_attachment_owner_contact CREATE INDEX idx_attachment_owner_contact ON public.attachment USING btree (owner_contact_id) WHERE (owner_contact_id IS NOT NULL)
+public.idx_attachment_owner_deal CREATE INDEX idx_attachment_owner_deal ON public.attachment USING btree (owner_deal_id) WHERE (owner_deal_id IS NOT NULL)
+public.idx_attachment_owner_lead CREATE INDEX idx_attachment_owner_lead ON public.attachment USING btree (owner_lead_id) WHERE (owner_lead_id IS NOT NULL)
+public.idx_attachment_owner_project CREATE INDEX idx_attachment_owner_project ON public.attachment USING btree (owner_project_id) WHERE (owner_project_id IS NOT NULL)
 public.idx_attachment_storage_key CREATE INDEX idx_attachment_storage_key ON public.attachment USING btree (storage_key) WHERE (storage_key <> ''::text)
+public.idx_attachment_unkeyed_owner CREATE INDEX idx_attachment_unkeyed_owner ON public.attachment USING btree (id) WHERE owner_unkeyed
 public.idx_audit_actor CREATE INDEX idx_audit_actor ON public.audit_log USING btree (actor_id, occurred_at DESC)
 public.idx_audit_claim_status CREATE INDEX idx_audit_claim_status ON public.audit_log USING btree (((after ->> 'claim_id'::text)), occurred_at DESC, id DESC) WHERE (after ? 'claim_status'::text)
 public.idx_audit_entity CREATE INDEX idx_audit_entity ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC)
@@ -9651,6 +9704,12 @@ public.provider_run_reservation.text_bound_insert CREATE TRIGGER text_bound_inse
 public.provider_run_reservation.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.provider_run_reservation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"pool": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"pool":20000}')
 public.provider_run_reservation_pkey CREATE UNIQUE INDEX provider_run_reservation_pkey ON public.provider_run_reservation USING btree (run_id, pool)
 public.provider_run_subject_identity CREATE UNIQUE INDEX provider_run_subject_identity ON public.provider_run USING btree (id, contact_id, provider)
+public.queue_deleted_attachment_object() secdef=false cfg=- acl=- BEGIN
+    IF NOT OLD.bytes_withheld AND OLD.storage_key <> '' THEN
+        PERFORM write_stored_object_intent('attachment', OLD.storage_key, true);
+    END IF;
+    RETURN OLD;
+END;
 public.raw_capture acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.raw_capture.ask_attempts smallint NOT NULL gen=- def=0
 public.raw_capture.ask_batch_id uuid gen=- def=-
@@ -9853,14 +9912,7 @@ public.record_source_channel(source text) secdef=false cfg=- acl=-
  END
 
 public.record_stored_object_intent(requested_kind text, requested_key text) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner BEGIN
-    INSERT INTO stored_object_intent (storage_key, kind)
-    VALUES (requested_key, requested_kind)
-    ON CONFLICT (storage_key) DO UPDATE
-       SET kind = excluded.kind, recorded_at = now()
-       WHERE stored_object_intent.reaping_since IS NULL;
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'The stored file has expired; upload it again' USING ERRCODE = '55000';
-    END IF;
+    PERFORM write_stored_object_intent(requested_kind, requested_key, false);
 END;
 public.refresh_clocks_of_activity(aid uuid) secdef=false cfg=- acl=- 
 DECLARE
@@ -11999,6 +12051,23 @@ BEGIN
 	END IF;
 	RETURN NEW;
 END 
+public.trg_attachment_owner_keys() secdef=false cfg=- acl=- BEGIN
+    IF TG_OP = 'INSERT' THEN
+        NEW.owner_unkeyed := false;
+    ELSE
+        NEW.owner_unkeyed := OLD.owner_unkeyed AND NEW.owner_unkeyed;
+    END IF;
+    IF NOT NEW.owner_unkeyed THEN
+        NEW.owner_contact_id := CASE WHEN NEW.entity_type = 'contact' THEN NEW.entity_id END;
+        NEW.owner_company_id := CASE WHEN NEW.entity_type = 'company' THEN NEW.entity_id END;
+        NEW.owner_deal_id := CASE WHEN NEW.entity_type = 'deal' THEN NEW.entity_id END;
+        NEW.owner_lead_id := CASE WHEN NEW.entity_type = 'lead' THEN NEW.entity_id END;
+        NEW.owner_project_id := CASE WHEN NEW.entity_type = 'project' THEN NEW.entity_id END;
+        NEW.owner_activity_id := CASE WHEN NEW.entity_type = 'activity' THEN NEW.entity_id END;
+    END IF;
+    RETURN NEW;
+END;
+
 public.trg_capture_import_clocks() secdef=false cfg=- acl=- 
 DECLARE
   imported capture_import;
@@ -13178,6 +13247,17 @@ public.workspace_email_domain.workspace_email_domain_pkey PRIMARY KEY (domain)
 public.workspace_email_domain.workspace_email_domain_source_check CHECK ((source = ANY (ARRAY['admin'::text, 'mailbox'::text])))
 public.workspace_email_domain_pkey CREATE UNIQUE INDEX workspace_email_domain_pkey ON public.workspace_email_domain USING btree (domain)
 public.workspace_pkey CREATE UNIQUE INDEX workspace_pkey ON public.workspace USING btree (id)
+public.write_stored_object_intent(requested_kind text, requested_key text, for_deletion boolean) secdef=false cfg=- acl=- BEGIN
+    INSERT INTO stored_object_intent (storage_key, kind)
+    VALUES (requested_key, requested_kind)
+    ON CONFLICT (storage_key) DO UPDATE
+       SET kind = CASE WHEN for_deletion THEN stored_object_intent.kind ELSE excluded.kind END,
+           recorded_at = CASE WHEN for_deletion THEN clock_timestamp() ELSE now() END
+       WHERE for_deletion OR stored_object_intent.reaping_since IS NULL;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'The stored file has expired; upload it again' USING ERRCODE = '55000';
+    END IF;
+END;
 public.written_contact_email_clears_reply_settled() secdef=false cfg=- acl=- 
 BEGIN
   PERFORM clear_reply_settled_by_thread(array_agg(thread_key), array_agg(since))

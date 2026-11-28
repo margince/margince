@@ -213,7 +213,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	// drop-everything behaviour, because there is no database to record into.
 	standingIMAP := imap.NewStanding()
 	if pool != nil {
-		standingIMAP = standingIMAP.WithBounceSink(newBounceSink(pool))
+		standingIMAP = standingIMAP.WithBounceSink(newBounceSink(pool, cfg.Blob))
 	}
 	r.Register(standingIMAP)
 	// Telegram is registered on the same terms and for the same reason: a bot

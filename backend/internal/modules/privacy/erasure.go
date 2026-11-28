@@ -193,7 +193,7 @@ func (e *Eraser) runContactErasure(ctx context.Context, contactID ids.UUID, reas
 		// Delete the subject's attachment rows and queue their objects for the
 		// stored-object reap, both inside the transaction. A failure here,
 		// including no configured store, rolls the whole erasure back.
-		if err := e.eraseAttachments(ctx, tx, reason, causeContactErasure, subjectAttachmentsWhere, subject, floorCurrent, floorCarried); err != nil {
+		if err := eraseAttachments(ctx, tx, e.blob, reason, causeContactErasure, subjectAttachmentsWhere, subject, floorCurrent, floorCarried); err != nil {
 			return err
 		}
 		// The activities this erasure just destroyed travel with the subject:

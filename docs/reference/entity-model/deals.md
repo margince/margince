@@ -76,7 +76,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-53 columns · primary key `(id)` · referenced by 31 foreign keys
+53 columns · primary key `(id)` · referenced by 32 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

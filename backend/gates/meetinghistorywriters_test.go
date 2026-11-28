@@ -39,7 +39,8 @@ const meetingHistoryRecorder = "recordMeetingTransition"
 // — a filter, a projection, a report expression — changes no meeting and owes
 // no transition.
 var writesMeetingStatusWithoutHistory = gatekit.Waive(map[string]string{
-	"internal/modules/activities/scheduling_change.go": "settles provider delivery through updateActivityInTx, which records the meeting transition in the same transaction",
+	"internal/modules/activities/meetingoutcomestart.go": "prepares an outcome preview without writing; lifecycle and activityupdate record the actual transition",
+	"internal/modules/activities/scheduling_change.go":   "settles provider delivery through updateActivityInTx, which records the meeting transition in the same transaction",
 	"internal/modules/activities/transcriptofmeeting.go": "marks the recorded meeting held through updateActivityInTx, " +
 		"which records the meeting transition in the same transaction",
 	"internal/modules/activities/mapping.go": "maps a request onto LogActivityInput and executes " +

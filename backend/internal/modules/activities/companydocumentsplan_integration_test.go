@@ -85,14 +85,14 @@ func seedBusyAccountFiles(ctx context.Context, t *testing.T, tx pgx.Tx) {
 	t.Helper()
 	if _, err := tx.Exec(ctx, `
 	ALTER TABLE attachment DISABLE TRIGGER USER;
-	INSERT INTO attachment (entity_type, entity_id, filename, content_type, byte_size, source, captured_by, storage_key, category)
-	  SELECT 'activity', m.id, 'file-'||m.g||'-'||k||'.pdf', 'application/pdf', 200000, 'imap', 'connector:imap', 'k/'||m.g||'/'||k, 'email_attachment'
+	INSERT INTO attachment (entity_type, entity_id, filename, content_type, byte_size, source, captured_by, storage_key, category, owner_activity_id)
+	  SELECT 'activity', m.id, 'file-'||m.g||'-'||k||'.pdf', 'application/pdf', 200000, 'imap', 'connector:imap', 'k/'||m.g||'/'||k, 'email_attachment', m.id
 	    FROM seeded_mail m, generate_series(1, 2) k;
-	INSERT INTO attachment (entity_type, entity_id, filename, content_type, byte_size, source, captured_by, storage_key)
-	  SELECT 'company', c.id, 'upload-'||c.n||'-'||k||'.pdf', 'application/pdf', 100000, 'upload', 'system', 'u/'||c.n||'/'||k
+	INSERT INTO attachment (entity_type, entity_id, filename, content_type, byte_size, source, captured_by, storage_key, owner_company_id)
+	  SELECT 'company', c.id, 'upload-'||c.n||'-'||k||'.pdf', 'application/pdf', 100000, 'upload', 'system', 'u/'||c.n||'/'||k, c.id
 	    FROM seeded_company c, generate_series(1, 50) k;
-	INSERT INTO attachment (entity_type, entity_id, filename, content_type, byte_size, source, captured_by, storage_key)
-	  SELECT 'deal', d.id, 'offer-'||c.n||'-'||k||'.pdf', 'application/pdf', 100000, 'upload', 'system', 'd/'||c.n||'/'||k
+	INSERT INTO attachment (entity_type, entity_id, filename, content_type, byte_size, source, captured_by, storage_key, owner_deal_id)
+	  SELECT 'deal', d.id, 'offer-'||c.n||'-'||k||'.pdf', 'application/pdf', 100000, 'upload', 'system', 'd/'||c.n||'/'||k, d.id
 	    FROM seeded_company c JOIN deal d ON d.company_id = c.id, generate_series(1, 50) k;
 	ANALYZE attachment`); err != nil {
 		t.Fatalf("seeding the busy account's files: %v", err)
