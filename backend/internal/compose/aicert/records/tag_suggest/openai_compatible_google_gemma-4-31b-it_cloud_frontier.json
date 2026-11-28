@@ -3,7 +3,7 @@
   "provider": "openai_compatible",
   "served_model": "google/gemma-4-31b-it",
   "env_class": "cloud_frontier",
-  "prompt_version": "pbacf58b2f6fc86a8ef8a0c6d2e4a0865",
+  "prompt_version": "p49d3b9806ce30409dccd52e2ece48e52",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 15,
@@ -17,12 +17,12 @@
   "context_applied": false,
   "context_scopes": null,
   "context_owed": 0,
-  "latency_p50": 1478,
-  "latency_p95": 2965,
+  "latency_p50": 857,
+  "latency_p95": 1546,
   "mean_tokens": 775,
-  "mean_tokens_in": 715,
-  "mean_tokens_out": 60,
-  "mean_cached_tokens": 158,
+  "mean_tokens_in": 734,
+  "mean_tokens_out": 41,
+  "mean_cached_tokens": 136,
   "mean_cache_write_tokens": 0,
   "est_cost_microusd": 0,
   "judge_served_model": "",
@@ -30,20 +30,16 @@
   "self_judged": false,
   "served_identity_source": "echo",
   "candidate_upstream": {
-    "only": [
-      "crusoe"
-    ],
+    "only": null,
     "ignore": null,
-    "quantizations": [
-      "bf16"
-    ],
-    "sort": "",
-    "require_parameters": null,
+    "quantizations": null,
+    "sort": "throughput",
+    "require_parameters": true,
     "allow_fallbacks": null,
     "preferred_max_latency_p90": 0,
     "reasoning_effort": ""
   },
-  "ran_at": "2026-11-27T23:57:18Z",
+  "ran_at": "2026-11-28T12:07:00Z",
   "scenarios": [
     {
       "scenario": "each_item_in_a_batch_gets_its_own_subset_of_two_tags",
@@ -63,7 +59,7 @@
     {
       "scenario": "a_forwarded_customer_request_is_interest_but_our_quoted_offer_is_not",
       "site": "interest",
-      "stamp": "113883a21f930a75bb4d762e368370dd0ea875b3d342a44e74241576298cdab220057d2bcf52eb34398593fe900bb9e39e79cdbd00485acc87eb1a18c73cad85bad631776e7747fed65add0d8acee8e8510dec96c72a1cd89c586331433bc2f8",
+      "stamp": "0de57be5b772465cc01e34f63cf2a2f88cfa7b2fa836f82b8da8a03c3b4dae801b02d973c6bb73a118ab0cca5eea368ff3edcb5ccf1f4b168b0460fd0bd328c3bad631776e7747fed65add0d8acee8e8510dec96c72a1cd89c586331433bc2f8",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,

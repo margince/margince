@@ -63,7 +63,6 @@ export const MODEL_SETUPS = {
           provider: "openai_compatible",
           routing: {
             provider: {
-              quantizations: ["fp8"],
               require_parameters: true,
               sort: "throughput",
             },
@@ -75,7 +74,6 @@ export const MODEL_SETUPS = {
           provider: "openai_compatible",
           routing: {
             provider: {
-              quantizations: ["fp8"],
               require_parameters: true,
               sort: "throughput",
             },
@@ -87,7 +85,6 @@ export const MODEL_SETUPS = {
           provider: "openai_compatible",
           routing: {
             provider: {
-              quantizations: ["fp8"],
               require_parameters: true,
               sort: "throughput",
             },
@@ -99,7 +96,6 @@ export const MODEL_SETUPS = {
           provider: "openai_compatible",
           routing: {
             provider: {
-              quantizations: ["fp8"],
               require_parameters: true,
               sort: "throughput",
             },

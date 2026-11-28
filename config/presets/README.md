@@ -15,7 +15,7 @@ this installation goes, so an operator must choose it; it is never inherited.
 | [`anthropic_cloud.yaml`](anthropic_cloud.yaml) | `local_small` and `cheap_cloud` to `claude-haiku-5-5`, `premium` and `frontier` to `claude-sonnet-5-5`, embeddings to `gemini-embedding-001`. Not yet measured | `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` |
 | [`openrouter_cloud.yaml`](openrouter_cloud.yaml) | every tier to an OpenRouter-brokered model | `OPENAI_COMPATIBLE_API_KEY` |
 | [`openrouter_openai.yaml`](openrouter_openai.yaml) | every tier to a GPT-6 model (`gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`) through OpenRouter, embeddings to `text-embedding-3-large` at 1024 | `OPENAI_COMPATIBLE_API_KEY` |
-| [`consumer_class_brokered.yaml`](consumer_class_brokered.yaml) | every tier to a Gemma 4 an operator could self-host, brokered at fp8 | `OPENAI_COMPATIBLE_API_KEY` |
+| [`consumer_class_brokered.yaml`](consumer_class_brokered.yaml) | every tier to a Gemma 4 an operator could self-host, brokered, host left to the broker | `OPENAI_COMPATIBLE_API_KEY` |
 | [`openrouter_cloud_eu.yaml`](openrouter_cloud_eu.yaml) | every lane, embeddings included, to Mistral's EU-region endpoint (`only: [mistral/eu]`) | `OPENAI_COMPATIBLE_API_KEY` |
 | [`gemma4_local_ollama.yaml`](gemma4_local_ollama.yaml) | every tier to `gemma4:12b` on loopback Ollama, embeddings to `bge-m3`; zero egress. Not yet measured | Ollama with both models pulled, nothing else |
 | [`qwen3_local_vllm.yaml`](qwen3_local_vllm.yaml) | every tier to Qwen3-14B (MLX 4-bit) on loopback vLLM, embeddings to `bge-m3` on a second vLLM; zero egress. Not yet measured | two vLLM servers started with the flags in the file's header |
