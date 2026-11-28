@@ -241,7 +241,7 @@ func readLiveLink(
 	link := liveLink{image: customerLinkImage{ExternalCustomerID: externalID}}
 	err := tx.QueryRow(ctx, `
 		SELECT id, version, company_id FROM finance_customer_link
-		 WHERE connection_id = $1 AND external_customer_id = $2`,
+		 WHERE connection_id = $1 AND external_customer_id = $2 AND archived_at IS NULL`,
 		connectionID, externalID).Scan(&link.id, &link.version, &link.image.CompanyID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return liveLink{}, false, nil

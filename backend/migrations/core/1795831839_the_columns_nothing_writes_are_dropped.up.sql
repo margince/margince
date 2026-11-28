@@ -2,6 +2,7 @@
 -- names them. No writer ever set a team voice profile, so its owner check is
 -- rebuilt to admit only a user's or the workspace's, and the next file
 -- validates it. A consent wording's window and jurisdiction were never set.
+-- A grant's uniqueness moves to the index the previous file built.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE oauth_client DROP COLUMN last_used_at;
@@ -15,7 +16,7 @@ ALTER TABLE finance_external_customer DROP COLUMN archived_at;
 ALTER TABLE contact_acquisition_evidence DROP COLUMN purpose_claimed;
 
 ALTER TABLE role_assignment DROP COLUMN team_id;
-CREATE UNIQUE INDEX uq_role_assignment ON role_assignment (role_id, user_id);
+ALTER INDEX uq_role_assignment_member RENAME TO uq_role_assignment;
 
 ALTER TABLE voice_profile
     DROP CONSTRAINT voice_profile_scope_owner_check,

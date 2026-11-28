@@ -1,5 +1,6 @@
--- The columns come back empty, with their keys, indexes and checks; a key or
--- check comes back NOT VALID, as a rollback adds it. A published wording's
+-- The columns come back empty, with their keys and checks; a key or check
+-- comes back NOT VALID, as a rollback adds it. The previous file's rollback
+-- rebuilds their indexes concurrently. A published wording's
 -- effective_until can again be closed by the application.
 SET LOCAL lock_timeout = '3s';
 
@@ -48,15 +49,12 @@ ALTER TABLE voice_profile
         OR (scope = 'workspace' AND owner_id IS NULL AND team_id IS NULL)) NOT VALID,
     ADD CONSTRAINT voice_profile_team_fkey FOREIGN KEY (team_id)
         REFERENCES team(id) ON DELETE RESTRICT NOT VALID;
-CREATE INDEX voice_profile_team_fk ON voice_profile (team_id) WHERE team_id IS NOT NULL;
 
-DROP INDEX uq_role_assignment;
+ALTER INDEX uq_role_assignment RENAME TO uq_role_assignment_member;
 ALTER TABLE role_assignment
     ADD COLUMN team_id uuid,
     ADD CONSTRAINT role_assignment_team_id_fkey FOREIGN KEY (team_id)
         REFERENCES team(id) ON DELETE CASCADE NOT VALID;
-CREATE INDEX idx_role_assignment_team ON role_assignment (team_id);
-CREATE UNIQUE INDEX uq_role_assignment ON role_assignment (role_id, user_id, team_id) NULLS NOT DISTINCT;
 
 ALTER TABLE contact_acquisition_evidence ADD COLUMN purpose_claimed text;
 ALTER TABLE finance_external_customer ADD COLUMN archived_at timestamptz;
@@ -74,10 +72,8 @@ ALTER TABLE oauth_authorization_code
     ADD COLUMN lent_passport_id uuid,
     ADD CONSTRAINT oauth_code_lent_passport_fkey FOREIGN KEY (lent_passport_id)
         REFERENCES passport(id) ON DELETE SET NULL (lent_passport_id) NOT VALID;
-CREATE INDEX oauth_code_lent_passport_ix ON oauth_authorization_code (lent_passport_id);
 ALTER TABLE oauth_grant
     ADD COLUMN lent_passport_id uuid,
     ADD CONSTRAINT oauth_grant_lent_passport_fkey FOREIGN KEY (lent_passport_id)
         REFERENCES passport(id) ON DELETE SET NULL NOT VALID;
-CREATE INDEX oauth_grant_lent_passport_ix ON oauth_grant (lent_passport_id);
 ALTER TABLE oauth_client ADD COLUMN last_used_at timestamptz;
