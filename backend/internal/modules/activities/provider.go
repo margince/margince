@@ -196,11 +196,8 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 	return ref(datasource.EntityActivity, v.Id), err
 }
 
-// originOfCaller stamps OriginAgent on a row a scheduled agent run creates.
-// That keeps its notes off the last-activity clocks
-// (relstrength.LastActivityCountsSQL). The run marker decides, not the
-// passport. A user's own assistant in a chat has a passport and no run.
-// Its note counts as one typed in the app.
+// originOfCaller marks scheduled runs. Activity clocks independently exclude
+// assistant-written notes through relstrength.RecordedByAgentSQL.
 func originOfCaller(ctx context.Context, origin string) string {
 	if _, scheduled := principal.AgentRunID(ctx); scheduled {
 		return OriginAgent

@@ -149,17 +149,20 @@ func TestProjectLastActivity_CountsOnlyDirectlyLinkedActivities(t *testing.T) {
 	}
 
 	when := time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC)
-	// An agent's note: a member's note on the deal is filed under its project too.
-	logProjectNote(e.AgentFor(t, e.AdminUser, nil, AdminPerms), t, e, when,
-		activities.ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(deal.Id)})
+	// An assistant's call counts on the deal without inheriting its project.
+	if _, _, err := e.Activities.LogActivity(e.AgentFor(t, e.AdminUser, nil, AdminPerms), activities.LogActivityInput{
+		Kind: "call", Subject: new("Phase one call"), Direction: new("inbound"), OccurredAt: &when, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: ids.UUID(deal.Id)}},
+	}); err != nil {
+		t.Fatalf("logging a deal-only call: %v", err)
+	}
 
 	if got := projectClock(e.Admin(), t, e, project.ID); got != nil {
-		t.Fatalf("project.last_activity_at = %v after a note on its DEAL, want NULL — the clock counts direct links only", got)
+		t.Fatalf("project.last_activity_at = %v after a call on its DEAL, want NULL — the clock counts direct links only", got)
 	}
-	// The derivation itself, not only the stored column: a note on the deal
-	// never reaches the project's trigger, so widening last_activity_of_project
-	// to walk the deals would leave the column NULL here and only surface on the
-	// next backfill or rebuild.
+	// Check the derivation as well as the stored column. This call never reaches
+	// the project's trigger. A derivation that walks deals would leave the
+	// column NULL here but change it on the next backfill or rebuild.
 	owner := OwnerConn(t)
 	var derived *time.Time
 	if err := owner.QueryRow(context.Background(),
@@ -167,7 +170,7 @@ func TestProjectLastActivity_CountsOnlyDirectlyLinkedActivities(t *testing.T) {
 		t.Fatalf("reading the project derivation: %v", err)
 	}
 	if derived != nil {
-		t.Fatalf("last_activity_of_project = %v with only a deal note, want NULL — the derivation counts direct links only", derived)
+		t.Fatalf("last_activity_of_project = %v with only a deal call, want NULL — the derivation counts direct links only", derived)
 	}
 	if got, err := e.Deals.GetDeal(e.Admin(), ids.From[ids.DealKind](ids.UUID(deal.Id)), storekit.LiveOnly); err != nil {
 		t.Fatal(err)

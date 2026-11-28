@@ -40,10 +40,8 @@ A lead's company starts as text, and imports create no company. **Link to** offe
 
 ## Contacts
 
-Every contact has a name and a source. To check its source, see [Review a contact source](source-review.md).
-
 ### How do I add a new contact?
-To add a new contact in Margince, open **Contacts** in the sidebar and choose **New contact**.
+To add a new contact in Margince, open **Contacts** in the sidebar and choose **New contact**. See [Review a contact source](source-review.md) to check where it came from.
 1. Enter the **Full name** and at least one email, phone number or LinkedIn profile link.
 2. If you like, fill **First name**, **Last name**, **Title**, **Company** and **LinkedIn**.
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
@@ -144,9 +142,7 @@ To add a company (a new customer, client or account) in Margince, open **Compani
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
 4. Fill any custom fields, then choose **Create**. If another company holds the same domain, **View existing record** opens it instead and nothing is created. If a company with the same name exists, Margince still creates yours and shows a notice with **View existing record**. Your company's page then shows **Possible duplicates** and a count. The website address comes from the main domain, so there is no website box.
 
-A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer.
-
-A contact whose job at the company you ended or removed is not linked again by that run. An assistant acting for you makes the same choice. Later mail and enrichment keep that choice too; link the contact here to start again. An imported past role does not block a new role at the same company.
+A new company with a domain lists unlinked contacts on that domain, none ticked. Margince links those with no current job each day, ticked or not. Ticks matter most for contacts with another employer. A job you or an assistant acting for you ended or removed stays unlinked by that run, later mail and enrichment. Link the contact here to start again. An imported past role does not block a new role at the same company.
 
 Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later. Also called: new account, new business, add a client or customer.
 

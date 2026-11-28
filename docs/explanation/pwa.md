@@ -145,11 +145,23 @@ answers one of:
 | State | Meaning |
 |---|---|
 | `installed` | running as the installed app (`display-mode: standalone`, or `navigator.standalone` on iOS; a browser without `matchMedia` reads as not installed), or accepted or installed during this visit |
-| `available` | the browser offered to install; `prompt()` asks it once and answers `accepted` or `dismissed`. A browser that refuses to show its window (an offer already used) answers `dismissed` and logs it, so the row never keeps offering a button that cannot work |
-| `dismissed` | the reader turned the offer down; it holds until the browser offers again (`available`) or the app is installed |
+| `available` | the browser exposes `navigator.install()`, or supplied an older install offer; `prompt()` asks from a user click and answers `accepted` or `dismissed` |
+| `dismissed` | the page has no further prompt to offer on this visit, after the reader cancels or an install call fails; a new browser offer or an installation clears it |
 | `manual-ios` | an iPhone or iPad browser whose agent carries `Safari/` (Safari, and Chrome, Edge and Firefox on iOS), where Add to Home Screen is a step by hand |
 | `manual-macos` | Safari 26 or later on a Mac, where File › Add to Dock is a step by hand |
 | `unavailable` | nothing this page can offer, including an app's own browser on iOS |
+
+The Web Install API is used first where it exists. The no-argument call installs this app,
+whose manifest declares `id: "/"`. An `AbortError` means the reader cancelled. Without the new
+API, the saved browser offer is used. A spent older offer answers `dismissed` and logs its failure.
+
+Other failures reach the button's error handler. If an older offer exists, the next click uses it.
+Without one, the row points to the browser menu rather than trying the failed call again. No second
+dialog opens from the failed click.
+
+The automatic Home notice still needs a browser offer. The new API alone enables only the install
+button in Settings. For an installed app opened in a browser tab, that button may offer to open the app.
+The API does not tell this page whether it is already installed.
 
 Some iOS apps open a link in their own browser: LinkedIn, the Google app, and the apps whose agent
 carries `FBAN` or `Instagram`. That browser leaves `Safari/` out of its agent, and its share sheet

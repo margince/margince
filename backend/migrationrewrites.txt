@@ -364,3 +364,6 @@
 1795826345_record_pickers_can_open_reportable_extension_fields.down.sql | * | refuses a downgrade while a record picker is reportable; changes only the schema check
 
 1795826346_the_record_picker_reporting_check_is_validated.down.sql | * | SELECT 1 is a no-op rollback of schema validation; it rewrites no stored rows
+
+1795846282_agent_notes_never_move_activity_clocks.up.sql | * | replaces clock functions and update-trigger declarations; changes no stored row, which the versioned bounded clock repair handles
+1795846282_agent_notes_never_move_activity_clocks.down.sql | * | restores the previous clock functions and update triggers without rewriting stored rows

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { activityRecordedByAgent } from "../../design-system/provenanceof";
 import { activityHasHappened } from "../../format/activitywhen";
 
 type Activity = components["schemas"]["Activity"];
@@ -34,6 +35,7 @@ export function movesLastActivity(
   record: string,
 ): boolean {
   if (!COUNTING.has(row.kind)) return false;
+  if (row.kind === "note" && activityRecordedByAgent(row)) return false;
   if (
     row.kind === "meeting" &&
     row.meeting_status != null &&

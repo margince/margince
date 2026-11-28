@@ -248,9 +248,9 @@ func notesOn(t *testing.T, e *apptest.AppEnv, deal string) int {
 	return n
 }
 
-// Each door drafts on the worst slipping deal it finds. A drafted deal is no
-// longer quiet, so the second door drafts on the next one. A REST retry under
-// the same Idempotency-Key answers the first drafts and writes none.
+// Both doors choose the worst slipping deal: an assistant's draft leaves it
+// quiet. A REST retry under the same Idempotency-Key answers the first draft
+// and writes none.
 func TestTheFollowUpRouteDraftsAsTheToolDoesAndARetryWritesNothing(t *testing.T) {
 	d := newTwoDoors(t, "follow-up-doors", "read", "draft")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
@@ -266,11 +266,17 @@ func TestTheFollowUpRouteDraftsAsTheToolDoesAndARetryWritesNothing(t *testing.T)
 	}
 	viaREST := decodeDrafts(t, first)
 	viaTool := decodeDrafts(t, d.tool(t, "draft_follow_ups_for", args))
-	if viaREST.Segment != viaTool.Segment || viaREST.Drafts[0].DealID != winter || viaTool.Drafts[0].DealID != spring {
-		t.Errorf("the route drafted %+v and the tool %+v, want the winter deal then the spring one", viaREST, viaTool)
+	if viaREST.Segment != viaTool.Segment || viaREST.Drafts[0].DealID != winter || viaTool.Drafts[0].DealID != winter {
+		t.Errorf("the route drafted %+v and the tool %+v, want both to choose the still-quiet winter deal", viaREST, viaTool)
 	}
 	for _, drafted := range []sharedDrafts{viaREST, viaTool} {
 		assertTheAgentWrote(t, d.e, drafted.Drafts[0].DraftActivityID, "create")
+	}
+	if notesOn(t, d.e, spring) != 0 {
+		t.Error("a less-quiet deal received a draft before the winter deal had contact")
+	}
+	if viaREST.Drafts[0].DraftActivityID == viaTool.Drafts[0].DraftActivityID {
+		t.Error("two separate draft requests returned the same activity")
 	}
 
 	before := notesOn(t, d.e, winter)

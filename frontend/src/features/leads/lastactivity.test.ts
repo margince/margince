@@ -44,6 +44,29 @@ describe("movesLastActivity", () => {
     );
   });
 
+  it("excludes assistant notes while preserving member notes and assistant contact", () => {
+    for (const writer of [
+      { recorded_by_agent: true, captured_by: "human:1" },
+      { recorded_by_agent: false, captured_by: "agent:passport" },
+    ]) {
+      expect(
+        movesLastActivity(row({ kind: "note", ...writer }), asOf, UTC_ZONE),
+      ).toBe(false);
+      for (const kind of ["email", "call", "meeting"] as const) {
+        expect(
+          movesLastActivity(row({ kind, ...writer }), asOf, UTC_ZONE),
+        ).toBe(true);
+      }
+    }
+    expect(
+      movesLastActivity(
+        row({ kind: "note", recorded_by_agent: false, captured_by: "human:1" }),
+        asOf,
+        UTC_ZONE,
+      ),
+    ).toBe(true);
+  });
+
   it("never counts a task, whoever filed it", () => {
     expect(movesLastActivity(row({ kind: "task" }), asOf, UTC_ZONE)).toBe(
       false,
