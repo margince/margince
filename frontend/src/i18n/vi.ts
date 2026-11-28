@@ -3101,6 +3101,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.singleKeyOff": "Đã tắt phím tắt một phím",
   "shell.shortcuts.singleKeyOffHint": "Bật lại trong Cài đặt, mục Tài khoản.",
   "shell.more": "Thêm",
+  "shell.embedSignInBody": "Đăng nhập Margince trong một tab trình duyệt, rồi quay lại đây và chọn Thử lại.",
+  "shell.embedOpen": "Mở Margince",
   "shell.unknownPage": "Không tìm thấy",
   "shell.unavailableForRole": "Không khả dụng cho vai trò của bạn.",
   "shell.unknownAddress": "Địa chỉ này không dẫn đến đâu trong Margince.",

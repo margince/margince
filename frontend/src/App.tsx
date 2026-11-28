@@ -20,6 +20,7 @@ import { AuthScreen, ReleaseSkewScreen } from "./app/authscreens";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { lockScreen, useProbeAnswer } from "./app/confinement";
+import { EmbeddedFrame, EmbedSignIn, isEmbedded } from "./app/embedded";
 import { DateFormatsProvider } from "./app/dateformats";
 import { useFeatureLanding } from "./app/featurelanding";
 import { useHomePrefetch } from "./app/homeprefetch";
@@ -298,7 +299,15 @@ function AuthedApp({
     [storedZone],
   );
 
-  const hold = useOnboardingHold(authed, described, progress.unfinished, route);
+  // A unit's screen in a frame is not the place to walk a reader through
+  // onboarding: the gate's own screens never load there.
+  const embedded = isEmbedded();
+  const hold = useOnboardingHold(
+    authed && !embedded,
+    described,
+    progress.unfinished,
+    route,
+  );
 
   const { refusal, confinement } = useProbeAnswer(me);
   const sessionSeen = useSyncExternalStore(
@@ -351,6 +360,9 @@ function AuthedApp({
           <UnavailableOrClaimable kind={kind} onRetry={retry} />
         </RaillessFrame>
       );
+    }
+    if (embedded) {
+      return <EmbedSignIn onRetry={() => void me.refetch()} />;
     }
     return (
       <RaillessFrame>
@@ -408,22 +420,32 @@ function AuthedApp({
                 <ApprovalHost>
                   {/* Sign out in the shell's account menu asks the page's guard. */}
                   <UnsavedExits>
-                    <AuthedShell
-                      hold={hold}
-                      onOpenSearch={() => palette.show("all")}
-                    >
-                      <ScreenView
-                        screen={route.screen}
-                        id={route.id}
-                        id2={route.id2}
-                      />
-                    </AuthedShell>
+                    {embedded ? (
+                      <EmbeddedFrame>
+                        <ScreenView
+                          screen={route.screen}
+                          id={route.id}
+                          id2={route.id2}
+                        />
+                      </EmbeddedFrame>
+                    ) : (
+                      <AuthedShell
+                        hold={hold}
+                        onOpenSearch={() => palette.show("all")}
+                      >
+                        <ScreenView
+                          screen={route.screen}
+                          id={route.id}
+                          id2={route.id2}
+                        />
+                      </AuthedShell>
+                    )}
                   </UnsavedExits>
                 </ApprovalHost>
               </SourceHost>
             </CallLogHost>
           </WriteToHost>
-          {palette.open !== null && (
+          {!embedded && palette.open !== null && (
             <Suspense fallback={null}>
               <CommandPalette
                 open={palette.open}

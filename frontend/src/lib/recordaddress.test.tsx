@@ -4,7 +4,13 @@
 
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { appHref, CONSENT_PATH, publishRecordAddress } from "./recordaddress";
+import {
+  appHref,
+  CONSENT_PATH,
+  EMBED_PATH,
+  isEmbedAddress,
+  publishRecordAddress,
+} from "./recordaddress";
 import { useRoute } from "./router";
 
 const DEAL = "01a00000-0000-7000-8000-000000000001";
@@ -170,6 +176,40 @@ it("keeps the consent screen on its own path", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  }
+  expect(replace).not.toHaveBeenCalled();
+});
+
+// Another origin may frame the embed path, so a core screen opened there
+// reloads at the root, where the app's own policy refuses every frame.
+it.each([
+  ["#/home", "/#/home"],
+  ["", "/"],
+  ["#/settings/ext", "/#/settings/ext"],
+  ["#/extension", "/#/extension"],
+  [`#/contacts/${CONTACT}`, `/#/contacts/${CONTACT}`],
+])("reloads %s at the root when it opens on the embed path", (hash, to) => {
+  const replace = vi.fn();
+  vi.stubGlobal("location", { pathname: EMBED_PATH, search: "", hash, replace });
+  try {
+    publishRecordAddress();
+  } finally {
+    vi.unstubAllGlobals();
+  }
+  expect(replace).toHaveBeenCalledWith(to);
+});
+
+it("keeps a unit's screen on the embed path, and only there", () => {
+  const replace = vi.fn();
+  for (const hash of ["#/ext/linkedin", "#/ext/openchannel?tab=a"]) {
+    vi.stubGlobal("location", { pathname: EMBED_PATH, search: "", hash, replace });
+    try {
+      publishRecordAddress();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(isEmbedAddress(EMBED_PATH, hash), hash).toBe(true);
+    expect(isEmbedAddress("/", hash), hash).toBe(false);
   }
   expect(replace).not.toHaveBeenCalled();
 });
