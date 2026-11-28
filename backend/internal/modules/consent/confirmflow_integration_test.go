@@ -20,6 +20,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -189,6 +190,41 @@ func TestAnAnswerFromTheConfirmPageCompletesTheGrant(t *testing.T) {
 	}
 	if wording == "" {
 		t.Error("the proof row carries no wording — Art. 7(1) asks what the subject agreed TO")
+	}
+}
+
+// The proof row keeps the device and address that answered the mailed link,
+// the evidence that a human, not a mail scanner, answered it.
+func TestAConfirmedGrantRecordsWhereTheAnswerCameFrom(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedMarketingPurpose(t, e)
+	link := issueLink(t, e)
+
+	h := NewHandlers(database.BindTo(e.store.db.Pool(), ids.From[ids.WorkspaceKind](e.ws)))
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:public_confirm"})
+	body := `{"marketing_choice":"granted","marketing_wording":"News from time to time, roughly once a month."}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/public/confirm/"+link.Token, strings.NewReader(body)).WithContext(ctx)
+	req.RemoteAddr = "198.51.100.23:40112"
+	req.Header.Set("User-Agent", "Mozilla/5.0 (phone)")
+	rec := httptest.NewRecorder()
+	h.SubmitConfirmDetails(rec, req, link.Token)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("submit the answer: status %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	var ip, agent string
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT coalesce(ce.confirm_ip, ''), coalesce(ce.confirm_user_agent, '')
+		  FROM consent_event ce
+		  JOIN consent_purpose cp ON cp.id = ce.purpose_id
+		 WHERE ce.contact_id = $1 AND cp.key = $2 AND ce.issuance_trigger IS NOT NULL`,
+		e.contact, PurposeMarketingEmail).Scan(&ip, &agent); err != nil {
+		t.Fatalf("read the proof row: %v", err)
+	}
+	if ip != "198.51.100.23" || agent != "Mozilla/5.0 (phone)" {
+		t.Errorf("proof row confirmed from %q with %q, want the answering client's address and device", ip, agent)
 	}
 }
 

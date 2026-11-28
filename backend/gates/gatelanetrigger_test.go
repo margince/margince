@@ -7,24 +7,18 @@
 
 package gates
 
-// A gate runs in a lane that every path it reads can trigger.
+// A lane runs on a change to every path it reads.
 //
-// The gates here are Go tests, and CI decides whether to run them from a
-// paths-filter. A gate that reads a file outside that filter's scope is one a
-// pull request can break without ever running it: the tree goes red on `main`,
-// and the failure then surfaces on the next unrelated change that does trigger
-// the lane, where it reads as that change's fault.
+// A lane that reads a file outside its paths-filter scope can be broken by a
+// pull request that never runs it. The red then lands on the next unrelated
+// change that does trigger the lane.
 //
-// It is not hypothetical. A frontend-only pull request added a retired word to a
-// comment, the vocabulary gate reads frontend comments, and the lane holding it
-// never ran. Three sessions found the red independently on unrelated branches
-// and two spent a full integration lane ruling out their own diff.
-//
-// The filter already carried one frontend file for exactly this reason, with a
-// comment describing this bug. One path is a point fix; this is the rule.
+// Many Go gates walk every tracked file, so their scope is `**`. The
+// integration lane reads far less, so its census starts from the tests.
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -33,166 +27,180 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// candidatePath finds string literals that could name a file: no whitespace,
-// and either a separator or an extension. Prose is excluded by the space rule —
-// a failure message mentioning `docs/` reads as a sentence, not a path.
-//
-// Which of these ARE paths is decided by the tree rather than by a list of
-// prefixes: the first version enumerated seven directories and silently missed
-// `.github/labels.yml` and the root `package.json`, both read by gates and
-// neither covered. A census that names its own subject can only ever find what
-// its author already thought of.
+const (
+	goGatesScope   = "backend"
+	databaseScope  = "backend_db"
+	minTrackedTree = 5000
+)
+
+func TestEveryTrackedFileTriggersTheGoGates(t *testing.T) {
+	t.Parallel()
+	scope := filterScopes(t, readWorkflow(t, classifierWorkflow))[goGatesScope]
+	if len(scope) == 0 {
+		t.Fatalf("%s declares no %q scope; the Go gates are guarded on it", classifierWorkflow, goGatesScope)
+	}
+	files := trackedFiles(t)
+	if len(files) < minTrackedTree {
+		t.Fatalf("the index lists %d files and the tree has at least %d; this census read the wrong repository",
+			len(files), minTrackedTree)
+	}
+	var missing []string
+	for _, file := range files {
+		if !scopeClaims(file.path, scope) {
+			missing = append(missing, file.path)
+		}
+	}
+	if len(missing) > 0 {
+		t.Errorf("%d tracked file(s) are outside ci.yml's %q scope, among them %s.\n"+
+			"A pull request touching only those skips every Go gate, and many gates walk every tracked file. "+
+			"Keep the scope `**`.", len(missing), goGatesScope, strings.Join(missing[:min(5, len(missing))], ", "))
+	}
+}
+
+// candidatePath is a string literal that could name a file: no whitespace,
+// and a separator or an extension.
 var candidatePath = regexp.MustCompile(`"([A-Za-z0-9_.][A-Za-z0-9_./*-]*(?:/[A-Za-z0-9_./*-]*|\.[A-Za-z]{2,4}))"`)
 
-// coveredBy reports whether a paths-filter pattern matches this path. The
-// shapes the filter uses: a `**` tree, a one-segment glob such as
-// `Dockerfile*`, and an exact file.
-func coveredBy(pattern, path string) bool {
-	if tree, ok := strings.CutSuffix(pattern, "/**"); ok {
-		return path == tree || strings.HasPrefix(path, tree+"/")
+// leadingJoinLiterals is the run of string literals a filepath.Join call starts
+// with: `filepath.Join("..", "..", "config", "presets", preset)` reads
+// ../../config/presets.
+var leadingJoinLiterals = regexp.MustCompile(`filepath\.Join\(((?:\s*"[^"\\]+"\s*,?)+)`)
+
+// rootJoinLiterals is a filepath.Join that starts from a helper naming the
+// repository root: `filepath.Join(integration.RepositoryRoot(t), "docs", …)`.
+var rootJoinLiterals = regexp.MustCompile(`filepath\.Join\(\s*(?:\w+\.)?(?:RepositoryRoot|repoRoot)\(t\)\s*,((?:\s*"[^"\\]+"\s*,?)+)`)
+
+var quoted = regexp.MustCompile(`"([^"\\]+)"`)
+
+func quotedParts(args string) []string {
+	var parts []string
+	for _, part := range quoted.FindAllStringSubmatch(args, -1) {
+		parts = append(parts, part[1])
 	}
-	if matched, err := filepath.Match(pattern, path); err == nil && matched {
-		return true
-	}
-	return pattern == path
+	return parts
 }
 
-func TestEveryGateRunsInALaneItsSubjectTriggers(t *testing.T) {
+// integrationReads resolves the paths an integration-tagged file names relative
+// to its own directory, the one `go test` runs it in, and keeps those outside
+// backend/ that exist.
+func integrationReads(file, body string) []string {
+	var named []string
+	for _, match := range candidatePath.FindAllStringSubmatch(body, -1) {
+		named = append(named, match[1])
+	}
+	for _, match := range leadingJoinLiterals.FindAllStringSubmatch(body, -1) {
+		named = append(named, path.Join(quotedParts(match[1])...))
+	}
+	// Spelled from the file's own directory, so it resolves as the others do.
+	upToRoot := strings.Repeat("../", strings.Count(path.Dir(file), "/")+1)
+	for _, match := range rootJoinLiterals.FindAllStringSubmatch(body, -1) {
+		named = append(named, upToRoot+path.Join(quotedParts(match[1])...))
+	}
+	var reads []string
+	for _, name := range named {
+		if !strings.HasPrefix(name, "../") {
+			continue
+		}
+		resolved := path.Clean(path.Join(path.Dir(file), name))
+		if strings.HasPrefix(resolved, "../") || resolved == "backend" || strings.HasPrefix(resolved, "backend/") {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(repoRoot, strings.SplitN(resolved, "*", 2)[0])); err == nil {
+			reads = append(reads, resolved)
+		}
+	}
+	return reads
+}
+
+// trackedUnder is what a read of path reaches: the file itself, or every
+// tracked file below it when it names a directory or a glob.
+func trackedUnder(files []trackedFile, read string) []string {
+	var reached []string
+	for _, file := range files {
+		if matched, err := path.Match(read, file.path); err == nil && matched {
+			reached = append(reached, file.path)
+		} else if file.path == read || strings.HasPrefix(file.path, read+"/") {
+			reached = append(reached, file.path)
+		}
+	}
+	return reached
+}
+
+func TestEveryPathAnIntegrationTestReadsTriggersTheDatabaseLanes(t *testing.T) {
 	t.Parallel()
-
-	// The gates suite runs with backend/ as its working directory, so the tree
-	// this judges is one level up.
-	const repoRoot = ".."
-	scope := backendFilterPatterns(t)
-	// The suite runs with backend/ as its working directory, which is why the
-	// workflow above is reached as ../.github — the gates are a directory down
-	// from here, not the one the process is in.
-	const dir = "gates"
-	entries, err := gatekit.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("reading %s: %v", dir, err)
-	}
+	scope := filterScopes(t, readWorkflow(t, classifierWorkflow))[databaseScope]
+	files := trackedFiles(t)
 	read := 0
-	for _, entry := range entries {
-		if !strings.HasSuffix(entry.Name(), "_test.go") {
+	for _, file := range files {
+		if !strings.HasPrefix(file.path, "backend/") || !strings.HasSuffix(file.path, ".go") {
 			continue
 		}
-		body, err := gatekit.ReadFile(filepath.Join(dir, entry.Name()))
+		onDisk := filepath.Join(repoRoot, file.path)
+		onlyIntegration, err := builtOnlyForIntegration(onDisk)
 		if err != nil {
-			t.Fatalf("reading %s: %v", entry.Name(), err)
+			t.Fatalf("reading the build constraint of %s: %v", file.path, err)
 		}
-		for _, match := range candidatePath.FindAllStringSubmatch(string(body), -1) {
-			path := match[1]
-			path, reads := readsFromTheTree(repoRoot, path)
-			if !reads {
-				continue
-			}
-			read++
-			if covered(scope, path) {
-				continue
-			}
-			t.Errorf("%s reads %q, which no pattern in ci.yml's `backend` filter covers.\n"+
-				"A pull request touching only that path skips this lane, so it can break this "+
-				"gate and merge green — and the red then lands on the next unrelated change "+
-				"that does trigger the lane.\nAdd the tree to the `backend` scope (not "+
-				"`backend_db`: a Go gate needs no Postgres shard).", entry.Name(), path)
-		}
-	}
-	// The census must not pass by reading nothing. Forty-eight gates reach
-	// outside backend/ today; a walk that stopped recognising the literal, or
-	// resolved the wrong directory, would report a clean tree having judged none
-	// of them.
-	if read < 20 {
-		t.Fatalf("this census found %d outside-backend path(s) across the gates and expects at "+
-			"least 20 — it has stopped recognising the reads rather than the tree having lost them",
-			read)
-	}
-}
-
-// readsFromTheTree resolves a literal to something that EXISTS outside
-// backend/, which is what separates a path a gate opens from an import path, a
-// format string or a word that happens to carry a dot.
-//
-// `./` is relative to the suite's own directory and therefore already inside
-// backend/**. `../` reaches the repository root, which is where this census
-// judges from anyway. A glob is resolved by matching it: a gate naming a
-// pattern reads whatever the pattern matches today.
-func readsFromTheTree(root, path string) (string, bool) {
-	switch {
-	case strings.HasPrefix(path, "./"):
-		return "", false
-	case strings.HasPrefix(path, "../"):
-		path = strings.TrimPrefix(path, "../")
-	case strings.HasPrefix(path, "backend/"), path == "backend":
-		return "", false
-	}
-	// After normalisation, not before: the literal that reaches here is
-	// "../.git", and a check ahead of the prefix strip never sees it. The
-	// repository's own metadata is named by gates locating the root — not a
-	// source path, and no pull request edits it.
-	if path == "" || path == "." || path == ".git" || strings.HasPrefix(path, ".git/") {
-		return "", false
-	}
-	if strings.ContainsAny(path, "*?") {
-		matches, err := gatekit.Glob(filepath.Join(root, path))
-		return path, err == nil && len(matches) > 0
-	}
-	_, err := os.Stat(filepath.Join(root, path))
-	return path, err == nil
-}
-
-func covered(scope []string, path string) bool {
-	for _, pattern := range scope {
-		if coveredBy(pattern, path) {
-			return true
-		}
-	}
-	return false
-}
-
-// backendFilterPatterns reads the `backend` scope out of ci.yml, including the
-// backend_db anchor it derives from, so this gate judges the filter the lane
-// actually uses rather than a copy of it.
-func backendFilterPatterns(t *testing.T) []string {
-	t.Helper()
-	const workflow = "../.github/workflows/ci.yml"
-	body, err := gatekit.ReadFile(filepath.Clean(workflow))
-	if err != nil {
-		t.Fatalf("reading %s: %v", workflow, err)
-	}
-	text := string(body)
-	start := strings.Index(text, "backend_db: &backend_db")
-	end := strings.Index(text, "\n            frontend:")
-	if start < 0 || end < 0 || end < start {
-		t.Fatalf("%s no longer declares `backend_db: &backend_db` followed by a `frontend:` "+
-			"scope; this gate can no longer read which paths trigger the backend lane", workflow)
-	}
-	var patterns []string
-	for _, line := range strings.Split(text[start:end], "\n") {
-		line = strings.TrimSpace(line)
-		quoted := strings.TrimPrefix(line, "- ")
-		if !strings.HasPrefix(quoted, "'") || !strings.HasSuffix(quoted, "'") {
+		if !onlyIntegration {
 			continue
 		}
-		patterns = append(patterns, strings.Trim(quoted, "'"))
+		body, err := gatekit.ReadFile(onDisk)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file.path, err)
+		}
+		for _, outside := range integrationReads(file.path, string(body)) {
+			for _, reached := range trackedUnder(files, outside) {
+				read++
+				if !scopeClaims(reached, scope) {
+					t.Errorf("%s reads %s, which ci.yml's %q scope does not claim. A pull request touching only "+
+						"that file skips the integration lane. Add it to the scope.", file.path, reached, databaseScope)
+				}
+			}
+		}
 	}
-	if len(patterns) < 10 {
-		t.Fatalf("the backend scope parsed to %d pattern(s), which is fewer than it has — the "+
-			"shape this gate reads has changed and it would judge every path uncovered",
-			len(patterns))
+	// Today: the compose stack, three root scripts, the role matrix and the
+	// presets. A reader that stopped resolving would report none and pass.
+	if read < 20 {
+		t.Fatalf("this census found %d file(s) outside backend/ that integration tests read; the tree has at least 20", read)
 	}
-	return patterns
+}
+
+// The resolver reads both spellings a test uses, relative to its own directory.
+// A path inside backend/ is left to the scope that already holds it.
+func TestIntegrationReadsResolvesEachSpelling(t *testing.T) {
+	t.Parallel()
+	const file = "backend/internal/compose/x_integration_test.go"
+	cases := []struct {
+		body string
+		want []string
+	}{
+		{`os.ReadFile(filepath.Join("..", "..", "..", "config", "presets", preset))`, []string{"config/presets"}},
+		{`const dir = "../../../docs/reference/mcp-tool-roles"`, []string{"docs/reference/mcp-tool-roles"}},
+		{`os.ReadFile("../../api/crm.yaml")`, nil},
+		{`filepath.Join(dir, "config", "token")`, nil},
+		{`filepath.Join(integration.RepositoryRoot(t), "docs", "reference", "mcp-tool-roles")`, []string{"docs/reference/mcp-tool-roles"}},
+		{`filepath.Join(RepositoryRoot(t), "backend", "api")`, nil},
+		{`"../../../no/such/path.txt"`, nil},
+	}
+	for _, c := range cases {
+		got := integrationReads(file, c.body)
+		if strings.Join(got, ",") != strings.Join(c.want, ",") {
+			t.Errorf("integrationReads(%q) = %v, want %v", c.body, got, c.want)
+		}
+	}
 }
 
 // The matcher has to read each pattern the way paths-filter does. Otherwise a
 // covered path is reported uncovered, and the fix is a duplicate filter line.
-func TestCoveredByReadsEachFilterShape(t *testing.T) {
+func TestScopeClaimsReadsEachFilterShape(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		pattern, path string
 		want          bool
 	}{
+		{"**", "LICENSE", true},
+		{"**", ".claude/settings.json", true},
 		{"docs/**", "docs/how-to/x.md", true},
+		{"docs/**", "docs", true},
 		{"docs/**", "docsx/a.md", false},
 		{"Dockerfile*", "Dockerfile", true},
 		{"Dockerfile*", "Dockerfile.dev", true},
@@ -201,8 +209,8 @@ func TestCoveredByReadsEachFilterShape(t *testing.T) {
 		{"README.md", "README.mdx", false},
 	}
 	for _, c := range cases {
-		if got := coveredBy(c.pattern, c.path); got != c.want {
-			t.Errorf("coveredBy(%q, %q) = %v, want %v", c.pattern, c.path, got, c.want)
+		if got := scopeClaims(c.path, []string{c.pattern}); got != c.want {
+			t.Errorf("scopeClaims(%q, %q) = %v, want %v", c.path, c.pattern, got, c.want)
 		}
 	}
 }
