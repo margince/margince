@@ -40,7 +40,7 @@ func TestARefileRetriesCommittedActivitiesWhenItsQueueTransactionIsLost(t *testi
 	if !ok {
 		t.Fatal("missing declaration")
 	}
-	worker := rivertest.NewWorker(t, riverpgxv5.New(e.Pool), &river.Config{}, jobs.Govern(production, spec))
+	worker := rivertest.NewWorker(t, riverpgxv5.New(e.Pool), bindingConfig(e.Pool), jobs.Govern(production, spec))
 	tx, err := e.Pool.Begin(t.Context())
 	if err != nil {
 		t.Fatal(err)

@@ -54,7 +54,7 @@ func TestASiteReadAsksWhatTheCompanyPubliclyRuns(t *testing.T) {
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
 	_, args := startDeepRead(t, e, company)
 
-	ctx := rivertest.WorkContext(context.Background(), workClient(t, e))
+	ctx := rivertest.WorkContext(boundBackground(t), workClient(t, e))
 	if err := worker.run(ctx, args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestASiteReadWithNoCompanyQueuesNoLookup(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
-	ctx := rivertest.WorkContext(context.Background(), workClient(t, e))
+	ctx := rivertest.WorkContext(boundBackground(t), workClient(t, e))
 
 	// The triage lane's shape: a claim whose read is about a DOMAIN, with no
 	// account resolved behind it yet.

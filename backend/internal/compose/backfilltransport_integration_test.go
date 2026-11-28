@@ -379,7 +379,11 @@ func backfillWorkContext(ctx context.Context, t *testing.T, b *backfillWireEnv) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	return rivertest.WorkContext(ctx, client)
+	bound, err := bindInstallation(ctx, b.env.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rivertest.WorkContext(bound, client)
 }
 
 func driveBackfillToTerminal(t *testing.T, b *backfillWireEnv, w *captureBackfillWorker, args CaptureBackfillArgs) {
@@ -658,12 +662,7 @@ func startTheRunAndAssertItIsQueued(t *testing.T, b *backfillWireEnv) string {
 
 func assertThePagerWalksTheRunToDone(t *testing.T, b *backfillWireEnv, worker *captureBackfillWorker, runID string) {
 	t.Helper()
-	t.Run("the pager worker refuses job args that name nothing", func(t *testing.T) {
-		if err := worker.Work(boundBackground(t), &river.Job[CaptureBackfillArgs]{
-			JobRow: &rivertype.JobRow{}, Args: CaptureBackfillArgs{BackfillID: runID},
-		}); err == nil {
-			t.Fatal("args naming no workspace must fail the job")
-		}
+	t.Run("the pager worker refuses a malformed backfill id", func(t *testing.T) {
 		if err := worker.Work(boundBackground(t), &river.Job[CaptureBackfillArgs]{
 			JobRow: &rivertype.JobRow{}, Args: CaptureBackfillArgs{BackfillID: "not-a-uuid"},
 		}); err == nil {

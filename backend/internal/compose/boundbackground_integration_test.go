@@ -10,7 +10,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
 )
 
 // boundBackground is the context the worker middleware hands a job: a
@@ -34,4 +38,10 @@ func boundBackground(t *testing.T) context.Context {
 		t.Fatalf("binding the installation's workspace: %v", err)
 	}
 	return ctx
+}
+
+// bindingConfig is the River config of a test worker that runs a job the way
+// the client does, with the binding plugin installed.
+func bindingConfig(pool *pgxpool.Pool) *river.Config {
+	return &river.Config{Plugins: []rivertype.Plugin{jobs.WorkerBinding(installationBinding(pool))}}
 }

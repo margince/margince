@@ -30,7 +30,7 @@ func TestTwoCorrectionReconcilersShareOneRiverJob(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		contexts[i] = rivertest.WorkContext(t.Context(), client)
+		contexts[i] = rivertest.WorkContext(boundBackground(t), client)
 	}
 	results := make(chan error, 2)
 	for _, ctx := range contexts {
@@ -96,7 +96,7 @@ func TestMissingInstallationKeepsAnErrorContext(t *testing.T) {
 	if err == nil || ctx == nil || engine != nil {
 		t.Fatalf("unconfigured worker=%v %v %v", ctx, engine, err)
 	}
-	if err := (&dataTaskRunWorker{pool: e.Pool, pace: time.Second}).Work(boundBackground(t), &river.Job[DataTaskRunArgs]{}); err == nil {
+	if err := (&dataTaskRunWorker{pool: e.Pool, pace: time.Second}).Work(context.Background(), &river.Job[DataTaskRunArgs]{}); err == nil {
 		t.Fatal("unconfigured execution succeeded")
 	}
 }

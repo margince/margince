@@ -200,7 +200,7 @@ func (e *reconcileEnv) workOwnerNotices(t *testing.T) {
 		t.Fatal("owner notice job is not declared")
 	}
 	production := &approvalOwnerNoticeWorker{pool: e.Pool, now: func() time.Time { return clocktest.Now(t) }}
-	worker := rivertest.NewWorker(t, riverpgxv5.New(e.Pool), &river.Config{}, jobs.Govern(production, spec))
+	worker := rivertest.NewWorker(t, riverpgxv5.New(e.Pool), bindingConfig(e.Pool), jobs.Govern(production, spec))
 	for _, row := range page.Jobs {
 		tx, err := e.Pool.Begin(t.Context())
 		if err != nil {

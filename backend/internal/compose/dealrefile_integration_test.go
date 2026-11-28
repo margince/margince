@@ -132,7 +132,7 @@ func (f dealRefileFixture) runPaged(t *testing.T, args CapturedDealRefileArgs, p
 	}
 	production := newCapturedDealRefileWorker(f.o.e.Pool, topic)
 	production.page = page
-	worker := rivertest.NewWorker(t, riverpgxv5.New(f.o.e.Pool), &river.Config{}, jobs.Govern(production, spec))
+	worker := rivertest.NewWorker(t, riverpgxv5.New(f.o.e.Pool), bindingConfig(f.o.e.Pool), jobs.Govern(production, spec))
 	var row *rivertype.JobRow
 	for pass := range 10 {
 		tx, err := f.o.e.Pool.Begin(t.Context())
@@ -296,7 +296,7 @@ func TestTheRecoverySweepQueuesTheSameFiniteReconsideration(t *testing.T) {
 	if !ok {
 		t.Fatal("missing recovery declaration")
 	}
-	worker := rivertest.NewWorker(t, riverpgxv5.New(f.o.e.Pool), &river.Config{}, jobs.Govern(&capturedDealRefileSweepWorker{pool: f.o.e.Pool, now: func() time.Time { return f.o.now }}, spec))
+	worker := rivertest.NewWorker(t, riverpgxv5.New(f.o.e.Pool), bindingConfig(f.o.e.Pool), jobs.Govern(&capturedDealRefileSweepWorker{pool: f.o.e.Pool, now: func() time.Time { return f.o.now }}, spec))
 	tx, err := f.o.e.Pool.Begin(t.Context())
 	if err != nil {
 		t.Fatal(err)
