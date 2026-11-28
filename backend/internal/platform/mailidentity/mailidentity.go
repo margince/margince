@@ -34,7 +34,7 @@ var transactionalBaseline = map[string]struct{}{
 // foldLocalpart lowercases a local part and drops the separators that spell
 // the same mailbox several ways (mailer-daemon, mailer_daemon, mailer.daemon).
 func foldLocalpart(localpart string) string {
-	local := strings.ToLower(strings.TrimSpace(localpart))
+	local := correspondence.Fold(localpart)
 	return strings.NewReplacer(".", "", "-", "", "_", "").Replace(local)
 }
 
@@ -92,7 +92,7 @@ var machineMarkers = map[string]bool{
 // HasMachineMarker keeps separators and marker positions so personal names such as
 // anna.notify.weber are not mistaken for machine senders such as calendar-notification.
 func HasMachineMarker(localpart string) bool {
-	local := strings.ToLower(strings.TrimSpace(localpart))
+	local := correspondence.Fold(localpart)
 	parts := strings.FieldsFunc(local, func(r rune) bool {
 		return r == '.' || r == '-' || r == '_' || r == '+'
 	})
@@ -230,7 +230,7 @@ func ReaderAddress(label, source string) string {
 	if DiscoveredMachineAddress(source, label) {
 		return ""
 	}
-	return strings.ToLower(strings.TrimSpace(BareAddress(label)))
+	return correspondence.Fold(BareAddress(label))
 }
 
 // DiscoveredMachineAddress rejects only machine identities inferred from delivery.

@@ -31,6 +31,8 @@ type tsToken struct {
 	text     string
 	computed bool
 	pos      int
+	// raw is a regular expression's own source, flags included.
+	raw string
 }
 
 // tsNote is one comment: its text after the opener, and whether it is a
@@ -277,6 +279,7 @@ func (l *tsLexer) template() error {
 }
 
 func (l *tsLexer) regex() error {
+	start := l.pos
 	inClass := false
 	for l.pos++; l.pos < len(l.src); l.pos++ {
 		switch ch := l.src[l.pos]; {
@@ -294,7 +297,7 @@ func (l *tsLexer) regex() error {
 				l.pos++
 			}
 			// A regular expression is an operand, which this token records.
-			l.tokens = append(l.tokens, tsToken{kind: tkNumber, text: "/regex/", pos: l.pos})
+			l.tokens = append(l.tokens, tsToken{kind: tkNumber, text: "/regex/", pos: l.pos, raw: l.src[start:l.pos]})
 			return nil
 		}
 	}
@@ -307,7 +310,37 @@ func (l *tsLexer) opensElement() bool {
 		return false
 	}
 	next := l.src[l.pos+1]
-	return next == '>' || isIdentStart(next) && next != '#'
+	return next == '>' || isIdentStart(next) && next != '#' && !l.opensTypeParameters()
+}
+
+// opensTypeParameters reports a generic arrow's "<T,>" or "<T extends U>", which a
+// .tsx file spells where an element could start.
+func (l *tsLexer) opensTypeParameters() bool {
+	end := l.pos + 1
+	for end < len(l.src) && isIdentPart(l.src[end]) {
+		end++
+	}
+	rest := strings.TrimLeft(l.src[end:], " \t")
+	constraint, extends := strings.CutPrefix(rest, "extends ")
+	return strings.HasPrefix(rest, ",") || extends && closesBeforeParameters(constraint)
+}
+
+// A constraint's list closes on a ">" that a "(" follows. A JSX attribute named
+// extends, as in <Widget extends />, has none.
+func closesBeforeParameters(constraint string) bool {
+	depth := 0
+	for i := 0; i < len(constraint); i++ {
+		switch {
+		case constraint[i] == '<':
+			depth++
+		case constraint[i] != '>' || i > 0 && constraint[i-1] == '=':
+		case depth > 0:
+			depth--
+		default:
+			return strings.HasPrefix(strings.TrimLeft(constraint[i+1:], " \t"), "(")
+		}
+	}
+	return false
 }
 
 // element reads one JSX element, its attributes and its children. Text is

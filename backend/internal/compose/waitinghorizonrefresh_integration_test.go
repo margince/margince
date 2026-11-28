@@ -49,7 +49,7 @@ func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 		    FROM horizon_seed`)
 
 	worker := newWaitingHorizonRefreshWorker(e.Pool, slog.New(slog.DiscardHandler))
-	if err := worker.Work(context.Background(), nil); err != nil {
+	if err := worker.Work(boundBackground(t), nil); err != nil {
 		t.Fatalf("the refresh pass failed: %v", err)
 	}
 

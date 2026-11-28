@@ -29,8 +29,8 @@ type sweepSeed struct {
 	owner  string
 }
 
-// call sends one route as the signed-in admin and stops the sweep on any
-// failure. A seed that fails would leave its calls reading as measured.
+// call sends one route as the signed-in seat and stops the sweep on failure.
+// A seed that fails would leave its calls reading as measured.
 //
 //craft:ignore naked-any a request body is whichever JSON shape the route takes
 func (s sweepSeed) call(method, path string, body any, headers map[string]string, out any) {
@@ -234,7 +234,7 @@ func (s sweepSeed) asRoles(keys ...string) func() {
 	user := apptest.SessionUserID(s.t, s.e)
 	email := s.ownerScalar(`SELECT email FROM app_user WHERE id = $1`, user)
 	held := s.ownerScalar(`SELECT coalesce(string_agg(r.key, ','), '') FROM role r JOIN role_assignment a ON a.role_id = r.id
-		WHERE a.team_id IS NULL AND a.user_id = $1`, user)
+		WHERE a.user_id = $1`, user)
 	apptest.AssignRoleTo(s.t, s.e, email, keys...)
 	return func() { apptest.AssignRoleTo(s.t, s.e, email, strings.Split(held, ",")...) }
 }

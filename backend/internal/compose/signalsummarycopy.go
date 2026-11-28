@@ -49,7 +49,7 @@ var signalSummaryByLang = map[textlang.Lang]signalSummaryCopy{
 	},
 	textlang.Vietnamese: {
 		ghostedThread: "Chúng ta đã viết cách đây ít nhất %d ngày và chưa ai trả lời.",
-		projectQuiet:  "Không có gì được lưu cho %s trong ít nhất %d ngày.",
+		projectQuiet:  "%s không có cập nhật nào trong ít nhất %d ngày.",
 	},
 }
 

@@ -230,11 +230,11 @@ func TestStatusEntitiesPendingDoesNotGrowWithTheWorkspaceCount(t *testing.T) {
 		t.Fatalf("entities_pending = %d, want >= 1 — the delta below proves nothing against an empty backlog", before.EntitiesPending)
 	}
 
-	SeedExtraWorkspace(t, e.Owner, "reindex-count-second", false)
+	SeedExtraWorkspace(t, e.Owner, "reindex-count-second", true)
 
 	status, after, _ := embedStatus(t, e)
 	if status != http.StatusOK {
-		t.Fatalf("status after the second workspace -> %d, want 200", status)
+		t.Fatalf("status after an archived workspace is added -> %d, want 200", status)
 	}
 	if after.EntitiesPending != before.EntitiesPending {
 		t.Fatalf("entities_pending went %d -> %d when a second workspace was added and no entity was: the total is summing a rollup whose entries are the same rows",

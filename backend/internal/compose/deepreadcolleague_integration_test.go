@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestADeepReadAColleagueAskedForWritesAsTheirAgentAndKeepsItsRowAsTheSystem(t *testing.T) {
@@ -23,7 +24,7 @@ func TestADeepReadAColleagueAskedForWritesAsTheirAgentAndKeepsItsRowAsTheSystem(
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
 	read, args := startDeepRead(t, e, company)
 
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1
@@ -47,7 +48,7 @@ func TestADeepReadForARequesterWithoutTheGrantFailsAndWritesNoFinding(t *testing
 	read, args := startDeepRead(t, e, company)
 	e.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, e.Rep1)
 
-	if err := worker.run(context.Background(), args); err == nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err == nil {
 		t.Fatal("a read for a requester with no grant on the company succeeded")
 	}
 	if status := e.WsScalar(t, `SELECT status FROM site_read WHERE id = $1`, read.ID); status != "failed" {
@@ -66,7 +67,7 @@ func TestADeepReadMarginceStartedWritesAsTheSystem(t *testing.T) {
 	read, args := startDeepRead(t, e, company)
 	e.WsExec(t, `UPDATE site_read SET requested_by = $1 WHERE id = $2`, systemAutoEnrichActor, read.ID)
 
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM company_fact WHERE company_id = $1 AND captured_by = 'system:deep_read'`, company); n == 0 {

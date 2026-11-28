@@ -242,9 +242,8 @@ func validateInvoice(ctx context.Context, tx pgx.Tx, req commsauthz.Request, sub
 		SELECT EXISTS (
 			SELECT 1 FROM finance_invoice i
 			 WHERE i.id = $1::uuid
-			   -- A deleted or voided invoice is not a financial event anybody
-			   -- is owed a message about.
-			   AND i.archived_at IS NULL
+			   -- A voided invoice is not a financial event anybody is owed a
+			   -- message about.
 			   AND i.void_at IS NULL
 			   AND `+documentRecipientSQL("i.company_id", "$3::uuid")+`
 		)`, req.Evidence.InvoiceID, zeroAsNull(req.Evidence.DealID), buyerRoles)

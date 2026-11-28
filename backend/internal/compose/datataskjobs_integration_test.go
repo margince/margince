@@ -30,7 +30,7 @@ func TestTwoCorrectionReconcilersShareOneRiverJob(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		contexts[i] = rivertest.WorkContext(t.Context(), client)
+		contexts[i] = rivertest.WorkContext(boundBackground(t), client)
 	}
 	results := make(chan error, 2)
 	for _, ctx := range contexts {
@@ -96,7 +96,7 @@ func TestMissingInstallationKeepsAnErrorContext(t *testing.T) {
 	if err == nil || ctx == nil || engine != nil {
 		t.Fatalf("unconfigured worker=%v %v %v", ctx, engine, err)
 	}
-	if err := (&dataTaskRunWorker{pool: e.Pool, pace: time.Second}).Work(t.Context(), &river.Job[DataTaskRunArgs]{}); err == nil {
+	if err := (&dataTaskRunWorker{pool: e.Pool, pace: time.Second}).Work(context.Background(), &river.Job[DataTaskRunArgs]{}); err == nil {
 		t.Fatal("unconfigured execution succeeded")
 	}
 }
@@ -155,7 +155,7 @@ func TestCorrectionWorkerCommitsFailureCapAndNoticeFromJobContext(t *testing.T) 
 	}
 	e.WsExec(t, `INSERT INTO role_assignment(user_id,role_id) SELECT @user::uuid,id FROM role WHERE key='admin' ON CONFLICT DO NOTHING`, pgx.NamedArgs{"user": e.AdminUser})
 	e.WsExec(t, `UPDATE data_task_run SET cursor='"invalid-uuid"'::jsonb, consecutive_failures=4 WHERE step='stamp_provider_received_at'`)
-	snoozeOf(t, (&dataTaskRunWorker{pool: e.Pool, pace: time.Second}).Work(t.Context(), nil))
+	snoozeOf(t, (&dataTaskRunWorker{pool: e.Pool, pace: time.Second}).Work(boundBackground(t), nil))
 	progress, err := engine.List(ctx)
 	if err != nil {
 		t.Fatal(err)

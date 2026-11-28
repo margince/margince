@@ -13,7 +13,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -233,7 +233,7 @@ func addFromTheRoster(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	offer := func(parties []connector.MessageParticipant) []connector.MessageParticipant {
 		var out []connector.MessageParticipant
 		for _, p := range parties {
-			bare, known := held[strings.ToLower(strings.TrimSpace(p.Email))]
+			bare, known := held[correspondence.Fold(p.Email)]
 			switch {
 			case !known && budget > 0:
 				budget--

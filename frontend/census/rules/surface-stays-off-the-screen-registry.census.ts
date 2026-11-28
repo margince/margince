@@ -10,7 +10,7 @@ import { MODULE_FILE } from "../../scripts/lib/source-tree";
 import { type CensusRule, type CensusTree, srcDir } from "../tree";
 
 const surfaceEntry = join(srcDir, "surface", "index.ts");
-const extensionSeam = join(srcDir, "lib", "extensions.ts");
+const extensionRoute = join(srcDir, "lib", "extensionscreen.ts");
 const screenRegistry = join(srcDir, "composition", "extscreens.gen.ts");
 
 const reachedFromSurface = (tree: CensusTree) =>
@@ -27,15 +27,15 @@ const reachedFromSurface = (tree: CensusTree) =>
 export const rule: CensusRule = {
   name: "surface-stays-off-the-screen-registry",
   corpus: (tree) => tree.files.filter((file) => file.area === "src"),
-  // The surface reaches the extension seam today; a walk that misses it
+  // The surface reaches the unit route's spelling today; a walk that misses it
   // stopped walking, and would report the registry as unreached from nothing.
   floors: (_corpus, tree) => [
     ...(tree.at(surfaceEntry)
       ? []
       : ["the tree holds no src/surface/index.ts"]),
-    ...(reachedFromSurface(tree).has(extensionSeam)
+    ...(reachedFromSurface(tree).has(extensionRoute)
       ? []
-      : ["the surface does not reach src/lib/extensions.ts"]),
+      : ["the surface does not reach src/lib/extensionscreen.ts"]),
   ],
   across: (_corpus, tree) =>
     reachedFromSurface(tree).has(screenRegistry)

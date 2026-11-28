@@ -6,9 +6,9 @@ package connector
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -97,7 +97,7 @@ const (
 // AttendeeAddress is an invited address as every reader compares it: trimmed
 // and lower-cased.
 func AttendeeAddress(raw string) string {
-	return strings.ToLower(strings.TrimSpace(raw))
+	return correspondence.Fold(raw)
 }
 
 // CalendarAttendee is one invited address and the record it resolved to.

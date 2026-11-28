@@ -65,7 +65,7 @@ func TestIndividualPerformanceOffJudgesAMyTeamsEditionOnTheRosterItKept(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := (&reportScheduleSweepWorker{pool: e.Pool, now: func() time.Time { return at }}).Work(context.Background(), nil); err != nil {
+	if err := (&reportScheduleSweepWorker{pool: e.Pool, now: func() time.Time { return at }}).Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	completed, err := service.GetExecution(lead, ids.UUID(run.Id))

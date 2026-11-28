@@ -3,7 +3,9 @@
 
 package commsauthz
 
-import "strings"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+)
 
 // CountryOverride is the country a sender states for one recipient of one
 // message. The marketing rules follow it in place of the country the record
@@ -23,12 +25,12 @@ func (o CountryOverride) Cleared() bool { return o.Country == "" }
 // entry for an address the message does not carry is never asked for, so it
 // changes nothing.
 func CountryOverrideFor(overrides []CountryOverride, address string) (CountryOverride, bool) {
-	want := strings.ToLower(strings.TrimSpace(address))
+	want := correspondence.Fold(address)
 	if want == "" {
 		return CountryOverride{}, false
 	}
 	for _, o := range overrides {
-		if strings.ToLower(strings.TrimSpace(o.Address)) == want {
+		if correspondence.Fold(o.Address) == want {
 			return o, true
 		}
 	}

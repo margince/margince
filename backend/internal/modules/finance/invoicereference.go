@@ -25,7 +25,7 @@ func (s *Store) InvoiceReference(ctx context.Context, id ids.UUID) (ids.CompanyI
 	var number string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		args := []any{id}
-		err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT company_id, coalesce(number, '') FROM finance_invoice WHERE id = $%d AND archived_at IS NULL`, len(args)), args...).Scan(&company, &number)
+		err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT company_id, coalesce(number, '') FROM finance_invoice WHERE id = $%d`, len(args)), args...).Scan(&company, &number)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

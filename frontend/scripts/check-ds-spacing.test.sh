@@ -29,12 +29,14 @@ GATE="$SCRIPT_DIR/check-ds-spacing.sh"
 # shellcheck source=scripts/lib-git-fixture.sh
 source "$SCRIPT_DIR/../../scripts/lib-git-fixture.sh"
 
-# The gate is deliberately fail-open outside a git checkout (a source export, a
-# container that refuses a dubious-ownership repo). Its test has to skip on the
-# same terms rather than turn `make fe-ds-gates` red for a reason that has
-# nothing to do with spacing.
+# Outside a git checkout the gate skips on a local run and fails in CI, and this
+# test follows the same rule.
 ROOT="$(cd "$SCRIPT_DIR" && git rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -z "$ROOT" ]]; then
+  if [[ -n "${CI:-}" && "${CI}" != "false" && "${CI}" != "0" ]]; then
+    echo "FAIL: DS spacing census: not a git checkout, so CI cannot test the gate" >&2
+    exit 1
+  fi
   echo "==> DS spacing census: not a git checkout — skipped"
   exit 0
 fi
@@ -160,6 +162,77 @@ if [[ "$EXT_SCREENS" -gt 0 && "$EXT_TSX" -eq 0 ]]; then
   fail "the unit tier ships $EXT_SCREENS frontend file(s) and the *.tsx pathspecs collect 0 of them — the gate is inspecting nothing there"
 fi
 
+# ---------------------------------------------------------------------------
+# 4. The base, in a fixture repository with no origin/main: CI with no base
+#    fails, and a local run may still skip.
+# ---------------------------------------------------------------------------
+BASE_FAILURES=0
+base_fail() {
+  echo "FAIL: $*" >&2
+  BASE_FAILURES=$((BASE_FAILURES + 1))
+}
+
+FIX="$TMP/base-repo"
+mkdir -p "$FIX/frontend/scripts" "$FIX/frontend/src/screens"
+cp "$GATE" "$FIX/frontend/scripts/check-ds-spacing.sh"
+printf '.row { padding: var(--space-2); }\n' >"$FIX/frontend/src/screens/row.css"
+git -C "$FIX" init --quiet
+git -C "$FIX" add -- frontend
+git -C "$FIX" -c user.name=Fixture -c user.email=fixture@example.test commit --quiet -m base
+FIX_BASE="$(git -C "$FIX" rev-parse HEAD)"
+
+# Runs the fixture's copy of the gate with only the settings a case names.
+expect_exit() {
+  local want="$1" label="$2"
+  shift 2
+  local got=0
+  env -u CI -u DS_SPACING_BASE "$@" bash "$FIX/frontend/scripts/check-ds-spacing.sh" >"$TMP/gate.out" 2>&1 || got=$?
+  if [[ ( "$want" == pass && "$got" -ne 0 ) || ( "$want" == fail && "$got" -eq 0 ) ]]; then
+    base_fail "$label: the gate exited $got, expected it to $want"
+    sed 's/^/      /' "$TMP/gate.out" >&2
+  fi
+}
+
+expect_output() {
+  local label="$1" text="$2"
+  if ! grep -qF -- "$text" "$TMP/gate.out"; then
+    base_fail "$label: the output does not say '$text'"
+    sed 's/^/      /' "$TMP/gate.out" >&2
+  fi
+}
+
+expect_exit fail "CI with no base" CI=true
+expect_output "CI with no base" "no base to compare with"
+expect_exit pass "a local run with no base" CI=false
+expect_output "a local run with no base" "skipped"
+expect_exit fail "CI with a base this clone lacks" CI=true DS_SPACING_BASE=0000000000000000000000000000000000000000
+expect_output "CI with a base this clone lacks" "is not a commit in this clone"
+
+printf '.gap { margin-top: 13px; }\n' >>"$FIX/frontend/src/screens/row.css"
+git -C "$FIX" -c user.name=Fixture -c user.email=fixture@example.test commit --quiet -am offender
+expect_exit fail "CI with a base and a raw px added" CI=true DS_SPACING_BASE="$FIX_BASE"
+expect_output "CI with a base and a raw px added" "frontend/src/screens/row.css:2: margin-top: 13px"
+
+printf '.row { padding: var(--space-2); }\n.gap { margin-top: var(--space-3); }\n' >"$FIX/frontend/src/screens/row.css"
+git -C "$FIX" -c user.name=Fixture -c user.email=fixture@example.test commit --quiet -am token
+expect_exit pass "CI with a base and a token added" CI=true DS_SPACING_BASE="$FIX_BASE"
+
+printf '.late { margin-top: 7px; }\n' >>"$FIX/frontend/src/screens/row.css"
+git -C "$FIX" -c user.name=Fixture -c user.email=fixture@example.test commit --quiet -am late
+git -C "$FIX" update-ref refs/remotes/origin/main HEAD
+expect_exit pass "origin/main at the tip, so nothing is new" CI=true
+expect_exit fail "DS_SPACING_BASE wins over origin/main" CI=true DS_SPACING_BASE="$FIX_BASE"
+expect_output "DS_SPACING_BASE wins over origin/main" "frontend/src/screens/row.css:3: margin-top: 7px"
+git -C "$FIX" update-ref -d refs/remotes/origin/main
+
+# A base whose commit is present and whose tree is not, as a shallow clone can
+# leave it: git diff fails, and in CI that must not read as "nothing to gate".
+BASE_TREE="$(git -C "$FIX" rev-parse "$FIX_BASE^{tree}")"
+rm -f "$FIX/.git/objects/${BASE_TREE:0:2}/${BASE_TREE:2}"
+expect_exit fail "CI with a base whose tree is missing" CI=true DS_SPACING_BASE="$FIX_BASE"
+expect_output "CI with a base whose tree is missing" "git diff against"
+expect_exit pass "a local run with a base whose tree is missing" CI=false DS_SPACING_BASE="$FIX_BASE"
+
 if [[ "$FAILURES" -ne 0 ]]; then
   echo "" >&2
   echo "check-ds-spacing.sh's collectors are no longer reaching every file it" >&2
@@ -171,3 +244,11 @@ if [[ "$FAILURES" -ne 0 ]]; then
 fi
 
 echo "==> DS spacing census: the *.tsx and *.css pathspecs reach every depth of every gated tree, from both collectors ($EXT_TSX unit-tier *.tsx collected)"
+
+if [[ "$BASE_FAILURES" -ne 0 ]]; then
+  echo "" >&2
+  echo "check-ds-spacing.sh no longer fails closed in CI: a CI run with no base it can" >&2
+  echo "compare with must exit non-zero, because its skip reads as a pass." >&2
+  exit 1
+fi
+echo "==> DS spacing base: CI fails with no base and judges the diff against DS_SPACING_BASE"

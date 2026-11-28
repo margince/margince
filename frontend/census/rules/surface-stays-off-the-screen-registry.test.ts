@@ -7,7 +7,7 @@ import { type Area, plantedFindings, srcDir, treeOf } from "../tree";
 import { rule } from "./surface-stays-off-the-screen-registry.census";
 
 const surface = join(srcDir, "surface", "index.ts");
-const seam = join(srcDir, "lib", "extensions.ts");
+const seam = join(srcDir, "lib", "extensionscreen.ts");
 const registry = join(srcDir, "composition", "extscreens.gen.ts");
 
 const plantedTree = (
@@ -16,7 +16,7 @@ const plantedTree = (
   {
     path: surface,
     area: "src",
-    text: `export * from "../lib/extensions";\n`,
+    text: `export * from "../lib/extensionscreen";\n`,
   },
   { path: seam, area: "src", text: seamText },
   {
@@ -45,12 +45,12 @@ describe("the surface-stays-off-the-screen-registry rule", () => {
     expect(findings).toEqual([]);
   });
 
-  it("states a floor when the surface does not reach the extension seam", () => {
+  it("states a floor when the surface does not reach the unit route spelling", () => {
     const tree = treeOf([
       { path: surface, area: "src", text: "export const alone = 1;\n" },
     ]);
     expect(rule.floors?.(rule.corpus(tree), tree)).toEqual([
-      "the surface does not reach src/lib/extensions.ts",
+      "the surface does not reach src/lib/extensionscreen.ts",
     ]);
   });
 });

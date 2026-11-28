@@ -2,8 +2,6 @@
 <!-- describes: frontend/src/features/automations backend/internal/modules/automation frontend/src/features/settings frontend/src/lib/settingscatalog.ts frontend/src/lib/settingscapability.ts frontend/src/App.settings.tsx backend/internal/platform/settings backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/contacts/contactcasesettings.go -->
 # Settings
 
-Margince settings open from the **account menu** at the top right. They are not in the sidebar. Which settings pages you see follows your permissions.
-
 ### How do I open Settings?
 To open Settings in Margince, open the account menu at the top right of the screen and choose **Settings**.
 Settings opens on **Overview**, which lists every page you can open. The page list down the side is in groups: **You**, **Company**, **People**, **Sales**, **Data**, **AI**, **Compliance** and **System**.
@@ -177,9 +175,11 @@ The Integrations page in Settings (group **Data**) shows what the installation i
 
 **Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Accounting source** connects the system your invoices come from and links its customers to companies; see [Contracts and invoices](contracts-and-invoices.md#how-do-i-connect-my-accounting-system). **Webhooks** send a signed message to another system when events you picked happen, and you can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
 
-**Messaging providers** connects Dispact, Slack and Microsoft Teams for shared channel links. Your own Messenger connection is separate from the shared bot. See [Chat channels](chat-channels.md) for record history and automatic posts, and [Messenger](messenger.md) for sending as yourself.
+**Messaging accounts** connects Dispact, Slack and Microsoft Teams for shared channel links. Your own Messenger connection is separate from the shared bot. See [Chat channels](chat-channels.md) for record history and automatic posts, and [Messenger](messenger.md) for sending as yourself.
 
 **Telegram bot** is the one bot that sends and receives messages for the whole company. Admin and Ops connect or change it; other readers see which bot it is. Forms on your website have a page of their own, **Website forms**; see [Connecting your website](connect-your-website.md). **Shared mailboxes** are mailboxes no one user owns, such as sales@, each read by one team. Only admins connect one, change its team or whether its mail is held or shared, import its older mail, or disconnect it. See [Shared mailboxes](who-can-see-an-email.md#shared-mailboxes).
+
+The **Messaging accounts** tab also connects company accounts and chooses the team that reads their messages. See [Connecting WhatsApp and Zalo](connecting-whatsapp-and-zalo.md).
 
 ## Extensions
 

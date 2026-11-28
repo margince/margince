@@ -13,75 +13,21 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// The fan-out is ONE insert, not a loop of them. A partial fan-out that then
-// failed the dispatcher would be re-run from the top, and the children that
-// had already completed would run a SECOND time — activeSweepStates excludes
-// completed, so ByArgs uniqueness does not suppress them.
-func TestDispatchWithEnqueuesTheWholeFleetInOneInsert(t *testing.T) {
-	fleet := []ids.UUID{ids.NewV7(), ids.NewV7(), ids.NewV7()}
-	calls := 0
-	var seen []ids.UUID
-	insert := func(_ context.Context, params []river.InsertManyParams) error {
-		calls++
-		for _, p := range params {
-			scoped, ok := p.Args.(jobs.WorkspaceScoped)
-			if !ok {
-				t.Fatalf("dispatcher built %T, which is not workspace-scoped", p.Args)
-			}
-			seen = append(seen, scoped.WorkspaceID())
-		}
-		return nil
-	}
-
-	if err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
-		t.Fatalf("dispatching a healthy fleet: %v", err)
-	}
-	if calls != 1 {
-		t.Fatalf("the fan-out made %d insert calls, want exactly 1 — a loop of single inserts can land partially", calls)
-	}
-	if len(seen) != len(fleet) {
-		t.Fatalf("enqueued %d workspaces, want %d", len(seen), len(fleet))
-	}
-	for i, ws := range fleet {
-		if seen[i] != ws {
-			t.Fatalf("workspace %d enqueued as %s, want %s", i, seen[i], ws)
-		}
-	}
-}
 
 // A refused insert must fail the DISPATCHER. Swallowing it would leave the
 // fleet un-swept while River recorded the tick as completed, which is the
 // exact defect this phase removes one level down.
 func TestDispatchWithFailsTheDispatcherWhenTheInsertIsRefused(t *testing.T) {
-	fleet := []ids.UUID{ids.NewV7(), ids.NewV7()}
 	refused := errors.New("insert refused")
 	insert := func(context.Context, []river.InsertManyParams) error { return refused }
 
-	err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor)
+	err := dispatchOnce(context.Background(), insert, workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), GmailWatchRenewArgs{})
 	if err == nil {
 		t.Fatal("a refused fan-out must surface, so the dispatcher row fails and the tick retries")
 	}
 	if !errors.Is(err, refused) {
 		t.Fatalf("the dispatcher lost the cause: %v", err)
-	}
-}
-
-// An installation with no live workspace has nothing to dispatch, and River
-// rejects an empty InsertMany — so the fan-out must not reach it at all.
-func TestDispatchWithEnqueuesNothingForAnEmptyFleet(t *testing.T) {
-	called := false
-	insert := func(context.Context, []river.InsertManyParams) error {
-		called = true
-		return nil
-	}
-	if err := dispatchWith(context.Background(), nil, insert, workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
-		t.Fatalf("an empty fleet is not a failure: %v", err)
-	}
-	if called {
-		t.Fatal("the fan-out called InsertMany with no params; River refuses an empty batch")
 	}
 }
 
@@ -265,33 +211,26 @@ func TestOneOffChildOptsRefusesAKindWhoseOptsItDoesNotOwn(t *testing.T) {
 	oneOffChildOpts(TelegramPollArgs{}.Kind()) // opts_owner: args
 }
 
-func gmailWatchRenewArgsFor(ws ids.UUID) river.JobArgs {
-	return GmailWatchRenewArgs{Workspace: ws}
-}
-
-// TestDispatchWithMarksEveryChildAsOneWorkspacesShareOfAFleetPass — the
-// sweep gauges cannot tell a fleet pass from a hand-triggered workspace job
-// by kind alone, because they are the same kind. The tag is the difference.
+// TestDispatchOnceMarksTheChildAsAFleetPass: the sweep gauges cannot tell a
+// fleet pass from a hand-triggered job by kind, so the tag is the difference.
 //
-// This covers the dispatchWith builder. The other one, fanOutChildOpts, is
-// covered by the posture tests above — between them every fan-out child's
-// opts are built here or there, and TestNoScheduledDispatcherIsEnqueuedByHand
-// is what proves no dispatcher is placed by a third spelling.
-func TestDispatchWithMarksEveryChildAsOneWorkspacesShareOfAFleetPass(t *testing.T) {
+// This covers the dispatchOnce builder. fanOutChildOpts, the other one, is
+// covered by the posture tests above, and TestNoScheduledDispatcherIsEnqueuedByHand
+// proves no dispatcher is placed by a third spelling.
+func TestDispatchOnceMarksTheChildAsAFleetPass(t *testing.T) {
 	var got []river.InsertManyParams
 	insert := func(_ context.Context, params []river.InsertManyParams) error {
 		got = params
 		return nil
 	}
-	fleet := []ids.UUID{ids.NewV7(), ids.NewV7()}
 
-	if err := dispatchWith(context.Background(), fleet, insert,
-		workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
-		t.Fatalf("dispatchWith: %v", err)
+	if err := dispatchOnce(context.Background(), insert,
+		workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), GmailWatchRenewArgs{}); err != nil {
+		t.Fatalf("dispatchOnce: %v", err)
 	}
 
-	if len(got) != len(fleet) {
-		t.Fatalf("inserted %d params, want %d", len(got), len(fleet))
+	if len(got) != 1 {
+		t.Fatalf("inserted %d params, want 1", len(got))
 	}
 	for i, p := range got {
 		if p.InsertOpts == nil {
@@ -319,9 +258,8 @@ func TestTheFanOutTagDoesNotMutateTheCallersInsertOpts(t *testing.T) {
 	insert := func(context.Context, []river.InsertManyParams) error { return nil }
 
 	for range 3 {
-		if err := dispatchWith(context.Background(), []ids.UUID{ids.NewV7()}, insert, opts,
-			gmailWatchRenewArgsFor); err != nil {
-			t.Fatalf("dispatchWith: %v", err)
+		if err := dispatchOnce(context.Background(), insert, opts, GmailWatchRenewArgs{}); err != nil {
+			t.Fatalf("dispatchOnce: %v", err)
 		}
 	}
 	if len(opts.Tags) != before {

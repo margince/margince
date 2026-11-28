@@ -7,6 +7,8 @@ import (
 	"net"
 	"sort"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
 // The services a subdomain can reveal. Each is something a rep can act on:
@@ -119,7 +121,7 @@ func ServiceKeys() []string {
 // The result is sorted by service key so two passes over the same certificate
 // set produce the same order, which is what lets a caller compare them.
 func OperatedServices(domain string, hostnames []string) []Signal {
-	domain = strings.ToLower(strings.TrimSpace(domain))
+	domain = owndomain.Fold(domain)
 	best := map[string]string{}
 	for _, hostname := range hostnames {
 		hostname = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(hostname), "."))

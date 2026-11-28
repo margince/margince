@@ -163,7 +163,7 @@ func (s *Store) RefuteStageEvidence(
 		if err := auth.EnsureWritableLive(ctx, tx, dealTable, dealID.UUID); err != nil {
 			return err
 		}
-		lock, err := storekit.LockRow(ctx, tx, evidenceEntity, id, storekit.IncludeArchived)
+		lock, err := storekit.LockRow(ctx, tx, evidenceEntity, id, storekit.NoArchiveColumn)
 		if err != nil {
 			return err
 		}

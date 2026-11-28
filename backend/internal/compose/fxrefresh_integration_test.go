@@ -67,7 +67,7 @@ func fxRefreshWith(e *integration.Env, reply string, bootstrap []string) fxRefre
 func asRefreshingAdmin(t *testing.T, e *integration.Env) context.Context {
 	t.Helper()
 	e.GrantRole(t, e.Rep1, "admin")
-	ctx, err := rateRefreshWorkerCtx(context.Background(), identity.NewService(e.Pool), e.WS, principal.HumanIDPrefix+e.Rep1.String())
+	ctx, err := rateRefreshWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), identity.NewService(e.Pool), principal.HumanIDPrefix+e.Rep1.String())
 	if err != nil {
 		t.Fatalf("binding the refresh for Rep1: %v", err)
 	}

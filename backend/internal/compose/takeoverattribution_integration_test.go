@@ -114,7 +114,7 @@ func TestATakenOverPromiseKeepsOneTaskWhenALaterReadingNamesItsPromiser(t *testi
 		WHERE contact_id = $1 AND source_activity_id = $2 AND kind = 'commitment_ours'`, r.contact.UUID, r.source))
 	// A member corrected the claim, which keeps a promise nobody may be asked
 	// about current, so it can be taken over.
-	r.e.WsExec(t, `UPDATE conversation_claim SET corrected_at = now(), corrected_by_user_id = $2 WHERE id = $1`, claim, r.e.Rep2)
+	r.e.WsExec(t, `UPDATE conversation_claim SET corrected_at = now() WHERE id = $1`, claim)
 	priya := r.e.As(r.e.Rep2, []ids.UUID{r.e.Team1}, integration.AdminPerms)
 	if _, err := newPromiseTakeOverHandlers(r.e.Pool).TakeOver(priya, claim); err != nil {
 		t.Fatalf("taking the promise over: %v", err)

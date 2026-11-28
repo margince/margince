@@ -21,16 +21,12 @@ import (
 
 // ApprovalOwnerNoticeArgs identifies the request and recipient to recheck.
 type ApprovalOwnerNoticeArgs struct {
-	Workspace  ids.UUID `json:"workspace_id"`
 	ApprovalID ids.UUID `json:"approval_id"`
 	DeciderID  ids.UUID `json:"decider_id"`
 }
 
 // Kind identifies persisted owner-announcement jobs.
 func (ApprovalOwnerNoticeArgs) Kind() string { return "approval_owner_notice" }
-
-// WorkspaceID binds the announcement to the workspace named at handover.
-func (a ApprovalOwnerNoticeArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // InsertOpts keeps each handover distinct while an earlier announcement completes.
 func (ApprovalOwnerNoticeArgs) InsertOpts() river.InsertOpts {
@@ -43,20 +39,14 @@ type approvalOwnerNoticeWorker struct {
 }
 
 func (w *approvalOwnerNoticeWorker) Work(ctx context.Context, job *river.Job[ApprovalOwnerNoticeArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return river.JobCancel(jobs.FaultContext(ctx, err))
-	}
 	if job.Args.ApprovalID.IsZero() || job.Args.DeciderID.IsZero() {
 		return river.JobCancel(jobs.FaultContext(ctx, fmt.Errorf("owner announcement requires a request and recipient: %w", apperrors.ErrInvalidArgument)))
 	}
+	wsCtx := ctx
 	ctx = principal.SystemActing(wsCtx, "system:approval-owner-notice")
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	db, err := workspaceJobDB(w.pool, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	err = db.Tx(ctx, func(tx pgx.Tx) error {
+	db := InstallationDB(w.pool)
+	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		return tellNewDecider(ctx, tx, notices.NewStore(db), job.Args.DeciderID, []ids.ApprovalID{ids.From[ids.ApprovalKind](job.Args.ApprovalID)}, w.now)
 	})
 	return jobs.FaultContext(ctx, err)

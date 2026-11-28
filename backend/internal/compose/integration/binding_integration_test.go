@@ -344,13 +344,6 @@ func TestPendingAndTokenSumAggregateAcrossWorkspaces(t *testing.T) {
 		t.Fatalf("SeedBinding: %v", err)
 	}
 
-	// A sibling workspace search's own setup does not create — proves the
-	// fleet enumeration (not just the harness's one workspace) is real.
-	ws2 := ids.NewV7()
-	if _, err := e.Owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws2); err != nil {
-		t.Fatalf("seeding the sibling workspace: %v", err)
-	}
-
 	const nameOne = "Pending One"
 	const nameCompany = "Pending Company"
 	const nameTwo = "Pending Two"
@@ -385,7 +378,6 @@ func TestPendingAndTokenSumAggregateAcrossWorkspaces(t *testing.T) {
 	}
 
 	wsKey := ids.From[ids.WorkspaceKind](e.WS)
-	ws2Key := ids.From[ids.WorkspaceKind](ws2)
 
 	// Both contacts and the company count under BOTH workspaces, and that is
 	// the honest answer rather than a leak: ADR-0091 §8 phase D took the tenant
@@ -399,8 +391,8 @@ func TestPendingAndTokenSumAggregateAcrossWorkspaces(t *testing.T) {
 	if counts[wsKey] != wantPerWorkspace {
 		t.Fatalf("counts[e.WS] = %d, want %d (both contacts + the company; the null lead and the already-covered contact must be excluded)", counts[wsKey], wantPerWorkspace)
 	}
-	if counts[ws2Key] != wantPerWorkspace {
-		t.Fatalf("counts[ws2] = %d, want %d (the same installation-wide rows)", counts[ws2Key], wantPerWorkspace)
+	if len(counts) != 1 {
+		t.Fatalf("the rollup names %d workspaces, want the installation's one", len(counts))
 	}
 
 	// EntitiesPending is the installation's backlog, NOT the sum of the rollup.
@@ -416,8 +408,8 @@ func TestPendingAndTokenSumAggregateAcrossWorkspaces(t *testing.T) {
 	if total != wantPerWorkspace {
 		t.Fatalf("EntitiesPending = %d, want %d (the installation's backlog, counted once)", total, wantPerWorkspace)
 	}
-	if sum == total {
-		t.Fatalf("sum of PendingByWorkspace = EntitiesPending = %d across %d workspaces — the total is summing a rollup whose entries are the same rows", total, len(counts))
+	if sum != total {
+		t.Fatalf("sum of PendingByWorkspace = %d, EntitiesPending = %d: with one workspace the two are the same backlog", sum, total)
 	}
 
 	// The same text is in both sums, for the same reason the same rows are in
@@ -425,8 +417,5 @@ func TestPendingAndTokenSumAggregateAcrossWorkspaces(t *testing.T) {
 	wantTokens := int64((len(nameOne) + len(nameTwo) + len(nameCompany)) / 4)
 	if tokens[wsKey] != wantTokens {
 		t.Fatalf("tokens[e.WS] = %d, want %d (SUM(length)/4 over the pending set)", tokens[wsKey], wantTokens)
-	}
-	if tokens[ws2Key] != wantTokens {
-		t.Fatalf("tokens[ws2] = %d, want %d", tokens[ws2Key], wantTokens)
 	}
 }

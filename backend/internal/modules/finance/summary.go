@@ -335,7 +335,7 @@ func (s *Store) fillRecent(
 		SELECT id, number, issued_at, due_at, fully_paid_at, status, currency,
 		       gross_minor, credited_minor, open_minor
 		  FROM finance_invoice
-		 WHERE company_id = $1 AND connection_id = $2 AND archived_at IS NULL
+		 WHERE company_id = $1 AND connection_id = $2
 		 ORDER BY issued_at DESC, id DESC
 		 LIMIT $3`, companyID, connectionID, recentInvoiceLimit+1)
 	if err != nil {
@@ -423,7 +423,7 @@ func (s *Store) readInvoices(
 		       net_minor, credited_minor, open_minor, fx_rate_to_base,
 		       credits_invoice_id IS NOT NULL, disputed_at IS NOT NULL, dunning_level
 		  FROM finance_invoice
-		 WHERE company_id = $1 AND connection_id = $2 AND archived_at IS NULL
+		 WHERE company_id = $1 AND connection_id = $2
 		 ORDER BY issued_at ASC, id ASC`, companyID, connectionID)
 	if err != nil {
 		return nil, fmt.Errorf("read invoices: %w", err)

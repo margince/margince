@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarevent"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -172,7 +173,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 	body, parts, drops, calendar := walked.text, walked.parts, walked.drops, walked.calendar
 	hasCalendarPart := calendar.present
 
-	ownerLower := strings.ToLower(strings.TrimSpace(owner))
+	ownerLower := correspondence.Fold(owner)
 	direction := connector.DirectionInbound
 	counterparty := from
 	counterpartyName := displayName(fromList, counterparty)
@@ -279,14 +280,14 @@ func ParticipantsOf(raw []byte, owner string) (connector.Parties, error) {
 // senders do: a direct recipient who is also copied was addressed directly,
 // and that is the stronger claim about their part in the conversation.
 func otherParties(toList, ccList, bccList []*mail.Address, ownerLower, counterparty string) connector.Parties {
-	counterpartyLower := strings.ToLower(strings.TrimSpace(counterparty))
+	counterpartyLower := correspondence.Fold(counterparty)
 	seen := map[string]bool{ownerLower: true, counterpartyLower: true}
 	delete(seen, "")
 
 	var out []connector.MessageParticipant
 	add := func(list []*mail.Address, role string) {
 		for _, a := range list {
-			address := strings.ToLower(strings.TrimSpace(a.Address))
+			address := correspondence.Fold(a.Address)
 			if address == "" || seen[address] {
 				continue
 			}
@@ -312,7 +313,7 @@ func allAddresses(lists ...[]*mail.Address) []string {
 	var out []string
 	for _, list := range lists {
 		for _, a := range list {
-			address := strings.ToLower(strings.TrimSpace(a.Address))
+			address := correspondence.Fold(a.Address)
 			if address == "" || seen[address] {
 				continue
 			}
@@ -470,7 +471,7 @@ func (m Message) envelope() *capture.MailEnvelope {
 // address carries no "@". It splits at the LAST "@" so a quoted local part
 // containing one (e.g. `"weird@local"@example.com`) still yields the domain.
 func domainOf(addr string) string {
-	addr = strings.ToLower(strings.TrimSpace(addr))
+	addr = correspondence.Fold(addr)
 	if idx := strings.LastIndex(addr, "@"); idx >= 0 {
 		return addr[idx+1:]
 	}

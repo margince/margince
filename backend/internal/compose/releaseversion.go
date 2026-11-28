@@ -149,7 +149,7 @@ func RecordInstallationRelease(ctx context.Context, pool *pgxpool.Pool, log *slo
 		}
 		if _, err := storekit.LogSystem(ctx, tx, installationReleaseObserved, map[string]any{
 			"release_version": version,
-			"installation":    installationMarker(ctx),
+			installationKey:   installationMarker(ctx),
 			"observed_at":     observedAt.UTC().Format(time.RFC3339Nano),
 		}); err != nil {
 			return err

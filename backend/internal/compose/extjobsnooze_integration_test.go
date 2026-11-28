@@ -123,7 +123,7 @@ func TestAPostponedTickSuppressesTheNextDispatch(t *testing.T) {
 	// hand-built one. What is under test is the policy the fan-out actually
 	// enqueues under, and a test that supplied its own opts would pass whatever
 	// the dispatcher does.
-	child := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS}
+	child := extJobWorkspaceArgs{JobKind: decl.ChildKind()}
 	if err := runner.Enqueue(context.Background(), child, workspaceSweepOpts(decl.ChildKind())); err != nil {
 		t.Fatalf("re-enqueueing the workspace's child while the first is postponed: %v", err)
 	}

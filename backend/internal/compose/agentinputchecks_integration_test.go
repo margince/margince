@@ -53,7 +53,7 @@ func TestAnAgentStartsAnInputCheckThatNamesIt(t *testing.T) {
 		t.Fatalf("the run was asked for by %+v, want the agent", queue.args)
 	}
 	worker := &assuranceRunWorker{sweep: v.worker}
-	if err := worker.Work(context.Background(), &river.Job[AssuranceRunArgs]{Args: args}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[AssuranceRunArgs]{Args: args}); err != nil {
 		t.Fatalf("a run the agent asked for: %v", err)
 	}
 }

@@ -59,7 +59,7 @@ type briefGenerateWorker struct {
 }
 
 func (w *briefGenerateWorker) Work(ctx context.Context, _ *river.Job[BriefGenerateArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.assembleOneWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.assembleOneWorkspace))
 }
 
 func (w *briefGenerateWorker) assembleOneWorkspace(ctx context.Context, workspace ids.UUID) error {

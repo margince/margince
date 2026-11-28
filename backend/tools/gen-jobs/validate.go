@@ -21,9 +21,9 @@ const (
 	roleDispatcher = "dispatcher"
 	roleWorker     = "worker"
 
-	unitWorkspace  = "workspace"
-	unitConnection = "connection"
-	unitBuild      = "build"
+	unitInstallation = "installation"
+	unitConnection   = "connection"
+	unitBuild        = "build"
 
 	optsFanOut = "fan_out"
 	optsArgs   = "args"
@@ -50,7 +50,7 @@ const (
 
 var (
 	roles     = map[string]bool{roleDispatcher: true, roleWorker: true}
-	fanUnits  = map[string]bool{unitWorkspace: true, unitConnection: true, unitBuild: true}
+	fanUnits  = map[string]bool{unitInstallation: true, unitConnection: true, unitBuild: true}
 	optsOwner = map[string]bool{optsFanOut: true, optsArgs: true, optsCaller: true}
 
 	// kindNameRE is the contract's kind-naming rule. River persists these
@@ -272,7 +272,7 @@ func (c contract) validateFanOut(name string, def kindDef) error {
 		return fmt.Errorf("kind %q: declares a fan-out but its role is %q — only a dispatcher enqueues on the fleet's behalf", name, def.Role)
 	}
 	if !fanUnits[def.FanOutUnit] {
-		return fmt.Errorf("kind %q: fan_out_unit must be %q, %q or %q, got %q", name, unitWorkspace, unitConnection, unitBuild, def.FanOutUnit)
+		return fmt.Errorf("kind %q: fan_out_unit must be %q, %q or %q, got %q", name, unitInstallation, unitConnection, unitBuild, def.FanOutUnit)
 	}
 	child, ok := c.Kinds[def.FansOutTo]
 	if !ok {

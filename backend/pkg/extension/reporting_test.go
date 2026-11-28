@@ -47,3 +47,21 @@ func TestReportBreakdownValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestAJoinedBreakdownNeedsAReportableDeclaredField(t *testing.T) {
+	kinds := []RecordKindDeclaration{{Kind: "account", Fields: []RecordKindField{{Name: "category", Label: "Category"}}}}
+	report := ReportBreakdown{Name: "by_category", Label: "Deals by category", Population: "pipeline-current", By: "cf_account.category"}
+	if err := report.Validate(kinds); err == nil {
+		t.Fatal("a kind field without reportable opt-in was accepted")
+	}
+	kinds[0].Fields[0].Reportable = true
+	if err := report.Validate(kinds); err != nil {
+		t.Fatal(err)
+	}
+	for _, by := range []string{"cf_account.missing", "cf_account.category.extra", "owner_id.category", "cf_account.category);DELETE"} {
+		report.By = by
+		if err := report.Validate(kinds); err == nil {
+			t.Fatalf("invalid join %q accepted", by)
+		}
+	}
+}

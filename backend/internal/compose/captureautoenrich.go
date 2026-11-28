@@ -31,7 +31,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -80,7 +79,7 @@ func newCaptureAutoEnrichSweepWorker(pool *pgxpool.Pool, log *slog.Logger) *capt
 // because the collapse is about how many job kinds describe one pass and not
 // about assuming a single tenant.
 func (w *captureAutoEnrichSweepWorker) Work(ctx context.Context, _ *river.Job[CaptureAutoEnrichSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, func(ctx context.Context, ws ids.UUID) error {
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, func(ctx context.Context, ws ids.UUID) error {
 		return w.sweepWorkspace(ctx, ids.From[ids.WorkspaceKind](ws))
 	}))
 }
@@ -206,7 +205,6 @@ func startAutoEnrichRead(ctx context.Context, contactsStore *contacts.Store,
 	_, joined, err := contactsStore.StartSiteReadQueued(ctx, companyID, seedURL, systemAutoEnrichActor,
 		func(ctx context.Context, tx pgx.Tx, read contacts.SiteRead) error {
 			_, insErr := client.InsertTx(ctx, tx, SiteDeepReadArgs{
-				Workspace:   storekit.MustWorkspace(ctx),
 				CompanyID:   companyID.UUID,
 				SiteReadID:  read.ID,
 				RequestedBy: read.RequestedBy,

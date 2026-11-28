@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/reportjoin"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -111,6 +112,9 @@ func withCustomDimensions(spec reportSpec, cols reportableColumns) reportSpec {
 		spec.customFields[expr] = customDimension{ReportableColumn: col, company: company}
 	}
 	for _, col := range cols.deal {
+		if col.Type == fieldcatalog.TypeRecord {
+			continue
+		}
 		add(col.Name, "t."+pgx.Identifier{col.Name}.Sanitize(), col, false)
 	}
 	if len(cols.company) == 0 {
@@ -130,20 +134,15 @@ func withCustomDimensions(spec reportSpec, cols reportableColumns) reportSpec {
 		spec.grants = map[string]string{}
 	}
 	for _, col := range cols.company {
+		if col.Type == fieldcatalog.TypeRecord {
+			continue
+		}
 		name := analyticsquery.CompanyCustomFieldPrefix + strings.TrimPrefix(col.Name, datasource.CustomFieldPrefix)
-		add(name, companyFieldExpr(col.Name), col, true)
+		add(name, reportjoin.CompanyFieldExpr(col.Name), col, true)
 		spec.scopeVia[name] = colCompanyID
 		spec.grants[name] = tableCompany
 	}
 	return spec
-}
-
-// companyFieldExpr reads one company column for the deal's company. The
-// subselect on the company's primary key matches at most one row, so the grain
-// stays one row per deal. A deal with no company reads NULL.
-func companyFieldExpr(column string) string {
-	return "(SELECT c." + pgx.Identifier{column}.Sanitize() + " FROM " + tableCompany +
-		" c WHERE c.id = " + colCompanyID + ")"
 }
 
 // AnalyticsSchemaWithCoverage is AnalyticsSchemaIn with each custom field's

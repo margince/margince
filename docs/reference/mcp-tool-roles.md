@@ -1441,10 +1441,10 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Documents | `list_documents.list` | `list_record_documents` | `activity.read,lead.read` |
 | Documents | `read_details.document_extraction` | `get_attachment_extraction` | `deal.read` |
 | Imports | `change_capture.cancel_import_run` | `cancel_import_run` | `import_run.read` `import_run.update` |
-| Imports | `change_capture.undo_import_run` | `undo_import_run` | `contact.create` `custom_field.read` `import_run.read` `import_run.update` |
+| Imports | `change_capture.undo_import_run` | `undo_import_run` | `custom_field.read` `import_run.read` `import_run.update` |
 | Imports | `change_capture.update_import_run` | `update_import_run` | `import_run.read` `import_run.update` |
 | Imports | `change_capture.validate_import_run` | `validate_import_run` | `custom_field.read` `import_run.read` `import_run.update` |
-| Imports | `commit_import` | `commit_import` | `contact.create` `custom_field.read` `import_run.read` `import_run.update` |
+| Imports | `commit_import` | `commit_import` | `custom_field.read` `import_run.read` `import_run.update` |
 | Imports | `preview_import` | `preview_import` | `custom_field.read` `import_run.create` `import_run.read` `import_run.update` |
 | Imports | `read_details.import_problems` | `download_import_problems` | `import_run.read` |
 | Imports | `read_details.import_template` | `download_import_template` | `custom_field.read` `deal.read` `import_run.read` `pipeline.read` |

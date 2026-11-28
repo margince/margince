@@ -47,10 +47,7 @@ type mailDraftRetentionWorker struct {
 }
 
 func (w *mailDraftRetentionWorker) Work(ctx context.Context, _ *river.Job[MailDraftRetentionArgs]) error {
-	wsCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	wsCtx = principal.SystemActing(wsCtx, mailDraftRetentionActor)
 	purged, err := w.drafts.PurgeStaleMailDrafts(wsCtx, mailDraftRetentionBatch)
 	if err != nil {

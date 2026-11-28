@@ -55,10 +55,10 @@ func (s *stubDispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (com
 	return s.outcome, s.wait, s.err
 }
 
-// sendJob builds one job for the worker with a fresh workspace/delivery pair.
+// sendJob builds one job for the worker.
 func sendJob(ws, delivery ids.UUID) *river.Job[SendEmailArgs] {
 	return &river.Job[SendEmailArgs]{
-		Args: SendEmailArgs{Workspace: ws, DeliveryID: delivery.String()},
+		Args: SendEmailArgs{DeliveryID: delivery.String()},
 	}
 }
 
@@ -156,14 +156,14 @@ func TestSendEmailWorkerFailsARetryThatCarriesNoCause(t *testing.T) {
 }
 
 // Every comms_outbound read and transition the dispatcher makes predicates on
-// the bound workspace, so the job's own workspace has to be on the context;
-// without it the load finds nothing and the send silently never happens.
-func TestSendEmailWorkerBindsTheJobsWorkspaceAndDelivery(t *testing.T) {
+// the bound workspace. Without the installation's workspace on the context, the
+// load finds nothing and the send never happens.
+func TestSendEmailWorkerBindsTheInstallationsWorkspaceAndTheJobsDelivery(t *testing.T) {
 	ws, delivery := ids.NewV7(), ids.NewV7()
 	dispatcher := &stubDispatcher{outcome: comms.OutcomeSent}
 	worker := &commsSendWorker{dispatcher: dispatcher}
 
-	if err := worker.Work(context.Background(), sendJob(ws, delivery)); err != nil {
+	if err := worker.Work(principal.WithWorkspaceID(context.Background(), ws), sendJob(ws, delivery)); err != nil {
 		t.Fatalf("Work: %v", err)
 	}
 	if !dispatcher.sawWSBind || dispatcher.gotWS != ws {
@@ -203,15 +203,11 @@ func TestSendEmailWorkerDispatchesUnderASystemActorAndACorrelationID(t *testing.
 	}
 }
 
-// An argument that names no delivery has nothing to dispatch, and one that
-// names no workspace has nowhere to dispatch it: the job must fail rather than
-// run against a zero id, which would read as "some other delivery" to a
-// row-scoped query — or, for the workspace, as an unbound GUC failing later
-// and less legibly.
+// An argument that names no delivery has nothing to dispatch. The job must
+// fail, because a zero id would read as another delivery to a row-scoped query.
 func TestSendEmailWorkerRefusesAJobArgumentThatNamesNothing(t *testing.T) {
 	cases := map[string]SendEmailArgs{
-		"workspace": {DeliveryID: ids.NewV7().String()},
-		"delivery":  {Workspace: ids.NewV7(), DeliveryID: "not-a-uuid"},
+		"delivery": {DeliveryID: "not-a-uuid"},
 	}
 	for name, args := range cases {
 		t.Run(name, func(t *testing.T) {

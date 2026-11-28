@@ -67,10 +67,7 @@ type introExpiryWorker struct {
 // between the two would close an ask nobody was ever told about, and the next
 // tick scans for OPEN rows, so it would never come back to it.
 func (w *introExpiryWorker) Work(ctx context.Context, _ *river.Job[IntroExpiryArgs]) error {
-	passCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	passCtx := ctx
 	// The clock is the actor. Every expiry writes an audit row and an event and
 	// both need a principal — but nobody decided any of this, so binding a
 	// human would put their name on a refusal they never made. The correlation

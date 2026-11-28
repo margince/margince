@@ -6,7 +6,6 @@
 package compose
 
 import (
-	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -48,7 +47,7 @@ func TestReportingHTTPCompleteMonthComparisonAndHistoryPagination(t *testing.T) 
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := worker.Work(context.Background(), nil); err != nil {
+		if err := worker.Work(boundBackground(t), nil); err != nil {
 			t.Fatal(err)
 		}
 		completed, err := f.service.GetExecution(f.human, ids.UUID(run.Id))

@@ -36961,7 +36961,9 @@ export interface components {
             /**
              * @description Per-channel reachability (design §6.6), derived from `contact_channel_identity`.
              *     Exposes `{provider, reachable, since}` only — the channel account id (an opaque
-             *     third-party identifier) stays out of this broad read; a governed surface owns it.
+             *     third-party identifier) stays out of this projection. A validated phone-based WhatsApp
+             *     identity named by a retained provider original can fill the contact's phone set,
+             *     which follows the contact's visibility. Opaque or business-scoped IDs do not.
              *     A blocked identity still appears here, with `reachable: false`, so the record keeps
              *     showing that a conversation exists even when a reply cannot currently be delivered.
              */
@@ -55879,7 +55881,7 @@ export interface components {
             /** @description The pipelines the field applies to. Only a deal field may name any; omitted or empty means every pipeline. An id that is not a live pipeline, or ids on another object's field, is refused with a 422. */
             pipeline_ids?: string[];
         };
-        /** @description Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable`, `activity_kinds` and `pipeline_ids`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. `pipeline_ids` does the same for the pipelines a deal field applies to. */
+        /** @description Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable`, `activity_kinds` and `pipeline_ids`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` accepts picklists and booleans on deals and companies, and deal record-picker fields for extension report joins. Other types are refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. `pipeline_ids` does the same for the pipelines a deal field applies to. */
         RenameCustomFieldRequest: {
             label?: string;
             label_translations?: components["schemas"]["LabelTranslations"];

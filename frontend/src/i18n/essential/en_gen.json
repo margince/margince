@@ -1790,6 +1790,8 @@
   "shell.shortcuts.then": "then",
   "shell.shortcuts.ctrl": "Ctrl",
   "shell.more": "More",
+  "shell.embedSignInBody": "Sign in to Margince in a browser tab. Then come back here and select Retry.",
+  "shell.embedOpen": "Open Margince",
   "shell.unknownPage": "Not found",
   "shell.unavailableForRole": "Not available for your role.",
   "shell.unknownAddress": "This address does not lead anywhere in Margince.",

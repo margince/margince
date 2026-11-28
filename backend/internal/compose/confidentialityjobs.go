@@ -44,7 +44,7 @@ type confidentialityVerdictWorker struct {
 }
 
 func (w *confidentialityVerdictWorker) Work(ctx context.Context, _ *river.Job[ConfidentialityVerdictArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.judgeWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.judgeWorkspace))
 }
 
 func (w *confidentialityVerdictWorker) judgeWorkspace(ctx context.Context, workspace ids.UUID) error {

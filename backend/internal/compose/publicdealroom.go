@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -145,7 +146,7 @@ func peekLinkRequestEmail(r *http.Request) (string, bool) {
 	if err := json.Unmarshal(raw, &body); err != nil || body.Email == "" {
 		return "", false
 	}
-	return strings.ToLower(strings.TrimSpace(body.Email)), true
+	return correspondence.Fold(body.Email), true
 }
 
 // linkRequestBodyLimit bounds what the edge will read to find the address: an

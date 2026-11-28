@@ -379,7 +379,11 @@ func backfillWorkContext(ctx context.Context, t *testing.T, b *backfillWireEnv) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	return rivertest.WorkContext(ctx, client)
+	bound, err := bindInstallation(ctx, b.env.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rivertest.WorkContext(bound, client)
 }
 
 func driveBackfillToTerminal(t *testing.T, b *backfillWireEnv, w *captureBackfillWorker, args CaptureBackfillArgs) {
@@ -430,7 +434,7 @@ func (b *backfillWireEnv) cancelBackfill(p crmcontracts.CaptureProvider) func(ht
 
 func TestBackfillWire(t *testing.T) {
 	b := setupBackfillWire(t)
-	worker := &captureBackfillWorker{registry: b.registry, log: b.handlers.log}
+	worker := &captureBackfillWorker{pool: b.env.Pool, registry: b.registry, log: b.handlers.log}
 
 	assertUnwiredAndAnonymousOpsAreRefused(t, b)
 	assertPreviewValidatesItsWindowAndPricesHonestly(t, b)
@@ -658,14 +662,9 @@ func startTheRunAndAssertItIsQueued(t *testing.T, b *backfillWireEnv) string {
 
 func assertThePagerWalksTheRunToDone(t *testing.T, b *backfillWireEnv, worker *captureBackfillWorker, runID string) {
 	t.Helper()
-	t.Run("the pager worker refuses job args that name nothing", func(t *testing.T) {
-		if err := worker.Work(context.Background(), &river.Job[CaptureBackfillArgs]{
-			JobRow: &rivertype.JobRow{}, Args: CaptureBackfillArgs{BackfillID: runID},
-		}); err == nil {
-			t.Fatal("args naming no workspace must fail the job")
-		}
-		if err := worker.Work(context.Background(), &river.Job[CaptureBackfillArgs]{
-			JobRow: &rivertype.JobRow{}, Args: CaptureBackfillArgs{Workspace: b.env.WS, BackfillID: "not-a-uuid"},
+	t.Run("the pager worker refuses a malformed backfill id", func(t *testing.T) {
+		if err := worker.Work(boundBackground(t), &river.Job[CaptureBackfillArgs]{
+			JobRow: &rivertype.JobRow{}, Args: CaptureBackfillArgs{BackfillID: "not-a-uuid"},
 		}); err == nil {
 			t.Fatal("a malformed backfill id must fail the job")
 		}
@@ -674,7 +673,7 @@ func assertThePagerWalksTheRunToDone(t *testing.T, b *backfillWireEnv, worker *c
 	t.Run("the pager worker walks the run to done", func(t *testing.T) {
 		// One page per tick: the worker snoozes between pages, so drive it as
 		// River would — re-invoke until it stops snoozing (the run terminated).
-		driveBackfillToTerminal(t, b, worker, CaptureBackfillArgs{Workspace: b.env.WS, BackfillID: runID})
+		driveBackfillToTerminal(t, b, worker, CaptureBackfillArgs{BackfillID: runID})
 		var out crmcontracts.BackfillStatus
 		if code, _ := b.do(b.human, t, b.backfillStatus(crmcontracts.CaptureProviderGmail), "", &out); code != http.StatusOK {
 			t.Fatalf("status = %d, want 200", code)
@@ -710,7 +709,7 @@ func assertAFailedPageFinishesTheRunInError(t *testing.T, b *backfillWireEnv, wo
 			t.Fatalf("widened start = %d, want 202", code)
 		}
 		// A page fault is recorded on the row, not retried by River.
-		driveBackfillToTerminal(t, b, worker, CaptureBackfillArgs{Workspace: b.env.WS, BackfillID: out.BackfillId.String()})
+		driveBackfillToTerminal(t, b, worker, CaptureBackfillArgs{BackfillID: out.BackfillId.String()})
 		var after crmcontracts.BackfillStatus
 		if code, _ := b.do(b.human, t, b.backfillStatus(crmcontracts.CaptureProviderGmail), "", &after); code != http.StatusOK {
 			t.Fatalf("status = %d, want 200", code)

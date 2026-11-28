@@ -180,12 +180,12 @@ Every field of `Extension` that brings something to the core.
 | `Jurisdictions` | Unit's jurisdiction packs (policy suppliers to the core retention engine, never actors). |
 | `Messaging` | Unit's outbound-messaging rule sets, the country rules the core authorization engine consults before a message goes out. |
 | `SubjectRights` | Unit's data-subject-request deadlines. |
-| `Reach` | Reach declares the unit's tables holding a core company, contact, lead or deal id. |
+| `Reach` | Reach declares the unit's tables holding a core company, contact or lead id. |
 | `Privacy` | Privacy declares, for every table the unit owns, which core record its rows belong to, which columns are personal data and the retention class. |
 | `Documents` | Compliance documents the unit ships for its jurisdictions. |
 | `Tools` | Governed agent tools the unit contributes: named operations running at a requested risk tier. |
 | `Channels` | Messaging providers this unit supplies TRANSPORT for. |
-| `Languages` | Languages stored data may carry, beside the three core ships. |
+| `Languages` | Languages this unit lets stored data carry, beside the three core ships. |
 | `CompanyTypes` | Company types this unit adds beside core's own. |
 | `RecordKinds` | Kinds of record this unit adds beside core's own, stored as `ext:<unit>:<kind>`. |
 | `LinkTypes` | Ways this unit says two core records relate, stored as `ext:<unit>:<type>`. |

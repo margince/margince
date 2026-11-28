@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -66,7 +67,7 @@ func EscapeLikeSQL(expr string) string {
 // A row the subject lifted no longer refuses the address.
 func EmailSuppressed(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	suppressed, err := SuppressedEmails(ctx, tx, []string{email})
-	return suppressed[strings.ToLower(strings.TrimSpace(email))], err
+	return suppressed[correspondence.Fold(email)], err
 }
 
 // SuppressedEmails batches durable erasure checks before a participant list is admitted.
@@ -92,7 +93,7 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 	for _, email := range emails {
 		for _, form := range EmailSuppressionForms(email) {
 			if held[form] {
-				result[strings.ToLower(strings.TrimSpace(email))] = true
+				result[correspondence.Fold(email)] = true
 			}
 		}
 	}

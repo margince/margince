@@ -135,7 +135,7 @@ func (h hookedChat) History(ctx context.Context, slug string, after int64, limit
 
 func TestALinkAskingForTheTalkSoFarDuringAPullRunsThePullOnceMore(t *testing.T) {
 	e := setupPull(t)
-	worker := &PullWorker[pullArgs]{Bind: bindAny, Puller: e.puller}
+	worker := &PullWorker[pullArgs]{Puller: e.puller}
 	job := &river.Job[pullArgs]{Args: pullArgs{conn: e.conn}}
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	if err := worker.Work(ctx, job); err != nil {

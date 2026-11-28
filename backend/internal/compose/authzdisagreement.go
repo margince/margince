@@ -76,10 +76,6 @@ func (w *authzDisagreementWorker) Work(ctx context.Context, _ *river.Job[AuthzDi
 	// The installation's own workspace, on the context rather than left to the
 	// store's handle to resolve, so this pass and the rows it reads agree on
 	// which workspace it is acting in.
-	ctx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, fmt.Errorf("comms_authz_disagreement: resolving the installation: %w", err))
-	}
 	// The system principal, because this is the installation asking about its
 	// own rollout rather than a seat asking about a contact. Nothing the reading
 	// returns names a subject: no address, no consent state, only how two rules

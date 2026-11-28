@@ -119,11 +119,19 @@ describe("contactVerdict", () => {
     expect(verdict?.tone).toBe(tone);
   });
 
-  it("says no interactions yet for the none band, never a zero", () => {
+  it("names missing shared interactions beside a readable last touch", () => {
     expect(
-      contactVerdict({ ...VIEW, strength: strength("none", 0) }, t),
+      contactVerdict(
+        {
+          ...VIEW,
+          last_inbound_at: AS_OF,
+          last_touch_basis: "readable_by_caller",
+          strength: { ...strength("none", 0), inbound_90d: 0, outbound_90d: 0 },
+        },
+        t,
+      ),
     ).toEqual({
-      word: "No interactions yet",
+      word: "No shared interactions yet",
       sentence: t("contact.verdict.noExchange"),
       tone: "neutral",
     });

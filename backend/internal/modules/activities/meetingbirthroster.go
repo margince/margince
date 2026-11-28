@@ -6,12 +6,12 @@ package activities
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,7 +28,7 @@ func NameBirthRosterTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID
 	}
 	addresses := make([]string, 0, len(listed))
 	for _, address := range listed {
-		if folded := strings.ToLower(strings.TrimSpace(address)); folded != "" {
+		if folded := correspondence.Fold(address); folded != "" {
 			addresses = append(addresses, folded)
 		}
 	}
