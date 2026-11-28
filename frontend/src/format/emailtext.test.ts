@@ -385,6 +385,29 @@ describe("splitEmailBody on a forward", () => {
     expect(parts.tail).toBe("none");
   });
 
+  it("keeps a Vietnamese Gmail forward's sender block", () => {
+    const parts = splitEmailBody(
+      "Gửi anh xem.\n\n---------- Thư được chuyển tiếp ---------\nTừ: Nguyễn Văn An <an@kunde.vn>\nNgày: Th 3, 12 thg 8, 2026\nTiêu đề: Báo giá\nĐến: Lars\n\nThứ Ba được không?",
+      "Fwd: Báo giá",
+    );
+    expect(parts.main).toBe(
+      "Gửi anh xem.\n\n---------- Thư được chuyển tiếp ---------\nTừ: Nguyễn Văn An <an@kunde.vn>\nNgày: Th 3, 12 thg 8, 2026\nTiêu đề: Báo giá\nĐến: Lars\n\nThứ Ba được không?",
+    );
+    expect(parts.tail).toBe("none");
+  });
+
+  it("folds a Vietnamese Outlook block under a reply subject", () => {
+    const parts = splitEmailBody(
+      "Đồng ý.\n\nTừ: Nguyễn Văn An <an@kunde.vn>\nĐã gửi: Thứ Ba, 12 tháng 8, 2026 09:14\nĐến: Lars\nChủ đề: Báo giá\n\nThứ Ba được không?",
+      "Re: Báo giá",
+    );
+    expect(parts.main).toBe("Đồng ý.");
+    expect(parts.trimmed).toBe(
+      "Từ: Nguyễn Văn An <an@kunde.vn>\nĐã gửi: Thứ Ba, 12 tháng 8, 2026 09:14\nĐến: Lars\nChủ đề: Báo giá\n\nThứ Ba được không?",
+    );
+    expect(parts.tail).toBe("quote");
+  });
+
   it("keeps an Apple Mail block under its blank line", () => {
     const parts = splitEmailBody(
       "FYI\n\nBegin forwarded message:\n\nFrom: Max Muster <max@kunde.de>\nSubject: Angebot\nDate: 12 August 2026\nTo: Lars\n\nPasst Dienstag?",

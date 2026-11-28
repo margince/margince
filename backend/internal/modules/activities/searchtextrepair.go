@@ -32,6 +32,9 @@ func SearchTextDataTask() datatask.Task {
 	}
 }
 
+// argInspected names the page of activity ids a data task batch inspects.
+const argInspected = "inspected"
+
 // storedMail is a mail read under its row lock, so the end computed from the
 // body is written beside that same body.
 type storedMail struct {
@@ -51,25 +54,35 @@ func RebuildSearchTextTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (d
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT id, subject, body FROM activity
+	mailIDs, ownEnds, err := lockedMailEndsTx(ctx, tx, `SELECT id, subject, body FROM activity
 		WHERE id = ANY(@inspected) AND kind = @mail AND body IS NOT NULL AND body_own_end IS NULL AND restricted_at IS NULL
-		ORDER BY id FOR UPDATE`, pgx.NamedArgs{"inspected": page, "mail": mailquote.MailKind})
+		ORDER BY id FOR UPDATE`, pgx.NamedArgs{argInspected: page, "mail": mailquote.MailKind})
 	if err != nil {
-		return datatask.BatchOut{}, fmt.Errorf("activities: reading stored mail bodies: %w", err)
+		return datatask.BatchOut{}, err
+	}
+	var changed int
+	if err := tx.QueryRow(ctx, `SELECT public.rebuild_activity_search_text(@inspected::uuid[], @mails::uuid[], @ends::int[])`,
+		pgx.NamedArgs{argInspected: page, "mails": mailIDs, "ends": ownEnds}).Scan(&changed); err != nil {
+		return datatask.BatchOut{}, fmt.Errorf("activities: rebuilding search text: %w", err)
+	}
+	return datatask.AdvanceUUID(in, page, changed)
+}
+
+// lockedMailEndsTx reads the mails a query selects under their row lock, and
+// derives the end each one's body holds beside the same body.
+func lockedMailEndsTx(ctx context.Context, tx pgx.Tx, query string, args pgx.NamedArgs) ([]ids.UUID, []*int, error) {
+	rows, err := tx.Query(ctx, query, args)
+	if err != nil {
+		return nil, nil, fmt.Errorf("activities: reading stored mail bodies: %w", err)
 	}
 	mails, err := pgx.CollectRows(rows, pgx.RowToStructByPos[storedMail])
 	if err != nil {
-		return datatask.BatchOut{}, fmt.Errorf("activities: reading stored mail bodies: %w", err)
+		return nil, nil, fmt.Errorf("activities: reading stored mail bodies: %w", err)
 	}
 	mailIDs, ownEnds := make([]ids.UUID, 0, len(mails)), make([]*int, 0, len(mails))
 	for _, mail := range mails {
 		mailIDs = append(mailIDs, mail.ID)
 		ownEnds = append(ownEnds, mailquote.OwnEnd(mailquote.MailKind, deref(mail.Subject), &mail.Body))
 	}
-	var changed int
-	if err := tx.QueryRow(ctx, `SELECT public.rebuild_activity_search_text(@inspected::uuid[], @mails::uuid[], @ends::int[])`,
-		pgx.NamedArgs{"inspected": page, "mails": mailIDs, "ends": ownEnds}).Scan(&changed); err != nil {
-		return datatask.BatchOut{}, fmt.Errorf("activities: rebuilding search text: %w", err)
-	}
-	return datatask.AdvanceUUID(in, page, changed)
+	return mailIDs, ownEnds, nil
 }

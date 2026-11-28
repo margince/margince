@@ -129,6 +129,8 @@ var audienceReadersAdmitted = gatekit.Waive(map[string]string{
 
 	"internal/modules/activities/searchtextrepair.go:RebuildSearchTextTx": "System-only data task reads each stored mail body to find where its sender's text ends. No row is returned to a caller, and a members-only mail is searched by its members, so its value is rebuilt too. Held rows are excluded.",
 
+	"internal/modules/activities/ownendreread.go:RereadOwnEndTx": "System-only data task reads each stored mail body that holds a Vietnamese header line to find again where its sender's text ends. No row is returned to a caller, and a members-only mail is searched by its members, so its end is stored too. Held rows are excluded.",
+
 	"internal/modules/activities/legacysystemtext.go:LegacySystemTasksTx": "System-only bounded repair reads native task text to recover its catalog descriptor. No row is returned to a user; archived and held rows are excluded.",
 
 	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupBoundedFrom":      mailCopyGroupReader,
