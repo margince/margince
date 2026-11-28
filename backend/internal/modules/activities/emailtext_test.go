@@ -325,6 +325,20 @@ func TestAForwardKeepsTheMailItForwards(t *testing.T) {
 			main:    "Siehe unten.\n\n---------- Forwarded message ---------\nFrom: Max Muster <max@kunde.de>\nDate: Tue, 12 Aug 2026 09:14\nSubject: Angebot\nTo: Lars\n\nPasst Dienstag?",
 		},
 		{
+			name:    "a Vietnamese Gmail forward keeps its sender block",
+			subject: "Fwd: Báo giá",
+			body:    "Gửi anh xem.\n\n---------- Thư được chuyển tiếp ---------\nTừ: Nguyễn Văn An <an@kunde.vn>\nNgày: Th 3, 12 thg 8, 2026\nTiêu đề: Báo giá\nĐến: Lars\n\nThứ Ba được không?",
+			main:    "Gửi anh xem.\n\n---------- Thư được chuyển tiếp ---------\nTừ: Nguyễn Văn An <an@kunde.vn>\nNgày: Th 3, 12 thg 8, 2026\nTiêu đề: Báo giá\nĐến: Lars\n\nThứ Ba được không?",
+		},
+		{
+			name:    "a Vietnamese Outlook block under a reply subject folds",
+			subject: "Re: Báo giá",
+			body:    "Đồng ý.\n\nTừ: Nguyễn Văn An <an@kunde.vn>\nĐã gửi: Thứ Ba, 12 tháng 8, 2026 09:14\nĐến: Lars\nChủ đề: Báo giá\n\nThứ Ba được không?",
+			main:    "Đồng ý.",
+			trimmed: "Từ: Nguyễn Văn An <an@kunde.vn>\nĐã gửi: Thứ Ba, 12 tháng 8, 2026 09:14\nĐến: Lars\nChủ đề: Báo giá\n\nThứ Ba được không?",
+			tail:    TailQuote,
+		},
+		{
 			name:    "an Apple Mail forward keeps the block under its blank line",
 			subject: "Fwd: Angebot",
 			body:    "FYI\n\nBegin forwarded message:\n\nFrom: Max Muster <max@kunde.de>\nSubject: Angebot\nDate: 12 August 2026\nTo: Lars\n\nPasst Dienstag?",

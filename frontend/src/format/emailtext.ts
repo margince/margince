@@ -67,8 +67,9 @@ const FORWARD_ATTRIBUTION =
 // The Outlook top-reply block: a From:/Von: line whose neighbours carry the
 // sent-date field. Recognised as a pair because "Von:" alone is ordinary prose
 // in German mail.
-const REPLY_HEADER_FROM = /^\*{0,2}(Von|From):\*{0,2}\s/;
-const REPLY_HEADER_SENT = /^\*{0,2}(Gesendet|Sent|Datum|Date):\*{0,2}\s/;
+const REPLY_HEADER_FROM = /^\*{0,2}(Von|From|Từ):\*{0,2}\s/;
+const REPLY_HEADER_SENT =
+  /^\*{0,2}(Gesendet|Sent|Datum|Date|Đã gửi|Ngày gửi|Ngày):\*{0,2}\s/;
 
 // Sign-offs, matched only in the trailing region. The multi-word forms may open
 // a line, since a name usually follows on the same one.
@@ -280,7 +281,7 @@ function headerAt(lines: readonly string[], index: number): number {
  */
 type ForwardedBlock = { header: number; body: number };
 
-const FORWARD_SUBJECT_LABELS = ["subject", "betreff"];
+const FORWARD_SUBJECT_LABELS = ["subject", "betreff", "chủ đề", "tiêu đề"];
 
 function forwardedSubject(
   lines: readonly string[],

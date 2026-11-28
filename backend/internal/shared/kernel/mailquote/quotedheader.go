@@ -16,9 +16,9 @@ type QuotedHeader struct {
 
 // The labels of a quoted header block, by the field they fill.
 var (
-	fromLabels    = []string{"from", "von"}
-	subjectLabels = []string{"subject", "betreff"}
-	dateLabels    = []string{"date", "sent", "datum", "gesendet"}
+	fromLabels    = []string{"from", "von", "từ"}
+	subjectLabels = []string{"subject", "betreff", "chủ đề", "tiêu đề"}
+	dateLabels    = []string{"date", "sent", "datum", "gesendet", "ngày", "ngày gửi", "đã gửi"}
 )
 
 // quotedHeaderReach is how many lines under an attribution the block may run.

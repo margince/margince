@@ -10351,6 +10351,23 @@ BEGIN
     RETURN NEW;
 END;
 
+public.reread_activity_own_end(mails uuid[], own_ends integer[]) secdef=false cfg=- acl=- 
+DECLARE
+    moving text := current_setting('margince.last_activity_move', true);
+    changed integer;
+BEGIN
+    PERFORM set_config('margince.last_activity_move', 'on', true);
+    UPDATE activity a SET body_own_end = m.own_end
+      FROM unnest(mails, own_ends) AS m(id, own_end)
+     WHERE a.id = m.id AND a.restricted_at IS NULL AND a.body_own_end IS DISTINCT FROM m.own_end;
+    GET DIAGNOSTICS changed = ROW_COUNT;
+    PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+    RETURN changed;
+EXCEPTION WHEN OTHERS THEN
+    PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+    RAISE;
+END;
+
 public.resolve_intent_time(wall_clock timestamp without time zone, zone_name text) secdef=false cfg=search_path=pg_catalog acl=- 
 DECLARE
  anchor timestamp with time zone := wall_clock AT TIME ZONE 'UTC';

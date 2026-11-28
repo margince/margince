@@ -52,6 +52,11 @@ func TestAReplyKeepsTheTextAboveTheQuotedMail(t *testing.T) {
 			own:  "Bên em đồng ý.\n\n",
 		},
 		{
+			name: "a Vietnamese Outlook block",
+			body: "Bên em đồng ý.\n\nTừ: Nguyễn Văn An <an@buyer.example>\nĐã gửi: Thứ Hai, 3 tháng 3, 2025 10:15\nĐến: Sales\nChủ đề: Thứ Sáu\n\nThứ Sáu được không?",
+			own:  "Bên em đồng ý.\n\n",
+		},
+		{
 			name: "an English Outlook block",
 			body: "Works for us.\n\nFrom: Dana Roe <dana@buyer.example>\nSent: Monday, March 3, 2025 10:15\nTo: Sales\nSubject: Friday\n\nCan you do Friday?",
 			own:  "Works for us.\n\n",
@@ -85,11 +90,13 @@ func TestTheRuleNeverCutsTheSendersWords(t *testing.T) {
 	bottom := "On Mon, 3 Mar 2025, Sales wrote:\n> Can you do Friday?\n\nFriday works.\n"
 	onlyQuote := "> Can you do Friday?\n> Sales\n"
 	prose := "Von: der Kollegin habe ich nichts gehört.\nOn the other hand, nobody wrote: anything."
+	vietnameseProse := "Lịch họp tuần sau.\nTừ: 9 giờ đến 11 giờ.\nPhòng họp tầng 2."
 	runOwnTextCases(t, []ownTextCase{
 		{name: "an inline reply keeps every answer", body: inline, own: inline},
 		{name: "a bottom-posted reply keeps the answer under the quote", body: bottom, own: bottom},
 		{name: "a body that is only a quote keeps it", body: onlyQuote, own: onlyQuote},
 		{name: "prose that names a sender is not a boundary", body: prose, own: prose},
+		{name: "a Vietnamese line opening Từ with no sent date is prose", body: vietnameseProse, own: vietnameseProse},
 		{
 			name: "an inline reply ends at the trailing quote",
 			body: "> Can you do Friday?\nFriday works.\n\n> Older mail\n> Sales\n",
@@ -135,6 +142,12 @@ func TestAForwardKeepsTheMailItPassesOn(t *testing.T) {
 			subject: "Fwd: Pricing",
 			body:    "FYI\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025\nTo: Sales\n\nThirty days net.",
 			own:     "FYI\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025\nTo: Sales\n\nThirty days net.",
+		},
+		{
+			name:    "a Vietnamese Gmail forward keeps the block under its forward line",
+			subject: "Fwd: Báo giá",
+			body:    "Gửi anh xem.\n\n---------- Thư được chuyển tiếp ---------\nTừ: Nguyễn Văn An <an@buyer.example>\nNgày: Th 2, 3 thg 3, 2025\nTiêu đề: Báo giá\nĐến: Sales\n\nThanh toán trong 30 ngày.",
+			own:     "Gửi anh xem.\n\n---------- Thư được chuyển tiếp ---------\nTừ: Nguyễn Văn An <an@buyer.example>\nNgày: Th 2, 3 thg 3, 2025\nTiêu đề: Báo giá\nĐến: Sales\n\nThanh toán trong 30 ngày.",
 		},
 		{
 			name:    "a reply to a forward is a reply",
