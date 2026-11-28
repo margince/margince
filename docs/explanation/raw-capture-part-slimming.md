@@ -150,9 +150,9 @@ use up rows that a store connected later must still work on. `parts_slimmed_at` 
   files path (`capture/privatethreadfiles.go`) do, and both build the parts again first.
 - **Art. 17 erasure.** The `ILIKE` over `payload::text` never looks inside a `base64` part, since
   the text itself is not there to match. `privacy/erasure_attachments.go` removes the file rows
-  after scrubbing their retained names and history. The attachment deletion trigger queues each
+  after clearing kept names and history. The attachment delete trigger queues each
   `storage_key` for `stored_object_reap`. One object holds the bytes of every row with an identical
-  file. The reaper keeps it while another live row still names it.
+  file. `stored_object_reap` keeps it while another live row still names it.
 - **Art. 15 access.** `compose/sarrestore.go` restores before it shows the data. A missing object
   holds back that one payload and keeps the row listed.
 - **The retention sweep.** It erases the whole payload when the activity's window ends, block and

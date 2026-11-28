@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+// Package attachmentkeys binds older files to their existing records.
 package attachmentkeys
 
 import (

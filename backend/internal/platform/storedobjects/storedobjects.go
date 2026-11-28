@@ -129,7 +129,7 @@ func RecordDeletionTx(ctx context.Context, tx pgx.Tx, kind Kind, key string) err
 	if !declared(kind) {
 		return fmt.Errorf("record a deleted object: %q is not a declared kind", kind)
 	}
-	_, err := tx.Exec(ctx, `SELECT record_stored_object_intent(@kind,@key,true)`, pgx.NamedArgs{"kind": string(kind), storageKeyArg: key})
+	_, err := tx.Exec(ctx, `SELECT write_stored_object_intent(@kind,@key,true)`, pgx.NamedArgs{"kind": string(kind), storageKeyArg: key})
 	return err
 }
 

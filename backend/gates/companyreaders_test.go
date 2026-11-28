@@ -113,6 +113,7 @@ const memberStaffingMetadataReadVerdict = "retiring a member must find live depe
 // records why asking was never the point.
 
 var lifecycleCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/attachmentownerkeys.go:KeyAttachmentOwnersTx":     "system-only owner repair asks only whether the company exists; no record column leaves the statement, and missing owners follow the attachment key cascade rule",
 	"internal/platform/database/storekit/capturefacts.go:OwnCompanyDomainsChanged": "a writer of company domains asks whether the companies it wrote are the own company, to say a capture fact moved. Only a boolean leaves the query, and no company column reaches a caller",
 	"internal/modules/contacts/employerchange.go:employerChangeSQL":                "capture's employer-change check, run inside the capture, triage or signature transaction under that machine principal. It reads the contact's owner, name and current employment and the two company names to stage a question only the contact's owner may open (a payload-owned approval kind). Nothing is returned to a caller, and accepting the question re-asks every grant as the owner",
 	"internal/modules/assignments/memberwork.go:memberAssignmentParents":           memberStaffingMetadataReadVerdict,

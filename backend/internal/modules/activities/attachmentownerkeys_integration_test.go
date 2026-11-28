@@ -43,8 +43,12 @@ func TestEveryAttachmentOwnerKeyRefusesMissingParentsAndCascades(t *testing.T) {
 		kind string
 		id   ids.UUID
 	}{
-		{"contact", seedCustomer(t, e)}, {"company", e.seedCompany(t)}, {"deal", e.seedDeal(t, "Renewal")},
-		{"lead", lead}, {"project", e.seedProject(t, "Renewal")}, {"activity", activity},
+		{"contact", seedCustomer(t, e)},
+		{"company", e.seedCompany(t)},
+		{"deal", e.seedDeal(t, "Renewal")},
+		{"lead", lead},
+		{"project", e.seedProject(t, "Renewal")},
+		{"activity", activity},
 	}
 	for _, owner := range owners {
 		t.Run(owner.kind, func(t *testing.T) {

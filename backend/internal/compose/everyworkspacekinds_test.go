@@ -22,7 +22,7 @@ func TestEveryWorkspaceKindsRunTheEveryWorkspacePass(t *testing.T) {
 		}
 	}
 	if everyWorkspaceKinds[ChatClarificationSweepArgs{}.Kind()] {
-		t.Error("chat clarification sends messages to people, so it must not run while no company is live")
+		t.Error("chat clarification sends messages, so it must not run while no company is live")
 	}
 	entries, err := os.ReadDir(".")
 	if err != nil {

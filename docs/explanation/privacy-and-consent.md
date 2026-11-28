@@ -331,11 +331,9 @@ into consent's handlers.
   outbox copies ([what stays](erasure-leftovers.md)). Audit IDs, actors, actions and times stay fixed.
   One transaction per subject records the proof and audit marker. A subject under `legal_hold` cannot be erased.
 
-  Deleting an attachment queues its object key in the same transaction, including when its owner
-  is deleted. The hourly `stored_object_reap` checks that no live record still needs the object
-  before deleting bytes. It starts once the intent is 24 hours old (`ProvisionalObjectGrace`) and
-  runs for up to 4 minutes. So unreferenced files go within 25 hours, and the rest of a long queue
-  an hour later. A later deletion renews the intent even while a reaper holds it.
+  Removing an attachment queues its object key in the same transaction. The hourly `stored_object_reap`
+  checks live references and removes bytes after 24 hours (`ProvisionalObjectGrace`), for up to 4 minutes.
+  A later remove renews the intent. Files no record needs go within 25 hours; a long queue can take another run.
 
   Background tasks use earlier proofs and stored links to clear old copies while keeping later
   edits and held content. Request references go after their linked copies.

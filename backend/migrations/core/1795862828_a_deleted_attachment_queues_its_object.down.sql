@@ -16,4 +16,4 @@ RETURNS void LANGUAGE plpgsql AS $$BEGIN
     END IF;
 END;$$;
 
-DROP FUNCTION record_stored_object_intent(text,text,boolean);
+DROP FUNCTION write_stored_object_intent(text,text,boolean);

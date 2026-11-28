@@ -9706,7 +9706,7 @@ public.provider_run_reservation_pkey CREATE UNIQUE INDEX provider_run_reservatio
 public.provider_run_subject_identity CREATE UNIQUE INDEX provider_run_subject_identity ON public.provider_run USING btree (id, contact_id, provider)
 public.queue_deleted_attachment_object() secdef=false cfg=- acl=- BEGIN
     IF NOT OLD.bytes_withheld AND OLD.storage_key <> '' THEN
-        PERFORM record_stored_object_intent('attachment', OLD.storage_key, true);
+        PERFORM write_stored_object_intent('attachment', OLD.storage_key, true);
     END IF;
     RETURN OLD;
 END;
@@ -9912,18 +9912,7 @@ public.record_source_channel(source text) secdef=false cfg=- acl=-
  END
 
 public.record_stored_object_intent(requested_kind text, requested_key text) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner BEGIN
-    PERFORM record_stored_object_intent(requested_kind, requested_key, false);
-END;
-public.record_stored_object_intent(requested_kind text, requested_key text, for_deletion boolean) secdef=false cfg=- acl=- BEGIN
-    INSERT INTO stored_object_intent (storage_key, kind)
-    VALUES (requested_key, requested_kind)
-    ON CONFLICT (storage_key) DO UPDATE
-       SET kind = CASE WHEN for_deletion THEN stored_object_intent.kind ELSE excluded.kind END,
-           recorded_at = CASE WHEN for_deletion THEN clock_timestamp() ELSE now() END
-       WHERE for_deletion OR stored_object_intent.reaping_since IS NULL;
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'The stored file has expired; upload it again' USING ERRCODE = '55000';
-    END IF;
+    PERFORM write_stored_object_intent(requested_kind, requested_key, false);
 END;
 public.refresh_clocks_of_activity(aid uuid) secdef=false cfg=- acl=- 
 DECLARE
@@ -13258,6 +13247,17 @@ public.workspace_email_domain.workspace_email_domain_pkey PRIMARY KEY (domain)
 public.workspace_email_domain.workspace_email_domain_source_check CHECK ((source = ANY (ARRAY['admin'::text, 'mailbox'::text])))
 public.workspace_email_domain_pkey CREATE UNIQUE INDEX workspace_email_domain_pkey ON public.workspace_email_domain USING btree (domain)
 public.workspace_pkey CREATE UNIQUE INDEX workspace_pkey ON public.workspace USING btree (id)
+public.write_stored_object_intent(requested_kind text, requested_key text, for_deletion boolean) secdef=false cfg=- acl=- BEGIN
+    INSERT INTO stored_object_intent (storage_key, kind)
+    VALUES (requested_key, requested_kind)
+    ON CONFLICT (storage_key) DO UPDATE
+       SET kind = CASE WHEN for_deletion THEN stored_object_intent.kind ELSE excluded.kind END,
+           recorded_at = CASE WHEN for_deletion THEN clock_timestamp() ELSE now() END
+       WHERE for_deletion OR stored_object_intent.reaping_since IS NULL;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'The stored file has expired; upload it again' USING ERRCODE = '55000';
+    END IF;
+END;
 public.written_contact_email_clears_reply_settled() secdef=false cfg=- acl=- 
 BEGIN
   PERFORM clear_reply_settled_by_thread(array_agg(thread_key), array_agg(since))
