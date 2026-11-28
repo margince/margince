@@ -129,7 +129,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"win_probability":              "Probability",
 	},
 	textlang.German: {
-		"meeting_notes":                "Interne Meetingnotizen",
+		"meeting_notes":                "Interne Notizen zum Termin",
 		"extension_relationship_types": "Erweiterungs-Beziehungstypen",
 		"task_type":                    "Aufgabentyp",
 		"ai_assisted":                  "KI-gestützt",

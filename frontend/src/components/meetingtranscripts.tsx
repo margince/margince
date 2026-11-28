@@ -10,18 +10,18 @@ import {
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Modal } from "../design-system/atoms";
+import { Button, Field, Modal, Textarea } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { NoteMarkdown } from "../design-system/markdown";
+import { useFieldFaults } from "../design-system/savepage";
 import { useToast } from "../design-system/toast";
 import { TranscriptReadCard } from "../design-system/transcriptread";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { useActivity } from "../lib/activityread";
 import { useCanWrite, useCanWriteRecord } from "../lib/capability";
 import { meetingNotesText } from "../lib/meetingrecord";
-import { unwrap } from "../lib/problem";
-import { ActivityBodyField } from "./activitybodyfield";
+import { blankRequired, unwrap } from "../lib/problem";
 import { TranscriptUploadField, useReportUnattached } from "./logactivityfiles";
 
 import {
@@ -103,6 +103,8 @@ function MeetingTranscriptContents({
   const t = useT();
   const client = useQueryClient();
   const toast = useToast();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
   const writable = useCanWriteRecord("activity", activity);
   const canCreate = useCanWrite("activity", "create");
   const {
@@ -120,7 +122,7 @@ function MeetingTranscriptContents({
   const queryKey = ["meeting-transcripts", activity.id];
   const transcripts = useInfiniteQuery({
     queryKey,
-    initialPageParam: undefined as string | undefined,
+    initialPageParam: "",
     queryFn: async ({ pageParam }) =>
       unwrap(
         await api.GET("/activities", {
@@ -129,7 +131,7 @@ function MeetingTranscriptContents({
               source_activity_id: activity.id,
               kind: ["meeting"],
               limit: 50,
-              cursor: pageParam,
+              cursor: pageParam || undefined,
             },
           },
         }),
@@ -193,26 +195,47 @@ function MeetingTranscriptContents({
       {!writable && <p className="t-caption">{t("meeting.readOnly")}</p>}
       {canAdd && (
         <form
+          ref={faultsRoot}
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            if (saving) return;
+            if (saving || readingFile) return;
+            if (
+              faults.show(
+                blankRequired(locale, {
+                  body: [t("meeting.transcriptText"), body],
+                }),
+              )
+            )
+              return;
             save.mutate({ meeting: activity, body, file, key });
           }}
         >
           <div className="form-stack">
-            <ActivityBodyField
+            <Field
               label={t("meeting.transcriptText")}
-              value={body}
-              onChange={(text) => {
-                setBody(text);
-                setFile(undefined);
-              }}
-              transcript
-              disabled={saving || stored || readingFile}
-              rows={8}
-            />
+              required
+              error={faults.of("body")}
+            >
+              {(control) => (
+                <Textarea
+                  {...control}
+                  rows={8}
+                  disabled={saving || stored || readingFile}
+                  value={body}
+                  onChange={(event) => {
+                    faults.edited("body", save);
+                    setBody(event.target.value);
+                    setFile(undefined);
+                  }}
+                />
+              )}
+            </Field>
             <TranscriptUploadField
-              onText={setBody}
+              onText={(text) => {
+                faults.edited("body", save);
+                setBody(text);
+              }}
               onFile={setFile}
               disabled={saving || stored || readingFile}
               onReadingChange={setReadingFile}
@@ -221,11 +244,7 @@ function MeetingTranscriptContents({
           {file && <p className="t-caption">{file.name}</p>}
           {stored && <p role="status">{t("meeting.transcriptFileRetry")}</p>}
           <ErrorLine error={save.error} />
-          <Button
-            type="submit"
-            pending={saving}
-            disabled={!body.trim() || readingFile}
-          >
+          <Button type="submit" pending={saving || readingFile}>
             {t("log.save")}
           </Button>
         </form>

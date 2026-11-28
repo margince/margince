@@ -24,6 +24,9 @@ import { RecordMeetingOutcome } from "./meetingoutcome";
 const meeting: components["schemas"]["Activity"] = {
   id: "01a05500-0000-7000-8000-0000000000b1",
   kind: "meeting",
+  occurred_precision: "instant",
+  is_done: false,
+  offers_email: false,
   source: "gcal",
   source_system: "gcal",
   captured_by: "connector:gcal",
@@ -82,8 +85,12 @@ function setup({
               201,
             );
       }
-      if (url.pathname.endsWith(`/activities/${meeting.id}`))
-        return jsonResponse({ ...meeting, writable });
+      if (/\/activities\/[^/]+$/.test(url.pathname))
+        return jsonResponse({
+          ...meeting,
+          id: url.pathname.slice(url.pathname.lastIndexOf("/") + 1),
+          writable,
+        });
       if (url.pathname.endsWith("/activities")) reads.push(url);
       return jsonResponse({
         data: [],
@@ -91,29 +98,29 @@ function setup({
       });
     }),
   );
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({
-          defaultOptions: {
-            queries: { retry: false },
-            mutations: { retry: false },
-          },
-        })
-      }
-    >
-      <LocaleProvider locale="en">
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const content = (activity: components["schemas"]["Activity"]) => (
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
         <ToastProvider>
           <RecordMeetingOutcome
-            activity={{ ...meeting, writable }}
+            activity={{ ...activity, writable }}
             invalidateKeys={[]}
           />
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
-  return { creates, uploads, reads };
+  const view = render(content(meeting));
+  return {
+    creates,
+    uploads,
+    reads,
+    switchMeeting: (id: string) => view.rerender(content({ ...meeting, id })),
+  };
 }
 
 it("reopens a held calendar meeting with its own notes and a transcript editor", async () => {
@@ -142,12 +149,8 @@ it("reopens a held calendar meeting with its own notes and a transcript editor",
   expect(creates[0].key).toBeTruthy();
   await waitFor(() =>
     expect(
-      (
-        dialog.getByRole("textbox", {
-          name: en["meeting.transcriptText"],
-        }) as HTMLTextAreaElement
-      ).value,
-    ).toBe(""),
+      dialog.getByRole("textbox", { name: en["meeting.transcriptText"] }),
+    ).toHaveProperty("value", ""),
   );
   expect(
     reads.some(
@@ -171,15 +174,13 @@ it("keeps the draft after a failed save and retries with the same meeting and ke
   await user.type(text, "Buyer: send a proposal.");
   await user.click(dialog.getByRole("button", { name: en["log.save"] }));
   await waitFor(() => expect(creates).toHaveLength(1));
-  expect((text as HTMLTextAreaElement).value).toBe("Buyer: send a proposal.");
+  expect(text).toHaveProperty("value", "Buyer: send a proposal.");
   await waitFor(() =>
     expect(
-      (
-        dialog.getByRole("button", {
-          name: en["log.save"],
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(false),
+      dialog
+        .getByRole("button", { name: en["log.save"] })
+        .getAttribute("aria-busy"),
+    ).toBeNull(),
   );
   await user.click(dialog.getByRole("button", { name: en["log.save"] }));
   await waitFor(() => expect(creates).toHaveLength(2));
@@ -203,12 +204,8 @@ it("retries an original file upload without creating a second transcript", async
   fireEvent.change(picker, { target: { files: [file] } });
   await waitFor(() =>
     expect(
-      (
-        dialog.getByRole("textbox", {
-          name: en["meeting.transcriptText"],
-        }) as HTMLTextAreaElement
-      ).value,
-    ).toBe("Buyer: approved."),
+      dialog.getByRole("textbox", { name: en["meeting.transcriptText"] }),
+    ).toHaveProperty("value", "Buyer: approved."),
   );
   await user.click(dialog.getByRole("button", { name: en["log.save"] }));
   await dialog.findByText(en["meeting.transcriptFileRetry"]);
@@ -243,7 +240,7 @@ it("explains read-only access while keeping the meeting notes readable", async (
   expect(dialog.queryByRole("textbox")).toBeNull();
 });
 
-it("waits for a picked transcript to finish reading before enabling save", async () => {
+it("refuses saving while a picked transcript is still being read", async () => {
   const user = userEvent.setup();
   const { creates } = setup();
   await user.click(
@@ -269,25 +266,65 @@ it("waits for a picked transcript to finish reading before enabling save", async
   });
   await waitFor(() =>
     expect(
-      (
-        dialog.getByRole("button", {
-          name: en["log.save"],
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true),
+      dialog
+        .getByRole("button", { name: en["log.save"] })
+        .getAttribute("aria-busy"),
+    ).toBe("true"),
   );
+  await user.click(dialog.getByRole("button", { name: en["log.save"] }));
   expect(creates).toHaveLength(0);
   finish("File transcript");
   await waitFor(() =>
     expect(
-      (
-        dialog.getByRole("button", {
-          name: en["log.save"],
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(false),
+      dialog
+        .getByRole("button", { name: en["log.save"] })
+        .getAttribute("aria-busy"),
+    ).toBeNull(),
   );
   await user.click(dialog.getByRole("button", { name: en["log.save"] }));
   await waitFor(() => expect(creates).toHaveLength(1));
   expect(creates[0].body).toMatchObject({ body: "File transcript" });
+});
+
+it("shows the required transcript field and focuses it when submitted empty", async () => {
+  const user = userEvent.setup();
+  const { creates } = setup();
+  await user.click(
+    screen.getByRole("button", { name: en["meeting.transcripts"] }),
+  );
+  const dialog = within(await screen.findByRole("dialog"));
+  const text = await dialog.findByRole("textbox", {
+    name: en["meeting.transcriptText"],
+  });
+  await user.click(dialog.getByRole("button", { name: en["log.save"] }));
+  expect((await dialog.findByRole("alert")).textContent).toContain(
+    en["meeting.transcriptText"],
+  );
+  expect(document.activeElement).toBe(text);
+  expect(creates).toHaveLength(0);
+  await user.type(text, "Buyer: approved.");
+  expect(dialog.queryByRole("alert")).toBeNull();
+});
+
+it("keeps an unsaved transcript out of another meeting when the drawer switches records", async () => {
+  const user = userEvent.setup();
+  const { switchMeeting, creates } = setup();
+  await user.click(
+    screen.getByRole("button", { name: en["meeting.transcripts"] }),
+  );
+  const first = within(await screen.findByRole("dialog"));
+  await user.type(
+    await first.findByRole("textbox", { name: en["meeting.transcriptText"] }),
+    "Private draft for the first meeting",
+  );
+  switchMeeting("01a05500-0000-7000-8000-0000000000b2");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  await user.click(
+    screen.getByRole("button", { name: en["meeting.transcripts"] }),
+  );
+  const second = within(await screen.findByRole("dialog"));
+  expect(
+    await second.findByRole("textbox", { name: en["meeting.transcriptText"] }),
+  ).toHaveProperty("value", "");
+  expect(creates).toHaveLength(0);
 });

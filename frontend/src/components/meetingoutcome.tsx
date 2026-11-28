@@ -39,7 +39,11 @@ export function RecordMeetingOutcome({
         activity={activity}
         invalidateKeys={invalidateKeys}
       />
-      <MeetingTranscripts activity={activity} invalidateKeys={invalidateKeys} />
+      <MeetingTranscripts
+        key={activity.id}
+        activity={activity}
+        invalidateKeys={invalidateKeys}
+      />
     </>
   );
 }

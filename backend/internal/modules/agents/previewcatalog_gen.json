@@ -716,6 +716,8 @@
      "Meeting start (local time)",
     "meeting_location":
      "Location or meeting link",
+    "meeting_notes":
+     "Internal meeting notes",
     "meeting_start":
      "Start (UTC offset included)",
     "meeting_status":
@@ -8900,6 +8902,26 @@
      "Unknown",
     "meeting_location/boolean/true":
      "Yes",
+    "meeting_notes/lifecycle/customer":
+     "Customer",
+    "meeting_notes/lifecycle/disqualified":
+     "Disqualified",
+    "meeting_notes/lifecycle/former_customer":
+     "Former customer",
+    "meeting_notes/lifecycle/live":
+     "Live",
+    "meeting_notes/lifecycle/onboarding":
+     "Onboarding",
+    "meeting_notes/lifecycle/opportunity":
+     "Opportunity",
+    "meeting_notes/lifecycle/prospect":
+     "Prospect",
+    "meeting_notes/lifecycle/target":
+     "Target",
+    "meeting_notes/lifecycle/unknown":
+     "Unknown",
+    "meeting_notes/boolean/true":
+     "Yes",
     "meeting_start/lifecycle/customer":
      "Customer",
     "meeting_start/lifecycle/disqualified":
@@ -11684,6 +11706,8 @@
      "Guests returned to the meeting they came from",
     "merge_profile_field/text/meeting_intent":
      "Meeting start (local time)",
+    "merge_profile_field/text/meeting_notes":
+     "Internal meeting notes",
     "merge_profile_field/text/meeting_status":
      "Meeting outcome",
     "merge_profile_field/text/members":
@@ -12364,6 +12388,8 @@
      "Guests returned to the meeting they came from",
     "merge_profile_field/lifecycle/meeting_intent":
      "Meeting start (local time)",
+    "merge_profile_field/lifecycle/meeting_notes":
+     "Internal meeting notes",
     "merge_profile_field/lifecycle/meeting_status":
      "Meeting outcome",
     "merge_profile_field/lifecycle/members":
@@ -22408,6 +22434,12 @@
      "Not set",
     "meeting_location/execution":
      "Set when applied",
+    "meeting_notes/boolean":
+     "No",
+    "meeting_notes/empty":
+     "Not set",
+    "meeting_notes/execution":
+     "Set when applied",
     "meeting_start/boolean":
      "No",
     "meeting_start/empty":
@@ -25982,6 +26014,8 @@
      "Terminbeginn (Ortszeit)",
     "meeting_location":
      "Ort oder Terminlink",
+    "meeting_notes":
+     "Interne Notizen zum Termin",
     "meeting_start":
      "Beginn (mit UTC-Abweichung)",
     "meeting_status":
@@ -34166,6 +34200,26 @@
      "Unbekannt",
     "meeting_location/boolean/true":
      "Ja",
+    "meeting_notes/lifecycle/customer":
+     "Kunde",
+    "meeting_notes/lifecycle/disqualified":
+     "Disqualifiziert",
+    "meeting_notes/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "meeting_notes/lifecycle/live":
+     "Live",
+    "meeting_notes/lifecycle/onboarding":
+     "Onboarding",
+    "meeting_notes/lifecycle/opportunity":
+     "Chance",
+    "meeting_notes/lifecycle/prospect":
+     "Interessent",
+    "meeting_notes/lifecycle/target":
+     "Zielunternehmen",
+    "meeting_notes/lifecycle/unknown":
+     "Unbekannt",
+    "meeting_notes/boolean/true":
+     "Ja",
     "meeting_start/lifecycle/customer":
      "Kunde",
     "meeting_start/lifecycle/disqualified":
@@ -36954,6 +37008,8 @@
      "Gäste an ihren eigenen Termin zurückgegeben",
     "merge_profile_field/text/meeting_intent":
      "Terminbeginn (Ortszeit)",
+    "merge_profile_field/text/meeting_notes":
+     "Interne Notizen zum Termin",
     "merge_profile_field/text/meeting_status":
      "Ergebnis des Termins",
     "merge_profile_field/text/members":
@@ -37638,6 +37694,8 @@
      "Gäste an ihren eigenen Termin zurückgegeben",
     "merge_profile_field/lifecycle/meeting_intent":
      "Terminbeginn (Ortszeit)",
+    "merge_profile_field/lifecycle/meeting_notes":
+     "Interne Notizen zum Termin",
     "merge_profile_field/lifecycle/meeting_status":
      "Ergebnis des Termins",
     "merge_profile_field/lifecycle/members":
@@ -47682,6 +47740,12 @@
      "Nicht gesetzt",
     "meeting_location/execution":
      "Wird beim Anwenden festgelegt",
+    "meeting_notes/boolean":
+     "Nein",
+    "meeting_notes/empty":
+     "Nicht gesetzt",
+    "meeting_notes/execution":
+     "Wird beim Anwenden festgelegt",
     "meeting_start/boolean":
      "Nein",
     "meeting_start/empty":
@@ -51256,6 +51320,8 @@
      "Giờ bắt đầu cuộc họp (giờ địa phương)",
     "meeting_location":
      "Địa điểm hoặc liên kết cuộc họp",
+    "meeting_notes":
+     "Ghi chú nội bộ của cuộc họp",
     "meeting_start":
      "Bắt đầu (kèm độ lệch UTC)",
     "meeting_status":
@@ -59440,6 +59506,26 @@
      "Chưa rõ",
     "meeting_location/boolean/true":
      "Có",
+    "meeting_notes/lifecycle/customer":
+     "Khách hàng",
+    "meeting_notes/lifecycle/disqualified":
+     "Đã loại",
+    "meeting_notes/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "meeting_notes/lifecycle/live":
+     "Đang vận hành",
+    "meeting_notes/lifecycle/onboarding":
+     "Đang triển khai",
+    "meeting_notes/lifecycle/opportunity":
+     "Cơ hội",
+    "meeting_notes/lifecycle/prospect":
+     "Tiềm năng",
+    "meeting_notes/lifecycle/target":
+     "Mục tiêu",
+    "meeting_notes/lifecycle/unknown":
+     "Chưa rõ",
+    "meeting_notes/boolean/true":
+     "Có",
     "meeting_start/lifecycle/customer":
      "Khách hàng",
     "meeting_start/lifecycle/disqualified":
@@ -62226,6 +62312,8 @@
      "Khách được trả về cuộc họp của họ",
     "merge_profile_field/text/meeting_intent":
      "Giờ bắt đầu cuộc họp (giờ địa phương)",
+    "merge_profile_field/text/meeting_notes":
+     "Ghi chú nội bộ của cuộc họp",
     "merge_profile_field/text/meeting_status":
      "Kết quả cuộc họp",
     "merge_profile_field/text/members":
@@ -62908,6 +62996,8 @@
      "Khách được trả về cuộc họp của họ",
     "merge_profile_field/lifecycle/meeting_intent":
      "Giờ bắt đầu cuộc họp (giờ địa phương)",
+    "merge_profile_field/lifecycle/meeting_notes":
+     "Ghi chú nội bộ của cuộc họp",
     "merge_profile_field/lifecycle/meeting_status":
      "Kết quả cuộc họp",
     "merge_profile_field/lifecycle/members":
@@ -72951,6 +73041,12 @@
     "meeting_location/empty":
      "Chưa đặt",
     "meeting_location/execution":
+     "Được xác định khi áp dụng",
+    "meeting_notes/boolean":
+     "Không",
+    "meeting_notes/empty":
+     "Chưa đặt",
+    "meeting_notes/execution":
      "Được xác định khi áp dụng",
     "meeting_start/boolean":
      "Không",

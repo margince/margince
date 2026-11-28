@@ -23045,7 +23045,7 @@ export const en = {
     "The transcript is saved. The original file was not attached. Save again to retry the file upload.",
   "meeting.internalNotes": "Internal meeting notes",
   "meeting.internalNotesHelp":
-    "Visible to people who can read this meeting’s content. Not added to the calendar invitation.",
+    "Anyone who can read the content of this meeting can read these notes. They are not added to the calendar invitation.",
   "worklist.verb.meetingCalendarManaged":
     "The title and date follow the calendar invitation. Notes stay inside Margince.",
   "worklist.verb.retry": "Run again",

@@ -22806,7 +22806,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã lưu bản chép lời nhưng chưa đính kèm tệp gốc. Lưu lại để thử tải tệp lên lần nữa.",
   "meeting.internalNotes": "Ghi chú nội bộ của cuộc họp",
   "meeting.internalNotesHelp":
-    "Người có quyền đọc nội dung cuộc họp có thể xem ghi chú này. Ghi chú không được thêm vào thư mời trên lịch.",
+    "Bạn có thể xem ghi chú này khi có quyền đọc nội dung cuộc họp. Ghi chú không được thêm vào thư mời trên lịch.",
   "worklist.verb.meetingCalendarManaged":
     "Tiêu đề và ngày theo lời mời trên lịch. Ghi chú chỉ được lưu trong Margince.",
   "worklist.verb.retry": "Chạy lại",
