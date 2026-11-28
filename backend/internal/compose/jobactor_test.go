@@ -24,11 +24,11 @@ var jobActorUnbound = gatekit.Waive(map[string]string{
 })
 
 // A worker may construct its store through a helper; trace the data handle too.
-var storeBuilders = regexp.MustCompile(`(providerRunStore|workspaceJobDB|InstallationDB|database\.BindTo)\(`)
+var storeBuilders = regexp.MustCompile(`(providerRunStore|InstallationDB|database\.BindTo)\(`)
 
 // A nested tool’s passport does not authorize the worker that called it.
 var actorBinders = regexp.MustCompile(
-	`\w+\s*(=|:=)\s*(forColleague|providerJobActor|reconcileWorkerCtx|partSlimJobActor|principal\.(WithActor|SystemActing))\(`)
+	`\w+\s*(=|:=)\s*(forColleague|providerJobActor|reconcileWorkerCtx|partSlimJobActor|geocodeJobActor|technicalActor|vatCheckJobActor|principal\.(WithActor|SystemActing))\(`)
 
 // Work signatures may omit the job argument; the receiver identifies the worker.
 var workMethod = regexp.MustCompile(`func \(\w+ \*(\w+)\) (?:Work|\w*[Ww]orkspace)\(`)

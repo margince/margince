@@ -5,71 +5,37 @@
 
 package gates
 
-// A FleetWide declaration is a promise: this job enumerates and enqueues, and
-// does no tenant write of its own (jobs.FleetWide). jobrole_test.go proves every
-// job DECLARES a role; this gate proves the FleetWide half of that declaration
-// is true of the code. Without it a pass could keep the marker, keep its null
-// `args->>'workspace_id'`, and quietly do a tenant's work inside one row again —
-// the shape whose per-workspace failures have nowhere durable to land.
+// A FleetWide declaration is a promise: this job enumerates and enqueues, or
+// runs one pass over the installation, and writes no tenant row inline
+// (jobs.FleetWide). jobrole_test.go proves every job declares a kind; this gate
+// proves the FleetWide half of that declaration is true of the code.
 //
 // # The allowlist
 //
-// "Reaches an insert" is interprocedural — a dispatch travels through package
-// helpers, injected inserters and store transactions — so it is not honestly
-// AST-checkable, and a gate that pretended otherwise would be lying about what
-// it verified. This one is a CLOSED ALLOWLIST instead: a dispatcher's Work must
-// contain a call to one of compose's three fan-out helpers —
-// dispatchPerWorkspace, dispatchWith or dispatchOne.
+// "Reaches an insert" is interprocedural, since a dispatch travels through
+// package helpers, injected inserters and store transactions. So it is not
+// checkable on the syntax tree. This gate is a closed allowlist instead. A
+// FleetWide Work must call dispatchOnce, dispatchOne or runInstallationPass.
 //
-// The set is the whole allowlist, and a direct River Insert is deliberately
-// NOT in it. Those three are where a fan-out child's insert options are built,
-// which is where the sweep tag is stamped and where the child's declared queue
-// and attempt cap are read; a dispatcher that inserts around them enqueues a
-// child that is invisible to both sweep gauges and carries whatever numbers
-// its author typed. That is not hypothetical — it is what shipped, in the one
-// dispatcher a hand-maintained comment forgot to list. A fourth spelling is a
-// finding on purpose: adding one is then a deliberate act with a reviewer
-// attached.
+// A direct River insert is not in the set. The helpers are where a child's
+// insert options are built, which stamps the sweep tag and reads the declared
+// queue and attempt cap. A dispatcher that inserts around them enqueues a child
+// that neither sweep gauge sees. A fourth spelling is a finding, so adding one
+// takes a reviewer.
 //
-// # Which arm carries the weight
+// # Kinds that do their own pass
 //
-// The FLEET-WALK requirement is the load-bearing one, and what it prohibits has
-// narrowed once. It used to read "a FleetWide job must fan out", and the
-// regression it prevented was a worker that looped the fleet and called a store
-// method per tenant. ADR-0103 makes that loop the intended shape for a
-// scheduled pass — one job declaration, not a dispatcher and a child — so the
-// loop itself is no longer the finding.
-//
-// What is still a finding is reaching the fleet by HAND. runPerWorkspace is now
-// a sanctioned spelling beside the three dispatch helpers: it enumerates the
-// live workspaces, attempts every one, and joins the failures, so a pass that
-// walks the fleet through it cannot silently skip a tenant or swallow a
-// tenant's error. A `for` loop written at the call site gets none of that, and
-// nothing downstream catches it — jobbinding_test.go does not look at writes at
-// all (it catches a Work body binding its own workspace), and the RLS lane
-// catches only UNBOUND writes, while a fleet loop that binds the GUC per
-// workspace and then writes satisfies RLS completely.
-//
-// # Kinds that own no tenant and still do the work
-//
-// A FleetWide declaration says the job owns no tenant. Until ADR-0091 §8 that
-// implied a fan-out, because the work itself always belonged to some workspace.
-// It no longer does for a corpus phase D un-scoped: there is ONE corpus, so the
-// pass that rebuilds it is neither a workspace's job nor a dispatcher, and the
-// children it used to enqueue all walked the same rows. Such a kind is named in
-// fleetWideDoesItsOwnPass with the reason, and only the fan-out arm is waived —
-// it is still held to the no-tenant-write arm below, which is the arm that
-// matters once a job does the work in its own row.
+// Some FleetWide kinds do the work in their own row and have nothing to fan
+// out to. Such a kind is named in fleetWideDoesItsOwnPass with the reason, and
+// only the fan-out arm is waived. It is still held to the no-write arm below.
 //
 // # Reads are fine; writes are not
 //
-// Several sanctioned dispatchers READ tenant tables — the due-scans that find
-// which connections, builds or workspaces have work — and jobs.FleetWide
-// expressly permits that. So the second arm prohibits WRITES, scoped to what is
-// honestly visible: a SQL write STATEMENT in the dispatcher's own body or in a
-// helper method on the same worker type that its Work calls. No dispatcher in
-// the tree writes inline today, so this arm has no live subject; it is here so
-// that the first inline write is a finding rather than a precedent.
+// Several dispatchers read tenant tables to find the units that have work, and
+// jobs.FleetWide permits that. The second arm prohibits a SQL write statement
+// in the dispatcher's own body, or in a helper method on its worker that Work
+// calls. No dispatcher writes inline today. The first one that does is a
+// finding and not a precedent.
 
 import (
 	"go/ast"
@@ -92,34 +58,12 @@ import (
 // failure to resolve still trips it.
 const fleetWideDispatcherFloor = 20
 
-// fanOutHelpers are the compose helpers that ARE a fan-out. See the allowlist
-// above for why the set is closed and why a direct River insert is not in it.
-// fanOutHelpers are the sanctioned ways a FleetWide job reaches the fleet.
-//
-// The first two ENQUEUE one child per unit; the rest RUN the pass for each
-// workspace in this process, which is what ADR-0103 collapsed the workspace
-// dispatchers into — over the live workspaces, over every one including the
-// archived (what a retention pass owes), or over a set the pass scanned for
-// itself.
-//
-// runEach is that last case, and it is the loop the other two are built on. The
-// overlay reconcile uses it directly because its population is the DUE
-// connections rather than the fleet: its next_sweep_at gate is the backoff, and
-// sweeping a workspace that is not due would spend incumbent quota to do
-// nothing. Going through it rather than writing the loop is what keeps the
-// guarantee — every workspace attempted, the failures joined.
-//
-// dispatchPerWorkspace was a sixth, and it is gone: ADR-0103 retired the last
-// caller, and a helper nothing calls is a spelling this gate would go on
-// admitting for a shape the tree no longer has.
-//
-// All five are listed together because the arm below is about the same thing
-// for all of them: a FleetWide job must reach the
-// fleet through a helper that knows what a unit is, and not through a loop it
-// wrote itself.
+// fanOutHelpers are the ways a FleetWide job reaches the installation:
+// dispatchOnce and dispatchOne queue a child, and runInstallationPass runs the
+// pass in this process. runEveryWorkspacePass does the same for the cleanups
+// that must also reach archived workspaces.
 var fanOutHelpers = []string{
-	"dispatchWith", "dispatchOne",
-	"runPerWorkspace", "runPerEveryWorkspace", "runEach",
+	"dispatchOnce", "dispatchOne", "runInstallationPass", "runEveryWorkspacePass",
 }
 
 // fleetWideDispatcher is one resolved args→worker→Work association and what
@@ -403,7 +347,7 @@ func checkFleetWideDispatchers(t *testing.T, dir string) {
 			continue
 		}
 		if !d.fansOut {
-			t.Errorf("%s:%d: %s works FleetWide args %s but never reaches the fleet. It must do so through dispatchWith or dispatchOne — which build the child's insert options, so a direct River insert around them loses the sweep tag and the declared attempt cap — or through runPerWorkspace / runPerEveryWorkspace / runEach, which walk the workspaces in this process (ADR-0103). A loop of its own is the shape all four exist to replace.",
+			t.Errorf("%s:%d: %s works FleetWide args %s but never reaches the fleet. It must do so through dispatchOnce or dispatchOne — which build the child's insert options, so a direct River insert around them loses the sweep tag and the declared attempt cap — or through runInstallationPass, which runs the pass over the installation in this process (ADR-0103).",
 				d.pos.Filename, d.pos.Line, d.worker, d.args)
 		}
 		for _, verb := range d.writes {

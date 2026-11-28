@@ -167,13 +167,13 @@ func TestComposedFanOutUnitsCarryTheirEdge(t *testing.T) {
 		Queue:      "default",
 		Timeout:    TimeoutPolicy{Fixed: time.Minute},
 		OptsOwner:  OptsArgs,
-		FanOutUnit: FanOutWorkspace,
+		FanOutUnit: FanOutInstallation,
 		FanOutTo:   "ext_demo_refresh_ws",
 	}
 	if err := RegisterComposed([]Spec{dispatcher, extSpec("ext_demo_refresh_ws")}); err != nil {
 		t.Fatalf("RegisterComposed: %v", err)
 	}
-	if got := FanOutUnits()["ext_demo_refresh_ws"]; got != FanOutWorkspace {
+	if got := FanOutUnits()["ext_demo_refresh_ws"]; got != FanOutInstallation {
 		t.Fatalf("composed child's fan-out unit: got %v, want workspace", got)
 	}
 }

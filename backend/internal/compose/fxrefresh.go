@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/webread"
@@ -27,30 +28,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// FxRateRefreshArgs is the async FX-rate refresh job: fetch fresh rates for the
-// currencies this workspace already tracks and stage a proposal per changed
-// rate. WorkspaceID + RequestedBy carry the acting admin so the worker binds a
-// system principal on behalf of them. Uniqueness is keyed on WorkspaceID alone
-// (river:"unique") so two admins refreshing the same workspace collapse to one
-// crawl; RequestedBy is provenance-only, outside the uniqueness hash.
+// FxRateRefreshArgs is the async FX-rate refresh job. It fetches fresh rates
+// for the currencies the installation already tracks and stages a proposal per
+// changed rate. RequestedBy carries the acting admin, so the worker binds a
+// system principal on their behalf. The insert is unique by kind alone, so two
+// admins refreshing at once collapse to one crawl.
 type FxRateRefreshArgs struct {
-	Workspace   ids.UUID `json:"workspace_id" river:"unique"`
-	RequestedBy string   `json:"requested_by"`
+	RequestedBy string `json:"requested_by"`
 }
 
 // Kind is the stable River job identifier.
 func (FxRateRefreshArgs) Kind() string { return "fx_rate_refresh" }
 
-// WorkspaceID binds this refresh to its tenant (jobs.WorkspaceScoped).
-// The field is Workspace because Go forbids a field and a method of the
-// same name; the wire key stays workspace_id.
-func (a FxRateRefreshArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
 // rateRefreshWorkerCtx binds the agent a refresh runs as, acting for the admin
 // who asked under that admin's live grants. The refresh keeps no run row. An
 // admin who left or lost the rate sheet fails the job itself.
-func rateRefreshWorkerCtx(ctx context.Context, users *identity.Service, ws ids.UUID, requestedBy string) (context.Context, error) {
-	ctx = principal.WithCorrelationID(principal.WithWorkspaceID(ctx, ws), ids.NewV7())
+func rateRefreshWorkerCtx(ctx context.Context, users *identity.Service, requestedBy string) (context.Context, error) {
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return agentFor(ctx, users, requestedByUserID(requestedBy), rateRefreshAgentID)
 }
 
@@ -301,10 +295,17 @@ type fxRefreshWorker struct {
 }
 
 func (w *fxRefreshWorker) Work(ctx context.Context, job *river.Job[FxRateRefreshArgs]) error {
-	if _, err := workspaceJobCtx(ctx, job.Args); err != nil {
+	// A row queued before the upgrade has a different unique key from a new
+	// one, so two refreshes can be queued. One crawl at a time is the lock's.
+	lease, held, err := database.TrySessionLease(ctx, w.refresh.pool, "fx_rate_refresh", w.refresh.log)
+	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	asAdmin, err := rateRefreshWorkerCtx(ctx, w.users, job.Args.Workspace, job.Args.RequestedBy)
+	if !held {
+		return nil
+	}
+	defer lease.Close(ctx)
+	asAdmin, err := rateRefreshWorkerCtx(ctx, w.users, job.Args.RequestedBy)
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("fx refresh: the admin who asked cannot act: %w", err))
 	}

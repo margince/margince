@@ -15,7 +15,7 @@ import (
 
 func runPendingPass(ctx context.Context, pool *pgxpool.Pool, pass func(context.Context) (bool, error)) error {
 	more := false
-	err := runPerWorkspace(ctx, pool, func(ctx context.Context, workspace ids.UUID) error {
+	err := runInstallationPass(ctx, pool, func(ctx context.Context, workspace ids.UUID) error {
 		next, err := pass(principal.WithWorkspaceID(ctx, workspace))
 		more = more || next
 		return err

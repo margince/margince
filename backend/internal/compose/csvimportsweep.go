@@ -76,18 +76,14 @@ func requeueImportAttempt(ctx context.Context, tx pgx.Tx, run migration.Run) (bo
 	if err != nil {
 		return false, fmt.Errorf("the sweep runs outside a River job: %w", err)
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return false, errors.New("the sweep's context binds no workspace")
-	}
 	var args importJobArgs
 	switch run.Status {
 	case migration.StatusRunning:
-		args = ImportCommitArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt}
+		args = ImportCommitArgs{RunID: run.ID, Attempt: run.JobAttempt}
 	case migration.StatusUndoing:
-		args = ImportUndoArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt}
+		args = ImportUndoArgs{RunID: run.ID, Attempt: run.JobAttempt}
 	case migration.StatusValidating:
-		args = ImportValidateArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt}
+		args = ImportValidateArgs{RunID: run.ID, Attempt: run.JobAttempt}
 	default:
 		return false, fmt.Errorf("import run %s is %s, which no job works", run.ID, run.Status)
 	}
@@ -101,10 +97,6 @@ func requeueImportAttempt(ctx context.Context, tx pgx.Tx, run migration.Run) (bo
 // Work runs every rule even when one fails, so one broken rule cannot keep
 // the others' runs, and their files, held.
 func (w *importRunSweepWorker) Work(ctx context.Context, _ *river.Job[ImportRunSweepArgs]) error {
-	ctx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, fmt.Errorf("import_run_sweep: resolving the installation: %w", err))
-	}
 	ctx = principal.SystemActing(ctx, "system:import-run-sweep")
 	runs := migration.NewRunStore(InstallationDB(w.pool))
 	var failures []error

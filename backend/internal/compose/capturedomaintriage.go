@@ -24,7 +24,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -150,7 +149,6 @@ func startDomainTriageRead(ctx context.Context, contactsStore *contacts.Store, d
 	_, joined, err := contactsStore.StartDomainTriageSiteRead(ctx, domain, systemDomainTriageActor,
 		func(ctx context.Context, tx pgx.Tx, read contacts.SiteRead) error {
 			_, insErr := client.InsertTx(ctx, tx, SiteDeepReadArgs{
-				Workspace:   storekit.MustWorkspace(ctx),
 				SiteReadID:  read.ID,
 				RequestedBy: read.RequestedBy,
 				// Declared in the payload as well as enforced at the worker: a

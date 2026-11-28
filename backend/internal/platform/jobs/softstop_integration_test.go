@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
@@ -67,6 +68,7 @@ func softStopRunner(t *testing.T, held *heldWorker, window time.Duration) (*jobs
 	workers := river.NewWorkers()
 	river.AddWorker(workers, held)
 	r, err := jobs.New(pool, jobs.Config{
+		BindWorkspace:   func(ctx context.Context, _ *rivertype.JobRow) (context.Context, error) { return ctx, nil },
 		Queues:          map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 2}},
 		Workers:         workers,
 		SoftStopTimeout: window,

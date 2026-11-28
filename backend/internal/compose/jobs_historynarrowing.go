@@ -38,7 +38,7 @@ func (w *captureHistoryNarrowingWorker) Work(ctx context.Context, _ *river.Job[C
 		return nil
 	}
 	var worked bool
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
 		if worked {
 			return nil
 		}

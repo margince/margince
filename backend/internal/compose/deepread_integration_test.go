@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -124,7 +125,6 @@ func startDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (contacts
 		t.Fatal("the first start joined — the fixture is not clean")
 	}
 	return read, SiteDeepReadArgs{
-		Workspace:   e.WS,
 		CompanyID:   company,
 		SiteReadID:  read.ID,
 		RequestedBy: read.RequestedBy,
@@ -156,7 +156,7 @@ func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
 	read, args := startDeepRead(t, e, company)
 
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
@@ -187,7 +187,7 @@ func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.
 	}
 
 	// A River retry after the terminal outcome no-ops: no second crawl, nothing written twice.
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("retry after done: %v", err)
 	}
 	if got := e.WsScalar(t, `SELECT count(*) || ' ' || max(captured_by) FROM company_profile_field WHERE company_id = $1`, company); got != "2 agent:deepread" {
@@ -262,7 +262,7 @@ func TestDeepReadWithNothingEvidencedIsAnHonestEmptyDoneWithNoProposal(t *testin
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), hallucinated)
 	read, args := startDeepRead(t, e, company)
 
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
@@ -285,7 +285,7 @@ func TestDeepReadCrawlFailureFinishesFailedAndARetryNoOps(t *testing.T) {
 	worker, _ := newDeepReadTestWorker(e, &fakeSite{pages: map[string]fakeSitePage{}}, ai.NewFakeClient())
 	read, args := startDeepRead(t, e, company)
 
-	if err := worker.run(context.Background(), args); err == nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err == nil {
 		t.Fatal("a failed crawl returned nil — River would record success")
 	}
 	failed := readDossier(t, e, company, read.ID)
@@ -295,7 +295,7 @@ func TestDeepReadCrawlFailureFinishesFailedAndARetryNoOps(t *testing.T) {
 
 	// The River retry after the recorded failure: Begin CAS-misses and the
 	// attempt no-ops — one honest failure, no zombie re-crawl.
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("retry after failed: %v", err)
 	}
 	after := readDossier(t, e, company, read.ID)
@@ -313,7 +313,7 @@ func TestDeepReadOnABrainlessWorkerFailsTheReadActionably(t *testing.T) {
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), nil)
 	read, args := startDeepRead(t, e, company)
 
-	err := worker.run(context.Background(), args)
+	err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args)
 	if err == nil || !strings.Contains(err.Error(), "--ai-routing") {
 		t.Fatalf("run on a brainless worker → %v, want the actionable no-model-path error", err)
 	}
@@ -332,7 +332,7 @@ func TestDeepReadBudgetDeferralSnoozesTheDurableJob(t *testing.T) {
 	worker.now = func() time.Time { return now }
 	read, args := startDeepRead(t, e, company)
 
-	err := worker.Work(context.Background(), &river.Job[SiteDeepReadArgs]{Args: args})
+	err := worker.Work(boundBackground(t), &river.Job[SiteDeepReadArgs]{Args: args})
 	var snooze *river.JobSnoozeError
 	if !errors.As(err, &snooze) || snooze.Duration != next.Sub(now) {
 		t.Fatalf("Work error = %v, want snooze for %s", err, next.Sub(now))
@@ -354,7 +354,7 @@ func TestDeepReadProviderOutageSnoozesUntilTheProbe(t *testing.T) {
 	worker.now = func() time.Time { return now }
 	read, args := startDeepRead(t, e, company)
 
-	err := worker.Work(context.Background(), &river.Job[SiteDeepReadArgs]{Args: args})
+	err := worker.Work(boundBackground(t), &river.Job[SiteDeepReadArgs]{Args: args})
 	var snooze *river.JobSnoozeError
 	if !errors.As(err, &snooze) || snooze.Duration != probe.Sub(now) {
 		t.Fatalf("Work error = %v, want snooze for %s, not a failed attempt", err, probe.Sub(now))
@@ -379,7 +379,7 @@ func TestDeepReadModelFailureMidwayKeepsWhatWasReadAsPartial(t *testing.T) {
 	worker, _ := newDeepReadTestWorker(e, site, brain)
 	read, args := startDeepRead(t, e, company)
 
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
@@ -436,7 +436,7 @@ func runServicesDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (co
 	t.Helper()
 	worker, svc := newDeepReadTestWorker(e, acmeServicesSite(), servicesDeepBrain())
 	read, args := startDeepRead(t, e, company)
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	done := readDossier(t, e, company, read.ID)
@@ -463,7 +463,7 @@ func TestDeepReadStartQueuesOnceAndAReClickJoinsWithoutASecondInsert(t *testing.
 	if !ok {
 		t.Fatalf("enqueued %T, want SiteDeepReadArgs", inserter.inserts[0])
 	}
-	if args.Workspace != e.WS || args.CompanyID != company ||
+	if args.CompanyID != company ||
 		args.SiteReadID != ids.UUID(first.ReadId) || args.RequestedBy != "human:"+e.Rep1.String() {
 		t.Fatalf("job args = %+v, want the dossier's own identity and the human who asked", args)
 	}
@@ -505,7 +505,7 @@ func seedHousekeepingSiteDeepRead(t *testing.T, e *integration.Env, company ids.
 			readID, company, contacts.TargetKindCompany, seedURL, "system:capture_auto_enrich"); err != nil {
 			return err
 		}
-		args, err := json.Marshal(SiteDeepReadArgs{Workspace: e.WS, CompanyID: company, SiteReadID: readID, RequestedBy: "system:capture_auto_enrich"})
+		args, err := json.Marshal(SiteDeepReadArgs{CompanyID: company, SiteReadID: readID, RequestedBy: "system:capture_auto_enrich"})
 		if err != nil {
 			return err
 		}
@@ -647,7 +647,7 @@ func TestDeepReadFinishSurvivesACancelledWorkContext(t *testing.T) {
 
 	// The dossier is picked up (queued → running), then the work context dies
 	// — exactly the shape the live incident hit mid-extraction.
-	workCtx, cancel := context.WithCancel(deepReadWorkerCtx(context.Background(), args))
+	workCtx, cancel := context.WithCancel(deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args))
 	claim, err := worker.contacts.BeginSiteRead(workCtx, read.ID, worker.reclaimAfter())
 	if err != nil {
 		t.Fatalf("begin: %v", err)
@@ -690,7 +690,7 @@ func TestDeepReadCancelsAnAutoEnrichJobWhenTheSettingWentOff(t *testing.T) {
 		INSERT INTO setting (key, value) VALUES ('capture.auto_enrich', to_jsonb(false))
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
 
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
@@ -719,7 +719,7 @@ func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames(t *testing.T) {
 	e.WsExec(t, `UPDATE site_read SET requested_by = $1 WHERE id = $2`, "human:"+e.Rep2.String(), read.ID)
 	e.GrantRole(t, e.Rep2, "admin")
 
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	// The read applies its findings itself now, so the question is asked of the
@@ -752,7 +752,7 @@ func TestDeepReadHonoursThePageLimitAnAdminSetBeforeItStarted(t *testing.T) {
 		capture.SettingsPatch{SiteReadMaxPages: &onePage}); err != nil {
 		t.Fatal(err)
 	}
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
@@ -779,7 +779,7 @@ func readTheCasinoOnAcmesDomain(t *testing.T, e *integration.Env, company ids.UU
 	worker.blob, worker.fetch = blobstore.NewMemory(), &assetSite{assets: map[string][]byte{touchIconURL: logoFixture(t, 512, 512)}}
 	read, args := startDeepRead(t, e, company)
 	e.WsExec(t, `UPDATE site_read SET requested_by = $1 WHERE id = $2`, requestedBy, read.ID)
-	if err := worker.run(context.Background(), args); err != nil {
+	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	return readDossier(t, e, company, read.ID)

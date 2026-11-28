@@ -72,7 +72,7 @@ type replySettledWorker struct {
 }
 
 func (w *replySettledWorker) Work(ctx context.Context, _ *river.Job[ReplySettledStampArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.stampWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.stampWorkspace))
 }
 
 func (w *replySettledWorker) stampWorkspace(ctx context.Context, workspace ids.UUID) error {

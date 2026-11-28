@@ -148,7 +148,7 @@ func composedJobSpecs(set []composedJob) []jobs.Spec {
 				GoType:     "extJobDispatcherArgs",
 				Role:       jobs.Dispatcher,
 				Timeout:    jobs.TimeoutPolicy{Fixed: j.decl.DispatcherTimeout},
-				FanOutUnit: jobs.FanOutWorkspace,
+				FanOutUnit: jobs.FanOutInstallation,
 				FanOutTo:   j.decl.ChildKind(),
 				// The TICK owns this row's insert options, exactly as it does for
 				// every core dispatcher: periodicForComposed hands River
@@ -178,7 +178,6 @@ func composedJobSpecs(set []composedJob) []jobs.Spec {
 				OptsOwner:   jobs.OptsFanOut,
 				Args: []jobs.ArgField{
 					{Name: "JobKind", Scalar: true, Reason: "see the dispatcher's"},
-					{Name: "Workspace"},
 				},
 			},
 		)

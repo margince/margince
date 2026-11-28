@@ -76,10 +76,7 @@ type approvalExpiryWorker struct {
 //
 // Which leaves this worker with one job, and no cross-module edge at all.
 func (w *approvalExpiryWorker) Work(ctx context.Context, _ *river.Job[ApprovalExpiryArgs]) error {
-	passCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	passCtx := ctx
 	// The clock is the actor. Every expiry writes an audit row and an event, and
 	// both need a principal on the context — but no human decided any of this,
 	// so binding one would put somebody's name on refusals they never made. The

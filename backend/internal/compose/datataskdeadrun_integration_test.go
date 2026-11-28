@@ -107,7 +107,7 @@ func TestARunBesideALiveRunWaitsInsteadOfFinishing(t *testing.T) {
 		t.Fatalf("taking the run lock: held=%v err=%v", held, err)
 	}
 	t.Cleanup(release)
-	if got := snoozeOf(t, (&dataTaskRunWorker{pool: e.Pool}).Work(t.Context(), nil)); got != dataTaskBusyWait {
+	if got := snoozeOf(t, (&dataTaskRunWorker{pool: e.Pool}).Work(boundBackground(t), nil)); got != dataTaskBusyWait {
 		t.Errorf("a run beside a live one snoozed %s, want %s", got, dataTaskBusyWait)
 	}
 }
