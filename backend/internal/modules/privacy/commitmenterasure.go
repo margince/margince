@@ -187,6 +187,8 @@ func eraseCommitmentClaims(ctx context.Context, tx pgx.Tx, item commitmentErasur
 	if err != nil {
 		return err
 	}
+	// contacts' deleteArchivedClaim writes the same image and event for the
+	// duplicates it deletes; neither module may import the other.
 	for _, claim := range claims {
 		auditID, err := storekit.Audit(ctx, tx, "update", "contact", claim.contact, map[string]any{"claim_id": claim.id},
 			map[string]any{"claim_id": claim.id, "claim_erased": true})

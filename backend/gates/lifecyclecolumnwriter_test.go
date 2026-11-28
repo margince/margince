@@ -80,7 +80,7 @@ var appendOnlyLifecycle = gatekit.Waive(map[string]string{
 	"list_revision.version": "version copies the list's own version at the revision it records. It is a snapshot " +
 		"of the counter on list, not a counter of this row.",
 	"conversation_claim.archived_at": "A migration archived the duplicate claims the evidence index refused, and " +
-		"the archivedclaims data task deletes them. The column goes once a release guarantees that task ran.",
+		"contacts.ArchivedClaimsDataTask deletes them. The column goes once a release guarantees that task ran.",
 	"workspace.archived_at": "An archived workspace row is a predecessor company merged in before the current " +
 		"code. The installation's workspace lookups skip it, and boot warns while one is stored.",
 })

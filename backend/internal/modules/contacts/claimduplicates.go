@@ -17,26 +17,42 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // An archived claim is a duplicate the evidence index retired: its kept twin
 // carries what a human did, and every reader hides the archived one.
 const archivedClaimScope = `archived_at IS NOT NULL`
 
-// DeleteArchivedClaimsTx inspects the claims after the cursor in key order and
-// deletes the archived duplicates among them. Each delete is audited on its
-// contact and announced as erased, as a claim erasure is.
-func DeleteArchivedClaimsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, int, error) {
-	if err := auth.RequireSystem(ctx); err != nil {
-		return nil, 0, err
+// ArchivedClaimsDataTask deletes the duplicate claims migration 1791101875
+// archived, so a later release can drop the mark.
+func ArchivedClaimsDataTask() datatask.Task {
+	return datatask.Task{
+		ID: "core/1795851263_archived_claims_deleted", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795851263_archived_claims_deleted"),
+		Requires: []string{"core/1791101875"},
+		Steps: []datatask.Step{{
+			Name: "conversation_claim", Limit: 200, MinLimit: 1,
+			Audit:    datatask.AuditPolicy{PerRecord: true},
+			Estimate: countArchivedClaims, Batch: deleteArchivedClaimsBatch, EmptyWhenDone: true,
+		}},
 	}
-	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
-		return nil, 0, err
+}
+
+// deleteArchivedClaimsBatch inspects the claims after the cursor in key order
+// and deletes the archived duplicates among them.
+func deleteArchivedClaimsBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return datatask.BatchOut{}, err
+	}
+	after, err := datatask.UUIDCursor(in.Cursor)
+	if err != nil {
+		return datatask.BatchOut{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT id, `+archivedClaimScope+` FROM conversation_claim
-		WHERE id > @after ORDER BY id LIMIT @batchLimit`, pgx.NamedArgs{afterCursorArg: after, "batchLimit": limit})
+		WHERE id > @after ORDER BY id LIMIT @batchLimit`, pgx.NamedArgs{afterCursorArg: after, "batchLimit": in.Limit})
 	if err != nil {
-		return nil, 0, fmt.Errorf("page the claims to inspect: %w", err)
+		return datatask.BatchOut{}, fmt.Errorf("page the claims to inspect: %w", err)
 	}
 	type inspectedClaim struct {
 		id       ids.UUID
@@ -48,7 +64,7 @@ func DeleteArchivedClaimsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limi
 		return claim, err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("page the claims to inspect: %w", err)
+		return datatask.BatchOut{}, fmt.Errorf("page the claims to inspect: %w", err)
 	}
 	inspected := make([]ids.UUID, 0, len(claims))
 	deleted := 0
@@ -59,13 +75,13 @@ func DeleteArchivedClaimsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limi
 		}
 		gone, err := deleteArchivedClaim(ctx, tx, claim.id)
 		if err != nil {
-			return nil, 0, err
+			return datatask.BatchOut{}, err
 		}
 		if gone {
 			deleted++
 		}
 	}
-	return inspected, deleted, nil
+	return datatask.AdvanceUUID(in, inspected, deleted)
 }
 
 // deleteArchivedClaim reports false when the claim is no longer an archived
@@ -81,8 +97,10 @@ func deleteArchivedClaim(ctx context.Context, tx pgx.Tx, claimID ids.UUID) (bool
 	if err != nil {
 		return false, fmt.Errorf("delete the archived claim: %w", err)
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID,
-		map[string]any{claimIDKey: claimID.String()}, map[string]any{claimIDKey: claimID.String(), "claim_erased": true})
+	// The image and event match privacy's eraseCommitmentClaims. A module may
+	// not import privacy, and eventtypeownership_test.go names privacy as the second emitter.
+	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID, map[string]any{claimIDKey: claimID},
+		map[string]any{claimIDKey: claimID, "claim_erased": true})
 	if err != nil {
 		return false, fmt.Errorf("audit the deleted claim: %w", err)
 	}
@@ -91,14 +109,16 @@ func deleteArchivedClaim(ctx context.Context, tx pgx.Tx, claimID ids.UUID) (bool
 	})
 }
 
-// CountArchivedClaims counts the archived claims still stored, up to the cap
+// countArchivedClaims counts the archived claims still stored, up to the cap
 // plus one.
-func CountArchivedClaims(ctx context.Context, q datatask.Querier, limit int64) (int64, error) {
-	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
-		return 0, err
+func countArchivedClaims(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
+	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
+		return 0, false, err
 	}
 	var count int64
-	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM conversation_claim WHERE `+archivedClaimScope+`
-		LIMIT @estimateCap) archived`, pgx.NamedArgs{"estimateCap": limit + 1}).Scan(&count)
-	return count, err
+	if err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM conversation_claim WHERE `+archivedClaimScope+`
+		LIMIT @estimateCap) archived`, pgx.NamedArgs{"estimateCap": maximum + 1}).Scan(&count); err != nil {
+		return 0, false, fmt.Errorf("contacts: counting the archived claims: %w", err)
+	}
+	return min(count, maximum), count > maximum, nil
 }
