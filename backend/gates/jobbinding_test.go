@@ -11,17 +11,14 @@ import (
 	"testing"
 )
 
-// workspaceBindFloor guards against a vacuous pass. This gate is a
-// PROHIBITION, so "found nothing" is what success looks like, which means it
-// would also read green if the walker silently matched no files at all. The
-// floor counts the POSITIVE side instead: Work methods that bind through the
-// installation helpers.
+// workspaceBindFloor guards against a vacuous pass. This gate prohibits, so
+// finding nothing reads as success. The floor counts the other side: Work
+// methods that bind through the installation helpers.
 const workspaceBindFloor = 15
 
-// TestOnlyTheSharedHelperBindsAWorkspace holds a job's workspace binding in one
-// place. A job names no workspace, so a Work body binds the installation's
-// through bindInstallation or installationJobCtx, and this gate keeps a Work
-// body from binding inline beside them.
+// TestOnlyTheSharedHelperBindsAWorkspace keeps the workspace binding in one
+// place. A Work body binds through bindInstallation or installationJobCtx, and
+// never inline.
 func TestOnlyTheSharedHelperBindsAWorkspace(t *testing.T) {
 	t.Parallel()
 	fset, files := parseGoFilesUnder(t, filepath.Join("internal", "compose"))

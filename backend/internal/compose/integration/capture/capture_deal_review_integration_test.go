@@ -491,14 +491,6 @@ func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
 	}
 }
 
-func (q *readingQueue) first(t *testing.T) compose.StageEvidenceReadArgs {
-	t.Helper()
-	if len(q.asked) == 0 {
-		t.Fatal("the trigger queued no reading of the repaired mail")
-	}
-	return q.asked[0]
-}
-
 // waitForLockWaiters returns once n other sessions wait on a row lock. The race
 // is set up by what the database reports, not by sleeping.
 func waitForLockWaiters(t *testing.T, e *integration.SearchEnv, holder uint32, n int) {

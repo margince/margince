@@ -50,14 +50,13 @@ func (extJobDispatcherArgs) FleetWide() {}
 
 // extJobWorkspaceArgs is the tick of one composed job.
 //
-// The row carries NO principal. What acts is the job, not a contact: the tick's
-// authority is a pure function of the declaration (extensionJobPrincipal), so
-// there is nothing about it a queued row could carry stale.
+// The row carries no principal. What acts is the job, and its authority is a
+// pure function of the declaration (extensionJobPrincipal), so a queued row has
+// nothing to carry stale.
 //
-// The args are the kind alone, so ByArgs uniqueness holds at most one live tick
-// of a job: a second varying field would have to be tagged `river:"unique"`
-// here, or an untagged hash would widen the key and let a second concurrent
-// tick start while the first was in flight.
+// The args are the kind alone, so ByArgs uniqueness holds one live tick of a
+// job. A second varying field would need `river:"unique"` here, or the hash
+// would widen and let a second tick start while the first runs.
 type extJobWorkspaceArgs struct {
 	JobKind string `json:"job_kind"`
 }
@@ -71,12 +70,11 @@ type extJobDispatcherWorker struct {
 	decl extension.JobDeclaration
 }
 
-// Work enqueues the job's tick as ONE insert, once the installation has a
+// Work enqueues the job's tick in one insert, once the installation has a
 // company.
 //
-// Enablement is DIRECTORY PRESENCE: an installation that composed a unit
-// composed it for the whole installation, and there is no per-tenant switch for
-// the tick to consult.
+// Enablement is directory presence: a unit composed into an installation is
+// composed for all of it, so the tick has no switch to consult.
 func (w *extJobDispatcherWorker) Work(ctx context.Context, _ *river.Job[extJobDispatcherArgs]) error {
 	_, ok, err := database.LiveWorkspace(ctx, w.pool)
 	if err != nil || !ok {
@@ -138,11 +136,9 @@ type extJobWorkspaceWorker struct {
 }
 
 func (w *extJobWorkspaceWorker) Work(ctx context.Context, job *river.Job[extJobWorkspaceArgs]) error {
-	// FIRST, and before anything reads a row: the workspace this tick is for.
-	// Every capability the handler is about to be handed re-derives the tenant
-	// from the context it is invoked on, so an unpinned invocation would not
-	// leak — it would refuse — but it would refuse at the unit's first query,
-	// which names the wrong fault.
+	// First, before anything reads a row: every capability the handler gets
+	// re-derives the workspace from the context. An unbound context would refuse
+	// at the unit's first query, which names the wrong fault.
 	wsCtx, err := bindInstallation(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)

@@ -211,14 +211,12 @@ func TestOneOffChildOptsRefusesAKindWhoseOptsItDoesNotOwn(t *testing.T) {
 	oneOffChildOpts(TelegramPollArgs{}.Kind()) // opts_owner: args
 }
 
-// TestDispatchOnceMarksTheChildAsAFleetPass — the
-// sweep gauges cannot tell a fleet pass from a hand-triggered workspace job
-// by kind alone, because they are the same kind. The tag is the difference.
+// TestDispatchOnceMarksTheChildAsAFleetPass: the sweep gauges cannot tell a
+// fleet pass from a hand-triggered job by kind, so the tag is the difference.
 //
-// This covers the dispatchOnce builder. The other one, fanOutChildOpts, is
-// covered by the posture tests above — between them every fan-out child's
-// opts are built here or there, and TestNoScheduledDispatcherIsEnqueuedByHand
-// is what proves no dispatcher is placed by a third spelling.
+// This covers the dispatchOnce builder. fanOutChildOpts, the other one, is
+// covered by the posture tests above, and TestNoScheduledDispatcherIsEnqueuedByHand
+// proves no dispatcher is placed by a third spelling.
 func TestDispatchOnceMarksTheChildAsAFleetPass(t *testing.T) {
 	var got []river.InsertManyParams
 	insert := func(_ context.Context, params []river.InsertManyParams) error {

@@ -164,8 +164,8 @@ func TestSendEmailWorkerFailsARetryThatCarriesNoCause(t *testing.T) {
 }
 
 // Every comms_outbound read and transition the dispatcher makes predicates on
-// the bound workspace, so the installation's workspace has to be on the context;
-// without it the load finds nothing and the send silently never happens.
+// the bound workspace. Without the installation's workspace on the context, the
+// load finds nothing and the send never happens.
 func TestSendEmailWorkerBindsTheInstallationsWorkspaceAndTheJobsDelivery(t *testing.T) {
 	ws, delivery := ids.NewV7(), ids.NewV7()
 	dispatcher := &stubDispatcher{outcome: comms.OutcomeSent}
@@ -211,9 +211,8 @@ func TestSendEmailWorkerDispatchesUnderASystemActorAndACorrelationID(t *testing.
 	}
 }
 
-// An argument that names no delivery has nothing to dispatch: the job must
-// fail rather than run against a zero id, which would read as "some other
-// delivery" to a row-scoped query.
+// An argument that names no delivery has nothing to dispatch. The job must
+// fail, because a zero id would read as another delivery to a row-scoped query.
 func TestSendEmailWorkerRefusesAJobArgumentThatNamesNothing(t *testing.T) {
 	cases := map[string]SendEmailArgs{
 		"delivery": {DeliveryID: "not-a-uuid"},

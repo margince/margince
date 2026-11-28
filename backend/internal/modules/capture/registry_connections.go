@@ -440,8 +440,8 @@ func (r *Registry) DueConnections(ctx context.Context, name string) ([]DueConnec
 }
 
 // collectDue is the scan the poll (DueConnections) and the watch scan
-// (DueWatches) share: it enters the installation's workspace GUC and returns
-// the connection ids the selector returns, tagged with their workspace.
+// (DueWatches) share. It enters the installation's workspace GUC and returns
+// the connection ids the selector picks, tagged with their workspace.
 func (r *Registry) collectDue(ctx context.Context, selector func(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error)) ([]DueConnection, error) {
 	wsID, ok, err := database.LiveWorkspace(ctx, r.db.Pool())
 	if err != nil || !ok {

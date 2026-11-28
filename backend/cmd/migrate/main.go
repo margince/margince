@@ -207,13 +207,10 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 			return fmt.Errorf("migrate up: writing the reconcile count: %w", err)
 		}
 	}
-	// No REQUEST ceiling — River's own migrator and the index drop below are DDL, and
-	// this is the role that runs it — but the MIGRATION ceiling still applies.
-	// WithoutRequestCeilings lifts statement_timeout to 0, which is right for
-	// escaping the 30s a request gets and wrong as a final answer: River's migrator
-	// takes the same kind of lock on the same tables as the files above, so leaving
-	// this pool unbounded would bound the half of the deploy that happens to run
-	// through conn and not the half that runs through here.
+	// No request ceiling: River's migrator and the index drop are DDL, and this
+	// role runs them. The migration ceiling still applies, because River's
+	// migrator takes the same locks as the files above, and an unbounded pool
+	// would leave this half of the deploy without a bound.
 	riverPool, err := database.NewPool(ctx, riverMigrationDSN(dsn, ceiling))
 	if err != nil {
 		return fmt.Errorf("migrate: opening river pool: %w", err)
@@ -247,15 +244,11 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 const upSummaryFormat = "applied %d core+custom+extension + %d river migration(s); schema is at head\n"
 
 // dropRiverWorkspaceArgIndex removes the index an earlier release built over
-// the job args' workspace key. No job names a workspace any more and nothing
-// reads that key, so the index only costs writes on river_job.
+// the job args' workspace key. Nothing reads that key now.
 //
-// It lives here rather than in a migration file for the reason the index did:
-// river_job is not ours, the table does not exist while the core lane runs
-// (River's own migrator creates it, on the pool opened above), and dbmigrate
-// wraps every migration in a transaction. Plain DROP INDEX IF EXISTS takes a
-// brief lock on a table whose rows are short-lived, so it needs no
-// concurrent form.
+// It lives here and not in a migration file because river_job does not exist
+// while the core lane runs, and dbmigrate wraps every migration in a
+// transaction.
 const dropRiverWorkspaceArgIndex = `DROP INDEX IF EXISTS river_job_workspace_arg`
 
 // reportExtensionNamespaces names the extension lanes BEFORE they are

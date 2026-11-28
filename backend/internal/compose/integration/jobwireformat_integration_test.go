@@ -5,12 +5,10 @@
 
 package integration
 
-// What River's encoder actually writes into river_job.args, read back off a
-// real Postgres. An installation holds one company, so no job names a
-// workspace, and a row that carried the key again would tell a reader of
-// river_job (the job-health read, the metrics) to filter on a field the
-// installation no longer has. The key is read off the encoded row, not the
-// decoded Go struct, which agrees with itself whatever the encoder wrote.
+// What River's encoder writes into river_job.args, read back off a real
+// Postgres. An installation holds one company, so no job names a workspace.
+// The key is read off the encoded row because the decoded Go struct agrees
+// with itself whatever the encoder wrote.
 
 import (
 	"context"
@@ -51,7 +49,7 @@ func TestNoJobArgsShipAWorkspaceKey(t *testing.T) {
 		compose.TelegramPollSweepArgs{},
 	}
 
-	// The high-water mark fences the read to rows THIS test inserted, so the
+	// The high-water mark fences the read to rows this test inserted, so the
 	// assertion does not depend on the table arriving empty.
 	var highWater int64
 	if err := e.Pool.QueryRow(ctx, `SELECT coalesce(max(id), 0) FROM river_job`).Scan(&highWater); err != nil {

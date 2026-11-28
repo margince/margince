@@ -146,11 +146,10 @@ func newGeocodeWorker(pool *pgxpool.Pool, geocoder geocode.Client) *geocodeWorke
 // nothing is the one where there was nothing to ask about.
 func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeCompanyArgs]) error {
 	args := job.Args
-	// Bound through the shared helper, so the args' own WorkspaceID() IS the
-	// binding: a worker that picked its own could claim one workspace and work
-	// in another. Under a NEW name rather than reassigning ctx, because
-	// workspaceJobCtx returns a nil context alongside its error and the refusal
-	// below has to report through a context that exists.
+	// Bound through the shared helper. Under a NEW name rather than
+	// reassigning ctx, because bindInstallation returns a nil context alongside
+	// its error and the refusal below has to report through a context that
+	// exists.
 	wsCtx, err := bindInstallation(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)

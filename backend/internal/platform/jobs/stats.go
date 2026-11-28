@@ -17,14 +17,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// SweepTag marks a job row as one share of a fleet pass. Every
-// site that fans work out to the fleet stamps it; a job enqueued by a user
-// action carries no tag and is correctly not counted as a fleet pass.
+// SweepTag marks a job row as one share of a fleet pass. Every site that fans
+// work out stamps it. A job enqueued by a user action carries no tag and is not
+// counted as a fleet pass.
 //
-// Nothing enforces that a new fan-out remembers the tag — an untagged one
-// is simply absent from the sweep gauges. Deriving that obligation needs a
-// static notion of "this insert is a fan-out" the tree does not support
-// today.
+// Nothing enforces that a new fan-out remembers the tag. An untagged one is
+// absent from the sweep gauges, and deriving that obligation needs a static
+// notion of a fan-out insert that the tree does not support.
 const SweepTag = "sweep"
 
 // sweepTagPredicate is the tag test, spelled once. River stores tags in a
@@ -71,34 +70,26 @@ type StateRow struct {
 }
 
 // SweepPass is one fleet-pass kind read as a whole: whether it has a surviving
-// tagged row, and whether the latest of those that ENDED failed. An
-// installation holds one company, so a kind has one pass to count: Passes is 1
-// when the kind has a tagged row at all and Failed is 1 when the latest ended
-// one is dead.
+// tagged row, and whether the latest of those that ended failed. An installation
+// holds one company, so a kind has one pass: Passes is 1 when the kind has a
+// tagged row, and Failed is 1 when the latest ended one is dead.
 type SweepPass struct {
 	Kind   string
 	Passes int64
 	Failed int64
 }
 
-// SweepUnit is one fan-out kind read per FAN-OUT UNIT — the grain the
-// dispatcher actually ran the pass at — for the kinds whose unit is finer than
-// the installation.
+// SweepUnit is one fan-out kind read per fan-out unit, the grain the dispatcher
+// ran the pass at, for the kinds whose unit is finer than the installation.
 //
 // It exists because SweepPass counts one pass per kind, and three dispatchers
-// fan out per CONNECTION and one per BUILD. If one connection's child fails
-// while another succeeds afterwards, the kind's most recent child is the
-// successful one: the failure is real, the installation is being half-served,
-// and the kind pair reports nothing. Counting at the declared unit is what
-// makes that visible.
+// fan out per connection and one per build. If one connection's child fails and
+// another then succeeds, the kind's latest child is the successful one, and the
+// kind pair reports nothing. Counting at the declared unit makes it visible.
 //
-// Only the kinds whose unit is NOT the installation are reported. For the
-// others the unit is the whole kind, so this pair would restate SweepPass value
-// for value; publishing both would be one number twice.
-//
-// The two families therefore OVERLAP rather than partition: a per-connection
-// kind is reported by both, at two grains. The two must never be summed, and an
-// alert reads whichever grain it means.
+// Kinds whose unit is the installation are not reported, because this pair
+// would restate SweepPass value for value. A per-connection kind is reported by
+// both pairs at two grains, so the two must never be summed.
 type SweepUnit struct {
 	Kind string
 	Unit FanOutUnit
@@ -157,22 +148,20 @@ func Stats(ctx context.Context, pool *pgxpool.Pool) (Snapshot, error) {
 }
 
 // subWorkspaceFanOuts answers the fan-out child kinds whose declared unit is
-// finer than the installation, paired with the args key that identifies one — the
-// two arrays statsBySweepUnit joins the job table against.
+// finer than the installation, paired with the args key that identifies one.
+// statsBySweepUnit joins the job table against the two arrays.
 //
-// Derived from the contract on every call rather than kept as a list: a
-// dispatcher that changes its fan_out_unit, or a new one that fans out per
-// connection, is enrolled by the declaration that made it so. Both arrays are
-// built in one pass so they stay index-aligned by construction.
+// It derives the pairs from the contract on every call, so a dispatcher that
+// changes its fan_out_unit, or a new one that fans out per connection, is
+// enrolled by its declaration. Both arrays come from one pass, which keeps them
+// index-aligned.
 func subWorkspaceFanOuts() (kinds, argsKeys []string) {
 	return subWorkspaceFanOutsOf(FanOutUnits())
 }
 
-// subWorkspaceFanOutsOf is the selection itself, over a table it is handed.
-//
-// Separate from its caller so the partition can be exercised against a table a
-// test builds. An installation-grain fan-out must be kept out of the unit pair,
-// because margince_sweep_workspaces already states exactly that number.
+// subWorkspaceFanOutsOf is the selection itself, over a table it is handed, so
+// a test can build the table. An installation-grain fan-out stays out of the
+// unit pair, because margince_sweep_workspaces already states that number.
 func subWorkspaceFanOutsOf(units map[string]FanOutUnit) (kinds, argsKeys []string) {
 	for _, kind := range slices.Sorted(maps.Keys(units)) {
 		key := units[kind].ArgsKey()
@@ -205,12 +194,10 @@ func fanOutDispatcherKindsOf(table map[string]Spec) []string {
 }
 
 func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
-	// The age is EXTRACTed from the database's own now(), never subtracted
-	// from the app clock: the two clocks differ by enough to move an exact
-	// assertion, which is a live intermittent flake elsewhere in this tree.
-	// The age has NO coalesce: a group with nothing runnable answers NULL,
-	// which the reader carries as "no such job" rather than as a measured
-	// zero.
+	// The age comes from the database's own now(), never the app clock, because
+	// the two differ by enough to move an exact assertion. The age has no
+	// coalesce: a group with nothing runnable answers NULL, which the reader
+	// carries as "no such job" and not as a measured zero.
 	const q = `
 		SELECT queue,
 		       kind,
@@ -244,29 +231,25 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 	return out, nil
 }
 
-// statsBySweep reports, per fleet-pass kind, whether it has run and whether
-// its latest outcome is a failure.
+// statsBySweep reports, per fleet-pass kind, whether it has run and whether its
+// latest outcome is a failure.
 //
-// It reads the LATEST OUTCOME PER KIND, never a batch. There is no such thing
-// as "the last pass" in this table: River resolves a uniqueness conflict with
-// ON CONFLICT DO UPDATE SET kind = EXCLUDED.kind, which writes neither
-// created_at nor metadata, so a child still active from the previous pass is
-// deduplicated and produces no row for the current one.
+// It reads the latest outcome per kind, never a batch. This table has no
+// "last pass": River resolves a uniqueness conflict with ON CONFLICT DO UPDATE
+// SET kind = EXCLUDED.kind, which writes neither created_at nor metadata, so a
+// child still active from the previous pass is deduplicated and produces no
+// row for the current one.
 //
-// The sweep tag is what separates a fleet pass from a job someone triggered by
-// hand. A fan-out dispatcher's own row is excluded: it enqueues and does no
-// work, and the children it enqueues are what this query counts for that kind.
+// The sweep tag separates a fleet pass from a job someone triggered by hand. A
+// fan-out dispatcher's own row is excluded: it enqueues and does no work, and
+// its children are what this query counts.
 //
-// The two readings come from DIFFERENT rows of the same kind. Coverage asks
-// "did the pass run", so it counts any tagged row, a pending one included. The
-// outcome asks "what did the last attempt that ENDED do", so it reads the
-// latest row in a terminal state and ignores one still on its way. Reading both
-// from the newest row would let a tick that exhausted its attempts read as
-// healthy for as long as a successor existed, since a periodic pass has a
-// pending or running next tick almost all the time.
-//
-// A later COMPLETED run still supersedes an earlier failure: it is terminal, so
-// it is the latest ended row.
+// The two readings come from different rows of the same kind. Coverage counts
+// any tagged row, a pending one included. The outcome reads the latest row in a
+// terminal state and ignores one still on its way. Reading both from the newest
+// row would let a tick that exhausted its attempts read as healthy while a
+// successor existed, and a periodic pass almost always has one. A later
+// completed run still supersedes an earlier failure.
 func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) {
 	dispatchers := fanOutDispatcherKinds()
 	const q = `
@@ -310,25 +293,21 @@ func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) 
 }
 
 // statsBySweepUnit is statsBySweep one grain down, for the kinds whose
-// dispatcher fans out per connection or per build rather than per workspace.
+// dispatcher fans out per connection or per build.
 //
-// The reading rule is the SAME — coverage from any tagged row of the unit, the
-// outcome from the latest row of it that ENDED, for the reason statsBySweep sets
-// out in full — and only the key it is latest PER changes:
-// args->>'connection_id' instead of the kind. That is what removes the
-// masking. An installation with a healthy connection and a broken one is one
-// healthy unit and one failed unit here, where the kind pair sees only
-// whichever child ran last.
+// The reading rule is the same: coverage from any tagged row of the unit, and
+// the outcome from the latest row of it that ended. Only the key it is latest
+// per changes, to args->>'connection_id' (or the build key) instead of the
+// kind. That removes the masking: an installation with a healthy connection and
+// a broken one is one healthy unit and one failed unit here, where the kind
+// pair sees only whichever child ran last.
 //
-// The kind→key pairing arrives as two aligned arrays and is JOINED against
-// rather than spliced into the SQL, so a kind name and an args key never reach
-// the statement as text. The unnest join is also what bounds the scan to the
-// declared sub-unit kinds: a row of any other kind matches no pair and is
-// not read.
+// The kind-to-key pairing arrives as two aligned arrays and is joined against,
+// not spliced into the SQL, so a kind name and an args key never reach the
+// statement as text. The join also bounds the scan to the declared unit kinds.
 //
 // An empty pairing means the contract declares no such dispatcher, and the
-// query is skipped rather than run with two empty arrays — the answer is the
-// same, and the skip says why it is empty.
+// query is skipped.
 func statsBySweepUnit(ctx context.Context, pool *pgxpool.Pool) ([]SweepUnit, error) {
 	kinds, argsKeys := subWorkspaceFanOuts()
 	if len(kinds) == 0 {

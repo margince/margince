@@ -33,10 +33,9 @@ func BumpDueByMailbox(ctx context.Context, pool *pgxpool.Pool, provider, email s
 // BumpDueByMailboxes is the same for a DELIVERY naming several mailboxes at
 // once, which Graph's batched change notifications do.
 //
-// ONE scan for the whole batch, not one per address: a per-address loop made
-// the cost of a single public request grow with the batch size, an
-// unauthenticated caller's lever on this server's connection pool. Matching a
-// set costs one predicate.
+// One scan serves the whole batch. A per-address loop would make the cost of
+// one public request grow with the batch size, which an unauthenticated caller
+// could use against the connection pool. Matching a set costs one predicate.
 func BumpDueByMailboxes(ctx context.Context, pool *pgxpool.Pool, provider string, emails []string) ([]DueConnection, error) {
 	if len(emails) == 0 {
 		return nil, nil

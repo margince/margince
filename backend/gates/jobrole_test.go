@@ -5,14 +5,13 @@
 
 package gates
 
-// Every River job declares its kind in api/jobs.yaml, and a job answers for
-// the whole installation: it names no workspace and has no WorkspaceID method.
+// Every River job declares its kind in api/jobs.yaml, and a job names no
+// workspace and has no WorkspaceID method.
 //
-// api/jobs.yaml states each kind and jobkinds_gen.go turns the fleet-wide ones
-// into a compile-time assertion, so a DECLARED kind is the compiler's to check.
-// What is left here is the two halves those generated assertions provably
-// cannot reach — a type the contract has never heard of, and a type that grows
-// a workspace accessor back.
+// jobkinds_gen.go turns the fleet-wide kinds into a compile-time assertion, so
+// a declared kind is the compiler's to check. This file holds the two halves
+// that the assertions cannot reach: a type the contract has never heard of, and
+// a type that grows a workspace accessor back.
 
 import (
 	"go/ast"

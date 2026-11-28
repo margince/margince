@@ -31,11 +31,9 @@ import (
 )
 
 // dispatcherKinds answers the kinds the job-health page marks fleet-wide:
-// every kind api/jobs.yaml declares FLEET-WIDE. Deriving the set from the
-// declaration keeps it honest, because the contract's `role: dispatcher` also
-// generates the `jobs.FleetWide` assertion each args type must satisfy, so a
-// kind cannot be a dispatcher in the tree and something else here without
-// failing to compile.
+// every kind api/jobs.yaml declares fleet-wide. The set comes from the
+// declaration, which also generates the `jobs.FleetWide` assertion each args
+// type must satisfy.
 func dispatcherKinds() []string {
 	var kinds []string
 	for kind, spec := range jobs.Declared() {
@@ -140,12 +138,10 @@ func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Bounded, for the same reason the exposition endpoint bounds its own
-	// job read: an unbounded one holds a request thread and a pool connection for
-	// as long as the read takes, and the read is covered by
-	// no index. The budget is larger than the scrape's 2s
-	// because an operator waiting on a page tolerates more latency than a
-	// scrape interval does — but it is a budget, not the absence of one.
+	// Bounded, as the exposition endpoint bounds its own job read: an unbounded
+	// one holds a request thread and a pool connection for as long as the read
+	// takes, and no index covers it. The budget is larger than the scrape's 2s
+	// because an operator tolerates more latency than a scrape interval does.
 	ctx, cancel := context.WithTimeout(ctx, jobHealthReadTimeout)
 	defer cancel()
 

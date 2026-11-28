@@ -213,9 +213,8 @@ func TestAnIdleFleetMapsToEmptyListsNotNulls(t *testing.T) {
 // leave it out for a reason api/jobs.yaml never states.
 //
 // What holds the ROLE itself to something outside the file is the generated
-// pair of interface assertions: a declared dispatcher must satisfy
-// jobs.FleetWide and a declared workspace kind jobs.WorkspaceScoped, so a role
-// that disagreed with the args struct it names fails to compile. That is the
+// interface assertion: a declared fleet-wide kind must satisfy jobs.FleetWide,
+// so a role that disagreed with the args struct it names fails to compile. That is the
 // independent binding; this is the filter in front of it.
 func TestTheUntenantedArmResolvesItsKindsFromTheDeclaredRole(t *testing.T) {
 	var want []string

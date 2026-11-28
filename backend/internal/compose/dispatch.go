@@ -3,12 +3,10 @@
 
 package compose
 
-// The ONE fleet enumeration. Before this file every sweep carried its own
-// copy of the workspace scan and its own inline per-workspace loop, which
-// meant a failed tenant pass became a log line inside a job row River then
-// recorded as completed — success on the outside, silent failure within.
-// Dispatching instead gives each workspace its own row to succeed or fail
-// as, and leaves exactly one place where the fleet is enumerated at all.
+// How a scheduled pass reaches the installation: runInstallationPass runs it in
+// this process, and dispatchOnce / dispatchOne queue a child row. A failed pass
+// fails its row, because a failure logged inside a row River then records as
+// completed is success on the outside and silent failure within.
 
 import (
 	"context"
@@ -178,16 +176,15 @@ func fanOutChildSpec(childKind string) jobs.Spec {
 // without a database or a live client.
 type insertManyFunc func(ctx context.Context, params []river.InsertManyParams) error
 
-// runInstallationPass runs a scheduled pass once over the installation's
-// company, in this process.
+// runInstallationPass runs a scheduled pass once, in this process, over the
+// installation's company.
 //
-// The callback receives the installation's workspace id because the stores it
-// reaches still take one; the id is resolved here once so no pass enumerates
-// anything. An installation that has no company yet has nothing to pass over,
-// so the pass succeeds without calling run.
+// The callback receives the workspace id because the stores it reaches still
+// take one. An installation with no company has nothing to pass over, so the
+// pass ends without calling run.
 //
-// A pass that could not load the installation zone counted its days in UTC.
-// The pass records that once. A fault row that cannot be written fails the
+// A pass that could not load the installation zone counted its days in UTC,
+// and the pass records that once. A fault row that cannot be written fails the
 // pass, so the retry writes it.
 func runInstallationPass(ctx context.Context, pool *pgxpool.Pool, run func(context.Context, ids.UUID) error) error {
 	ws, ok, err := database.LiveWorkspace(ctx, pool)
@@ -226,10 +223,10 @@ func dispatchOnce(ctx context.Context, insert insertManyFunc, opts *river.Insert
 }
 
 // dispatchOne enqueues ONE fan-out child through the River client working the
-// current job. It serves the dispatchers that cannot use dispatchWith because
-// they fan out per CONNECTION or per BUILD rather than per workspace: their
-// unit is not the fleet, so there is no one enumeration to insert atomically
-// and they loop single inserts instead.
+// current job. It serves the dispatchers that cannot use dispatchOnce because
+// they fan out per CONNECTION or per BUILD rather than once for the
+// installation: there is no one set to insert atomically, so they loop single
+// inserts instead.
 //
 // The client is resolved per insert, and only inside the loop, for the reason
 // clientInsertMany states: river.ClientFromContext panics when there is none,
@@ -245,7 +242,7 @@ func dispatchOne(ctx context.Context, pool *pgxpool.Pool, args river.JobArgs, ca
 // them into one:
 //
 //   - fan_out — the queue and attempt cap come from the declaration, exactly
-//     as dispatchWith's children get them.
+//     as dispatchOnce's child gets them.
 //   - args — the child's own InsertOpts() owns them, so it gets a TAG-ONLY
 //     value and River's field-by-field merge leaves the args' rule standing.
 //     Handing telegram_poll a populated opts would drop its per-bot

@@ -9,8 +9,8 @@ import "github.com/riverqueue/river"
 // installation: a scheduled pass, or a dispatcher that enqueues children for
 // it. Nothing may read a workspace off its args, because it carries none.
 //
-// The marker method is empty on purpose — it is a declaration, not
-// behaviour, and it is what the G1 gate reads.
+// The marker method is empty on purpose. It is a declaration, not behaviour,
+// and the G1 gate reads it.
 type FleetWide interface {
 	river.JobArgs
 	FleetWide()

@@ -34,11 +34,8 @@ import (
 
 // GeocodeBackfillArgs is one pass over the companies never asked about.
 //
-// It carries NO workspace, like WebhookRetryArgs and for the same reason: a
-// periodic insert has no tenant to name, and a WorkspaceScoped kind whose args
-// carry none fails every tick with "declares WorkspaceScoped but carries no
-// workspace". The tenant belongs on the per-company job this pass queues —
-// that is the one that reads and writes a row.
+// It carries no arguments: a periodic insert names nothing, and the per-company
+// job this pass queues is the one that reads and writes a row.
 type GeocodeBackfillArgs struct{}
 
 // Kind is the stable job identifier River persists in river_job.

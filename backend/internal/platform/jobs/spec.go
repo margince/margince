@@ -42,24 +42,20 @@ const (
 	FanOutBuild
 )
 
-// ArgsKey is the river_job.args key that identifies WHICH unit a child row
-// stands for — the connection or the build it was enqueued against. An
-// installation-grain child names no key, since there is one of it. It is what lets a reader count a fan-out pass at the grain the
-// dispatcher actually ran it at: two children of one workspace differ in this
-// key and in nothing else the job table carries.
+// ArgsKey is the river_job.args key that identifies which unit a child row
+// stands for: the connection or the build it was enqueued against. It lets a
+// reader count a fan-out pass at the grain the dispatcher ran it at. An
+// installation-grain child names no key, since there is one of it.
 //
-// A unit with no key answers the empty string, and subWorkspaceFanOuts then
-// SKIPS it, which is right for the installation unit and wrong for any other:
-// a unit added without a key would quietly drop every kind declared with it
-// out of the unit gauges. Go's switch offers no
-// exhaustiveness for that, and this comment does not pretend otherwise: what
-// catches it is a gate, TestEveryDeclaredFanOutUnitNamesAnArgsKey, which reads
-// the units the CONTRACT actually declares rather than a list kept here. The
-// census then holds every declared child to writing the key its dispatcher's
-// unit names.
+// A unit with no key answers the empty string, and subWorkspaceFanOuts skips
+// it. That is right for the installation unit and wrong for any other, because
+// a unit added without a key would drop every kind declared with it out of the
+// unit gauges. TestEveryDeclaredFanOutUnitNamesAnArgsKey reads the units the
+// contract declares and catches that. The census then holds every declared
+// child to writing the key its dispatcher's unit names.
 //
-// The zero FanOutUnit — a kind that fans out to nothing — answers the empty
-// string on purpose: it has no unit, and no row of it has a key to group on.
+// The zero FanOutUnit, a kind that fans out to nothing, answers the empty
+// string too: it has no unit.
 func (u FanOutUnit) ArgsKey() string {
 	switch u {
 	case FanOutConnection:

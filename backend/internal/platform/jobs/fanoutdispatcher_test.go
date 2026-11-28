@@ -8,11 +8,10 @@ import (
 	"testing"
 )
 
-// TestFanOutDispatcherKindsSelectsExactlyTheKindsThatEnqueueChildren —
-// statsBySweep leaves a dispatcher's own row out, because the children it
-// enqueues (a different kind) are the real signal, and counting the
-// dispatcher's row too would double the pass. A kind that fans out to nothing
-// is a pass of its own and must stay in the sweep read.
+// TestFanOutDispatcherKindsSelectsExactlyTheKindsThatEnqueueChildren:
+// statsBySweep leaves a dispatcher's own row out, because its children are the
+// signal and its row would double the pass. A kind that fans out to nothing is
+// a pass of its own and stays in the sweep read.
 //
 // Walks allSpecs() (core plus any composed/extension declarations), not the
 // core-only specs map, so an extension's own pass is held to the same rule.
@@ -44,8 +43,8 @@ func TestFanOutDispatcherKindsSelectsExactlyTheKindsThatEnqueueChildren(t *testi
 	}
 }
 
-// TestFanOutDispatcherKindsOfIgnoresAKindWithoutAChild — against a table this
-// test builds.
+// TestFanOutDispatcherKindsOfIgnoresAKindWithoutAChild runs against a table
+// this test builds.
 func TestFanOutDispatcherKindsOfIgnoresAKindWithoutAChild(t *testing.T) {
 	t.Parallel()
 

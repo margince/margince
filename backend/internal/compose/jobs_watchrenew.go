@@ -109,9 +109,9 @@ func (w *gmailWatchRenewWorker) Work(ctx context.Context, job *river.Job[GmailWa
 	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.pool, w.registry, job.Args, job.Args.ConnectionID, w.topic))
 }
 
-// renewOneWatch is the body both providers' renewal workers run: bind the
-// installation, read the connection id it names, and let the registry
-// perform the provider call and advance watch_expires_at.
+// renewOneWatch is the body both providers' renewal workers run. It binds the
+// installation, reads the connection id, and lets the registry call the
+// provider and advance watch_expires_at.
 //
 // The topic is whatever that provider's Watch takes — a Pub/Sub topic for
 // Gmail, a notification URL for Graph — and this never looks inside it.

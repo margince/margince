@@ -58,11 +58,10 @@ const actionCredentialRelocated = "capture_credential_relocated"
 
 // BackfillCredentials migrates every legacy capture_connection row whose
 // credential still lives in the auth bytea column onto the vault: it seals the
-// bytes, records the credential_ref, and clears auth. It is idempotent — a row
-// that already carries a ref is skipped — so a re-run or a crash-retry is
-// safe, which is what lets it run on every boot. It runs under the installation
-// workspace's own GUC, which is what capture_connection's own workspace
-// predicates read.
+// bytes, records the credential_ref, and clears auth. It is idempotent: a row
+// that already carries a ref is skipped, so a re-run or a crash-retry is safe
+// and it can run on every boot. It runs under the installation workspace's own
+// GUC, which capture_connection's workspace predicates read.
 func (r *Registry) BackfillCredentials(ctx context.Context) (int, error) {
 	if r.vault == nil {
 		return 0, errors.New("capture: cannot backfill connector credentials without a keyvault")
@@ -71,17 +70,10 @@ func (r *Registry) BackfillCredentials(ctx context.Context) (int, error) {
 	if err != nil || !ok {
 		return 0, err
 	}
-	// The pass names ITSELF as the actor. Nobody asked for this — it is
-	// the boot noticing a legacy row — so binding a human would put
-	// somebody's name on a move they did not make, and the ledger's whole
-	// value is telling a relocation apart from a connect.
-	//
+	// The pass names itself as the actor. The boot noticing a legacy row is not
+	// a human's move, and the ledger tells a relocation apart from a connect.
 	// A bound actor is also storekit.LogSystem's precondition: it refuses
-	// rather than guessing, which is what made this the one credential_ref
-	// writer with no ledger row until the actor arrived with it.
-	//
-	// The correlation id groups one boot's relocations as the single pass
-	// they are, exactly as the expiry sweep's does for one tick.
+	// rather than guessing.
 	wsCtx := principal.WithWorkspaceID(ctx, wsID)
 	wsCtx = principal.SystemActing(wsCtx, CredentialBackfillActor)
 	return r.backfillWorkspace(wsCtx, ids.From[ids.WorkspaceKind](wsID))

@@ -5,10 +5,9 @@
 
 package gates
 
-// An installation holds one company, so no job names a workspace. A job's
-// args that carried one again would put a key into river_job.args that every
-// reader of that table has stopped looking at, and would tell the reader the
-// job is about something other than the installation.
+// An installation holds one company, so no job names a workspace. A job args
+// type that carried one again would write a key that no reader of river_job
+// looks at any more.
 
 import (
 	"go/ast"
@@ -62,8 +61,8 @@ func TestNoJobArgsCarryAWorkspace(t *testing.T) {
 }
 
 // assertNoWorkspaceArg refuses a field called Workspace, a field that ships
-// json:"workspace_id", and an embedded type: the gate reads declared fields and
-// cannot see through an embedded type to a key it might carry.
+// json:"workspace_id", and an embedded type. The gate reads declared fields, so
+// it cannot see a key inside an embedded type.
 func assertNoWorkspaceArg(t *testing.T, fset *token.FileSet, typeName string, structType *ast.StructType) {
 	t.Helper()
 	for _, field := range structType.Fields.List {

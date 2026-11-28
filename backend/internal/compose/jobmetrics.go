@@ -294,14 +294,12 @@ func writeFamilyHeader(w io.Writer, name, help string) error {
 // characters, and a parser meeting an escape the format does not define
 // rejects the whole exposition rather than the one series. That matters
 // here because kind and queue are river_job columns verbatim, in a table
-// with no constraint on them and direct app-role CRUD, so a single
-// raw-inserted row could otherwise poison every scrape for every metric.
-// A control character outside those three is rewritten as a PRINTABLE
-// <0xNN>, never dropped. Dropping is lossy, and lossy is not safe here: two
-// distinct malformed kind names differing only in a control byte would
-// collapse to the same label set, and duplicate series are exactly the
-// thing that makes a scrape unparseable — the failure this escaping exists
-// to prevent.
+// with no constraint on them and direct app-role CRUD. A single raw-inserted
+// row could otherwise poison every scrape for every metric.
+// A control character outside those three is rewritten as a printable
+// <0xNN>, never dropped. Dropping is lossy: two malformed kind names that
+// differ only in a control byte would collapse to one label set, and
+// duplicate series make a scrape unparseable.
 //
 // A literal '<' is escaped the same way, and that is what makes the mapping
 // INJECTIVE rather than merely printable. Without it, a value containing

@@ -13,8 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
-// TestJobMetricsCarryNoWorkspaceLabel — an installation holds one company, so
-// a series is identified by its kind and queue alone.
+// TestJobMetricsCarryNoWorkspaceLabel: an installation holds one company, so a
+// series is identified by its kind and queue alone.
 func TestJobMetricsCarryNoWorkspaceLabel(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
@@ -324,10 +324,10 @@ func TestAQueueHoldingOnlyDeadWorkReportsNoAgeAtAll(t *testing.T) {
 	}
 }
 
-// TestALabelValueCannotBreakTheWholeExposition — kind is river_job.kind
-// verbatim, from a table with no constraint on it and direct app-role CRUD. Go's %q would encode a tab as \t, which the
-// Prometheus text format does not define, and a parser meeting an undefined
-// escape rejects the ENTIRE scrape — every metric, not the one series.
+// TestALabelValueCannotBreakTheWholeExposition: kind is river_job.kind
+// verbatim, from a table with no constraint on it. Go's %q would encode a tab
+// as \t, which the Prometheus text format does not define. A parser meeting an
+// undefined escape rejects the whole scrape, not the one series.
 func TestALabelValueCannotBreakTheWholeExposition(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
@@ -448,14 +448,10 @@ func TestTwoLabelsDifferingOnlyByAControlCharacterStayDistinct(t *testing.T) {
 	}
 }
 
-// TestALiteralEscapeSequenceDoesNotCollideWithTheCharacterItEncodes is the
-// direct test for the '<' branch, and the collision that branch exists to
-// close. Escape only control bytes and the two values below both render as
-// `<0x09>`: one row whose kind contains the six literal characters, and one
-// whose kind contains a real tab. Two distinct kinds, one label set, and
-// Prometheus rejects the whole scrape — the third time this same failure
-// appeared in this change, so it gets an assertion of its own rather than
-// being implied by the control-character test next door.
+// TestALiteralEscapeSequenceDoesNotCollideWithTheCharacterItEncodes tests the
+// '<' branch. Escaping only control bytes would render both kinds below as
+// `<0x09>`: one holds the six literal characters, the other a real tab. Two
+// kinds with one label set make Prometheus reject the whole scrape.
 func TestALiteralEscapeSequenceDoesNotCollideWithTheCharacterItEncodes(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
@@ -474,7 +470,7 @@ func TestALiteralEscapeSequenceDoesNotCollideWithTheCharacterItEncodes(t *testin
 	if !strings.Contains(got, `kind="<0x09>",queue="q"} 2`) {
 		t.Errorf("the real tab did not render as its escape\ngot:\n%s", got)
 	}
-	// The load-bearing assertion: two distinct kinds, two distinct series.
+	// Two distinct kinds must give two distinct series.
 	if strings.Count(got, `margince_job_queue_depth{kind=`) != 2 {
 		t.Errorf("two distinct kinds collapsed into one series; a duplicate label "+
 			"set makes Prometheus reject the entire scrape\ngot:\n%s", got)

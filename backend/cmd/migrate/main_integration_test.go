@@ -471,10 +471,8 @@ func assertRecorded(t *testing.T, dsn, table, version string) {
 	}
 }
 
-// assertNoRiverWorkspaceArgIndex pins the post-River statement that retires
-// the index. It cannot be a core migration (river_job does not exist while the
-// core lane runs, and dbmigrate wraps each migration in a transaction), so
-// nothing but this test would notice the drop disappearing.
+// assertNoRiverWorkspaceArgIndex pins the statement that retires the index.
+// Only this test would notice it disappearing, because it is not a migration.
 func assertNoRiverWorkspaceArgIndex(t *testing.T, dsn string) {
 	t.Helper()
 	ctx := context.Background()

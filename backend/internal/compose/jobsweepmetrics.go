@@ -3,11 +3,10 @@
 
 package compose
 
-// The two sweep-pair families beside jobmetrics.go's per-job gauges: "did the
-// pass run" per kind and, where a kind's declared unit is finer than the
-// installation, at the unit grain too. Split out of jobmetrics.go because the
-// sweep passes answer a different question (did a pass run) from the
-// job-runtime gauges next door (what is a queue currently holding).
+// The two sweep-pair families beside jobmetrics.go's per-job gauges. They
+// answer "did the pass run" per kind and, where a kind's unit is finer than the
+// installation, per unit. The job-runtime gauges next door answer what a queue
+// holds.
 
 import (
 	"cmp"
@@ -19,11 +18,11 @@ import (
 )
 
 // writeSweepGauges renders the pair that answers "did the pass run". Both
-// halves carry the same sweep label so an alert can compare them; for a fan-out
-// kind the label is the CHILD kind, which is what the rows hold. The reading is
-// 1 when the kind's latest tagged row exists, and 0 or absent otherwise: an
-// installation holds one company, so there is one pass to count. The series
-// keep their historical names so a dashboard reading them keeps working.
+// halves carry the same sweep label so an alert can compare them. For a fan-out
+// kind the label is the child kind, which is what the rows hold. The reading is
+// 1 when the kind has a tagged row, since an installation holds one company and
+// so one pass to count. The series keep their names so a dashboard reading them
+// keeps working.
 func writeSweepGauges(w io.Writer, sweeps []jobs.SweepPass) error {
 	ordered := slices.SortedFunc(slices.Values(sweeps), func(a, b jobs.SweepPass) int {
 		return cmp.Compare(a.Kind, b.Kind)
@@ -55,15 +54,12 @@ func writeSweepGauges(w io.Writer, sweeps []jobs.SweepPass) error {
 
 // writeSweepUnitGauges renders the pair that answers the same question one
 // grain down, for the dispatchers that fan out per connection or per build.
-// The pair above is the coarser reading of the same passes and can
-// mask a failed unit behind a healthy sibling; these two
-// cannot, because each unit is counted in its own right.
+// The pair above can mask a failed unit behind a healthy sibling. These two
+// cannot, because each unit is counted on its own.
 //
-// Present ONLY for kinds whose declared unit is finer than the installation.
-// For every other fan-out kind the unit IS the installation, so this pair would
-// repeat the one above value for value, and two published series for one number is a
-// worse surface than one series and a documented pairing. The unit rides as a
-// label so an alert can see which grain it is reading without a lookup.
+// Present only for kinds whose declared unit is finer than the installation.
+// For every other kind this pair would repeat the one above value for value.
+// The unit rides as a label so an alert can see which grain it reads.
 func writeSweepUnitGauges(w io.Writer, units []jobs.SweepUnit) error {
 	ordered := slices.SortedFunc(slices.Values(units), func(a, b jobs.SweepUnit) int {
 		return cmp.Compare(a.Kind, b.Kind)

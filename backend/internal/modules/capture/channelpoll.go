@@ -53,10 +53,10 @@ type ChannelPollTarget struct {
 	PollOffset    int64
 }
 
-// DueChannelConnections lists every live connection of one provider. Only a `connected`, un-archived row is due: a disconnected or
-// reauth-required connection has nothing this installation may still poll, and
-// leaving it out of the scan is what stops the poll retrying a bot whose token
-// Telegram has already refused.
+// DueChannelConnections lists every live connection of one provider. Only a
+// `connected`, un-archived row is due. A disconnected or reauth-required
+// connection is left out, which stops the poll retrying a bot whose token the
+// provider has already refused.
 func DueChannelConnections(ctx context.Context, pool *pgxpool.Pool, provider string) ([]DueChannelConnection, error) {
 	wsID, ok, err := database.LiveWorkspace(ctx, pool)
 	if err != nil || !ok {

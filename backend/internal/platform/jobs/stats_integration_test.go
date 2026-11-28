@@ -136,10 +136,9 @@ func unitFor(snap jobs.Snapshot, kind string) (jobs.SweepUnit, bool) {
 	return jobs.SweepUnit{}, false
 }
 
-// TestStatsCountsLiveWorkPerKindWhateverItsArgsCarry proves that a row is
-// counted under its kind and state alone: a row a release before this one
-// queued still carries a workspace key, and must land beside the rows that do
-// not.
+// TestStatsCountsLiveWorkPerKindWhateverItsArgsCarry proves a row is counted
+// under its kind and state alone. A row queued by an earlier release still
+// carries a workspace key and must land beside the rows that do not.
 func TestStatsCountsLiveWorkPerKindWhateverItsArgsCarry(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
@@ -234,9 +233,7 @@ func TestStatsMeasuresTheAgeOfRunnableWorkOnlyAndInTheDatabasesOwnClock(t *testi
 // TestSweepReadsAKindsLatestEndedOutcomeAndSurvivesADeduplicatedRetry seeds the
 // shape a rescued dispatcher produces: an older child still live, so it was
 // deduplicated out of the newer fan-out, beside a newer one that ended. The
-// kind reports one pass, and its outcome is the latest row that ENDED. A
-// fixture that gives every row the same timestamp proves the fixture, not the
-// query.
+// kind reports one pass, and its outcome is the latest row that ended.
 func TestSweepReadsAKindsLatestEndedOutcomeAndSurvivesADeduplicatedRetry(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
@@ -266,22 +263,16 @@ func TestSweepReadsAKindsLatestEndedOutcomeAndSurvivesADeduplicatedRetry(t *test
 	}
 }
 
-// TestTheUnitPairSeesAFailedConnectionTheKindPairMasks is the whole
-// reason the second pair exists, seeded as the exact shape that hides the
-// failure: ONE workspace, TWO connections, the broken one failing FIRST and
-// the healthy one completing after it.
+// TestTheUnitPairSeesAFailedConnectionTheKindPairMasks is the reason the second
+// pair exists. Two connections, the broken one failing first and the healthy
+// one completing after it.
 //
-// Read per workspace, that workspace's most recent child is the successful
-// one and the pass looks clean. Read per connection, one unit of two is dead.
-// Both readings are asserted here, not just the new one — the masking is a
-// documented property of the workspace pair, and a change that silently
-// "fixed" it there would break what that pair is for (a batch has no
-// identity in this table) while this test still passed on the new half alone.
+// Read per kind, the most recent child is the successful one and the pass looks
+// clean. Read per connection, one unit of two is dead. Both readings are
+// asserted, so a change that fixed the masking in the kind pair would fail here.
 //
-// telegram_poll is used rather than a made-up kind because the unit read is
-// derived from the contract: only kinds a dispatcher declares it fans out to
-// per connection are read at all, so a fixture kind would prove a query that
-// never runs.
+// telegram_poll is used, not a made-up kind, because the unit read is derived
+// from the contract: a fixture kind would prove a query that never runs.
 func TestTheUnitPairSeesAFailedConnectionTheKindPairMasks(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
@@ -422,8 +413,8 @@ type taggedWorker struct {
 
 func (taggedWorker) Work(context.Context, *river.Job[taggedArgs]) error { return nil }
 
-// TestSweepIgnoresASupersededFailure — the mirror of the above. A
-// pass that failed and then succeeded is not a pass being missed.
+// TestSweepIgnoresASupersededFailure is the mirror of the above. A pass that
+// failed and then succeeded is not a pass being missed.
 func TestSweepIgnoresASupersededFailure(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
@@ -484,15 +475,10 @@ func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
 	}
 }
 
-// TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace — a Fleet kind
-// that fans out to nothing (embed_drift_sweep, ADR-0103's collapsed shape)
-// never carries a workspace_id, so a query keyed only on workspace_id
-// excludes every one of its rows forever — the gauge would then read
-// greenest exactly when such a pass was failing on every tick.
-// embed_drift_sweep is used rather than a made-up kind for the same reason
-// TestTheUnitPairSeesAFailedConnectionTheKindPairMasks uses
-// telegram_poll: the standalone-kind arm is derived from the contract, so a
-// fixture kind would prove a query that never runs.
+// TestSweepCountsAStandaloneFleetPassByKind: a fleet kind that fans out to
+// nothing (embed_drift_sweep) is counted as one pass. It is a real declared
+// kind and not a made-up one, because the dispatcher exclusion is derived from
+// the contract.
 func TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()

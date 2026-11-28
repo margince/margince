@@ -24,7 +24,7 @@ var jobActorUnbound = gatekit.Waive(map[string]string{
 })
 
 // A worker may construct its store through a helper; trace the data handle too.
-var storeBuilders = regexp.MustCompile(`(providerRunStore|workspaceJobDB|InstallationDB|database\.BindTo)\(`)
+var storeBuilders = regexp.MustCompile(`(providerRunStore|InstallationDB|database\.BindTo)\(`)
 
 // A nested tool’s passport does not authorize the worker that called it.
 var actorBinders = regexp.MustCompile(
