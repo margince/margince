@@ -103,8 +103,9 @@ type Config struct {
 // no company is live in (the cleanups that reach archived data) can opt out.
 type BindWorkspace func(ctx context.Context, job *rivertype.JobRow) (context.Context, error)
 
-// bindingMiddleware is the River worker middleware that runs the binding.
-func bindingMiddleware(bind BindWorkspace) rivertype.WorkerMiddleware {
+// WorkerBinding is the River worker middleware that runs the binding. A test
+// that works a job through River's test worker installs it the same way.
+func WorkerBinding(bind BindWorkspace) rivertype.WorkerMiddleware {
 	return river.WorkerMiddlewareFunc(func(ctx context.Context, job *rivertype.JobRow, doInner func(context.Context) error) error {
 		bound, err := bind(ctx, job)
 		if err != nil {
@@ -169,7 +170,7 @@ func riverConfig(cfg Config, log *slog.Logger) *river.Config {
 		Logger:            log,
 		ReindexerSchedule: river.NeverSchedule(),
 		TestOnly:          cfg.TestOnly,
-		WorkerMiddleware:  []rivertype.WorkerMiddleware{bindingMiddleware(cfg.BindWorkspace)},
+		WorkerMiddleware:  []rivertype.WorkerMiddleware{WorkerBinding(cfg.BindWorkspace)},
 	}
 	if cfg.TestOnly {
 		config.FetchCooldown, config.FetchPollInterval = testFetchInterval, testFetchInterval

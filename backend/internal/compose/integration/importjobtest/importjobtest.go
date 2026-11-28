@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivertest"
@@ -125,7 +126,7 @@ func WorkJob[T river.JobArgs](
 		t.Fatalf("opening the job's transaction: %v", err)
 	}
 	defer rollback(t, tx)
-	result, err := rivertest.NewWorker(t, riverpgxv5.New(e.Pool), riverConfig(), worker).WorkJob(ctx, t, tx, job)
+	result, err := rivertest.NewWorker(t, riverpgxv5.New(e.Pool), riverConfig(e.Pool), worker).WorkJob(ctx, t, tx, job)
 	if err != nil {
 		t.Fatalf("working %s job %d: %v", job.Kind, job.ID, err)
 	}
@@ -144,13 +145,16 @@ func rollback(t *testing.T, tx pgx.Tx) {
 
 func riverClient(t *testing.T, e *apptest.AppEnv) *river.Client[pgx.Tx] {
 	t.Helper()
-	client, err := river.NewClient(riverpgxv5.New(e.Pool), riverConfig())
+	client, err := river.NewClient(riverpgxv5.New(e.Pool), riverConfig(e.Pool))
 	if err != nil {
 		t.Fatalf("river.NewClient: %v", err)
 	}
 	return client
 }
 
-func riverConfig() *river.Config {
-	return &river.Config{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+func riverConfig(pool *pgxpool.Pool) *river.Config {
+	return &river.Config{
+		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
+		WorkerMiddleware: []rivertype.WorkerMiddleware{compose.InstallationBindingForTest(pool)},
+	}
 }

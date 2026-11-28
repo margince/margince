@@ -15,12 +15,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/loopfault"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -59,4 +61,10 @@ func WithConsentClockForTest(now func() time.Time) Option {
 // WithRunnerReadFailureForTest refuses selected reads inside the real registry.
 func WithRunnerReadFailureForTest(fail loopfault.Failure) RunnerOption {
 	return func(s *RunnerService) { s.features.readFailure = fail }
+}
+
+// InstallationBindingForTest is the worker middleware the production client
+// runs, for a test that works a job through River's test worker.
+func InstallationBindingForTest(pool *pgxpool.Pool) rivertype.WorkerMiddleware {
+	return jobs.WorkerBinding(installationBinding(pool))
 }

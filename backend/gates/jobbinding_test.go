@@ -110,7 +110,7 @@ func checkOwnerFile(t *testing.T, file *ast.File) {
 		case *ast.KeyValueExpr:
 			if id, ok := x.Key.(*ast.Ident); ok && id.Name == "WorkerMiddleware" {
 				ast.Inspect(x.Value, func(m ast.Node) bool {
-					if c, ok := m.(*ast.CallExpr); ok && qualifiedCall(c) == "bindingMiddleware" {
+					if c, ok := m.(*ast.CallExpr); ok && qualifiedCall(c) == "WorkerBinding" {
 						installs = true
 					}
 					return true
@@ -137,7 +137,7 @@ func checkOwnerFile(t *testing.T, file *ast.File) {
 		return true
 	})
 	if !installs {
-		t.Error("riverConfig does not install bindingMiddleware as a WorkerMiddleware")
+		t.Error("riverConfig does not install WorkerBinding as a WorkerMiddleware")
 	}
 	if !refuses {
 		t.Error("jobs.New does not refuse a Config with no BindWorkspace")
