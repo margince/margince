@@ -60,7 +60,7 @@ A `merge_group` run builds `main` + everything ahead of it in the queue + the en
   request's last run. [`scripts/ci-integration-proven.sh`](../../scripts/ci-integration-proven.sh) finds
   that run's `proven-integration-<tree>` artifact. Then `ci` admits the skipped lane. The same check
   runs on "Re-run all jobs" of a pull request, where the proof is an earlier attempt of that run. It
-  holds while that attempt's shard coverage has six hours left before it expires, so Sonar can still merge it.
+  holds while that attempt's shard coverage is kept six hours more, so SonarCloud can still merge it.
 - **The tree that lands.** Each group's head is the tree that reaches `main`. With `HEADGREEN` it is
   the only one that must pass, so a commit inside a group can land without a green run of its own.
 
