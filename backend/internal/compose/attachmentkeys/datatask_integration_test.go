@@ -25,10 +25,10 @@ func TestAttachmentOwnerTaskBoundsRepairAndPreservesUnknownOwners(t *testing.T) 
 	owner := integration.OwnerConn(t)
 	contact := e.SeedContact(t, "Buyer", nil)
 	live, orphan, unsupported, blocked := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
-	pipeline := e.SeedID(t, `INSERT INTO pipeline(id,name) VALUES($1,'Files')`)
-	stage := e.SeedID(t, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES($1,$2,'Open',0,'open',10)`, pipeline)
-	deal := e.SeedID(t, `INSERT INTO deal(id,name,pipeline_id,stage_id,source,captured_by) VALUES($1,'Files',$2,$3,'manual','human:test')`, pipeline, stage)
-	room := e.SeedID(t, `INSERT INTO deal_room(id,deal_id,title,source,captured_by) VALUES($1,$2,'Files','manual','human:test')`, deal)
+	pipeline := integration.SeedIDRow(t, owner, `INSERT INTO pipeline(id,name) VALUES($1,'Files')`)
+	stage := integration.SeedIDRow(t, owner, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES($1,$2,'Open',0,'open',10)`, pipeline)
+	deal := integration.SeedIDRow(t, owner, `INSERT INTO deal(id,name,pipeline_id,stage_id,source,captured_by) VALUES($1,'Files',$2,$3,'manual','human:test')`, pipeline, stage)
+	room := integration.SeedIDRow(t, owner, `INSERT INTO deal_room(id,deal_id,title,source,captured_by) VALUES($1,$2,'Files','manual','human:test')`, deal)
 	ctx := principal.SystemActing(e.Admin(), "attachment-owner-task-test")
 	err := pgx.BeginFunc(ctx, owner, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `ALTER TABLE attachment DISABLE TRIGGER trg_attachment_owner_keys;
@@ -43,7 +43,7 @@ func TestAttachmentOwnerTaskBoundsRepairAndPreservesUnknownOwners(t *testing.T) 
 			owner ids.UUID
 		}{{live, "contact", contact}, {orphan, "contact", ids.NewV7()}, {unsupported, "offer", ids.NewV7()}, {blocked, "activity", ids.NewV7()}} {
 			if _, err := tx.Exec(ctx, `INSERT INTO attachment(id,entity_type,entity_id,filename,storage_key,source,captured_by,owner_unkeyed,updated_at)
- VALUES($1,$2,$3,'old.txt','old/'||$1::text,'manual','human:test',true,now()-interval '2 days')`, row.id, row.kind, row.owner); err != nil {
+ VALUES($1,$2,$3,'old.txt','old/'||$1::uuid::text,'manual','human:test',true,now()-interval '2 days')`, row.id, row.kind, row.owner); err != nil {
 				return err
 			}
 		}

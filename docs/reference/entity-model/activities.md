@@ -6,7 +6,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-94 columns · primary key `(id)` · referenced by 52 foreign keys
+94 columns · primary key `(id)` · referenced by 53 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -943,7 +943,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## attachment
 
-27 columns · primary key `(id)` · referenced by 6 foreign keys
+34 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -959,10 +959,17 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `declared_type` | `text` |  |  |
 | `doc_state` | `text`, default `'current'::text` | yes | ASSERTED, never inferred. |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `activity`, `project` and 11 more. |
+| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`, `activity`. |
 | `external_part_id` | `text` |  |  |
 | `external_source_id` | `text` |  |  |
 | `filename` | `text` | yes |  |
+| `owner_activity_id` | `uuid` |  | Points at `activity.id`. |
+| `owner_company_id` | `uuid` |  | Points at `company.id`. |
+| `owner_contact_id` | `uuid` |  | Points at `contact.id`. |
+| `owner_deal_id` | `uuid` |  | Points at `deal.id`. |
+| `owner_lead_id` | `uuid` |  | Points at `lead.id`. |
+| `owner_project_id` | `uuid` |  | Points at `project.id`. |
+| `owner_unkeyed` | `boolean`, default `false` | yes |  |
 | `pinned` | `boolean`, default `false` | yes | Held at the top of the account's library. |
 | `project_id` | `uuid` |  |  |
 | `storage_key` | `text` | yes |  |
@@ -980,6 +987,12 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `contract_id` | `contract` | deleting the parent keeps this row and clears the link |
+| `owner_activity_id` | `activity` | deleting the parent deletes this row |
+| `owner_company_id` | `company` | deleting the parent deletes this row |
+| `owner_contact_id` | `contact` | deleting the parent deletes this row |
+| `owner_deal_id` | `deal` | deleting the parent deletes this row |
+| `owner_lead_id` | `lead` | deleting the parent deletes this row |
+| `owner_project_id` | `project` | deleting the parent deletes this row |
 | `supersedes_id` | `attachment` | deleting the parent keeps this row and clears the link |
 
 **Rules**
@@ -987,9 +1000,16 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `attachment_byte_size_js_safe`: `CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))`
 - `attachment_category_check`: `CHECK ((category = ANY (ARRAY['contract', 'offer', 'legal', 'email_attachment', 'message_attachment', 'other', 'link'])))`
 - `attachment_doc_state_check`: `CHECK ((doc_state = ANY (ARRAY['draft', 'current', 'final', 'superseded'])))`
-- `attachment_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])))`
+- `attachment_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project', 'activity'])))`
 - `attachment_external_identity_complete`: `CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))`
 - `attachment_link_shape`: `CHECK ((((category <> 'link') OR (url IS NOT NULL)) AND ((url IS NULL) OR ((storage_key = '') AND bytes_withheld AND (url ~ '^https?://') AND (length(url) <= 2048)))))`
+- `attachment_owner_activity_id_bound`: `CHECK ((owner_unkeyed OR (NOT (owner_activity_id IS DISTINCT FROM CASE WHEN (entity_type = 'activity') THEN entity_id ELSE NULL::uuid END))))`
+- `attachment_owner_company_id_bound`: `CHECK ((owner_unkeyed OR (NOT (owner_company_id IS DISTINCT FROM CASE WHEN (entity_type = 'company') THEN entity_id ELSE NULL::uuid END))))`
+- `attachment_owner_contact_id_bound`: `CHECK ((owner_unkeyed OR (NOT (owner_contact_id IS DISTINCT FROM CASE WHEN (entity_type = 'contact') THEN entity_id ELSE NULL::uuid END))))`
+- `attachment_owner_deal_id_bound`: `CHECK ((owner_unkeyed OR (NOT (owner_deal_id IS DISTINCT FROM CASE WHEN (entity_type = 'deal') THEN entity_id ELSE NULL::uuid END))))`
+- `attachment_owner_lead_id_bound`: `CHECK ((owner_unkeyed OR (NOT (owner_lead_id IS DISTINCT FROM CASE WHEN (entity_type = 'lead') THEN entity_id ELSE NULL::uuid END))))`
+- `attachment_owner_project_id_bound`: `CHECK ((owner_unkeyed OR (NOT (owner_project_id IS DISTINCT FROM CASE WHEN (entity_type = 'project') THEN entity_id ELSE NULL::uuid END))))`
+- `attachment_owner_shape`: `CHECK ((owner_unkeyed OR (num_nonnulls(owner_contact_id, owner_company_id, owner_deal_id, owner_lead_id, owner_project_id, owner_activity_id) = 1)))`
 - `attachment_supersedes_not_self`: `CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))`
 
 **Indexes**
@@ -1001,13 +1021,22 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `attachment_supersedes_ix`: `btree (supersedes_id) WHERE (supersedes_id IS NOT NULL)`
 - `idx_attachment_entity`: `btree (entity_type, entity_id) WHERE (archived_at IS NULL)`
 - `idx_attachment_held_copy`: `btree (checksum, byte_size) WHERE ((checksum IS NOT NULL) AND (NOT bytes_withheld))`
+- `idx_attachment_owner_activity`: `btree (owner_activity_id) WHERE (owner_activity_id IS NOT NULL)`
+- `idx_attachment_owner_company`: `btree (owner_company_id) WHERE (owner_company_id IS NOT NULL)`
+- `idx_attachment_owner_contact`: `btree (owner_contact_id) WHERE (owner_contact_id IS NOT NULL)`
+- `idx_attachment_owner_deal`: `btree (owner_deal_id) WHERE (owner_deal_id IS NOT NULL)`
+- `idx_attachment_owner_lead`: `btree (owner_lead_id) WHERE (owner_lead_id IS NOT NULL)`
+- `idx_attachment_owner_project`: `btree (owner_project_id) WHERE (owner_project_id IS NOT NULL)`
 - `idx_attachment_storage_key`: `btree (storage_key) WHERE (storage_key <> '')`
+- `idx_attachment_unkeyed_owner`: `btree (id) WHERE owner_unkeyed`
 
 **Triggers**
 
+- `attachment_deleted_object`: `AFTER DELETE FOR EACH ROW EXECUTE FUNCTION queue_deleted_attachment_object()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"title": 120, "source": 20000, "category": 20000, "checksum": 20000, "filename": 20000, "doc_state": 20000, "captured_by": 20000, "entity_type": 20000, "storage_key": 20000, "content_type": 20000, "declared_type": 20000, "external_part_id": 20000, "external_source_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"checksum":20000,"content_type":20000,"declared_type":20000,"doc_state":20000,"entity_type":20000,"external_part_id":20000,"external_source_id":20000,"filename":20000,"source":20000,"storage_key":20000,"title":120}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "category": 20000, "checksum": 20000, "filename": 20000, "doc_state": 20000, "captured_by": 20000, "entity_type": 20000, "storage_key": 20000, "content_type": 20000, "declared_type": 20000, "external_part_id": 20000, "external_source_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"checksum":20000,"content_type":20000,"declared_type":20000,"doc_state":20000,"entity_type":20000,"external_part_id":20000,"external_source_id":20000,"filename":20000,"source":20000,"storage_key":20000,"title":120}')`
-- `trg_attachment_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
+- `trg_attachment_owner_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_attachment_owner_keys()`
+- `trg_attachment_updated`: `BEFORE UPDATE FOR EACH ROW WHEN (((NOT (((((((old.owner_unkeyed IS DISTINCT FROM new.owner_unkeyed) OR (old.owner_contact_id IS DISTINCT FROM new.owner_contact_id)) OR (old.owner_company_id IS DISTINCT FROM new.owner_company_id)) OR (old.owner_deal_id IS DISTINCT FROM new.owner_deal_id)) OR (old.owner_lead_id IS DISTINCT FROM new.owner_lead_id)) OR (old.owner_project_id IS DISTINCT FROM new.owner_project_id)) OR (old.owner_activity_id IS DISTINCT FROM new.owner_activity_id))) OR ((to_jsonb(old.*) - ARRAY['owner_unkeyed', 'owner_contact_id', 'owner_company_id', 'owner_deal_id', 'owner_lead_id', 'owner_project_id', 'owner_activity_id']) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['owner_unkeyed', 'owner_contact_id', 'owner_company_id', 'owner_deal_id', 'owner_lead_id', 'owner_project_id', 'owner_activity_id'])))) EXECUTE FUNCTION set_updated_at()`
 
 ## attachment_extraction
 

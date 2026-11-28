@@ -33,7 +33,7 @@ func TestUntoldLeadErasureScrubsFilesBeforeItsParentCascades(t *testing.T) {
 	}{{"lead", lead}, {"activity", activity}} {
 		id := ids.NewV7()
 		mustExec(ctx, t, env.owner, `INSERT INTO attachment(id,entity_type,entity_id,filename,storage_key,source,captured_by)
- VALUES($1,$2,$3,'private-buyer-file.txt','untold/'||$1::text,'manual','human:test')`, id, file.kind, file.owner)
+ VALUES($1,$2,$3,'private-buyer-file.txt','untold/'||$1::uuid::text,'manual','human:test')`, id, file.kind, file.owner)
 		mustExec(ctx, t, env.owner, `INSERT INTO audit_log(actor_type,actor_id,action,entity_type,entity_id,after,occurred_at)
  VALUES('human','human:test','create','attachment',$1,'{"filename":"private-buyer-file.txt"}',now()-interval '1 hour')`, id)
 	}

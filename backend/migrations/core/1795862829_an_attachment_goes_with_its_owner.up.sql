@@ -32,8 +32,7 @@ ALTER TABLE attachment
     ADD CONSTRAINT attachment_owner_activity_id_bound CHECK (owner_unkeyed OR owner_activity_id IS NOT DISTINCT FROM CASE WHEN entity_type = 'activity' THEN entity_id END) NOT VALID,
     ADD CONSTRAINT attachment_owner_shape CHECK (owner_unkeyed OR num_nonnulls(owner_contact_id, owner_company_id, owner_deal_id, owner_lead_id, owner_project_id, owner_activity_id) = 1) NOT VALID;
 
-CREATE FUNCTION trg_attachment_owner_keys() RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
+CREATE FUNCTION trg_attachment_owner_keys() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.owner_unkeyed := false;
     ELSE
@@ -48,7 +47,8 @@ BEGIN
         NEW.owner_activity_id := CASE WHEN NEW.entity_type = 'activity' THEN NEW.entity_id END;
     END IF;
     RETURN NEW;
-END $$;
+END;
+$$;
 CREATE TRIGGER trg_attachment_owner_keys BEFORE INSERT OR UPDATE ON attachment
     FOR EACH ROW EXECUTE FUNCTION trg_attachment_owner_keys();
 
