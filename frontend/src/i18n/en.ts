@@ -3384,6 +3384,18 @@ export const en = {
   "record.disqualify": "Disqualify",
   "record.archiveConfirm":
     "Archive this record? You can bring it back from its history.",
+  "co.archiveConfirm.ask": "Archive {name}?",
+  "co.archiveConfirm.contacts_one":
+    "Its {count} contact stays, but no longer shows this company as employer.",
+  "co.archiveConfirm.contacts_other":
+    "Its {count} contacts stay, but no longer show this company as employer.",
+  "co.archiveConfirm.deals_one":
+    "Its {count} open deal stays open in the pipeline.",
+  "co.archiveConfirm.deals_other":
+    "Its {count} open deals stay open in the pipeline.",
+  "co.archiveConfirm.unknown":
+    "Its contacts stay, but no longer show this company as employer. Its open deals stay open.",
+  "co.archiveConfirm.restore": "You can bring it back from its history.",
   "record.archived": "Archived",
   "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange":
@@ -3804,6 +3816,7 @@ export const en = {
   "ownerPick.change": "Change owner",
   "ownerPick.search": "Search colleagues",
   "ownerPick.done": "Assigned to {name}",
+  "ownerPick.cleared": "Returned to the unassigned queue",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
   // A record search that ANSWERED and found nothing. Distinct from a search
@@ -3997,7 +4010,11 @@ export const en = {
   "list.viewMine": "Mine",
   "list.viewCustomers": "Customers",
   "list.viewProspects": "Prospects",
-  "company.filterLifecycleAll": "Any stage",
+  "company.filterLifecycleAll": "Any lifecycle",
+  "company.filterLifecycleDelivering": "Onboarding, live or customer",
+  "company.filterIndustryAll": "Any industry",
+  "company.industry": "Industry",
+  "company.employees": "Employees",
   "company.filterRelTypeAll": "Any type",
   "company.filterSizeBandAll": "Any number of employees",
   "company.filterDormancyAll": "Any activity",
@@ -5830,6 +5847,8 @@ export const en = {
   "co.contacts.band.noWayIn": "None",
   "co.contacts.band.noWayInWhy": "Contacted · no replies",
   "co.contacts.band.committee": "Buying committee",
+  "co.contacts.band.committeeOf": "Buying committee · {deal}",
+  "co.contacts.board.deal": "Deal whose buying committee to show",
   "co.contacts.band.missing": "No {role}",
   "co.contacts.band.committeeComplete": "Complete",
   "co.contacts.band.committeeUnread": "Restricted",
@@ -6321,6 +6340,7 @@ export const en = {
   "lead.bulkOwner": "New owner",
   "lead.bulkOwnerPick": "Choose owner",
   "lead.bulkAssign": "Assign",
+  "lead.bulkReturn": "Return to queue",
   "lead.bulkDisqualify": "Disqualify",
   "lead.bulkDisqualifyTitle_one": "Disqualify this lead?",
   "lead.bulkDisqualifyTitle_other": "Disqualify {count} leads?",
@@ -6332,6 +6352,15 @@ export const en = {
   "lead.bulkDisqualifiedDone_other": "{count} leads disqualified.",
   "lead.bulkAssignTitle_one": "Assign this lead to {owner}?",
   "lead.bulkAssignTitle_other": "Assign {count} leads to {owner}?",
+  "lead.bulkUnassignTitle_one": "Return this lead to the unassigned queue?",
+  "lead.bulkUnassignTitle_other":
+    "Return {count} leads to the unassigned queue?",
+  "lead.bulkUnassignedDone_one":
+    "{count} lead returned to the unassigned queue.",
+  "lead.bulkUnassignedDone_other":
+    "{count} leads returned to the unassigned queue.",
+  "lead.unassignedAway":
+    "{names} returned to the unassigned queue. No longer in Mine.",
   "lead.bulkFailed": "{count} not applied:",
   "lead.bulkFailedRow": "not saved",
   "lead.bulkOutcomeConflict": "changed by someone else in the meantime",

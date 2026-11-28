@@ -23,9 +23,10 @@ import (
 // between the wire and here reads maxItems.
 const maxBulkAssign = 500
 
-// AssignLeadsInput is one destination and the leads to hand to it.
+// AssignLeadsInput is one destination and the leads to hand to it. A nil
+// OwnerID hands them back to the unassigned queue.
 type AssignLeadsInput struct {
-	OwnerID ids.UserID
+	OwnerID *ids.UserID
 	Leads   []AssignLeadItem
 }
 
@@ -80,19 +81,17 @@ func (s *Store) AssignLeads(ctx context.Context, in AssignLeadsInput) ([]AssignL
 	// and then discovered the owner was suspended would leave the reader to
 	// undo thirty writes by hand. Each row re-asks it inside its own
 	// transaction, because a seat can be suspended mid-run.
-	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		return auth.EnsureAssignee(ctx, tx, in.OwnerID.UUID)
-	}); err != nil {
-		return nil, err
+	if in.OwnerID != nil {
+		if err := s.tx(ctx, func(tx pgx.Tx) error {
+			return auth.EnsureAssignee(ctx, tx, in.OwnerID.UUID)
+		}); err != nil {
+			return nil, err
+		}
 	}
 
-	owner := in.OwnerID
 	out := make([]AssignLeadOutcome, 0, len(in.Leads))
 	for _, item := range in.Leads {
-		lead, err := s.UpdateLead(ctx, item.ID, UpdateLeadInput{
-			OwnerID:   &owner,
-			IfVersion: item.IfVersion,
-		})
+		lead, err := s.UpdateLead(ctx, item.ID, handOver(in.OwnerID, item.IfVersion))
 		outcome, ok := assignOutcomeOf(item.ID, lead, err)
 		if !ok {
 			// Not a verdict about this lead — the database went away, or the
@@ -104,6 +103,15 @@ func (s *Store) AssignLeads(ctx context.Context, in AssignLeadsInput) ([]AssignL
 		out = append(out, outcome)
 	}
 	return out, nil
+}
+
+// handOver is the single update one row of a bulk run makes: the owner set,
+// or cleared as a PATCH with `owner_id: null` clears it.
+func handOver(owner *ids.UserID, ifVersion *int64) UpdateLeadInput {
+	if owner == nil {
+		return UpdateLeadInput{Clear: []string{ownerIDColumn}, IfVersion: ifVersion}
+	}
+	return UpdateLeadInput{OwnerID: owner, IfVersion: ifVersion}
 }
 
 // assignOutcomeOf reads one row's answer off what the writer returned.

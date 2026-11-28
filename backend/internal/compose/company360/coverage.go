@@ -39,9 +39,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Coverage reads the account's coverage for the company Contacts tab.
+// Coverage reads the account's coverage for the company Contacts tab. The
+// committee is dealID's when one is named, else the newest open deal's.
 func (s *Service) Coverage(
-	ctx context.Context, companyID ids.CompanyID,
+	ctx context.Context, companyID ids.CompanyID, dealID *ids.DealID,
 ) (crmcontracts.CompanyCoverage, error) {
 	// The account admission its siblings state. Coverage was the fourth company360
 	// read of this shape and the one left behind: its root grant came only from
@@ -71,7 +72,7 @@ func (s *Service) Coverage(
 		if err := s.fillBestWayIn(ctx, tx, companyID, all, &out); err != nil {
 			return err
 		}
-		return s.fillCommittee(ctx, tx, companyID, now, all, &out)
+		return s.fillCommittee(ctx, tx, companyID, dealID, now, all, &out)
 	})
 	if err != nil {
 		return crmcontracts.CompanyCoverage{}, err
@@ -146,25 +147,29 @@ func (s *Service) fillBestWayIn(
 // ("nobody holds a role"), and giving that answer to somebody who was not
 // allowed to ask is the disclosure inverted.
 func (s *Service) fillCommittee(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, named *ids.DealID, now time.Time,
 	all []contacts.ContactStrength, out *crmcontracts.CompanyCoverage,
 ) error {
 	openDeals, err := s.visibleOpenDeals(ctx, tx, companyID)
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
+	if errors.Is(err, apperrors.ErrPermissionDenied) && named == nil {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
 	out.Deals = openDeals
-	if len(openDeals) == 0 {
+	at, err := selectedDeal(openDeals, named)
+	if err != nil {
+		return err
+	}
+	if at < 0 {
 		// No open deal is a complete answer, not a refused one: there is no
 		// committee to read because there is no deal to hold one.
 		out.Completeness.CommitteeRead = true
 		return nil
 	}
-	selected := ids.From[ids.DealKind](ids.UUID(openDeals[0].DealId))
-	out.SelectedDealId = &openDeals[0].DealId
+	selected := ids.From[ids.DealKind](ids.UUID(openDeals[at].DealId))
+	out.SelectedDealId = &openDeals[at].DealId
 
 	seats, err := deals.Stakeholders(ctx, tx, selected, now)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -190,6 +195,24 @@ func (s *Service) fillCommittee(
 	}
 	out.Committee = &committee
 	return nil
+}
+
+// selectedDeal is the position of the deal whose committee to read: the one the
+// caller named, else the first. -1 is an account with no open deal. A named deal
+// outside the open deals this caller may see is not found, as a row out of scope is.
+func selectedDeal(openDeals []crmcontracts.CompanyCoverageDeal, named *ids.DealID) (int, error) {
+	if named == nil {
+		if len(openDeals) == 0 {
+			return -1, nil
+		}
+		return 0, nil
+	}
+	for at, deal := range openDeals {
+		if ids.UUID(deal.DealId) == named.UUID {
+			return at, nil
+		}
+	}
+	return -1, fmt.Errorf("deal_id names no open deal of this account you may see: %w", apperrors.ErrNotFound)
 }
 
 func (s *Service) wireCommittee(

@@ -61,11 +61,10 @@ type ListCompaniesInput struct {
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
 	// Two questions, asked separately because one value could not answer both.
-	// Status is where the account stands with us and holds one value at a time.
-	// RelationshipType is what the company is to us and holds several: a
-	// partner is often a customer as well. They replaced the retired
-	// classification field.
-	Status           *string
+	// Status is where the account stands with us: an account holds one, and the
+	// filter matches any of the ones named. RelationshipType is what the company
+	// is to us and holds several: a partner is often a customer as well.
+	Status           []string
 	RelationshipType *string
 	// ExtensionRelationshipType is RelationshipType for an `ext:<unit>:<type>`
 	// value, kept apart so the closed core enum stays closed.
@@ -113,11 +112,9 @@ var companyListFields = map[string]storekit.SortField{
 	ownerIDColumn:      storekit.OwnerNameSort(companyEntity),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 	columnDescription:  storekit.Column(fieldcatalog.TypeText),
-	// classification is retired and the column the list draws is status, so
-	// this is the one the header offers. By the stored value, which groups the
-	// seven states together; the funnel's own order is a question of its own
-	// and the deals list answers `status` the same way today.
-	filterStatus: storekit.Column(fieldcatalog.TypeText),
+	// The column the list draws, in the funnel's order rather than the
+	// alphabet's. The cursor field is renamed with the order it continues.
+	filterStatus: {Kind: fieldcatalog.TypeNumber, Expr: orderByLifecycle, CursorField: "status_funnel"},
 	// The three the list draws and does not store (company_sorts.go).
 	"website_url":     {Kind: fieldcatalog.TypeText, Expr: orderByPrimaryDomain},
 	"contact_count":   {Kind: fieldcatalog.TypeNumber, Expr: orderByContactCount},
@@ -317,12 +314,14 @@ func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontr
 // when the contract never accepted the question. The check runs here, inside
 // the store, so it lands after listPage's auth.Require.
 func appendCompanyEnumClauses(where []string, in ListCompaniesInput, arg func(any) int) ([]string, error) {
-	if in.Status != nil {
-		if !crmcontracts.ListCompaniesParamsStatus(*in.Status).Valid() {
-			return nil, httperr.Validation(filterStatus, "not_a_known_value",
-				"filter by one of the account stages the contract defines, or leave the parameter off")
+	if len(in.Status) > 0 {
+		for _, status := range in.Status {
+			if !crmcontracts.ListCompaniesParamsStatus(status).Valid() {
+				return nil, httperr.Validation(filterStatus, "not_a_known_value",
+					"filter by the account stages the contract defines, or leave the parameter off")
+			}
 		}
-		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
+		where = append(where, storekit.SQLf("status = ANY($%d)", arg(in.Status)))
 	}
 	if in.Industry != nil {
 		if !crmcontracts.ListCompaniesParamsIndustry(*in.Industry).Valid() {

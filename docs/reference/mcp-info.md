@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 245.0 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 64112 |
+| Approx. wire tokens | 64116 |
 | Largest tool | `read_details` (15.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.1 KB | 20% | Yes, every step |
-| Input schemas | 148.6 KB | 60% | Yes, every step |
+| Input schemas | 148.7 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
 | **Description + input schema** | **199.7 KB** | **81%** | **the recurring cost** |
 
@@ -104,7 +104,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who your team knows, and how well | yes |  | 365 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 3352 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 357 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1920 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1925 |
 | [`read_workspace`](#read_workspace) | Read how this company is set up | yes |  | 3011 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 617 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1482 |
@@ -9185,7 +9185,7 @@ find_records to find or list records, and read_reports for the standard metrics 
       "type": "integer"
     },
     "deal_id": {
-      "description": "views: relationships",
+      "description": "views: company_coverage, relationships",
       "type": "string"
     },
     "doc_state": {

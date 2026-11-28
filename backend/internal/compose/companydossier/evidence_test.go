@@ -18,6 +18,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -281,6 +282,21 @@ func (s stubFacts) GetCompany(
 		company.SizeBand = &band
 	}
 	return company, nil
+}
+
+// ListCompanies answers the one company row the standing is read from.
+func (s stubFacts) ListCompanies(
+	context.Context, contacts.ListCompaniesInput,
+) ([]crmcontracts.Company, storekit.Page, error) {
+	row := crmcontracts.Company{
+		Description: &s.in.Standing.Description, ContactCount: s.in.Standing.Contacts,
+		OpenDealCount: s.in.Standing.OpenDeals,
+	}
+	if s.in.Standing.Lifecycle != "" {
+		lifecycle := crmcontracts.CompanyStatus(s.in.Standing.Lifecycle)
+		row.Status = &lifecycle
+	}
+	return []crmcontracts.Company{row}, storekit.Page{}, nil
 }
 
 // A receipt must not both NAME a field as missing and render it blank. The

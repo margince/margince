@@ -80,6 +80,7 @@ export type ListView = {
    */
   id?: string;
   label: string;
+  /** Absent, the tab claims no order: picking it keeps the reader's sort. */
   sort?: string;
   filters?: Readonly<Record<string, string>>;
   /** Opens `href` instead of narrowing this list; `name` says so aloud. */

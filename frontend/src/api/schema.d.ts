@@ -42658,11 +42658,11 @@ export interface components {
             /** Format: date-time */
             as_of: string;
             summary: components["schemas"]["CompanyCoverageSummary"];
-            /** @description The account's open deals, so the reader can pick which committee to read. */
+            /** @description The account's open deals, most recently changed first, so the reader can pick which committee to read with `deal_id`. */
             deals: components["schemas"]["CompanyCoverageDeal"][];
             /**
              * Format: uuid
-             * @description The deal the committee below describes. Null when the account has no visible open deal.
+             * @description The deal the committee below describes, the one `deal_id` named or else the first of `deals`. Null when the account has no visible open deal.
              */
             selected_deal_id?: string | null;
             best_way_in?: components["schemas"]["CompanyCoverageRoute"];
@@ -45639,9 +45639,11 @@ export interface components {
              * Format: uuid
              * @description The seat to hand them to. Must be one that can be handed work — an active, unarchived
              *     human seat that is not read-only, inside the caller's own row scope — else
-             *     `422 owner_not_assignable` and nothing moves.
+             *     `422 owner_not_assignable` and nothing moves. An explicit `null` hands them back to
+             *     the unassigned queue: each lead loses its owner as `updateLead` with `owner_id: null`
+             *     would, so a lead the caller may not write answers `forbidden`.
              */
-            owner_id: string;
+            owner_id: string | null;
             leads: components["schemas"]["AssignLeadsItem"][];
         };
         AssignLeadsItem: {
@@ -71243,6 +71245,13 @@ export interface operations {
                 domain?: string;
                 /** @description Where the account stands with us (DM-VOCAB-2, ADR-0079). */
                 status?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
+                /**
+                 * @description Several account stages at once: an account at any one of them matches, so onboarding,
+                 *     live and customer together select every account we deliver for. Repeat the parameter
+                 *     for each. Sent together with `status`, an account at `status` or at any of these
+                 *     matches.
+                 */
+                status_any?: ("unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified")[];
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
                 /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`. */
@@ -71977,7 +71986,15 @@ export interface operations {
     };
     getCompanyCoverage: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description The open deal whose buying committee to read, one of `deals`. Absent, the committee
+                 *     is the most recently changed open deal's. A deal that is not one of this account's
+                 *     open deals the caller may see answers `404`. A caller without the deal read grant
+                 *     who names a deal answers `403`, as any refused grant does.
+                 */
+                deal_id?: string;
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */

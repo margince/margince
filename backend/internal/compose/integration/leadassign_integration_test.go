@@ -357,7 +357,7 @@ func TestBulkAssignAnswersForEachLeadSeparately(t *testing.T) {
 
 	staleVersion := int64(1)
 	outcomes, err := e.Contacts.AssignLeads(manager, contacts.AssignLeadsInput{
-		OwnerID: ids.From[ids.UserKind](e.Rep1),
+		OwnerID: new(ids.From[ids.UserKind](e.Rep1)),
 		Leads: []contacts.AssignLeadItem{
 			{ID: movable},
 			{ID: ids.From[ids.LeadKind](ids.UUID(strangerLead.Id))},
@@ -407,7 +407,7 @@ func TestBulkAssignRefusesAnIneligibleOwnerBeforeWritingAnything(t *testing.T) {
 	defer e.WsExec(t, `UPDATE app_user SET status = 'active' WHERE id = $1`, e.Rep3)
 
 	_, err := e.Contacts.AssignLeads(e.Admin(), contacts.AssignLeadsInput{
-		OwnerID: ids.From[ids.UserKind](e.Rep3),
+		OwnerID: new(ids.From[ids.UserKind](e.Rep3)),
 		Leads:   []contacts.AssignLeadItem{{ID: first}, {ID: second}},
 	})
 	if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
@@ -429,7 +429,7 @@ func TestBulkAssignHoldsTheSameRuleAsTheSingleWrite(t *testing.T) {
 	e.WsExec(t, `UPDATE lead SET owner_id = $1 WHERE id = $2`, e.Rep3, theirs.UUID)
 
 	outcomes, err := e.Contacts.AssignLeads(rep, contacts.AssignLeadsInput{
-		OwnerID: ids.From[ids.UserKind](e.Rep2),
+		OwnerID: new(ids.From[ids.UserKind](e.Rep2)),
 		Leads:   []contacts.AssignLeadItem{{ID: ownerless}, {ID: theirs}},
 	})
 	if err != nil {
@@ -451,12 +451,43 @@ func TestBulkAssignHoldsTheSameRuleAsTheSingleWrite(t *testing.T) {
 	mustBeOwnedBy(rep, t, e, theirs, e.Rep3)
 }
 
+// A null owner hands a selection back to the unassigned queue. The rule is the
+// single clear's: a rep clears their own lead and not a colleague's.
+func TestBulkAssignToNobodyReturnsTheLeadsToTheQueue(t *testing.T) {
+	e := Setup(t)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, leadRepPerms())
+	mine := seedOwnerlessLead(t, e, "Bulk Back To Queue")
+	theirs := seedOwnerlessLead(t, e, "Bulk Not Mine To Drop")
+	e.WsExec(t, `UPDATE lead SET owner_id = $1 WHERE id = $2`, e.Rep1, mine.UUID)
+	e.WsExec(t, `UPDATE lead SET owner_id = $1 WHERE id = $2`, e.Rep3, theirs.UUID)
+
+	outcomes, err := e.Contacts.AssignLeads(rep, contacts.AssignLeadsInput{
+		Leads: []contacts.AssignLeadItem{{ID: mine}, {ID: theirs}},
+	})
+	if err != nil {
+		t.Fatalf("a rep handing leads back to the queue: %v", err)
+	}
+	want := map[ids.LeadID]crmcontracts.AssignLeadOutcomeKind{
+		mine:   crmcontracts.AssignLeadOutcomeKindAssigned,
+		theirs: crmcontracts.AssignLeadOutcomeKindForbidden,
+	}
+	for _, outcome := range outcomes {
+		if outcome.Outcome != want[outcome.LeadID] {
+			t.Errorf("lead %s answered %q, want %q", outcome.LeadID, outcome.Outcome, want[outcome.LeadID])
+		}
+	}
+	mustStayUnowned(t, e, mine)
+	if e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND owner_id = $2`, theirs.UUID, e.Rep3) != 1 {
+		t.Errorf("a colleague's lead lost its owner to a rep who may not change it")
+	}
+}
+
 // The contract says 1..500 and nothing between the wire and the store reads
 // that: this installation runs no request-validator middleware, so a cap
 // declared in the schema alone is a cap on nothing.
 func TestBulkAssignEnforcesItsOwnSizeCap(t *testing.T) {
 	e := Setup(t)
-	owner := ids.From[ids.UserKind](e.Rep1)
+	owner := new(ids.From[ids.UserKind](e.Rep1))
 
 	if _, err := e.Contacts.AssignLeads(e.Admin(), contacts.AssignLeadsInput{
 		OwnerID: owner,
@@ -491,7 +522,7 @@ func TestAssigningALeadToItsCurrentOwnerWritesNothing(t *testing.T) {
 	auditBefore := e.WsCount(t, auditRows, id)
 
 	got, err := e.Contacts.AssignLeads(admin, contacts.AssignLeadsInput{
-		OwnerID: ids.From[ids.UserKind](e.Rep1),
+		OwnerID: new(ids.From[ids.UserKind](e.Rep1)),
 		Leads:   []contacts.AssignLeadItem{{ID: id, IfVersion: before.Version}},
 	})
 	if err != nil {

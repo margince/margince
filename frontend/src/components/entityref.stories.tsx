@@ -12,6 +12,25 @@ import {
 import { EntityRef } from "./entityref";
 import { companyReferenceQuery } from "./entityref.queries";
 
+// What the reference read answers for each story's id; an id not here is one
+// the read leaves out.
+const REFERENCES: Readonly<Record<string, object>> = {
+  "o-1": {
+    id: "o-1",
+    name: "Brandt Automotive GmbH",
+    archived: false,
+    logo: null,
+  },
+  "o-archived": {
+    id: "o-archived",
+    name: "Former Account GmbH",
+    archived: true,
+    logo: null,
+  },
+  "ct-1": { id: "ct-1", name: "Anna Weber", archived: true },
+  "l-email": { id: "l-email", name: "lead@example.com", archived: false },
+};
+
 const meta: Meta<typeof EntityRef> = {
   title: "Patterns/Entity reference",
   component: EntityRef,
@@ -34,29 +53,8 @@ const meta: Meta<typeof EntityRef> = {
           if (args.id === "o-refused") {
             return jsonResponse({ title: "permission denied" }, 403);
           }
-          return jsonResponse({
-            data:
-              args.id === "o-1"
-                ? [
-                    {
-                      id: "o-1",
-                      name: "Brandt Automotive GmbH",
-                      archived: false,
-                      logo: null,
-                    },
-                  ]
-                : args.id === "ct-1"
-                  ? [{ id: "ct-1", name: "Anna Weber", archived: true }]
-                  : args.id === "l-email"
-                    ? [
-                        {
-                          id: "l-email",
-                          name: "lead@example.com",
-                          archived: false,
-                        },
-                      ]
-                    : [],
-          });
+          const reference = args.id ? REFERENCES[args.id] : undefined;
+          return jsonResponse({ data: reference ? [reference] : [] });
         },
         // A roster that offers another cursor for every page it answers: the
         // walk spends its page budget and still has not reached the end, which
@@ -98,6 +96,17 @@ export const CachedCompanyReference: Story = {
         name: "Cached Company",
       }),
     ).resolves.toBeVisible();
+  },
+};
+
+export const ArchivedCompanySaysSo: Story = {
+  args: { kind: "company", id: "o-archived" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.findByRole("link", { name: "Former Account GmbH" }),
+    ).resolves.toBeVisible();
+    await expect(canvas.getByText("Archived")).toBeVisible();
   },
 };
 

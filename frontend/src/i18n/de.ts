@@ -3483,6 +3483,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
     "Diesen Datensatz archivieren? Über den Verlauf kannst du den Datensatz zurückholen.",
+  "co.archiveConfirm.ask": "{name} archivieren?",
+  "co.archiveConfirm.contacts_one":
+    "{count} Kontakt bleibt erhalten, zeigt dieses Unternehmen aber nicht mehr als Arbeitgeber.",
+  "co.archiveConfirm.contacts_other":
+    "{count} Kontakte bleiben erhalten, zeigen dieses Unternehmen aber nicht mehr als Arbeitgeber.",
+  "co.archiveConfirm.deals_one":
+    "{count} offener Deal bleibt in der Pipeline offen.",
+  "co.archiveConfirm.deals_other":
+    "{count} offene Deals bleiben in der Pipeline offen.",
+  "co.archiveConfirm.unknown":
+    "Die Kontakte bleiben erhalten, zeigen dieses Unternehmen aber nicht mehr als Arbeitgeber. Offene Deals bleiben offen.",
+  "co.archiveConfirm.restore":
+    "Über den Verlauf kannst du das Unternehmen zurückholen.",
   "record.archived": "Archiviert",
   "record.archivedReadOnly":
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
@@ -3897,6 +3910,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ownerPick.change": "Verantwortung ändern",
   "ownerPick.search": "Teammitglieder suchen",
   "ownerPick.done": "{name} zugewiesen",
+  "ownerPick.cleared": "Zuweisung aufgehoben",
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
@@ -4078,7 +4092,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.viewMine": "Meine",
   "list.viewCustomers": "Kunden",
   "list.viewProspects": "Interessenten",
-  "company.filterLifecycleAll": "Jede Phase",
+  "company.filterLifecycleAll": "Jeder Lebenszyklus",
+  "company.filterLifecycleDelivering": "Onboarding, Live oder Kunde",
+  "company.filterIndustryAll": "Jede Branche",
+  "company.industry": "Branche",
+  "company.employees": "Beschäftigtenzahl",
   "company.filterRelTypeAll": "Jeder Typ",
   "company.filterSizeBandAll": "Jede Mitarbeiterzahl",
   "company.filterDormancyAll": "Jede Aktivität",
@@ -5907,6 +5925,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.band.noWayIn": "Keiner",
   "co.contacts.band.noWayInWhy": "Angeschrieben · keine Antworten",
   "co.contacts.band.committee": "Buying Center",
+  "co.contacts.band.committeeOf": "Buying Center · {deal}",
+  "co.contacts.board.deal": "Deal, dessen Buying Center angezeigt wird",
   "co.contacts.band.missing": "Ohne {role}",
   "co.contacts.band.committeeComplete": "Vollständig",
   "co.contacts.band.committeeUnread": "Eingeschränkt",
@@ -6410,6 +6430,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.bulkOwner": "Neue Verantwortung",
   "lead.bulkOwnerPick": "Verantwortung wählen",
   "lead.bulkAssign": "Zuweisen",
+  "lead.bulkReturn": "Zuweisung aufheben",
   "lead.bulkDisqualify": "Disqualifizieren",
   "lead.bulkDisqualifyTitle_one": "Diesen Lead disqualifizieren?",
   "lead.bulkDisqualifyTitle_other": "{count} Leads disqualifizieren?",
@@ -6421,6 +6442,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.bulkDisqualifiedDone_other": "{count} Leads disqualifiziert.",
   "lead.bulkAssignTitle_one": "Diesen Lead an {owner} zuweisen?",
   "lead.bulkAssignTitle_other": "{count} Leads an {owner} zuweisen?",
+  "lead.bulkUnassignTitle_one": "Zuweisung dieses Leads aufheben?",
+  "lead.bulkUnassignTitle_other": "Zuweisung von {count} Leads aufheben?",
+  "lead.bulkUnassignedDone_one": "Zuweisung von {count} Lead aufgehoben.",
+  "lead.bulkUnassignedDone_other": "Zuweisung von {count} Leads aufgehoben.",
+  "lead.unassignedAway":
+    "Zuweisung von {names} aufgehoben. Nicht mehr unter „Meine“.",
   "lead.bulkFailed": "{count} nicht übernommen:",
   "lead.bulkFailedRow": "nicht gespeichert",
   "lead.bulkOutcomeConflict": "inzwischen von jemand anderem geändert",

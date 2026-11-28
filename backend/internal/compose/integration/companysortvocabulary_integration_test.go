@@ -65,8 +65,8 @@ func TestTheAccountsListSortsByTheDescriptionAndLifecycleItDraws(t *testing.T) {
 
 	assertIDOrder(t, companyIDsIn(ctx, t, e, "description"), []ids.UUID{zeta, alma},
 		"description ascending")
-	assertIDOrder(t, companyIDsIn(ctx, t, e, "status"), []ids.UUID{zeta, alma},
-		"status ascending — customer before target")
+	assertIDOrder(t, companyIDsIn(ctx, t, e, "status"), []ids.UUID{alma, zeta},
+		"status ascending in funnel order — target before customer")
 }
 
 // The Website header orders by the HOST it prints, off the primary domain row

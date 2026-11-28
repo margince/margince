@@ -65,7 +65,7 @@ quoted messages stay as written. Older text without this record keeps its origin
 Also called: translation, show in English, read in German.
 
 ### Which language does the AI write in?
-Summaries on a record, such as the company overview or the relationship summary, are read by everyone who can open the record. They use the language your administrator set for the installation. An answer only you see, such as **Ask about this company**, uses the language you set for yourself.
+A summary everyone who opens a record reads, such as the relationship summary, uses the language your administrator set for the installation. The company overview and the growth fit are made for each reader, so they use the language you set for yourself. So does an answer only you see, such as **Ask about this company**.
 Also called: AI language, wrong language, summary in English.
 
 ### What happens to my mail and enrichment while the AI provider is down?

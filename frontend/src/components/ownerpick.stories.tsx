@@ -92,7 +92,14 @@ function Picker({
   roster = "colleagues",
   write = "lands",
   ownerId = "u-7",
-}: Readonly<{ roster?: Roster; write?: Write; ownerId?: string | null }>) {
+  queue = false,
+}: Readonly<{
+  roster?: Roster;
+  write?: Write;
+  ownerId?: string | null;
+  /** The record may go back to the unassigned queue, as a lead may. */
+  queue?: boolean;
+}>) {
   installFetchStub({
     "GET /me": meRoute({}),
     "GET /users": (_, url) => rosterAnswer(roster, url),
@@ -103,6 +110,7 @@ function Picker({
         <OwnerPick
           record={{ id: "p-1", version: 3, owner_id: ownerId }}
           assign={() => assign(write)}
+          unassign={queue ? () => assign(write) : undefined}
           invalidate="projects"
           recordKey="project"
         />
@@ -129,6 +137,15 @@ async function pickJane(canvasElement: HTMLElement) {
 
 /** The trigger at rest. */
 export const Default: Story = { render: () => <Picker /> };
+
+/** A lead's list: "Unassigned" first, which hands the record back to the queue. */
+export const WithUnassigned: Story = {
+  render: () => <Picker queue />,
+  play: async ({ canvasElement }) => {
+    const list = await openList(canvasElement);
+    await list.findByRole("option", { name: "Unassigned" });
+  },
+};
 
 /** Opened on the roster: the viewer first, the current owner marked. */
 export const Open: Story = {

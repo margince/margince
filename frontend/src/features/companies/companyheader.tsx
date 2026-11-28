@@ -24,7 +24,7 @@ import {
   useFieldEditor,
 } from "../../design-system/fieldeditdialog";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import { useCan, useCanWrite, useCanWriteRecord } from "../../lib/capability";
 import { useClaimRecord } from "../../lib/claimrecord";
@@ -36,6 +36,8 @@ import { useMe, useViewerId } from "../../lib/session";
 import { useShortcut } from "../../lib/shortcuts";
 import { useArchiveRefusal, useKindWriteRefusal } from "../../lib/writerefusal";
 import { ShareAction } from "../records/share";
+import type { Company360View } from "./companies";
+import { companyArchiveConfirm } from "./companyarchiveconfirm";
 import { CompanyRejectAction } from "./companyreject";
 import { displayDomain } from "./domaindisplay";
 
@@ -253,6 +255,7 @@ export function useCompanyVerbRefusal(company: Company): string | undefined {
 
 export function CompanyActionBadges({
   company,
+  view,
   activity,
   onAddTask,
   onOpenHistory,
@@ -260,6 +263,8 @@ export function CompanyActionBadges({
   archivedReasonId,
 }: Readonly<{
   company: Company;
+  // The account's 360 read, which the archive question counts from.
+  view?: Company360View;
   // The page's activity gate, which the strip's Log verb reads too; its
   // refusal sentence is stated there, outside this menu.
   activity: ActivityGate;
@@ -272,6 +277,8 @@ export function CompanyActionBadges({
   archivedReasonId?: string;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   // An archived record is read-only: the backend rejects edit, merge and
   // archive on it until History undoes the archive. The verbs stay visible and
   // refused (STATE-4a), because a missing button reads as a missing feature.
@@ -419,7 +426,7 @@ export function CompanyActionBadges({
           refusedReason={archiveRefusal}
           disabledReasonId={refusedByState}
           label={t("record.archive")}
-          confirmText={t("record.archiveConfirm")}
+          confirmText={companyArchiveConfirm(t, plural, locale, company, view)}
           archivedMessage={t("record.archiveDone", {
             name: company.display_name,
           })}

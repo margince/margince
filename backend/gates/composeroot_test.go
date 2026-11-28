@@ -199,7 +199,9 @@ const (
 	// finish case, which checks a repeated id keeps its first place.
 	// Raised by 21 test lines for the case that reads a timeline entry's request
 	// state into the deal status input, which is unexported.
-	composeRootTestLines = 364_269
+	// Raised by 2 test lines for the company list's status_any entry in the MCP
+	// path census, which reads the unexported route table.
+	composeRootTestLines = 364_271
 )
 
 // A read under these floors stopped early or read the wrong place, and would

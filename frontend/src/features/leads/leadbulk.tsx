@@ -21,6 +21,7 @@ import {
   throwProblem,
   unwrap,
 } from "../../lib/problem";
+import { useViewerId } from "../../lib/session";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -37,7 +38,8 @@ export type BulkOutcome = { id: string; name: string; error?: string };
  */
 export type AssignAction = {
   kind: "assign";
-  ownerId: string;
+  /** Null hands the leads back to the unassigned queue. */
+  ownerId: string | null;
   ownerName: string;
 };
 export type DisqualifyAction = { kind: "disqualify"; reasonId: string };
@@ -72,12 +74,15 @@ export function useBulkDoneMessage() {
   const { locale } = useLocale();
   return (moved: number, action: BulkAction) => {
     const count = formatNumber(moved, locale);
-    return action.kind === "assign"
-      ? plural("lead.bulkAssignedDone", moved, {
+    if (action.kind === "disqualify") {
+      return plural("lead.bulkDisqualifiedDone", moved, { count });
+    }
+    return action.ownerId === null
+      ? plural("lead.bulkUnassignedDone", moved, { count })
+      : plural("lead.bulkAssignedDone", moved, {
           count,
           owner: action.ownerName,
-        })
-      : plural("lead.bulkDisqualifiedDone", moved, { count });
+        });
   };
 }
 
@@ -91,6 +96,9 @@ export function useBulkDoneMessage() {
  * selection that changed underneath would send writes for rows nobody chose.
  */
 type BulkRun = { action: BulkAction; rows: readonly Lead[] };
+
+// The owner list's value for "nobody": no seat id can be this word.
+const UNASSIGNED = "unassigned";
 
 /**
  * Bulk verbs over selected leads: assign an owner, disqualify. Both are a
@@ -126,6 +134,13 @@ export function LeadBulkBar({
   const queryClient = useQueryClient();
   const [ownerId, setOwnerId] = useState("");
   const owners = useRecordOwnerOptions();
+  const viewerId = useViewerId();
+  // The queue first, then the viewer, then everyone by name.
+  const ownerChoices = [
+    { value: UNASSIGNED, label: t("lead.unassigned") },
+    ...owners.options.filter((owner) => owner.value === viewerId),
+    ...owners.options.filter((owner) => owner.value !== viewerId),
+  ];
   const [reasonId, setReasonId] = useState("");
   // The batch confirm's own open state. It is not part of the run's state:
   // a refused batch leaves the bar showing what failed, with the dialog
@@ -258,11 +273,16 @@ export function LeadBulkBar({
   });
 
   const ownerName =
-    owners.options.find((option) => option.value === ownerId)?.label ?? ownerId;
+    ownerChoices.find((option) => option.value === ownerId)?.label ?? ownerId;
+  const unassigning = ownerId === UNASSIGNED;
   const assign = () => {
     setConfirmingAssign(false);
     run.mutate({
-      action: { kind: "assign", ownerId, ownerName },
+      action: {
+        kind: "assign",
+        ownerId: unassigning ? null : ownerId,
+        ownerName,
+      },
       rows: leads,
     });
   };
@@ -300,7 +320,7 @@ export function LeadBulkBar({
         placeholder={t("lead.bulkOwnerPick")}
         disabled={run.isPending}
         onChange={setOwnerId}
-        options={owners.options}
+        options={ownerChoices}
       />
       <Button
         variant="primary"
@@ -362,11 +382,17 @@ export function LeadBulkBar({
       <ConfirmModal
         open={confirmingAssign}
         onClose={() => setConfirmingAssign(false)}
-        title={plural("lead.bulkAssignTitle", leads.length, {
-          count: formatNumber(leads.length, locale),
-          owner: ownerName,
-        })}
-        confirmLabel={t("lead.bulkAssign")}
+        title={
+          unassigning
+            ? plural("lead.bulkUnassignTitle", leads.length, {
+                count: formatNumber(leads.length, locale),
+              })
+            : plural("lead.bulkAssignTitle", leads.length, {
+                count: formatNumber(leads.length, locale),
+                owner: ownerName,
+              })
+        }
+        confirmLabel={t(unassigning ? "lead.bulkReturn" : "lead.bulkAssign")}
         onConfirm={assign}
         pending={run.isPending}
       >

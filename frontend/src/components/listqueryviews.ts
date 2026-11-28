@@ -97,9 +97,17 @@ export function useActiveView(
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [opened, setOpened] = useState<OpenedView | null>(null);
   const [litId, setLitId] = useState<string | null>(null);
-  // A link tab opens another page, so it never stands for this list.
+  // A tab that claims no order keeps its light while the reader re-sorts it,
+  // once picked. Unpicked, it claims the order the list opens in, so it never
+  // takes over a saved view the reader is changing. A link tab opens another
+  // page, so it never stands for this list.
   const matched = views.findIndex(
-    (spec) => !spec.link && matchesView(spec, query),
+    (spec) =>
+      !spec.link &&
+      matchesView(
+        { ...spec, sort: spec.sort ?? opening.initialSort ?? "" },
+        query,
+      ),
   );
   const pinned = views.findIndex((spec) => spec.id === pickedId);
   const pinnedView = views[pinned];
@@ -172,8 +180,8 @@ export function withOpenedView(
  * box would light over the whole list and name it acme.
  *
  * The invariant, then: a tab is lit only while the list on screen is the one it
- * names, down to the search box. Page size is the one allowed exception. It
- * changes how many of those rows are drawn at once, not which rows they are.
+ * names, down to the search box. Page size and the order of a tab that claims
+ * none are the exceptions: they change how the rows are drawn, not which.
  */
 export function matchesView(
   spec: Readonly<{
@@ -187,7 +195,7 @@ export function matchesView(
   if (query.q !== (spec.q ?? "")) {
     return false;
   }
-  if (query.sort !== (spec.sort ?? "")) {
+  if (spec.sort !== undefined && query.sort !== spec.sort) {
     return false;
   }
   if (query.includeArchived !== (spec.includeArchived ?? false)) {

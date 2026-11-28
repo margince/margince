@@ -54,7 +54,11 @@ const COLLEAGUES = [
 
 type RosterAnswer = "everyone" | "refused" | "endless";
 
-function stubRoster(answer: RosterAnswer = "everyone", viewer = "u-viewer") {
+function stubRoster(
+  answer: RosterAnswer = "everyone",
+  viewer = "u-viewer",
+  colleagues: readonly unknown[] = COLLEAGUES,
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -76,7 +80,7 @@ function stubRoster(answer: RosterAnswer = "everyone", viewer = "u-viewer") {
         "cursor",
       );
       return jsonResponse({
-        data: laterPage ? [] : COLLEAGUES,
+        data: laterPage ? [] : colleagues,
         page: { next_cursor: answer === "endless" ? "more" : null },
       });
     }),
@@ -87,6 +91,7 @@ type Harness = Readonly<{
   ownerId?: string | null;
   version?: number;
   assign?: (ownerId: string, opened: OpenedRecord) => Promise<unknown>;
+  unassign?: (opened: OpenedRecord) => Promise<unknown>;
   onAssigned?: () => void;
   pending?: boolean;
 }>;
@@ -99,6 +104,7 @@ function render(props: Harness = {}) {
     ownerId = null,
     version = 5,
     assign = vi.fn(async () => undefined),
+    unassign,
     onAssigned,
     pending,
   }: Harness) => (
@@ -108,6 +114,7 @@ function render(props: Harness = {}) {
           <OwnerPick
             record={{ id: "r-1", version, owner_id: ownerId }}
             assign={assign}
+            unassign={unassign}
             invalidate="projects"
             recordKey="project"
             onAssigned={onAssigned}
@@ -164,6 +171,65 @@ describe("OwnerPick", () => {
     );
     expect(onAssigned).toHaveBeenCalledTimes(1);
     expect(await screen.findByText("Assigned to Jane Doe")).toBeInTheDocument();
+  });
+
+  // The roster answers in no useful order; the list reads by name, viewer first.
+  // Mutation: drop the sort or the viewer's move and the order breaks.
+  it("lists the viewer first, then colleagues by name", async () => {
+    stubRoster("everyone", "u-7", [
+      { id: "u-9", display_name: "Zoe Weber", email: "zoe@example.test" },
+      ...COLLEAGUES,
+      { id: "u-3", display_name: "Anna Berg", email: "anna@example.test" },
+    ]);
+    const user = userEvent.setup();
+    render();
+
+    const panel = await openPicker(user);
+    await waitFor(() =>
+      expect(
+        panel.getAllByRole("option").map((option) => option.textContent),
+      ).toEqual(["Omar Haddad", "Anna Berg", "Jane Doe", "Zoe Weber"]),
+    );
+  });
+
+  it("offers Unassigned first where the record may go back to the queue, and a pick clears the owner", async () => {
+    stubRoster("everyone", "u-7");
+    const assign = vi.fn(async () => undefined);
+    const unassign = vi.fn(async () => undefined);
+    const user = userEvent.setup();
+    render({ ownerId: "u-7", assign, unassign });
+
+    const panel = await openPicker(user);
+    await waitFor(() =>
+      expect(
+        panel.getAllByRole("option").map((option) => option.textContent),
+      ).toEqual(["Unassigned", "Omar Haddad", "Jane Doe"]),
+    );
+    await user.click(panel.getByRole("option", { name: "Unassigned" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(unassign).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "r-1", version: 5 }),
+    );
+    expect(assign).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText(englishCopy["ownerPick.cleared"]),
+    ).toBeInTheDocument();
+  });
+
+  it("marks Unassigned on a record nobody owns, and picking it writes nothing", async () => {
+    stubRoster();
+    const unassign = vi.fn(async () => undefined);
+    const user = userEvent.setup();
+    render({ ownerId: null, unassign });
+
+    const panel = await openPicker(user);
+    const nobody = await panel.findByRole("option", { name: "Unassigned" });
+    expect(nobody).toHaveAttribute("aria-selected", "true");
+    await user.click(nobody);
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(unassign).not.toHaveBeenCalled();
   });
 
   it("names the picked colleague in the toast when the roster is gone by then", async () => {

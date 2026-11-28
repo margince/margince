@@ -249,7 +249,9 @@ export function CompanyRecordBody({
               hidden={view?.contacts_hidden}
               mayCreate={canWriteCompany}
               bandSlot={(narrow) => (
+                // Keyed by company: a picked deal belongs to the company it was picked on.
                 <CoverageBand
+                  key={company.id}
                   companyId={company.id}
                   accountName={company.display_name}
                   onNarrow={narrow}

@@ -32071,6 +32071,45 @@ func (e ListCompaniesParamsStatus) Valid() bool {
 	}
 }
 
+// Defines values for ListCompaniesParamsStatusAny.
+const (
+	ListCompaniesParamsStatusAnyCustomer       ListCompaniesParamsStatusAny = "customer"
+	ListCompaniesParamsStatusAnyDisqualified   ListCompaniesParamsStatusAny = "disqualified"
+	ListCompaniesParamsStatusAnyFormerCustomer ListCompaniesParamsStatusAny = "former_customer"
+	ListCompaniesParamsStatusAnyLive           ListCompaniesParamsStatusAny = "live"
+	ListCompaniesParamsStatusAnyOnboarding     ListCompaniesParamsStatusAny = "onboarding"
+	ListCompaniesParamsStatusAnyOpportunity    ListCompaniesParamsStatusAny = "opportunity"
+	ListCompaniesParamsStatusAnyProspect       ListCompaniesParamsStatusAny = "prospect"
+	ListCompaniesParamsStatusAnyTarget         ListCompaniesParamsStatusAny = "target"
+	ListCompaniesParamsStatusAnyUnknown        ListCompaniesParamsStatusAny = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the ListCompaniesParamsStatusAny enum.
+func (e ListCompaniesParamsStatusAny) Valid() bool {
+	switch e {
+	case ListCompaniesParamsStatusAnyCustomer:
+		return true
+	case ListCompaniesParamsStatusAnyDisqualified:
+		return true
+	case ListCompaniesParamsStatusAnyFormerCustomer:
+		return true
+	case ListCompaniesParamsStatusAnyLive:
+		return true
+	case ListCompaniesParamsStatusAnyOnboarding:
+		return true
+	case ListCompaniesParamsStatusAnyOpportunity:
+		return true
+	case ListCompaniesParamsStatusAnyProspect:
+		return true
+	case ListCompaniesParamsStatusAnyTarget:
+		return true
+	case ListCompaniesParamsStatusAnyUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListCompaniesParamsRelationshipType.
 const (
 	ListCompaniesParamsRelationshipTypeCompetitor       ListCompaniesParamsRelationshipType = "competitor"
@@ -38378,8 +38417,10 @@ type AssignLeadsRequest struct {
 
 	// OwnerId The seat to hand them to. Must be one that can be handed work — an active, unarchived
 	// human seat that is not read-only, inside the caller's own row scope — else
-	// `422 owner_not_assignable` and nothing moves.
-	OwnerId openapi_types.UUID `json:"owner_id"`
+	// `422 owner_not_assignable` and nothing moves. An explicit `null` hands them back to
+	// the unassigned queue: each lead loses its owner as `updateLead` with `owner_id: null`
+	// would, so a lead the caller may not write answers `forbidden`.
+	OwnerId *openapi_types.UUID `json:"owner_id"`
 }
 
 // AssignLeadsResult defines model for AssignLeadsResult.
@@ -44322,10 +44363,10 @@ type CompanyCoverage struct {
 	Committee    *CompanyCoverageCommittee   `json:"committee,omitempty"`
 	Completeness CompanyCoverageCompleteness `json:"completeness"`
 
-	// Deals The account's open deals, so the reader can pick which committee to read.
+	// Deals The account's open deals, most recently changed first, so the reader can pick which committee to read with `deal_id`.
 	Deals []CompanyCoverageDeal `json:"deals"`
 
-	// SelectedDealId The deal the committee below describes. Null when the account has no visible open deal.
+	// SelectedDealId The deal the committee below describes, the one `deal_id` named or else the first of `deals`. Null when the account has no visible open deal.
 	SelectedDealId *openapi_types.UUID    `json:"selected_deal_id,omitempty"`
 	Summary        CompanyCoverageSummary `json:"summary"`
 }
@@ -81026,6 +81067,12 @@ type ListCompaniesParams struct {
 	// Status Where the account stands with us (DM-VOCAB-2, ADR-0079).
 	Status *ListCompaniesParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
+	// StatusAny Several account stages at once: an account at any one of them matches, so onboarding,
+	// live and customer together select every account we deliver for. Repeat the parameter
+	// for each. Sent together with `status`, an account at `status` or at any of these
+	// matches.
+	StatusAny *[]ListCompaniesParamsStatusAny `form:"status_any,omitempty" json:"status_any,omitempty"`
+
 	// RelationshipType Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
 	RelationshipType *ListCompaniesParamsRelationshipType `form:"relationship_type,omitempty" json:"relationship_type,omitempty"`
 
@@ -81098,6 +81145,9 @@ type ListCompaniesParamsCapturedByKind string
 
 // ListCompaniesParamsStatus defines parameters for ListCompanies.
 type ListCompaniesParamsStatus string
+
+// ListCompaniesParamsStatusAny defines parameters for ListCompanies.
+type ListCompaniesParamsStatusAny string
 
 // ListCompaniesParamsRelationshipType defines parameters for ListCompanies.
 type ListCompaniesParamsRelationshipType string
@@ -81309,6 +81359,15 @@ type ListCompanyContractsParams struct {
 
 // ListCompanyContractsParamsStatus defines parameters for ListCompanyContracts.
 type ListCompanyContractsParamsStatus string
+
+// GetCompanyCoverageParams defines parameters for GetCompanyCoverage.
+type GetCompanyCoverageParams struct {
+	// DealId The open deal whose buying committee to read, one of `deals`. Absent, the committee
+	// is the most recently changed open deal's. A deal that is not one of this account's
+	// open deals the caller may see answers `404`. A caller without the deal read grant
+	// who names a deal answers `403`, as any refused grant does.
+	DealId *openapi_types.UUID `form:"deal_id,omitempty" json:"deal_id,omitempty"`
+}
 
 // ListCompanyDocumentsParams defines parameters for ListCompanyDocuments.
 type ListCompanyDocumentsParams struct {
@@ -105175,7 +105234,7 @@ type ServerInterface interface {
 	ListCompanyContracts(w http.ResponseWriter, r *http.Request, id Id, params ListCompanyContractsParams)
 	// How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
 	// (GET /companies/{id}/coverage)
-	GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id Id)
+	GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyCoverageParams)
 	// Read the company's WHOLE site in the background — a crawl that ends in staged 🟡 proposals.
 	// (POST /companies/{id}/deep-read)
 	DeepReadCompany(w http.ResponseWriter, r *http.Request, id Id)
@@ -109816,7 +109875,7 @@ func (_ Unimplemented) ListCompanyContracts(w http.ResponseWriter, r *http.Reque
 
 // How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
 // (GET /companies/{id}/coverage)
-func (_ Unimplemented) GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyCoverageParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -129426,6 +129485,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "status_any" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status_any", r.URL.Query(), &params.StatusAny, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status_any"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status_any", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "relationship_type" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "relationship_type", r.URL.Query(), &params.RelationshipType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -130397,8 +130469,24 @@ func (siw *ServerInterfaceWrapper) GetCompanyCoverage(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCompanyCoverageParams
+
+	// ------------- Optional query parameter "deal_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "deal_id", r.URL.Query(), &params.DealId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "deal_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "deal_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCompanyCoverage(w, r, id)
+		siw.Handler.GetCompanyCoverage(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

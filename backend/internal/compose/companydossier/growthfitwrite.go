@@ -59,8 +59,8 @@ Every claim's text and every sub-score reason is a plain statement with no speak
 
 // growthFitSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 //
-// The assessment is filed on the company and read by whoever opens it, so it
-// takes the installation's shared language.
+// The assessment is assembled and cached per reader, so it takes the reader's
+// language.
 func growthFitSystemFor(fence promptfence.Fence, lang string) string {
 	return growthFitSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("company summary")
 }

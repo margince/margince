@@ -130,11 +130,11 @@ Also called: order by, biggest deals first, sort by amount, sort A to Z, newest 
 ### Which columns can I sort by?
 The columns you can sort on each Margince list are:
 - **Contacts**: Name, Email, Company, Owner, Last activity, Created.
-- **Companies**: Company, Description, Website, Contacts, Open deals, Lifecycle, Owner, Last activity, Created.
+- **Companies**: Company, Description, Website, Contacts, Open deals, Lifecycle (from **Unknown** to **Disqualified**), Owner, Last activity, Created.
 - **Leads**: Name, Score, Status, Next step, Last activity, Origin, Owner, Created.
 - **Deals**: Name, Company, **Referring partner**, Stage, Value, Expected close, Last signal, Status, Owner.
 - **Projects**: Project name, Company, Phase, Owner, Last activity.
-**Owner** sorts by the owner's name, with unassigned records last. You cannot sort by **Tags**, **Relationship type** or **Last email**. You can still pick a hidden column under **View** → **Sort**.
+**Owner** sorts by the owner's name, with unassigned records last. You cannot sort by **Tags**, **Relationship type**, **Industry**, **Employees** or **Last email**. You can still pick a hidden column under **View** → **Sort**.
 Also called: sort options, order by column.
 
 ### How do I switch between the table and the board?
@@ -236,7 +236,7 @@ Also called: natural-language filter, AI filter, describe a segment.
 ### What can I filter on in Filters and views?
 The fields on **Filters and views** in Margince are:
 - **Contacts**: **Owner**, **Owner team**, **Tag** and custom fields.
-- **Companies** add **Industry** (picked from the list of industries), **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**). The **Customers** view shows only the customer stage, so filter on **Lifecycle** to find **Onboarding** or **Live** companies.
+- **Companies** add **Industry** (picked from the list of industries), **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**). The **Customers** tab on **Companies** shows companies at **Onboarding**, **Live** or **Customer**. It and **Prospects** keep the sort you picked.
 - **Deals** add **Pipeline**, **Stage**, **Company**, **Partner**, **Project**, **Status**, **Win probability**, **Company industry**, **Company size** and **Company lifecycle**.
 Custom fields have a **Custom field** mark. Your own company is never in a company filter.
 Also called: filter fields, which attributes can I filter.
@@ -262,7 +262,7 @@ Also called: multi-select, bulk edit, mass update, select all.
 To give many records a new owner at once in Margince, tick them on the **Contacts**, **Companies** or **Deals** table. Choose **Pick an owner** in the bar for many rows, and press **Assign owner**.
 1. A window shows how many records will change and up to three examples. It names each record left as it is, with its reason. For example "No permission to change" or "Changed since the list loaded".
 2. Press **Change owner**. A message says how many changed and how many were left as they were.
-On **Leads**, pick the colleague under **Choose owner** and press **Assign**.
+On **Leads**, pick the colleague, or **Unassigned**, under **Choose owner** and press **Assign**.
 Also called: bulk reassign, hand over accounts, transfer deals, a colleague left, reassign all their contacts.
 
 ### What can I do to several records at once?

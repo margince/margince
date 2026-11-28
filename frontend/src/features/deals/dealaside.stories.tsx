@@ -277,3 +277,30 @@ export const ProbabilityReasonDark: Story = {
   name: "Probability says why, dark",
   globals: { theme: "dark" },
 };
+
+/** An open deal on an archived account: the account card says the account is gone. */
+export const ArchivedAccount: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({ allow: { deal: ["read"], company: ["read"] } }),
+        ),
+      "GET /companies/c1": () =>
+        jsonResponse({
+          id: "c1",
+          display_name: "Brandt Automotive GmbH",
+          status: "customer",
+          archived_at: "2026-06-10T00:00:00Z",
+        }),
+    });
+    return (
+      <StoryProviders locale="en">
+        <DealAside deal={{ ...deal, company_id: "c1" }} stages={stages} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText("Archived");
+  },
+};

@@ -39,6 +39,7 @@ import { Avatar, Badge, Button } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import { CellStrip, useListRefusal } from "../../design-system/listtable";
 import { useToast } from "../../design-system/toast";
+import { industryOptions, industryWords } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
@@ -69,12 +70,28 @@ import { displayHost } from "./companyheader";
 import { partnerMarkText } from "./companymarks";
 import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
 
+// The stages of an account we deliver for, in funnel order. The Customers tab and
+// the Lifecycle option that names them hold the same value, so the two agree.
+const DELIVERING = ["onboarding", "live", "customer"].join(",");
+
+// The address holds one stage, or several comma-joined. One goes as `status`,
+// several as `status_any`. A value that names no stage is dropped, not sent.
+function statusParams(joined: string | undefined) {
+  const named = joined?.split(",") ?? [];
+  const stages = LIFECYCLE_OPTIONS.filter((stage) => named.includes(stage));
+  if (stages.length > 1) {
+    return { status_any: stages };
+  }
+  return { status: stages[0] };
+}
+
 async function fetchCompaniesPage(
   query: ListQuery,
   cursor: string | null,
   signal?: AbortSignal,
   reach?: ListReach,
 ): Promise<ListPage<Company>> {
+  const { status, ...filters } = query.filters;
   const data = unwrap(
     await api.GET("/companies", {
       signal,
@@ -86,7 +103,8 @@ async function fetchCompaniesPage(
           cursor: cursor || undefined,
           limit: listFetchLimit(query.perPage, reach),
           offset: reach?.offset,
-          ...listQueryParams(query.filters),
+          ...listQueryParams(filters),
+          ...statusParams(status),
         },
       },
     }),
@@ -185,6 +203,12 @@ export function CompaniesScreen({
         label: formatSizeBand(t, value),
       })),
     },
+    {
+      key: "industry",
+      label: t("company.industry"),
+      allLabel: t("company.filterIndustryAll"),
+      options: industryOptions(t, locale),
+    },
   ];
 
   return (
@@ -253,14 +277,28 @@ export function CompaniesScreen({
             fixed: true,
           },
           {
-            // What the company does, in its own words from its own site. It
-            // stands in for industry and size: imports leave size_band null for
-            // every company and industry for most, so those columns sit empty.
+            // What the company does, in its own words from its own site.
             key: "description",
             header: t("company.description"),
             cell: (company: Company) => company.description ?? "",
             sort: "description",
             initiallyHidden: true,
+          },
+          {
+            // Unsorted, as the server orders neither: a code's alphabet is not
+            // the reader's, and a size band's text is not its size.
+            key: "industry",
+            header: t("company.industry"),
+            initiallyHidden: true,
+            cell: (company: Company) =>
+              company.industry ? industryWords(t, company.industry) : null,
+          },
+          {
+            key: "employees",
+            header: t("company.employees"),
+            initiallyHidden: true,
+            cell: (company: Company) =>
+              company.size_band ? formatSizeBand(t, company.size_band) : null,
           },
           { ...tagsColumn<Company>(t), initiallyHidden: true },
           {
@@ -375,12 +413,16 @@ export function CompaniesScreen({
             key: "status",
             label: "company.lifecycle",
             allLabel: "company.filterLifecycleAll",
-            options: LIFECYCLE_OPTIONS.filter(
-              (value) => value !== "unknown",
-            ).map((value) => ({
-              value,
-              label: labelFor(LIFECYCLE_LABELS, value),
-            })),
+            options: [
+              ...LIFECYCLE_OPTIONS.map((value) => ({
+                value,
+                label: labelFor(LIFECYCLE_LABELS, value),
+              })),
+              {
+                value: DELIVERING,
+                label: "company.filterLifecycleDelivering" as const,
+              },
+            ],
           },
           {
             key: "relationship_type",
@@ -413,18 +455,12 @@ export function CompaniesScreen({
           },
         ]}
         dataViews={savedViews}
+        // The two cuts carry no sort, so the reader's own order survives the
+        // change of tab.
         views={[
           ...standardViews(viewerId),
-          {
-            label: "list.viewCustomers",
-            sort: "display_name",
-            filters: { status: "customer" },
-          },
-          {
-            label: "list.viewProspects",
-            sort: "display_name",
-            filters: { status: "prospect" },
-          },
+          { label: "list.viewCustomers", filters: { status: DELIVERING } },
+          { label: "list.viewProspects", filters: { status: "prospect" } },
         ]}
       />
     </div>

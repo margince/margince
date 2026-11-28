@@ -402,3 +402,34 @@ describe("the owner dial — one question the server answers three ways", () => 
     expect(screen.getByRole("group", { name: "Owner: You" })).toBeTruthy();
   });
 });
+
+// An unpicked tab that claims no order claims the order the list opens in.
+// Mutation: match it against the empty order and the tab stays dark.
+it("lights a tab that claims no order over the list's opening sort", async () => {
+  function OpenedSorted() {
+    const state = useListQuery<Row>({
+      key: "opened-sorted",
+      fetchPage: async () => emptyPage(),
+      initialSort: "-created_at",
+    });
+    return (
+      <ListTable
+        state={state}
+        unit="nav.contacts"
+        columns={[
+          {
+            key: "name",
+            header: "contacts.name",
+            cell: (row: Row) => row.name,
+          },
+        ]}
+        rowKey={(row) => row.id}
+        views={[{ label: "list.viewAll" }]}
+      />
+    );
+  }
+  render(<OpenedSorted />);
+
+  const all = await screen.findByRole("button", { name: "All" });
+  expect(all.getAttribute("aria-pressed")).toBe("true");
+});

@@ -118,7 +118,7 @@ var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
 	filterIndustry:        storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Industry = v }),
 	filterSizeBand:        storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.SizeBand = v }),
 	filterDomain:          storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Domain = v }),
-	filterStatus:          storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Status = v }),
+	filterStatus:          storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Status = OneStatus(v) }),
 	filterOwnerID:         storekit.FilterID(func(in *ListCompaniesInput, id *ids.UserID) { in.OwnerID = id }),
 	filterRelationshipType: storekit.FilterWord(
 		func(in *ListCompaniesInput, v *string) { in.RelationshipType = v }),

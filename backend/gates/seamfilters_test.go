@@ -81,6 +81,8 @@ var unofferedSeamFilters = gatekit.Waive(map[string]string{
 		"company by id through read_record, and a second route to the same answer is prompt text for nothing",
 	"activity.collapse_copies": "the seam collapses a record's timeline itself (Provider.SearchEntity), so an agent " +
 		"never sees one mail once per mailbox, and an unscoped agent read keeps every row as an export does",
+	"company.status_any": "a second spelling of `status`, which the seam already offers: an agent narrows by one " +
+		"stage per call, and publishing both grows every run's tool listing and turns the agent loop's records stale",
 })
 
 func TestEveryDeclaredFilterTheStoreBindsIsOfferedToTheSeam(t *testing.T) {

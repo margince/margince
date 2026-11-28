@@ -45,6 +45,9 @@ type Facts interface {
 	// The rail has to say which company. The column is the industry the
 	// record shows, so the assessment counts it as known.
 	GetCompany(ctx context.Context, id ids.CompanyID, archived storekit.ArchivedFilter) (crmcontracts.Company, error)
+	// ListCompanies is read for the company's contact and open deal counts,
+	// which the single read does not carry, under the same grants as the list.
+	ListCompanies(ctx context.Context, in contacts.ListCompaniesInput) ([]crmcontracts.Company, storekit.Page, error)
 }
 
 // Input is the assembled factual picture of one company.
@@ -74,6 +77,8 @@ type Input struct {
 	AssessAgainst string `json:"-"`
 	ProfileFields []crmcontracts.CompanyProfileField
 	Facts         []crmcontracts.CompanyFact
+	// Standing is read for the overview alone (readStanding).
+	Standing Standing `json:"-"`
 }
 
 // The citable record kinds, DERIVED from the contract's own enum rather than

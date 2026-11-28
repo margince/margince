@@ -126,7 +126,7 @@ func TestAReadRoleBecomesASeatTheCommitteeMarks(t *testing.T) {
 
 	// The committee read must now mark it, from the row's own captured_by —
 	// which is the whole of the marking, with no second column to set.
-	coverage, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	coverage, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestAReadRoleNeverOverwritesASeatAContactTyped(t *testing.T) {
 		t.Fatalf("overwrote a role a contact recorded: %+v", got.Written)
 	}
 	// The typed seat is untouched and still reads as a human's.
-	coverage, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	coverage, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}
@@ -501,7 +501,7 @@ func TestConfirmingAReadRoleClearsTheMarkWithoutChangingIt(t *testing.T) {
 		t.Fatalf("proposing roles: %v", err)
 	}
 
-	before, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	before, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}
@@ -520,7 +520,7 @@ func TestConfirmingAReadRoleClearsTheMarkWithoutChangingIt(t *testing.T) {
 		t.Fatalf("confirming the seat: %v", err)
 	}
 
-	after, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	after, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("re-reading coverage: %v", err)
 	}
@@ -554,7 +554,7 @@ func TestASeatCardAddressesItsOwnRowWhenAContactHoldsTwoRoles(t *testing.T) {
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'ai_proposal', 'agent:propose_roles')`,
 		both, deal)
 
-	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}

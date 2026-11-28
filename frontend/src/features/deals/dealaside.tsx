@@ -3,38 +3,31 @@
 
 import type { ReactNode } from "react";
 import { RecordListsActions } from "../../components/addtoshortlist";
-import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
   customFieldHref,
   dealNarrowing,
   useCustomFieldDisplay,
   useObjectCustomFields,
 } from "../../components/customfields.form";
-import { EntityRef } from "../../components/entityref";
 import { type SectionLock, useSectionEdit } from "../../components/sectionedit";
 import { useTagsFlow, useTagsRow } from "../../components/tagsflow";
 import { AppLink } from "../../design-system/applink";
-import { Badge } from "../../design-system/atoms";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { ProbabilityRing } from "../../design-system/probabilityring";
 import { provenanceLabel } from "../../design-system/provenance";
 import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import { FieldGuard } from "../../design-system/rbac";
-import { RecordCard } from "../../design-system/recordcard";
 import {
   type DetailRow,
   type DetailSection,
   RecordDetails,
 } from "../../design-system/recorddetails";
-import { LIFECYCLE_LABELS } from "../../format/companylifecycle";
 import { formatDateAbbrev, formatMoneyWhole } from "../../format/format";
-import { industryWords } from "../../format/industry";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { closeDayOf } from "../../lib/closeday";
 import { customFieldLabel } from "../../lib/customfields.logic";
-import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useMemberName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
@@ -50,6 +43,7 @@ import { ProbabilityHint } from "./dealprobabilityhint";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
 import { useViewOnlyAccess } from "../../components/viewonly";
+import { DealAccount } from "./dealaccount";
 
 type AsideProps = Readonly<{
   deal: Deal;
@@ -465,35 +459,4 @@ function listSection(
       </>
     ),
   };
-}
-
-// The account is the same card as a contact in Way in. Mark and name are one
-// link, its facts sit under them and its stage at the edge.
-function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
-  const t = useT();
-  const company = useEmployerSummary(companyId).data;
-  const name = company?.display_name;
-  const stage =
-    company?.status && company.status !== "unknown"
-      ? t(labelFor(LIFECYCLE_LABELS, company.status))
-      : undefined;
-  const facts = [
-    stage,
-    company?.industry ? industryWords(t, company.industry) : undefined,
-    company?.address?.city,
-  ].filter((part): part is string => Boolean(part));
-  if (!name) {
-    return <EntityRef kind="company" id={companyId} />;
-  }
-  return (
-    <RecordCard
-      kind="company"
-      name={name}
-      identity={companyId}
-      href={routeHash({ screen: "companies", id: companyId })}
-      logo={company?.logo_url}
-      position={facts.length > 0 ? facts.join(" · ") : undefined}
-      aside={stage && <Badge wrap>{stage}</Badge>}
-    />
-  );
 }

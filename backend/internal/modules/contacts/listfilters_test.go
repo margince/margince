@@ -131,3 +131,24 @@ func assertEveryFilterNarrows[I any](t *testing.T, entity string, set storekit.F
 		}
 	}
 }
+
+// `status` and `status_any` together ask for the union of the stages they name.
+func TestTheStageFiltersAskForTheUnionOfWhatTheyName(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		one     *string
+		several []string
+		want    []string
+	}{
+		{"neither filters nothing", nil, nil, nil},
+		{"status alone", new("prospect"), nil, []string{"prospect"}},
+		{"status_any alone", nil, []string{"live", "customer"}, []string{"live", "customer"}},
+		{"both are one union", new("prospect"), []string{"live"}, []string{"prospect", "live"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := anyStatus(tc.one, tc.several); !slices.Equal(got, tc.want) {
+				t.Errorf("anyStatus = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

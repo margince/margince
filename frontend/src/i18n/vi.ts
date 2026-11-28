@@ -3383,6 +3383,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.disqualify": "Loại lead",
   "record.archiveConfirm":
     "Chuyển hồ sơ này vào kho lưu trữ? Có thể khôi phục từ lịch sử của hồ sơ.",
+  "co.archiveConfirm.ask": "Chuyển {name} vào kho lưu trữ?",
+  "co.archiveConfirm.contacts_one":
+    "{count} liên hệ vẫn được giữ, nhưng không còn hiện công ty này là nơi làm việc.",
+  "co.archiveConfirm.contacts_other":
+    "{count} liên hệ vẫn được giữ, nhưng không còn hiện công ty này là nơi làm việc.",
+  "co.archiveConfirm.deals_one": "{count} deal đang mở vẫn mở trong pipeline.",
+  "co.archiveConfirm.deals_other":
+    "{count} deal đang mở vẫn mở trong pipeline.",
+  "co.archiveConfirm.unknown":
+    "Các liên hệ vẫn được giữ, nhưng không còn hiện công ty này là nơi làm việc. Các deal đang mở vẫn mở.",
+  "co.archiveConfirm.restore": "Có thể khôi phục công ty từ lịch sử của nó.",
   "record.archived": "Trong kho lưu trữ",
   "record.archivedReadOnly":
     "Công ty này đang trong kho lưu trữ và không thể thay đổi.",
@@ -3790,6 +3801,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ownerPick.change": "Đổi người chịu trách nhiệm",
   "ownerPick.search": "Tìm đồng nghiệp",
   "ownerPick.done": "Đã giao cho {name}",
+  "ownerPick.cleared": "Đã trả về hàng chưa giao",
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách thành viên)",
   "picker.noMatch": "Không có kết quả phù hợp",
@@ -3954,7 +3966,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "list.viewMine": "Của tôi",
   "list.viewCustomers": "Khách hàng",
   "list.viewProspects": "Tiềm năng",
-  "company.filterLifecycleAll": "Mọi giai đoạn",
+  "company.filterLifecycleAll": "Mọi vòng đời",
+  "company.filterLifecycleDelivering":
+    "Đang triển khai, đang vận hành hoặc khách hàng",
+  "company.filterIndustryAll": "Mọi ngành",
+  "company.industry": "Ngành",
+  "company.employees": "Nhân viên",
   "company.filterRelTypeAll": "Mọi loại",
   "company.filterSizeBandAll": "Mọi số nhân viên",
   "company.filterDormancyAll": "Mọi mức hoạt động",
@@ -5751,6 +5768,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.contacts.band.noWayIn": "Không có",
   "co.contacts.band.noWayInWhy": "Đã liên hệ · chưa có trả lời",
   "co.contacts.band.committee": "Nhóm quyết định mua",
+  "co.contacts.band.committeeOf": "Nhóm quyết định mua · {deal}",
+  "co.contacts.board.deal": "Deal có nhóm quyết định mua cần xem",
   "co.contacts.band.missing": "Chưa có {role}",
   "co.contacts.band.committeeComplete": "Đầy đủ",
   "co.contacts.band.committeeUnread": "Bị hạn chế",
@@ -6243,6 +6262,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.bulkOwner": "Người chịu trách nhiệm mới",
   "lead.bulkOwnerPick": "Chọn người chịu trách nhiệm",
   "lead.bulkAssign": "Giao",
+  "lead.bulkReturn": "Trả về hàng chờ",
   "lead.bulkDisqualify": "Lo\u1ea1i",
   "lead.bulkDisqualifyTitle_one": "Loại 1 lead?",
   "lead.bulkDisqualifyTitle_other": "Loại {count} lead?",
@@ -6254,6 +6274,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.bulkDisqualifiedDone_other": "Đã loại {count} lead.",
   "lead.bulkAssignTitle_one": "Giao lead này cho {owner}?",
   "lead.bulkAssignTitle_other": "Giao {count} lead cho {owner}?",
+  "lead.bulkUnassignTitle_one": "Trả lead này về hàng chưa giao?",
+  "lead.bulkUnassignTitle_other": "Trả {count} lead về hàng chưa giao?",
+  "lead.bulkUnassignedDone_one": "Đã trả {count} lead về hàng chưa giao.",
+  "lead.bulkUnassignedDone_other": "Đã trả {count} lead về hàng chưa giao.",
+  "lead.unassignedAway":
+    "Đã trả {names} về hàng chưa giao. Không còn trong “Của tôi”.",
   "lead.bulkFailed": "Không thể áp dụng cho {count} lead:",
   "lead.bulkFailedRow": "không thể lưu",
   "lead.bulkOutcomeConflict": "người khác đã thay đổi trong lúc đó",

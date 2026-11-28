@@ -162,8 +162,15 @@ func (h Handlers) GetCompanyGraph(w http.ResponseWriter, r *http.Request, id crm
 }
 
 // GetCompanyCoverage implements GET /companies/{id}/coverage.
-func (h Handlers) GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	coverage, err := h.svc.Coverage(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
+func (h Handlers) GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
+	params crmcontracts.GetCompanyCoverageParams,
+) {
+	var deal *ids.DealID
+	if params.DealId != nil {
+		named := ids.From[ids.DealKind](ids.UUID(*params.DealId))
+		deal = &named
+	}
+	coverage, err := h.svc.Coverage(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)), deal)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

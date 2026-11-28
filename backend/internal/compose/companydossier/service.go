@@ -182,12 +182,20 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 	if err != nil {
 		return zero, err
 	}
+	if in.Standing, err = readStanding(ctx, s.facts, companyID); err != nil {
+		return zero, err
+	}
 	// Written in the reader's language: the cache is per reader and its
 	// fingerprint names the language, so another language writes it again.
 	lang := readerLanguage(ctx, s.pool)
 	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
 	if err != nil {
 		return zero, err
+	}
+	if s.lane == nil {
+		// Only the floor states the standing, so only the floor's cache turns
+		// over when a count or the lifecycle moves.
+		fingerprint = floorFingerprint(fingerprint, in.Standing)
 	}
 
 	cached, found, err := s.cached(ctx, userID, companyID)
@@ -241,7 +249,7 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 // cites a row it did not supply, the surface would render it as though it had
 // been verified.
 func keepGrounded(sections []Section, in Input) []Section {
-	known := KnownRecords(in)
+	known := floorRecords(in)
 	out := make([]Section, 0, len(sections))
 	for _, section := range sections {
 		kept := claims.Keep(section.Sentences, known, knownNature, natureFact)
@@ -281,6 +289,12 @@ func Fingerprint(in Input, routingVersion, lang string) (string, error) {
 	}
 	sum := sha256.Sum256([]byte(assemblyVersion + "\x00" + promptVersion + "\x00" + routingVersion + "\x00" + lang + "\x00" + string(encoded)))
 	return hex.EncodeToString(sum[:]), nil
+}
+
+// floorFingerprint folds the standing the floor states into a fingerprint.
+func floorFingerprint(fingerprint string, standing Standing) string {
+	sum := sha256.Sum256([]byte(fingerprint + "\x00" + claims.Source(standing)))
+	return hex.EncodeToString(sum[:])
 }
 
 func (d stored) wire(companyID ids.CompanyID, now time.Time, from crmcontracts.AssemblyServedFrom) crmcontracts.CompanyDossier {

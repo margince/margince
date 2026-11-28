@@ -329,11 +329,12 @@ function LeadsWorkbench({
                   // The verb goes through `action`: the region draws it as one
                   // control on one ground, not a `Button` hand-placed on the
                   // toast's dark plate, and withdraws the message once pressed.
+                  const names = moved.map((o) => o.name).join(", ");
+                  const owner = action.ownerName;
                   assignedAway.show(
-                    t("lead.assignedAway", {
-                      names: moved.map((o) => o.name).join(", "),
-                      owner: action.ownerName,
-                    }),
+                    action.ownerId === null
+                      ? t("lead.unassignedAway", { names })
+                      : t("lead.assignedAway", { names, owner }),
                     {
                       action: {
                         kind: "open",
