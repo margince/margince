@@ -6,6 +6,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -23,9 +24,10 @@ import (
 // A handle from NewAcrossWorkspaces skips that check, for cleanup that sends
 // nothing out.
 //
-// The lookup runs fresh inside every transaction and nothing caches it, so an
-// archived or replaced company is seen on the next call. The cost is one
-// indexed statement on a one-row table.
+// A transaction proves the company is live with one indexed statement inside
+// itself, and a handle repeats that proof at most once per InstallationRecheck.
+// So an archived company stops admitting transactions within that bound, not
+// never. Workspace always looks the company up fresh.
 type DB struct {
 	pool *pgxpool.Pool
 	// installation is true on a ForInstallation handle.
@@ -36,6 +38,27 @@ type DB struct {
 	// on a handle nobody bounded — see Bounded.
 	budget   time.Duration
 	admitted bool
+	// provenAt is the unix-nano time of the last in-transaction proof that a
+	// company is live, or zero after a failed one. Copies of a handle share it.
+	provenAt *atomic.Int64
+	recheck  time.Duration
+}
+
+// InstallationRecheck is how long a ForInstallation handle trusts its last
+// proof that a company is live. It bounds how long an archived company keeps
+// admitting transactions. The Home and capture round-trip budgets leave no room
+// for a statement in every transaction.
+const InstallationRecheck = 2 * time.Second
+
+// Rechecking is this handle proving the company is live at most once per every.
+// Zero proves it in every transaction.
+func (d *DB) Rechecking(every time.Duration) *DB {
+	if d == nil {
+		return nil
+	}
+	rechecked := *d
+	rechecked.recheck = every
+	return &rechecked
 }
 
 // Bounded is this handle with a time ceiling on every statement its
@@ -80,7 +103,7 @@ func (d *DB) Budget() time.Duration {
 // censuses in backend/gates resolve calls by name, and a callee named New
 // collides there.
 func ForInstallation(pool *pgxpool.Pool) *DB {
-	return &DB{pool: pool, installation: true}
+	return &DB{pool: pool, installation: true, provenAt: new(atomic.Int64), recheck: InstallationRecheck}
 }
 
 // NewAcrossWorkspaces returns a handle whose transactions need no live
@@ -193,12 +216,14 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 			return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
 		}
 	}
-	if d.installation {
+	if d.installation && !d.recentlyProven() {
 		body := fn
 		fn = func(tx pgx.Tx) error {
 			if _, err := InstallationWorkspaceTx(ctx, tx); err != nil {
+				d.provenAt.Store(0)
 				return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
 			}
+			d.provenAt.Store(time.Now().UnixNano())
 			return body(tx)
 		}
 	}
@@ -224,6 +249,11 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 		}
 	}
 	return runTxWith(ctx, d.pool, opts, fn)
+}
+
+func (d *DB) recentlyProven() bool {
+	at := d.provenAt.Load()
+	return at != 0 && time.Since(time.Unix(0, at)) < d.recheck
 }
 
 // WithReadAdmission opts expensive reads into the pool's shared allowance.

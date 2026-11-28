@@ -70,7 +70,7 @@ func TestAHandleFollowsTheInstallationThroughAnArchiveAndAReplacement(t *testing
 	owner, pool := installationEnv(t)
 	ctx := context.Background()
 	a := addWorkspace(t, owner)
-	db := database.ForInstallation(pool)
+	db := database.ForInstallation(pool).Rechecking(0)
 	ran := 0
 	body := func(pgx.Tx) error { ran++; return nil }
 
