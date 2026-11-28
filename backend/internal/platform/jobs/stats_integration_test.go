@@ -247,7 +247,7 @@ func TestSweepReadsAKindsLatestEndedOutcomeAndSurvivesADeduplicatedRetry(t *test
 	seedJob(ctx, t, pool, seed{Kind: "sweep_child", State: "completed", Tags: tagged, CreatedAt: older})
 	seedJob(ctx, t, pool, seed{Kind: "sweep_child", State: "cancelled", Tags: tagged, CreatedAt: newer})
 	// A hand-triggered job of the same kind, carrying no sweep tag.
-	seedJob(ctx, t, pool, seed{Kind: "sweep_child", State: "completed", CreatedAt: time.Now()})
+	seedJob(ctx, t, pool, seed{Kind: "sweep_child", State: "completed"})
 
 	snap, err := jobs.Stats(ctx, pool)
 	if err != nil {

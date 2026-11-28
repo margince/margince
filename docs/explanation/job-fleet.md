@@ -29,35 +29,29 @@ backend/api/jobs.yaml
         │  leader-elected, so replicas never tick twice
         ▼
  ┌─ FLEET PASS row      role: worker + fleet: true   ·   jobs.FleetWide
- │      │  runPerWorkspace | runPerEveryWorkspace | runEach   (compose/dispatch.go)
- │      │  each workspace in turn, every one attempted
- │      ▼  the failures joined, each naming its workspace: the row FAILS
+ │      │  runInstallationPass   (compose/dispatch.go)
+ │      │  the pass runs once, over the installation's one workspace
+ │      ▼  a failure fails the row
  │
  ├─ DISPATCHER row      role: dispatcher             ·   jobs.FleetWide
- │      │  dispatchOne (per connection or build) | dispatchWith (per workspace)
+ │      │  dispatchOne (per connection or build) | dispatchOnce (the installation)
  │      ▼  one child row per fan-out unit, tagged `sweep`
- │   CHILD row × N      role: worker                 ·   jobs.WorkspaceScoped
+ │   CHILD row × N      role: worker
  │
- ├─ WORKSPACE row       role: worker, args name a Workspace   ·   jobs.WorkspaceScoped
- │      │  workspaceJobCtx binds args.WorkspaceID() onto the context
- │      ▼  Work(…) ──► jobs.FaultContext(ctx, err)
- │
- └─ INSTALLATION row    role: worker, no Workspace, no fleet: true
-        ▼  installationJobCtx binds the installation's one workspace
+ └─ WORKER row          role: worker, args carry ids and no workspace
+        │  bindInstallation / installationJobCtx bind the installation's one workspace
+        ▼  Work(…) ──► jobs.FaultContext(ctx, err)
 ```
 
-**Why one failed workspace fails the pass.** Take a job that loops over every workspace
-and logs each failure. River then records a row as `completed` while a workspace failed, and the
-failure has no durable place to land.
-
-`runEach` closes that gap. It tries every workspace, even after
-one fails, and joins the errors. So the row fails. The joined error names each workspace that failed,
-and River stores the fixed message that `jobs.Fault` gives it (§6).
+**Why a failed pass fails the row.** Take a job that logs a failure and returns nil. River then records
+the row as `completed` while the pass failed, and the failure has no durable place to land.
+`runInstallationPass` returns the pass's error, so the row fails and River stores the fixed message
+that `jobs.Fault` gives it (§6).
 
 A dispatcher goes one step further and gives each unit its own row. That row is retried, counted and
 reported on `GET /v1/admin/job-health` on its own. The kinds in `backend/api/jobs.yaml` that carry
-`role: dispatcher` fan out per connection or per build. A job an extension unit declares fans out per
-workspace (§4).
+`role: dispatcher` fan out per connection or per build. A job an extension unit declares queues one tick
+for the installation (§4).
 
 ---
 
@@ -92,7 +86,7 @@ These fields are declared for **every** kind:
 Four more fields **depend on what the kind is**, and `make gen` refuses a field that does not belong, both
 ways. A field that is owed and missing fails, and so does a field declared where it means nothing:
 
-- **`fleet: true`**: a worker whose row owns no single workspace, because it walks the fleet itself
+- **`fleet: true`**: a worker whose row answers for the whole installation, because it walks the installation itself
   (§4). A dispatcher is fleet-wide without it. `gen-jobs` reads the two as one question
   (`fleetWide()` in `contract.go`). Its answer writes `Fleet: true` into the `Spec` and the
   `jobs.FleetWide` check into `jobkinds_gen.go`.
@@ -110,7 +104,7 @@ ways. A field that is owed and missing fails, and so does a field declared where
   (`backend/internal/compose/jobschedulebook.go`).
 - **`fans_out_to` + `fan_out_unit`**: one declaration, never one without the other. Required on a
   dispatcher (`a dispatcher enumerates and enqueues, so one with no child does no work at all`). It is
-  refused on any other kind, and the named child must itself be `role: worker`. The unit is `workspace`, `connection` or `build`,
+  refused on any other kind, and the named child must itself be `role: worker`. The unit is `installation`, `connection` or `build`,
   and it tells a reader what a child row is. A `gmail_watch_renew_connection` row is the work for one
   *connection*, not one workspace. The unit is declared on the **dispatcher**, beside the edge it names,
   because that is where the fan-out decision is made.
@@ -222,11 +216,6 @@ file edited by hand, or a test that registers into a test-only `*river.Workers`:
 ## 4. The two roles and the shapes of a pass
 
 ```go
-type WorkspaceScoped interface {
-    river.JobArgs
-    WorkspaceID() ids.UUID
-}
-
 type FleetWide interface {
     river.JobArgs
     FleetWide()          // a declaration, not behaviour
@@ -234,75 +223,57 @@ type FleetWide interface {
 ```
 
 Every kind is either a dispatcher or a worker, and there is no third role. A third would change what a
-job *is*. The role says whether a kind queues other rows. A second question is whether a row owns a
-workspace. `Spec.Fleet` answers it, and both operator surfaces read it to decide whether a null
-`args->>'workspace_id'` is correct or a bug.
+job *is*. The role says whether a kind queues other rows. No job names a workspace: an installation
+holds one company, so job args carry no workspace field and `river_job.args` carries no `workspace_id`
+key. A row queued by an earlier release may still carry the key, and it decodes into the args without it.
 
 A kind takes one of these shapes:
 
 | Shape | Declared as | What one row does |
 |---|---|---|
-| Fleet pass | `role: worker`, `fleet: true` | runs each workspace in turn through `runPerWorkspace`, `runPerEveryWorkspace` or `runEach` |
+| Fleet pass | `role: worker`, `fleet: true` | runs once over the installation through `runInstallationPass` |
 | Dispatcher | `role: dispatcher` | lists the units that are due and queues one child row per unit |
-| Workspace job | `role: worker`, a `Workspace` field | does the work for the one workspace its args name |
-| Installation job | `role: worker`, no `Workspace` field, no `fleet` | works for the installation's one workspace, bound by `installationJobCtx` |
+| Worker | `role: worker` | does the work its args name, under the installation's one workspace, bound by `bindInstallation` |
 
 **The fleet pass is one job.** Most passes on a clock take this shape. `time_scan` is one: its
-`Work` is a single `runPerWorkspace` call. `runPerWorkspace` lists the live workspaces;
-`runPerEveryWorkspace` adds the archived ones, which a retention pass owes. Both hand the list to
-`runEach`.
+`Work` is a single `runInstallationPass` call. The helper reads the installation's one live workspace
+and hands it to the pass, which still needs it for the stores that take one. An installation with no
+company yet has nothing to pass over, so the pass ends without running.
 
-`runEach` runs each workspace, keeps going after a failure, and returns the joined errors, each
-headed `workspace <id>`. The function a pass hands it binds that workspace for its own turn.
-
-`runEach` also watches the installation zone for each turn. A turn that could not load the stored
-zone counted its days in UTC. `runEach` then writes one `system_log` row for it, with the action
+`runInstallationPass` also watches the installation zone. A pass that could not load the stored
+zone counted its days in UTC. The helper then writes one `system_log` row for it, with the action
 `installation_zone.unresolved` (`compose/zonefault`).
 
 A tick of a fleet pass carries the `sweep` tag and at most `periodicPassMaxAttempts` attempts
 (`periodicInsertOpts`). Its real retry is still the next tick.
 
 **Where the dispatcher shape stays.** The kinds in `backend/api/jobs.yaml`
-that carry `role: dispatcher` fan out per connection or per build, through `dispatchOne`. A job an
-extension unit declares, in its own `api/jobs.yaml` fragment, is composed as a dispatcher and a
-per-workspace child (`internal/compose/extjobs.go`). Its dispatcher queues every live workspace with
-`dispatchWith`.
+that carry `role: dispatcher` fan out per connection or per build, through `dispatchOne`, or once for the
+installation, through `dispatchOnce` (`fan_out_unit: installation`). A job an extension unit declares, in
+its own `api/jobs.yaml` fragment, is composed as a dispatcher and a child
+(`internal/compose/extjobs.go`). Its dispatcher queues one tick with `dispatchOnce`.
 
 **The generated checks follow the args.** `make gen` writes `var _ jobs.FleetWide = XArgs{}` for
-each kind that `fleetWide()` names. It writes `var _ jobs.WorkspaceScoped = XArgs{}` for each worker
-whose args declare a `Workspace` field. So the compiler checks a *declared* kind's markers.
+each kind that `fleetWide()` names. So the compiler checks a *declared* kind's marker.
 
-Gates cover the two cases the generated checks cannot reach. One is a type the contract does not know
-(`TestEveryJobArgsTypeIsDeclaredInTheContract`). The other is a type that is both at once
-(`TestNoJobArgsDeclaresBothRoles`: `a job does one workspace's work or dispatches, never both`).
+Gates cover the cases the generated checks cannot reach. One is a type the contract does not know
+(`TestEveryJobArgsTypeIsDeclaredInTheContract`). The other is a type that names a workspace again
+(`TestNoJobArgsDeclaresAWorkspaceAccessor`, `TestNoJobArgsCarryAWorkspace`).
 
-**The args declaration sets the binding.** A workspace job binds through `compose.workspaceJobCtx`.
-`workspaceJobDB` makes a handle from the same field. The binding gate keeps a `Work` body from calling
+**The binding is the installation's.** A worker binds through `compose.bindInstallation`, or through
+`installationJobCtx` when it holds an identity service. The binding gate keeps a `Work` body from calling
 `principal.WithWorkspaceID` itself:
 
 ```go
-func workspaceJobCtx(ctx context.Context, args jobs.WorkspaceScoped) (context.Context, error) {
-    ws := args.WorkspaceID()
-    if ws == (ids.UUID{}) {
-        return nil, fmt.Errorf("%s: declares WorkspaceScoped but carries no workspace", args.Kind())
-    }
-    return principal.WithWorkspaceID(ctx, ws), nil
+func bindInstallation(ctx context.Context, pool *pgxpool.Pool) (context.Context, error) {
+    return installationJobCtx(ctx, identity.NewService(pool))
 }
 ```
 
 It cannot live in River middleware. `river.WorkerMiddleware` sees a `rivertype.JobRow`, which is raw
-JSON and never the typed args. A middleware could only bind by reading the wire key again. That would
-make the role declaration a label *beside* the binding instead of the thing that governs it. Binding
-from `WorkspaceID()` keeps the declaration in control: a worker cannot claim one workspace and work in
-another.
-
-The **zero id is refused**. No query limits rows by workspace: no table carries the column and no
-policy reads one. So a zero id set on the context would not fail by itself. It would take the place of the real
-id in an audit row, a blob key or the name of an advisory lock. Someone would see it much later and
-far from the job that produced it.
-
-A zero is also what an args type reads back when a queued row is older than a change to its wire key.
-Refusing it turns a pass that would touch nothing into a visible failure.
+JSON and never the typed args. Some stores still read the workspace off the context. Without the binding, an audit entity id, a blob key
+or the name of an advisory lock would carry a zero id.
+A job queued before the first company exists fails until one does.
 
 **One pass over one corpus.** `embed_reindex` is one: the search data has no
 workspace column, so one row rebuilds it all. It declares `cadence: on_demand`, because a human's
@@ -315,27 +286,21 @@ the `FleetWide` marker to the code. A fleet-wide `Work` must call one of the hel
 closed allowlist. It must also hold no SQL write in its own body or in a method of its worker that it
 calls.
 
-Two of the helpers queue one child per unit (`dispatchWith`, `dispatchOne`). The other three run
-the pass for each workspace in this process (`runPerWorkspace`, `runPerEveryWorkspace`, `runEach`). A
-direct `river.Insert` is not in the list, and nor is a loop written by hand.
+Two of the helpers queue a child (`dispatchOnce`, `dispatchOne`). The third runs the pass in this
+process (`runInstallationPass`). A direct `river.Insert` is not in the list, and nor is a loop written by
+hand.
 
-The two queuing helpers build a child's insert options and always add the `sweep` tag. `dispatchWith`
+The two queuing helpers build a child's insert options and always add the `sweep` tag. `dispatchOnce`
 takes the options its caller hands it, and the caller passes the declared queue and most attempts.
 `dispatchOne` chooses them by the child's declared `opts_owner`. It uses the declaration for `fan_out`,
 the child's own `InsertOpts()` for `args`, and the dispatcher's options for `caller`. A dispatcher that
 adds rows around the helpers queues a child that neither sweep gauge can see, carrying whatever numbers
 its writer typed.
 
-**One transaction is the reason it is correct.** `dispatchWith` adds the whole fan-out as one
-`InsertMany`. Take a loop that adds one workspace at a time and fails after only some of them. It leaves some
-child rows queued and then fails the dispatcher. By the time the dispatcher retries, those child rows
-may already be `completed`. `activeSweepStates` leaves out `completed`, so `ByArgs` uniqueness does
-**not** stop them.
-
-The retry would run those workspaces again, and no one would see it: a second capture pass, backed by
-AI, that uses up model budget. One `InsertMany` does not make each job run only once. River can run a
-job more than once. Each workspace pass sets the limit on that itself, because it reads its own
-waiting work again.
+**A refused insert fails the dispatcher.** `dispatchOnce` returns the insert's error, so the tick is
+recorded as failed and River retries it. A dispatcher that dropped it would leave the pass undone while River recorded
+the tick as completed. River can still run a job more than once; each pass sets the limit on that
+itself, because it reads its own waiting work again.
 
 ---
 
@@ -489,15 +454,9 @@ They cover what `/metrics` reports and its labels, and the counts that show how 
 They also cover the list derived from the declaration, and the points to watch for when you read a
 kind's rows. They are not copied here.
 
-One point about the shape counts here. The scope that `health.go` sets lets in the rows of the
-workspace that calls it. It also lets in the rows with no workspace that belong to the
-**fleet-wide kinds**: compose derives that list from `Spec.Fleet` (`dispatcherKinds` in
-`jobhealth.go`). It is closed against that list, and does not let in every null.
-
-"The workspace key is null" is kept in place by tests that read the source, not by a database
-constraint. And the app role can read and write that table directly, with no RLS. Otherwise a wrong row, or one added from outside, would land in
-the part for every workspace. It would carry its kind, counts and failure class to the admin of every
-workspace.
+One point about the shape counts here. `health.go` reads every row of the table, because the installation
+holds one company. Compose derives the list of **fleet-wide kinds** the page marks from `Spec.Fleet`
+(`dispatcherKinds` in `jobhealth.go`).
 
 ---
 
@@ -510,9 +469,9 @@ census carries its own floor, `declaredJobKindFloor`, beside the runner it reads
 
 | File | What it catches |
 |---|---|
-| `jobrole_test.go` | a River job args type (it declares `Kind()`) that `api/jobs.yaml` does not know; and a type declaring `WorkspaceID()` **and** `FleetWide()` at once |
-| `jobwirekey_test.go` | a workspace key written as anything but `json:"workspace_id"`, of any type but `ids.UUID`, missing, embedded, or listed twice at one level. The other way, a **fleet-wide** kind that ships a workspace key at all. Both failures look like the safe answer to `args->>'workspace_id'` |
-| `jobbinding_test.go` | a `Work` body that calls `principal.WithWorkspaceID` itself instead of binding through `workspaceJobCtx`. Such a body could declare one field and bind another while the role gate stays green |
+| `jobrole_test.go` | a River job args type (it declares `Kind()`) that `api/jobs.yaml` does not know; and a job args type that declares `WorkspaceID()` |
+| `jobnoworkspacearg_test.go` | a job args type with a `Workspace` field, a `json:"workspace_id"` key, or an embedded type the gate cannot read |
+| `jobbinding_test.go` | a `Work` body that calls `principal.WithWorkspaceID` itself instead of binding through `bindInstallation` or `installationJobCtx` |
 | `jobfleetwide_test.go` | a `FleetWide` kind that reaches the fleet around the helpers in the allowlist, that holds a SQL write in its own `Work`, or that no worker runs at all. A kind on its waiver list must not fan out |
 | `jobfleetwideshapes_test.go` | the gate above, tested against itself: it proves every shape the tree uses to queue child rows is **accepted**, and the two shapes it exists to reject are rejected. A gate that blocks a writer doing the right thing gets turned off by the writer it stopped |
 | `jobfleetscan_test.go` | a `FROM workspace` read of all workspaces outside the agreed places. Each place must name which of four things it is: a dispatcher listing the fleet, a path that only reads, a boot path, or finding the workspace for an inbound request that has none |
@@ -548,17 +507,15 @@ for rows the schedule half will never queue.
   boot.
 - **A worker exposes `Work` and nothing else.** The time limit, the retry rule and the middleware
   belong to the declaration.
-- **A fleet pass is one job** (`fleet: true`). It walks the workspaces through `runPerWorkspace`,
-  `runPerEveryWorkspace` or `runEach`, never a loop of its own. It tries each one, and it fails when
-  any workspace failed.
+- **A fleet pass is one job** (`fleet: true`). It runs through `runInstallationPass`, never a loop of its own, and it fails when the pass failed.
 - **A dispatcher lists and queues.** Its child does the work for one unit and owns its failure.
-- **A fan-out goes through `dispatchWith` / `dispatchOne`**, never a direct River insert. Otherwise the
+- **A fan-out goes through `dispatchOnce` / `dispatchOne`**, never a direct River insert. Otherwise the
   child loses the sweep tag and its declared cap.
 - **Job args carry ids.** A scalar is an agreed exception with a written reason.
 - **Return the failure through `jobs.FaultContext`**, and check anything read back out of
   `river_job.errors` before showing it to a human.
-- **A workspace travels as `workspace_id`.** A fleet-wide kind carries none, and
-  `job-health` lets in a null only for the kinds `Spec.Fleet` marks.
+- **No job names a workspace.** Job args carry ids of the records they work on, and the worker binds
+  the installation's one workspace itself.
 
 ## Where the code lives
 
@@ -577,7 +534,7 @@ for rows the schedule half will never queue.
 | How workers register, and the kind and type matching | `internal/compose/jobregistry.go` |
 | The fleet lists, the fleet pass helpers and the fan-out helpers | `internal/compose/dispatch.go` |
 | Workspace and installation binding | `internal/compose/workspacejob.go` |
-| Extension jobs as a dispatcher and a per-workspace child | `internal/compose/extjobs.go`, `extjobsrun.go` |
+| Extension jobs as a dispatcher and a child | `internal/compose/extjobs.go`, `extjobsrun.go` |
 | Schedule from the declared cadence | `internal/compose/jobschedule.go` |
 | The census (contract and wiring, both ways) | `internal/compose/jobcensus.go`, `jobcensusconfig.go`, `jobcensusposture.go` |
 | Workers and args types, split by subject | `internal/compose/jobs_*.go` |

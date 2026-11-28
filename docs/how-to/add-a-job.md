@@ -57,21 +57,18 @@ never one job row that loops over every workspace.
 
 3. **Write the args type** in the matching `backend/internal/compose/jobs_<concern>.go`.
    Create a new file for a new kind of work.
-   A worker for one tenant carries its tenant in a field named `Workspace`.
-   Go does not allow a method and a field of the same name, and the wire key is fixed:
+   A worker carries the ids of the records it works on and no workspace. An installation holds one
+   company, so the worker binds it itself.
 
    ```go
    type CloseDateWorkspaceArgs struct {
-       Workspace ids.UUID `json:"workspace_id"`
+       RunID ids.UUID `json:"run_id"`
    }
 
    func (CloseDateWorkspaceArgs) Kind() string { return "close_date_workspace" }
-
-   // WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-   func (a CloseDateWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
    ```
 
-   A dispatcher declares the empty mark instead, and carries no workspace key at all:
+   A dispatcher or a pass over the installation declares the empty mark:
 
    ```go
    func (CloseDateSweepArgs) Kind() string { return "close_date_sweep" }
@@ -89,11 +86,11 @@ never one job row that loops over every workspace.
 4. **Write `Work`**, a method on your worker type, and nothing else.
    Do not declare `Timeout`, `NextRetry` or `Middleware`.
    The worker reaches River only as `jobs.WorkOnly[T]`, so the declaration answers those.
-   Bind the workspace through the shared helper, and return through `jobs.FaultContext`:
+   Bind the installation's workspace through the shared helper, and return through `jobs.FaultContext`:
 
    ```go
    func (w *closeDateWorkspaceWorker) Work(ctx context.Context, job *river.Job[CloseDateWorkspaceArgs]) error {
-       wsCtx, err := workspaceJobCtx(ctx, job.Args)   // refuses a zero workspace, binds it to the context
+       wsCtx, err := bindInstallation(ctx, w.pool)   // binds the installation's one workspace to the context
        if err != nil {
            return jobs.FaultContext(ctx, err)
        }
@@ -106,14 +103,14 @@ never one job row that loops over every workspace.
    A pass that writes names who acts and makes its own `correlation_id`, as above. No HTTP layer stands
    behind a job, and `storekit.Emit` fails without a `correlation_id`
    ([write-backbone.md](../explanation/write-backbone.md#6-correlation--causation-the-trace)).
-   `workspaceJobCtx` binds the tenant and only the tenant.
+   `bindInstallation` binds the workspace and nothing else.
 
-   A `Work` of a dispatcher instead calls one of the fan-out helpers (`dispatchWith`,
-   `dispatchOne`, `runPerWorkspace`, `runPerEveryWorkspace`, `runEach`). It makes no tenant write of its own:
+   A `Work` of a dispatcher instead calls one of the fan-out helpers (`dispatchOnce`,
+   `dispatchOne`, `runInstallationPass`). It makes no tenant write of its own:
 
    ```go
    func (w *closeDateSweepWorker) Work(ctx context.Context, _ *river.Job[CloseDateSweepArgs]) error {
-       return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.correctWorkspace))
+       return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.correctWorkspace))
    }
    ```
 
@@ -142,13 +139,11 @@ never one job row that loops over every workspace.
      and whether there is a schedule at all from the declaration. It never reads them from where the call
      sits. Do not build a `river.PeriodicJob` by hand. Do not touch the River `PeriodicJobBundle` either;
      `forbidigo` blocks it.
-   - A fan-out over every workspace calls
-     `dispatchWith(ctx, workspaces, insert, workspaceSweepOpts(ChildArgs{}.Kind()), argsFor)`. Pass the
-     insert of a transaction you already hold when the fan-out must join it. It inserts the whole fan-out as
-     one `InsertMany`. A fan-out that is partly inserted, fails and runs again would run the workspaces
-     whose child jobs already passed.
-   - A pass that runs each workspace in this process calls `runPerWorkspace(ctx, pool, run)`. It tries
-     every workspace and joins the failures.
+   - A dispatcher that queues one child for the installation calls
+     `dispatchOnce(ctx, insert, workspaceSweepOpts(ChildArgs{}.Kind()), ChildArgs{})`. It returns the
+     insert's error, so a refused insert fails the dispatcher and River retries the tick.
+   - A pass that runs in this process calls `runInstallationPass(ctx, pool, run)`. It reads the
+     installation's one workspace, hands it to `run` and returns the pass's error.
    - A fan-out per connection or per build loops over `dispatchOne(ctx, args, callerOpts)`. The child's
      declared `opts_owner` decides the options. Pass `callerOpts` for `caller` and `nil` for the other two.
      The wrong one stops with a panic, so the rule that keeps a job from running twice is never dropped
@@ -183,10 +178,9 @@ The failures you meet first, in the order you would meet them:
 | start | `compose: a worker is registered under a kind the contract pairs with another args type` | `Kind()` returns the other kind's string. River would work those rows under the other kind's timeout, queue and limit, and your kind would have no worker |
 | start | `compose: fanning out to "y", which no declared kind names in fans_out_to` | Declare the fan-out link of the dispatcher. `fans_out_to` is the register of what may take a fan-out at all |
 | `jobrole_test.go` | `X is a River job (it declares Kind()) but is not in api/jobs.yaml` | An args type with no declaration. It would run on the River default of one minute and not show on either job page |
-| `jobrole_test.go` | `X declares both WorkspaceID() and FleetWide()` | A job does one workspace's work or hands out work, never both |
-| `jobwirekey_test.go` | `X.F ships as json:"ws", want json:"workspace_id"` | `args->>'workspace_id'` cannot see a different key. A `null` there reads as a dispatcher, not as tenant work the query cannot see |
-| `jobwirekey_test.go` | `X is a dispatcher (it declares FleetWide()) but ships a json:"workspace_id" key` | Put the workspace on the child jobs it adds to the queue. The args of the dispatcher carry none |
-| `jobfleetwide_test.go` | `W works FleetWide args X but never fans out` | A dispatcher must call one of the fan-out helpers (`dispatchWith`, `dispatchOne`, `runPerWorkspace`, `runPerEveryWorkspace`, `runEach`). If it does tenant work instead, it is `WorkspaceScoped` |
+| `jobrole_test.go` | `X is a River job and declares WorkspaceID()` | A job names no workspace. Remove the method and the field |
+| `jobnoworkspacearg_test.go` | `X names a workspace; an installation holds one company, so the job needs none` | Remove the `Workspace` field. The worker binds the installation's workspace with `bindInstallation` |
+| `jobfleetwide_test.go` | `W works FleetWide args X but never fans out` | A dispatcher must call one of the fan-out helpers (`dispatchOnce`, `dispatchOne`, `runInstallationPass`). If it does the work itself, declare it `fleet: true`, and run it through `runInstallationPass` |
 | `jobfleetwide_test.go` | `W works FleetWide args X and issues a tenant write` | Move the write into the workspace worker, where it can pass or fail as its own row |
 | `jobfault_test.go` | `a worker return must be nil, jobs.Fault(...), or a river control return — a raw cause is written verbatim into river_job.errors` | Put the return in `jobs.FaultContext(ctx, err)` |
 | `jobfault_test.go` | `W logs an error and returns nil — River will record this job as completed while the work failed` | Return the failure. Or accept it with `fault: {nil_after_logging: …}`, and name the retry rule that does the work later |
