@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -48,7 +49,7 @@ const SAVE_WAIT = { timeout: 4000 };
 function refused() {
   return new Response(
     JSON.stringify({ code: "internal", title: "The draft store is down." }),
-    { status: 503, headers: { "Content-Type": "application/problem+json" } },
+    { status: 500, headers: { "Content-Type": "application/problem+json" } },
   );
 }
 
@@ -78,7 +79,7 @@ function composerStory(routes: RouteMap) {
 
 async function restored() {
   const dialog = within(await screen.findByRole("dialog"));
-  await dialog.findByText("Saved draft restored");
+  await dialog.findByText(englishCopy["compose.savedDraftRestored"]);
   return dialog;
 }
 
@@ -109,8 +110,8 @@ export const RestoredWhole: Story = {
     const dialog = await restored();
     await expect(dialog.getByText("seat-pricing.pdf")).toBeInTheDocument();
     await expect(
-      dialog.getByRole("combobox", { name: "Reason for contact" }),
-    ).toHaveTextContent("They asked for it");
+      dialog.getByRole("combobox", { name: englishCopy["compose.why"] }),
+    ).toHaveTextContent(englishCopy["compose.why.asked"]);
   },
 };
 

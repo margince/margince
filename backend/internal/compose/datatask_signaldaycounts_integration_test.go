@@ -38,7 +38,7 @@ type legacySignal struct {
 func seedLegacySignal(ctx context.Context, t *testing.T, e *integration.Env, company ids.UUID, s legacySignal) ids.UUID {
 	t.Helper()
 	fingerprint := "day-counts:" + ids.NewV7().String()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind: s.kind, CompanyID: company, ProjectID: s.project, Summary: s.summary,
 			Severity: severityWarn, Fingerprint: fingerprint, Producer: s.producer,
@@ -130,7 +130,7 @@ func TestTheSignalDayCountTaskRewordsOnlyTheScansOldSummaries(t *testing.T) {
 	in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
 	for {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = step.Batch(ctx, tx, in)
 			return err
@@ -146,7 +146,7 @@ func TestTheSignalDayCountTaskRewordsOnlyTheScansOldSummaries(t *testing.T) {
 		in.Cursor = out.Cursor
 	}
 	in = datatask.BatchIn{Limit: 2, RunID: ids.NewV7(), Cursor: json.RawMessage(`"not-a-uuid"`)}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := step.Batch(ctx, tx, in)
 		return err
 	}); err == nil {

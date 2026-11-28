@@ -56,17 +56,10 @@ const (
 	ReviewCancelled = "cancelled"
 )
 
-// reviewKindSingle is the only kind this slice writes: one review, one send
-// attempt. The column is constrained to it so a batch review — a campaign, a
-// manifest — arrives as a deliberate widening rather than as a value somebody
-// wrote by accident.
-const reviewKindSingle = "single"
-
 // Review is a refused send somebody can look at.
 type Review struct {
 	ID          ids.UUID
 	State       string
-	Kind        string
 	IntentID    ids.UUID
 	InitiatedBy ids.UUID
 	Refusals    []RefusedRecipient
@@ -106,7 +99,6 @@ func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, in
 	initiator := initiatingSeat(ctx)
 	out := Review{
 		State:      stateFor(refusals),
-		Kind:       reviewKindSingle,
 		IntentID:   intentID,
 		Refusals:   refusals,
 		ReasonCode: refusals[0].ReasonCode,
@@ -118,8 +110,8 @@ func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, in
 	// has already gone.
 	err = tx.QueryRow(ctx, `
 		INSERT INTO communication_review
-		  (state, kind, delivery_intent_id, initiated_by, refusals, reason_code)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		  (state, delivery_intent_id, initiated_by, refusals, reason_code)
+		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (delivery_intent_id)
 		  WHERE delivery_intent_id IS NOT NULL AND resolved_at IS NULL
 		  DO UPDATE SET refusals = CASE WHEN EXISTS (
@@ -130,7 +122,7 @@ func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, in
 		                state = EXCLUDED.state,
 		                opened_at = now()
 		RETURNING id`,
-		out.State, out.Kind, zeroUUIDAsNull(intentID), zeroUUIDAsNull(initiator),
+		out.State, zeroUUIDAsNull(intentID), zeroUUIDAsNull(initiator),
 		payload, out.ReasonCode).Scan(&out.ID)
 	if err != nil {
 		return Review{}, fmt.Errorf("consent: opening the review this refusal owes: %w", err)
@@ -198,13 +190,13 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var payload []byte
 		err := tx.QueryRow(ctx, `
-			SELECT id, state, kind, coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
+			SELECT id, state, coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
 			       refusals, reason_code,
 			       coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid)
 			  FROM communication_review
 			 WHERE id = $1
 			   AND (($2::uuid IS NOT NULL AND initiated_by = $2) OR $3)`, id, zeroSeatAsNull(seat), decider).
-			Scan(&out.ID, &out.State, &out.Kind, &out.IntentID, &payload, &out.ReasonCode,
+			Scan(&out.ID, &out.State, &out.IntentID, &payload, &out.ReasonCode,
 				&out.InitiatedBy)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -370,11 +362,11 @@ func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, er
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var payload []byte
 		err := tx.QueryRow(ctx, `
-			SELECT id, state, kind, coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
+			SELECT id, state, coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
 			       refusals, reason_code
 			  FROM communication_review
 			 WHERE id = $1 AND initiated_by = $2`, id, seat).
-			Scan(&out.ID, &out.State, &out.Kind, &out.IntentID, &payload, &out.ReasonCode)
+			Scan(&out.ID, &out.State, &out.IntentID, &payload, &out.ReasonCode)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

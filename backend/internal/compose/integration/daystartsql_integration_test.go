@@ -44,7 +44,7 @@ func TestTheSQLDayStartIsTheFirstInstantOfTheDay(t *testing.T) {
 		want := storekit.StartOfDay(time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, loc), loc)
 		var got time.Time
 		ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(ctx, `SELECT `+occurredday.DayStartSQL(`$1::date`), tc.day).Scan(&got)
 		}); err != nil {
 			t.Fatalf("%s %s: %v", tc.zone, tc.day, err)

@@ -152,7 +152,7 @@ it("keeps a refused correction and offers the existing record on a duplicate", a
   await user.clear(input);
   await user.type(input, "taken@example.test");
   await user.click(screen.getByRole("button", { name: "Save" }));
-  await screen.findByRole("button", { name: "View existing record" });
+  await screen.findByRole("button", { name: en["dedupe.viewExisting"] });
   expect(
     within(screen.getByRole("dialog", { name: "Email" })).getByDisplayValue(
       "taken@example.test",
@@ -382,7 +382,7 @@ it("converts the lead that holds an edited address by saving again", async () =>
   await user.type(input, "dana@lead.example");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await user.click(
-    await screen.findByRole("button", { name: "Convert the lead" }),
+    await screen.findByRole("button", { name: en["contact.leadHeld.convert"] }),
   );
   await waitFor(() => expect(sent).toHaveLength(2));
   expect(sent[1]).toMatchObject({

@@ -651,7 +651,7 @@ func TestAPassportStopsWorkingWhileItsHumanOwesARotation(t *testing.T) {
 		t.Fatalf("the passport must authenticate before the rotation is owed: %v", err)
 	}
 
-	if err := database.WithWorkspaceTx(e.wsOnlyCtx(), e.svc.db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(e.wsOnlyCtx(), e.svc.db.Pool(), func(tx pgx.Tx) error {
 		_, execErr := tx.Exec(context.Background(),
 			`UPDATE app_user SET must_change_password = true WHERE id = $1`, e.member.UserID)
 		return execErr

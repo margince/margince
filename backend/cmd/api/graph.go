@@ -30,7 +30,7 @@ func graphOptions(cfg apiConfig, pool *pgxpool.Pool, vault keyvault.Vault, logge
 		PublicBaseURL: cfg.publicBaseURL,
 		APIBaseURL:    cfg.apiBaseURL,
 	}
-	opts := []compose.Option{compose.WithGraphCapture(graphCfg)}
+	opts := []compose.Option{compose.WithGraphCapture(graphCfg), compose.WithMessengerOAuth(graphCfg, cfg.posture.IsNonProduction())}
 	// The notification webhook needs only the pool and an insert-only client —
 	// not the OAuth transport — so a configured token mounts it even while the
 	// Entra app is incomplete (connections synced by the worker still route).

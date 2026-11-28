@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 )
 
 // Criterion is the judge's answer to one yes/no question about a run.
@@ -25,8 +27,9 @@ type Criterion struct {
 // Run is one run's outcome: the checks its end state failed, and the judge's
 // answer to each criterion.
 type Run struct {
-	Failures []Failure   `json:"failures"`
-	Criteria []Criterion `json:"criteria"`
+	Recovery *aitasks.LoopRecoveryMeasure `json:"recovery,omitempty"`
+	Failures []Failure                    `json:"failures"`
+	Criteria []Criterion                  `json:"criteria"`
 }
 
 // ChecksPassed says the end state failed no check.

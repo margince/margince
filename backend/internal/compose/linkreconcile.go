@@ -195,7 +195,7 @@ func (w *linkReconcileWorker) repairLeadFilings(ctx context.Context) (int, error
 		Filer:     ActivityLeadFiler{Tasks: &tasks},
 	}
 	var out datatask.BatchOut
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = repair.BatchTx(ctx, tx, datatask.BatchIn{Limit: linkReconcileContactsPerTick})
 		return err
@@ -265,7 +265,7 @@ const liftFiledMeetingHoldsPerTick = 200
 // predicate guards the invariant for the price of one probe.
 func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context, lifted *sweepTally) error {
 	var held []ids.ActivityID
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := filedMeetingHeldClause("a", arg)
@@ -295,7 +295,7 @@ func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context, lifted 
 	for _, id := range held {
 		// One transaction per meeting, like the repair above: a row another
 		// writer holds a lock on costs that row and not the whole drain.
-		if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 			return activities.RecomputeAudienceTx(ctx, tx, id)
 		}); err != nil {
 			return fmt.Errorf("re-deriving the audience of %s: %w", id, err)

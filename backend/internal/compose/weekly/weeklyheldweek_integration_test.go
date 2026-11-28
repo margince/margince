@@ -28,7 +28,7 @@ import (
 func heldMeetingWeekCount(t *testing.T, e *weekEnv, start time.Time) (int, int) {
 	t.Helper()
 	var held, withNextStep int
-	if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		held, withNextStep, err = countWeekMeetings(e.repCtx, tx, e.Rep1,
 			start, start.AddDate(0, 0, 7))
@@ -72,7 +72,7 @@ func TestAMeetingRedatedAfterItWasHeldStaysInItsHeldWeek(t *testing.T) {
 	// week under test is in September. The figure counts a task recorded before
 	// the week ended, so the stamp is pinned into the week after the real write.
 	recordedAt := at.Add(time.Hour)
-	if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.repCtx, `UPDATE activity SET created_at = $1 WHERE id = $2`,
 			recordedAt, ids.UUID(task.Id))
 		return err
@@ -118,7 +118,7 @@ func TestAFollowUpTheMorningOfAnUndatedDayMeetingCounts(t *testing.T) {
 	held := storekit.MeetingHeldAsOfSQL("m", "'infinity'::timestamptz", activities.ReversedCancellationSQL)
 	instant := occurredday.StartAtSQL(held.Start, "'instant'")
 	var counts, wouldHaveCounted bool
-	if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.repCtx, `SELECT $2::timestamptz >= `+held.Began+`, $2::timestamptz >= `+instant+`
 			FROM (SELECT gen_random_uuid() AS id, $1::timestamptz AS scheduled_start, NULL::text AS scheduled_precision) held,
 			     (SELECT $1::timestamptz AS occurred_at, 'day'::text AS occurred_precision) m`,

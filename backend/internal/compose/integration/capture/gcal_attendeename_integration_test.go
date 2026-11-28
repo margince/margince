@@ -36,7 +36,7 @@ import (
 // displayed name, which move together or not at all.
 func contactName(t *testing.T, e *integration.SearchEnv, id ids.UUID) (first, last, full string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT coalesce(first_name, ''), coalesce(last_name, ''), full_name
 			  FROM contact WHERE id = $1`, id).Scan(&first, &last, &full)

@@ -68,6 +68,10 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "design-system/timelinechat.stories.tsx",
+    why: "The correction marker fixture compares provider recaps at one explicit record clock in both themes.",
+  },
+  {
     file: "features/companies/companyactivity.test.ts",
     why: "A date-only activity must read as its own date for a reader far east of UTC, where its stored noon is already the next day; only a named zone at UTC+14 tells that apart from the instant's day.",
   },

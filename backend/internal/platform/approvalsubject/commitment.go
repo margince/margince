@@ -10,32 +10,29 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// KindCommitmentTask is a promise one of our colleagues made, read out of a
-// conversation and staged for them to confirm.
+// KindCommitmentTask is work read from a conversation, staged for its named
+// colleague to confirm.
 const KindCommitmentTask = "commitment_task"
 
 // commitmentSubject is the part of compose's CommitmentTaskProposal that says
 // who it is for. The keys are that type's JSON tags; a compose test marshals
 // the real type through CommitmentAskedOf, so a renamed key fails there.
 type commitmentSubject struct {
-	ExistingTaskID *ids.UUID `json:"existing_task_id"`
-	SeatID         *ids.UUID `json:"seat_id"`
-	PromiserSeatID *ids.UUID `json:"promiser_seat_id"`
-	FollowUpOf     *ids.UUID `json:"follow_up_of"`
+	ReconfirmSource bool      `json:"reconfirm_source"`
+	ExistingTaskID  *ids.UUID `json:"existing_task_id"`
+	SeatID          *ids.UUID `json:"seat_id"`
+	PromiserSeatID  *ids.UUID `json:"promiser_seat_id"`
+	FollowUpOf      *ids.UUID `json:"follow_up_of"`
 }
 
-// CommitmentAskedOf is the one member a commitment proposal may be put to.
-// A new task is for the colleague who made the promise: the payload must name
-// them, and a seat it names must be theirs. A request to add recipients to an
-// existing task is for the colleague who holds that task. A follow-up of a
-// customer's promise is for the member its seat names, who made no promise.
-// Any other shape names nobody, and nobody may read, decide or be told about it.
+// CommitmentAskedOf binds review to its named colleague. A source question or
+// customer follow-up names a holder without asserting that they made a promise.
 func CommitmentAskedOf(body json.RawMessage) (ids.UUID, bool) {
 	var subject commitmentSubject
 	if err := json.Unmarshal(body, &subject); err != nil {
 		return ids.Nil, false
 	}
-	if subject.ExistingTaskID != nil || subject.FollowUpOf != nil {
+	if subject.ExistingTaskID != nil || subject.FollowUpOf != nil || subject.ReconfirmSource {
 		return named(subject.SeatID)
 	}
 	if subject.SeatID != nil && (subject.PromiserSeatID == nil || *subject.SeatID != *subject.PromiserSeatID) {

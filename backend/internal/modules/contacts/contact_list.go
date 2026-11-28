@@ -29,11 +29,12 @@ const contactNameColumn = "full_name"
 
 // ListContactsInput carries the contact list's contract parameters.
 type ListContactsInput struct {
-	Cursor  *string
-	Offset  *int
-	Limit   *int
-	Query   *string
-	OwnerID *ids.UserID
+	Salutation *string
+	Cursor     *string
+	Offset     *int
+	Limit      *int
+	Query      *string
+	OwnerID    *ids.UserID
 	// OwnerTeamID narrows to a team's rows; Unassigned to the unowned queue.
 	// Both narrow the caller's row scope and never widen it — see
 	// storekit.OwnershipClause, which also refuses two of them at once.
@@ -200,6 +201,9 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 			}
 			if shared != "" {
 				where = append(where, shared)
+			}
+			if clause := salutationListClause(contactEntity, in.Salutation, arg); clause != "" {
+				where = append(where, clause)
 			}
 			if clause := relationshipMarkClause(in, arg); clause != "" {
 				where = append(where, clause)

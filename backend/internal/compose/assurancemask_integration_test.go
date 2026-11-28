@@ -109,7 +109,7 @@ func TestAMaskedReaderIsListedNoFindingMoneyOnADealTheyCannotChange(t *testing.T
 	})
 
 	var found []assurance.Exception
-	if err := database.WithWorkspaceTx(repCtx, database.BindTo(pool, wsTyped).Pool(),
+	if err := database.WithTx(repCtx, database.BindTo(pool, wsTyped).Pool(),
 		func(tx pgx.Tx) error {
 			found, err = AssuranceExceptions(repCtx, tx)
 			return err

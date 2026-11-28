@@ -58,7 +58,7 @@ func (r *callRuntime) landSignal(runCtx context.Context, rec extension.Record, d
 	}
 	var id ids.UUID
 	var created bool
-	err = database.WithWorkspaceTx(runCtx, r.deps.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(runCtx, r.deps.pool, func(tx pgx.Tx) error {
 		filed, made, err := signals.RecordExtensionTx(runCtx, tx, in)
 		id, created = ids.UUID(filed.Id), made
 		return err

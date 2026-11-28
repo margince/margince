@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
@@ -149,11 +148,6 @@ func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) 
 	if !adminadmit.HealthReader(w, r) {
 		return
 	}
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		httperr.Write(w, r, apperrors.ErrPermissionDenied)
-		return
-	}
 
 	// Bounded, for the same reason the exposition endpoint bounds its own
 	// job read: an unbounded one holds a request thread and a pool connection for
@@ -171,10 +165,7 @@ func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// wsID.String(), not the uuid: ->> yields text, and a uuid-typed bind
-	// gives pgx the uuid OID and Postgres "operator does not exist: text =
-	// uuid".
-	health, err := jobs.WorkspaceHealth(ctx, h.pool, wsID.String(), dispatcherKinds(), window)
+	health, err := jobs.ReadHealth(ctx, h.pool, dispatcherKinds(), window)
 	if err != nil {
 		// Never a partial 200. A page that renders half the fleet as if it
 		// were the whole one is the failure this endpoint exists to end.

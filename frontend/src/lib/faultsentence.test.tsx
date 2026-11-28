@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { describe, expect, it } from "vitest";
 import { translate } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import {
   faultSentence,
   fieldCheckSentence,
@@ -286,14 +287,14 @@ describe("a field fault worded from the screen's label and limit", () => {
 
   it("words an unlabelled field in the catalog when the server's sentence opens on its key", () => {
     expect(faultSentence(fault("not_integer"), "en")).toBe(
-      "Enter a whole number.",
+      englishCopy["common.valueNotInteger"],
     );
     expect(
       faultSentence(
         { ...fault("not_integer"), message: "win_probability must be whole" },
         "en",
       ),
-    ).toBe("Enter a whole number.");
+    ).toBe(englishCopy["common.valueNotInteger"]);
   });
 
   it("gives an English reader the words, not the API sentence", () => {
@@ -386,7 +387,7 @@ describe("a field fault worded from the screen's label and limit", () => {
     });
     expect(
       problemFieldSentencesOf(error, "en", {
-        win_probability: "Win probability",
+        win_probability: englishCopy["analytics.field.win_probability"],
       }).get("win_probability"),
     ).toBe("Enter a whole number for Win probability.");
   });
@@ -448,7 +449,7 @@ describe("a company form's refusals in the reader's words", () => {
       );
     }
     expect(faultSentence(fault, "en")).toBe(
-      "A company cannot be its own parent. Choose another.",
+      englishCopy["create.parentCompanySelf"],
     );
   });
 

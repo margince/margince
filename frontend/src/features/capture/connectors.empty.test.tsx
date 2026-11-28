@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { ConnectorsCard } from "./connectors";
@@ -59,7 +60,9 @@ function render(ui: ReactNode) {
 }
 
 function mailPanel() {
-  const heading = screen.getByRole("heading", { name: "Mail and calendar" });
+  const heading = screen.getByRole("heading", {
+    name: englishCopy["connectors.title"],
+  });
   const panel = heading.closest("section");
   if (!panel) throw new Error("the mail heading is not inside its panel");
   return panel;
@@ -81,10 +84,14 @@ describe("the empty Mail and calendar card", () => {
 
     await screen.findByTestId("connect-tile-google");
     const panel = mailPanel();
-    expect(within(panel).getByText("Not connected")).toBeInTheDocument();
+    expect(
+      within(panel).getByText(englishCopy["connectors.health.notConnected"]),
+    ).toBeInTheDocument();
     // Adding is what the tiles are for, so the header verb waits for an account.
     expect(
-      within(panel).queryByRole("button", { name: "Add another mailbox" }),
+      within(panel).queryByRole("button", {
+        name: englishCopy["connectors.addOpen"],
+      }),
     ).toBeNull();
     for (const vendor of ["Google", "Microsoft 365"]) {
       expect(
@@ -93,7 +100,7 @@ describe("the empty Mail and calendar card", () => {
     }
     // The steps are read once, before the tiles they describe.
     const steps = within(panel).getByRole("list", {
-      name: "How connecting works",
+      name: englishCopy["connectors.strip.label"],
     });
     expect(
       steps.compareDocumentPosition(screen.getByTestId("connect-tile-google")),
@@ -133,7 +140,9 @@ describe("the empty Mail and calendar card", () => {
         within(panel).queryByRole("button", { name: /^Connect/ }),
       ).toBeNull();
       expect(
-        within(panel).queryByRole("button", { name: "Add another mailbox" }),
+        within(panel).queryByRole("button", {
+          name: englishCopy["connectors.addOpen"],
+        }),
       ).toBeNull();
       expect(screen.queryByTestId("connect-tile-google")).toBeNull();
     },
@@ -144,10 +153,12 @@ describe("the empty Mail and calendar card", () => {
     render(<ConnectorsCard />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Connect Microsoft 365" }),
+      await screen.findByRole("button", {
+        name: englishCopy["scheduling.connectMicrosoft"],
+      }),
     );
     const dialog = screen.getByRole("dialog", {
-      name: "Connect Microsoft 365",
+      name: englishCopy["scheduling.connectMicrosoft"],
     });
     // The account step is skipped: the tile already chose it.
     expect(within(dialog).queryByRole("radio", { name: /^Google/ })).toBeNull();
@@ -178,7 +189,7 @@ describe("the empty Mail and calendar card", () => {
     expect(within(microsoft).queryByRole("link")).toBeNull();
     expect(
       within(screen.getByTestId("connect-tile-google")).getByRole("button", {
-        name: "Connect Google",
+        name: englishCopy["scheduling.connectGoogle"],
       }),
     ).toBeEnabled();
   });
@@ -211,17 +222,19 @@ describe("the empty Mail and calendar card", () => {
 
     await userEvent.click(
       await screen.findByRole("button", {
-        name: "Connect with IMAP",
+        name: englishCopy["connectors.imapRow.connect"],
       }),
     );
     const dialog = screen.getByRole("dialog", {
-      name: "Connect another mail host",
+      name: englishCopy["connectFlow.titleImap"],
     });
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Continue" }),
     );
     expect(
-      await screen.findByRole("dialog", { name: "Connect IMAP mailbox" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["connectors.imapModalTitle"],
+      }),
     ).toBeInTheDocument();
   });
 
@@ -236,6 +249,8 @@ describe("the empty Mail and calendar card", () => {
         /shares newly captured mail with colleagues/,
       ),
     ).toBeInTheDocument();
-    expect(within(panel).getByText("Whole company")).toBeInTheDocument();
+    expect(
+      within(panel).getByText(englishCopy["mailSharing.plate.scope"]),
+    ).toBeInTheDocument();
   });
 });

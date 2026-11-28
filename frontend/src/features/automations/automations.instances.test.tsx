@@ -565,7 +565,7 @@ describe("creating a rule from a template in another language", () => {
   it("stores the template's own name when the suggested one is kept", async () => {
     expect(await createRouteLead()).toMatchObject({
       key: "route_lead",
-      name: "Route new lead to a task",
+      name: en["auto.template.route_lead.name"],
     });
   });
 

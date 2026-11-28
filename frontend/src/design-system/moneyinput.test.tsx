@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { MoneyInput } from "./moneyinput";
 
 // MoneyInput wraps the existing TextInput (field.tsx). It shows and edits
@@ -495,7 +496,7 @@ describe("MoneyInput refusal before blur", () => {
     const { rerender } = rtlRender(box(""));
     const early = screen.getByLabelText("Value") as HTMLInputElement;
     expect(early.disabled).toBe(true);
-    expect(early.placeholder).toBe("Opens once a currency is set.");
+    expect(early.placeholder).toBe(englishCopy["amount.waitsForCurrency"]);
 
     rerender(box("VND"));
     const input = screen.getByLabelText("Value") as HTMLInputElement;

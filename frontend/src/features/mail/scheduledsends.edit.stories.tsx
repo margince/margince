@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, waitFor, within } from "storybook/test";
 import { browserZone } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -57,7 +58,9 @@ export const FilesRefused: Story = {
   },
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    const title = await dialog.findByText("Message not editable");
+    const title = await dialog.findByText(
+      englishCopy["sched.editRefused.title"],
+    );
     await waitFor(() => expect(title).toBeVisible());
   },
 };
@@ -97,7 +100,7 @@ export const Stale: Story = {
   },
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    const title = await dialog.findByText("Message changed");
+    const title = await dialog.findByText(englishCopy["sched.editStale.title"]);
     await waitFor(() => expect(title).toBeVisible());
   },
 };

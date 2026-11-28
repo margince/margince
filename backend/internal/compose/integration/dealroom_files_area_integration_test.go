@@ -53,7 +53,7 @@ func captureFileOnEmail(t *testing.T, e *apptest.AppEnv, blob blobstore.Store, d
 	if err != nil {
 		t.Fatalf("stage: %v", err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return store.RecordCapturedFiles(ctx, tx, ids.From[ids.ActivityKind](ids.MustParse(activityID)),
 			activities.CapturedFileSource{System: "imap", MessageID: "msa-" + activityID, CapturedBy: "connector:imap", Category: "email_attachment"}, staged)
 	}); err != nil {
@@ -198,7 +198,7 @@ func TestAWithheldMailFileCannotBePutInADealRoom(t *testing.T) {
 	}
 	ctx := captureContext(t, e)
 	store := activities.NewStore(e.DB()).WithBlobstore(blob)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return store.RecordWithheldFiles(ctx, tx, ids.From[ids.ActivityKind](ids.MustParse(activityID)),
 			activities.CapturedFileSource{System: "imap", MessageID: "private-" + activityID, CapturedBy: "connector:imap", Category: "email_attachment"},
 			[]activities.WithheldFile{{PartID: "1", Filename: "payslip.pdf", ContentType: "application/pdf", ByteSize: 4096}})

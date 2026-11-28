@@ -195,40 +195,8 @@ func reachabilityImage(provider string, reachable bool) map[string]any {
 	}}
 }
 
-// auditChannelIdentityChange puts a channel-identity mutation on the CONTACT's
-// write trail: domain row + audit row + outbox event in the caller's one
-// transaction.
-//
-// The contact is the right subject, not the satellite. Both mutations this
-// serves change what the RECORD says — reachability is projected onto the
-// contact read (contact_children.go), and it decides whether a rep is offered
-// the reply box at all — so an auditor asking "why can this contact no longer
-// be messaged, and since when" must find the answer on the contact's history,
-// exactly as a contact_profile_field write is audited as a contact update
-// (enrichsignature.go).
-//
-// The bind path needs none of this: it is enclosed by the contact create whose
-// audit row already covers it. These two writes have no enclosing contact
-// mutation — they reach a Contact who already exists.
-//
-// Every genuine change gets a row, and there is no per-identity budget on top
-// of that. The counterpart decides how often they flip, so the question is what
-// bounds the trail, and the answer is where the bound belongs rather than here:
-//
-//   - Repetition costs nothing. Both callers guard on the CURRENT stored state,
-//     so a redelivered my_chat_member and a message repeating the handle we
-//     already hold reach no row and write nothing — which covers everything
-//     Telegram generates on its own.
-//   - What is left is one row per state a human actually changed, and a human
-//     who can change state can already send messages, each of which costs an
-//     activity, an audit row and an event of its own. A budget here would cap a
-//     constant factor on a path that is unbounded by design, and the real bound
-//     on both is the same one: the workspace disconnects the bot.
-//   - A capped trail would be worse than a long one. Reachability decides
-//     whether a rep is offered the reply box at all, so a flip recorded nowhere
-//     leaves an auditor asking "since when can we not message this contact" with
-//     a record that changed and a history that does not say so — and a trail
-//     silently truncated by a budget reads exactly like a complete one.
+// A channel account or derived number changes what the contact itself says.
+// Its audit and outbox entries belong on the contact's trail in the same transaction.
 func auditChannelIdentityChange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, before, after map[string]any) error {
 	// Binding an account to a contact who had none replaces nothing: the
 	// question an auditor brings is which account reaches this human, and

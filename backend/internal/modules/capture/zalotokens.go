@@ -42,7 +42,7 @@ type ZaloRenewer struct {
 	// Now is the clock the expiry is judged by.
 	Now func() time.Time
 	// Tx runs one renewal's locked work in a workspace transaction. Nil is
-	// database.WithWorkspaceTx. It is the boundary a test breaks to make a
+	// database.WithTx. It is the boundary a test breaks to make a
 	// commit's outcome unclear.
 	Tx func(ctx context.Context, fn func(pgx.Tx) error) error
 }
@@ -51,7 +51,7 @@ func (r *ZaloRenewer) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
 	if r.Tx != nil {
 		return r.Tx(ctx, fn)
 	}
-	return database.WithWorkspaceTx(ctx, r.Pool, fn)
+	return database.WithTx(ctx, r.Pool, fn)
 }
 
 // RenewWorkspace renews every connection of one workspace whose access token
@@ -62,7 +62,7 @@ func (r *ZaloRenewer) RenewWorkspace(ctx context.Context, workspace ids.UUID) er
 		Type: principal.PrincipalConnector, ID: capturedByZalo,
 	})
 	var live []ids.UUID
-	err := database.WithWorkspaceTx(ctx, r.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT id FROM channel_connection WHERE status = $2 AND archived_at IS NULL AND `+zaloRow,
 			zalo.Provider, channelStatusConnected)
 		if err != nil {
@@ -139,7 +139,7 @@ func (r *ZaloRenewer) settle(ctx context.Context, workspace, id ids.UUID, done z
 // credentialRef reads which sealed credential the connection names now.
 func (r *ZaloRenewer) credentialRef(ctx context.Context, id ids.UUID) (keyvault.Ref, error) {
 	var ref string
-	err := database.WithWorkspaceTx(ctx, r.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT credential_ref FROM channel_connection WHERE id = $1`, id).Scan(&ref)
 	})
 	return keyvault.Ref(ref), err

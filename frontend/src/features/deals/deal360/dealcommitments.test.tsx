@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { type Locale, LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -107,8 +108,12 @@ describe("the deal's customer commitments", () => {
       },
     });
     show();
-    expect(await screen.findByText("Overdue: did it happen?")).toBeTruthy();
-    expect(screen.getAllByText("Overdue: did it happen?")).toHaveLength(1);
+    expect(
+      await screen.findByText(englishCopy["deal.commitments.overdue"]),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText(englishCopy["deal.commitments.overdue"]),
+    ).toHaveLength(1);
     await userEvent
       .setup()
       .click(await screen.findByRole("button", { name: "Done" }));
@@ -121,9 +126,15 @@ describe("the deal's customer commitments", () => {
       [ROUTE]: () => jsonResponse(COMMITMENTS),
     });
     show();
-    expect(await screen.findByText("Overdue: did it happen?")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["deal.commitments.overdue"]),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "No longer true" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["deal.commitments.noLongerTrue"],
+      }),
+    ).toBeNull();
   });
 
   it("marks only the total the server found to differ, with its amount", async () => {
@@ -175,9 +186,7 @@ describe("a card with nothing to list", () => {
     });
     show();
     expect(
-      await screen.findByText(
-        "The customer has no open commitments on this deal.",
-      ),
+      await screen.findByText(englishCopy["deal.commitments.empty"]),
     ).toBeTruthy();
     expect(screen.queryByText(/are left out/)).toBeNull();
   });
@@ -190,9 +199,7 @@ describe("a card with nothing to list", () => {
     });
     show();
     expect(
-      await screen.findByText(
-        "Some commitments are left out because you cannot read their contact or message.",
-      ),
+      await screen.findByText(englishCopy["deal.commitments.incomplete"]),
     ).toBeTruthy();
   });
 
@@ -206,7 +213,7 @@ describe("a card with nothing to list", () => {
       await screen.findByText(/You cannot read the customer’s commitments/),
     ).toBeTruthy();
     expect(
-      screen.queryByText("The customer has no open commitments on this deal."),
+      screen.queryByText(englishCopy["deal.commitments.empty"]),
     ).toBeNull();
   });
 
@@ -221,7 +228,7 @@ describe("a card with nothing to list", () => {
       await screen.findByText(/.+/, { selector: ".t-danger" }),
     ).toBeTruthy();
     expect(
-      screen.queryByText("The customer has no open commitments on this deal."),
+      screen.queryByText(englishCopy["deal.commitments.empty"]),
     ).toBeNull();
   });
 });

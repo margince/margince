@@ -250,7 +250,7 @@ describe("Deal360 leads with the call", () => {
     renderCard();
     await screen.findByText("They asked for slots.");
     expect(document.querySelector("details.deal360-fold")).toBeNull();
-    expect(screen.queryByText("Read full brief")).toBeNull();
+    expect(screen.queryByText(en["deal360.readFull"])).toBeNull();
   });
 
   it("draws the fold for a blocker alone", async () => {
@@ -332,7 +332,9 @@ describe("Deal360's signal chips state their trigger", () => {
       risks: [{ kind: "coverage_gap", summary: "Nobody is championing this." }],
     });
     renderCard();
-    expect(await screen.findByText("No engaged champion")).toBeVisible();
+    expect(
+      await screen.findByText(en["coverage.risk.coverage_gap"]),
+    ).toBeVisible();
     expect(screen.queryByText(/\d+ days/)).toBeNull();
   });
 
@@ -385,7 +387,9 @@ describe("Deal360's brief discloses the machine that wrote it", () => {
     // Scoped to the brief: the day's work above it discloses itself too, and a
     // page-wide query would be satisfied by that panel's badge alone.
     expect(within(brief).getByText("AI-assisted")).toBeInTheDocument();
-    expect(within(brief).getByText("Written by Margince")).toBeInTheDocument();
+    expect(
+      within(brief).getByText(en["co.brief.by.model"]),
+    ).toBeInTheDocument();
     // The verb that asks for another reading is the machine's own, drawn quiet
     // because it sits inside the panel the machine already wrote.
     expect(
@@ -404,8 +408,10 @@ describe("Deal360's brief discloses the machine that wrote it", () => {
     const brief = within(briefPanel(container));
     expect(briefPanel(container).classList).toContain("panel-ai");
     expect(brief.getByText("AI-assisted")).toBeInTheDocument();
-    expect(brief.getByText("Compiled from CRM records")).toBeInTheDocument();
-    expect(brief.queryByText("Written by Margince")).toBeNull();
+    expect(
+      brief.getByText(en["co.brief.by.deterministic"]),
+    ).toBeInTheDocument();
+    expect(brief.queryByText(en["co.brief.by.model"])).toBeNull();
   });
 });
 

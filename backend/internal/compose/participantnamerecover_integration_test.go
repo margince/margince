@@ -116,7 +116,7 @@ func TestNameRecoveryPassesOverAnOriginalThatIsGone(t *testing.T) {
 	e := integration.Setup(t)
 	meeting := seedNamelessMeeting(t, e, "evt-gone")
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		done, err := recoverOneMeetingsNames(e.Admin(), tx, nameRecoveryCandidate{
 			activityID: ids.From[ids.ActivityKind](meeting), source: calendarSystem, rawCaptureID: ids.NewV7(),
 		})

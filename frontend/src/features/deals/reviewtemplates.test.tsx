@@ -5,6 +5,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
@@ -135,7 +136,7 @@ describe("outcome review questions", () => {
     const head = lossHead.closest<HTMLElement>(".panel-head");
     if (!head) throw new Error("the template name is not a panel title");
     const edit = screen.getByRole("button", {
-      name: "Edit questions",
+      name: englishCopy["reviewTemplates.edit"],
       description: "Loss review",
     });
     expect(head.contains(edit)).toBe(true);
@@ -164,8 +165,16 @@ describe("outcome review questions", () => {
     render(<ReviewTemplatesCard />);
 
     await screen.findByRole("list", { name: "Win review" });
-    expect(screen.queryByRole("button", { name: "Edit questions" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Add template" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["reviewTemplates.edit"],
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["reviewTemplates.add"],
+      }),
+    ).toBeNull();
     expect(
       screen
         .getByRole("switch", { name: "Ask Win review when a deal closes" })
@@ -199,11 +208,15 @@ describe("outcome review questions", () => {
     render(<ReviewTemplatesCard />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Add template" }),
+      await screen.findByRole("button", {
+        name: englishCopy["reviewTemplates.add"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(
-      within(dialog).getByRole("heading", { name: "New review template" }),
+      within(dialog).getByRole("heading", {
+        name: englishCopy["reviewTemplates.newTitle"],
+      }),
     ).toBeTruthy();
   });
 });

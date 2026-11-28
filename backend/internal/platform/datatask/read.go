@@ -19,7 +19,7 @@ func (e *Engine) List(ctx context.Context) ([]Progress, error) {
 		return nil, err
 	}
 	var out []Progress
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		progress, err := readProgress(ctx, tx)
 		if err != nil {
 			return err

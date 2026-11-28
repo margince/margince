@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingList } from "../../design-system/settingrow";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import type { MfaStatus } from "./mfa.queries";
 import { MfaSettingRow } from "./mfacard";
 
@@ -134,7 +135,7 @@ describe("the two-step sign-in row", () => {
     await user.type(codeField(), "123 456");
     await user.click(within(dialog).getByRole("button", { name: "Turn on" }));
     const codes = await within(dialog).findByRole("textbox", {
-      name: "Recovery codes",
+      name: englishCopy["mfa.codesLabel"],
     });
     expect(codes).toHaveTextContent(CODES[0]);
     expect(codes).toHaveTextContent(CODES[1]);
@@ -189,7 +190,9 @@ describe("the two-step sign-in row", () => {
 
     await user.type(passwordField(), PASSWORD);
     await user.click(within(dialog).getByRole("button", { name: "Turn on" }));
-    await within(dialog).findByRole("textbox", { name: "Recovery codes" });
+    await within(dialog).findByRole("textbox", {
+      name: englishCopy["mfa.codesLabel"],
+    });
     expect(server.sent).toContainEqual({
       route: "POST /v1/me/mfa/totp/confirm",
       body: { current_password: PASSWORD, code: "123456" },
@@ -239,7 +242,7 @@ describe("the two-step sign-in row", () => {
     expect(
       await screen.findByText("On · 1 recovery code left"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Few recovery codes left")).toBeInTheDocument();
+    expect(screen.getByText(englishCopy["mfa.lowTitle"])).toBeInTheDocument();
     expect(
       screen.getByText(/remove two-step sign-in and set it up again/i),
     ).toBeInTheDocument();
@@ -250,7 +253,7 @@ describe("the two-step sign-in row", () => {
     mount();
 
     await screen.findByText("On · 10 recovery codes left");
-    expect(screen.queryByText("Few recovery codes left")).toBeNull();
+    expect(screen.queryByText(englishCopy["mfa.lowTitle"])).toBeNull();
     expect(screen.queryByRole("button", { name: "Set up" })).toBeNull();
   });
 
@@ -285,7 +288,7 @@ describe("the two-step sign-in row", () => {
     await user.type(codeField(), " 654 321 {Enter}");
 
     expect(
-      await screen.findByText("Two-step sign-in removed"),
+      await screen.findByText(englishCopy["mfa.removed"]),
     ).toBeInTheDocument();
     expect(server.sent).toEqual([
       { route: "DELETE /v1/me/mfa", body: { code: "654321" } },
@@ -303,7 +306,7 @@ describe("the two-step sign-in row", () => {
     await user.click(await screen.findByRole("button", { name: "Remove" }));
     const dialog = await screen.findByRole("dialog");
     const confirm = within(dialog).getByRole("button", {
-      name: "Remove two-step sign-in",
+      name: englishCopy["mfa.removeConfirm"],
     });
     await user.type(codeField(), "111111");
     await user.click(confirm);
@@ -335,16 +338,20 @@ describe("the two-step sign-in row", () => {
     );
     mount();
 
-    expect(await screen.findByText("Not finished")).toBeInTheDocument();
+    expect(
+      await screen.findByText(englishCopy["mfa.pending"]),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Set up" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Remove" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).queryByRole("textbox")).toBeNull();
     await user.click(
-      within(dialog).getByRole("button", { name: "Discard setup" }),
+      within(dialog).getByRole("button", { name: englishCopy["mfa.discard"] }),
     );
 
-    expect(await screen.findByText("Setup discarded")).toBeInTheDocument();
+    expect(
+      await screen.findByText(englishCopy["mfa.discarded"]),
+    ).toBeInTheDocument();
     expect(server.sent).toEqual([
       { route: "DELETE /v1/me/mfa", body: { code: "" } },
     ]);
@@ -368,7 +375,9 @@ describe("the two-step sign-in row", () => {
       "123456",
     );
     await user.click(within(dialog).getByRole("button", { name: "Turn on" }));
-    await within(dialog).findByRole("textbox", { name: "Recovery codes" });
+    await within(dialog).findByRole("textbox", {
+      name: englishCopy["mfa.codesLabel"],
+    });
 
     await user.keyboard("{Escape}");
     await user.click(within(dialog).getByRole("button", { name: /close/i }));
@@ -376,7 +385,7 @@ describe("the two-step sign-in row", () => {
     if (overlay) await user.click(overlay);
     expect(screen.getByRole("dialog")).toHaveTextContent(CODES[0]);
     expect(
-      within(dialog).getByText("Save the codes, then choose Done."),
+      within(dialog).getByText(englishCopy["mfa.keepCodes"]),
     ).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: "Done" }));
@@ -415,7 +424,9 @@ describe("the two-step sign-in row", () => {
 
     answer(json({ recovery_codes: CODES }));
     expect(
-      await within(dialog).findByRole("textbox", { name: "Recovery codes" }),
+      await within(dialog).findByRole("textbox", {
+        name: englishCopy["mfa.codesLabel"],
+      }),
     ).toHaveTextContent(CODES[1]);
   });
 
@@ -437,7 +448,7 @@ describe("the two-step sign-in row", () => {
     await user.click(await screen.findByRole("button", { name: "Remove" }));
     const dialog = await screen.findByRole("dialog");
     await user.click(
-      within(dialog).getByRole("button", { name: "Discard setup" }),
+      within(dialog).getByRole("button", { name: englishCopy["mfa.discard"] }),
     );
 
     expect(
@@ -461,7 +472,7 @@ describe("the two-step sign-in row", () => {
     await user.click(await screen.findByRole("button", { name: "Remove" }));
     await screen.findByRole("dialog");
     await user.type(codeField(), "654321{Enter}");
-    await screen.findByText("Two-step sign-in removed");
+    await screen.findByText(englishCopy["mfa.removed"]);
 
     expect(client.getQueryState(["me"])?.isInvalidated).toBe(true);
   });

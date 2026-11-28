@@ -100,7 +100,7 @@ func TestTheSignaturePhoneTaskRetractsOrphansAndKeepsSupportedAndHumanNumbers(t 
 		t.Fatalf("retraction events = %d, want one", n)
 	}
 	step := task.Steps[0]
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		if err == nil && (out.Changed != 0 || !out.Done) {
 			t.Errorf("replayed repair = %+v, want no changes and done", out)
@@ -131,7 +131,7 @@ func TestTheSignaturePhoneTaskRollsBackWithItsProgressAndRejectsBadCursors(t *te
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE evidence->>'reason' = 'signature number has no supporting evidence'`); n != 0 {
 		t.Errorf("%d retraction audits escaped rollback", n)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := batch(ctx, tx, datatask.BatchIn{Limit: 1, Cursor: []byte(`"not-a-uuid"`)})
 		return err
 	}); err == nil {

@@ -17,30 +17,44 @@ export function schemaSource(): ts.SourceFile {
   return sourceFileAt(schemaPath);
 }
 
+// Queries share one complete walk of each immutable contract syntax tree.
+const ownersBySource = new WeakMap<
+  ts.SourceFile,
+  Map<string, ts.PropertySignature[]>
+>();
+
+function ownerMembers(source: ts.SourceFile, owner: string) {
+  let owners = ownersBySource.get(source);
+  if (!owners) {
+    const indexed = new Map<string, ts.PropertySignature[]>();
+    const walk = (node: ts.Node) => {
+      if (
+        ts.isPropertySignature(node) &&
+        ts.isIdentifier(node.name) &&
+        node.type
+      ) {
+        const members = indexed.get(node.name.text) ?? [];
+        members.push(...membersOf(node.type));
+        indexed.set(node.name.text, members);
+      }
+      ts.forEachChild(node, walk);
+    };
+    walk(source);
+    owners = indexed;
+    ownersBySource.set(source, indexed);
+  }
+  return owners.get(owner) ?? [];
+}
+
 // The property of one named type in the contract, wherever it is declared.
 export function propertyOf(
   source: ts.SourceFile,
   owner: string,
   property: string,
 ): ts.PropertySignature | undefined {
-  let found: ts.PropertySignature | undefined;
-  const walk = (node: ts.Node) => {
-    if (
-      ts.isPropertySignature(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === owner &&
-      node.type
-    ) {
-      for (const member of membersOf(node.type)) {
-        if (ts.isIdentifier(member.name) && member.name.text === property) {
-          found = member;
-        }
-      }
-    }
-    ts.forEachChild(node, walk);
-  };
-  walk(source);
-  return found;
+  return ownerMembers(source, owner).findLast(
+    (member) => ts.isIdentifier(member.name) && member.name.text === property,
+  );
 }
 
 export function membersOf(node: ts.TypeNode): ts.PropertySignature[] {
@@ -58,20 +72,7 @@ export function typeMembers(
   source: ts.SourceFile,
   owner: string,
 ): ts.PropertySignature[] {
-  const found: ts.PropertySignature[] = [];
-  const walk = (node: ts.Node) => {
-    if (
-      ts.isPropertySignature(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === owner &&
-      node.type
-    ) {
-      found.push(...membersOf(node.type));
-    }
-    ts.forEachChild(node, walk);
-  };
-  walk(source);
-  return found;
+  return [...ownerMembers(source, owner)];
 }
 
 function stringCodes(node: ts.TypeNode): string[] | undefined {

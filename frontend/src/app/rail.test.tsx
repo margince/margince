@@ -18,6 +18,7 @@ import {
   armHoverIntent,
   takeHoverClock,
 } from "../design-system/hoverintent-testing";
+import { en as englishCopy } from "../i18n/en";
 import { navigate, parseHash, type Route } from "../lib/router";
 import {
   fixtureSection,
@@ -180,7 +181,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   it("renders the canonical destinations in order, logomark → brief", () => {
     render(<WorkspaceRail route={{ screen: "deals" }} />);
     const brand = within(
-      screen.getByRole("navigation", { name: "Primary navigation" }),
+      screen.getByRole("navigation", { name: englishCopy["shell.railAria"] }),
     ).getByRole("link", {
       name: "Margince",
     });
@@ -607,10 +608,13 @@ describe("Rail levels (a section's entries as the second level)", () => {
     // The destinations are GONE, not pushed below a second list: 56px cannot
     // carry two levels and 256px carrying both is a list of twenty places to go.
     expect(screen.queryByRole("link", { name: "Deals" })).toBeNull();
-    expect(levelLabels()).toEqual(["Account", "Privacy and retention"]);
+    expect(levelLabels()).toEqual([
+      "Account",
+      englishCopy["settings.tab.privacy"],
+    ]);
     expect(
       screen
-        .getByRole("link", { name: "Privacy and retention" })
+        .getByRole("link", { name: englishCopy["settings.tab.privacy"] })
         .getAttribute("href"),
     ).toBe("/#/settings/deep");
     // Exactly one row claims the current page, and it is the entry the SECTION
@@ -818,9 +822,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
         section={fixtureSection("deep")}
       />,
     );
-    expect(levelLabels()).toEqual(["Records and fields"]);
+    expect(levelLabels()).toEqual([englishCopy["settings.tab.records"]]);
     expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
-    expect(navGroupNames()).toEqual(["Privacy and retention"]);
+    expect(navGroupNames()).toEqual([englishCopy["settings.tab.privacy"]]);
   });
 
   it("renders a third level from the data, addressed under the entry that opens it", () => {
@@ -831,13 +835,13 @@ describe("Rail levels (a section's entries as the second level)", () => {
       />,
     );
     // The child level: only the entry's children, addressed under it.
-    expect(levelLabels()).toEqual(["Records and fields"]);
+    expect(levelLabels()).toEqual([englishCopy["settings.tab.records"]]);
     expect(
       screen
-        .getByRole("link", { name: "Records and fields" })
+        .getByRole("link", { name: englishCopy["settings.tab.records"] })
         .getAttribute("href"),
     ).toBe("/#/settings/deep/deeper");
-    expect(navGroupNames()).toEqual(["Privacy and retention"]);
+    expect(navGroupNames()).toEqual([englishCopy["settings.tab.privacy"]]);
   });
 
   // One step at a time, and the step is an ADDRESS: below the section's own
@@ -869,7 +873,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     );
     const account = screen.getByRole("link", { name: "Account" });
     const privacyEntry = screen.getByRole("link", {
-      name: "Privacy and retention",
+      name: englishCopy["settings.tab.privacy"],
     });
     expect(screen.queryByRole("tooltip")).toBeNull();
 
@@ -884,7 +888,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     privacyEntry.focus();
     await waitFor(() =>
       expect(screen.getByRole("tooltip").textContent).toBe(
-        "Privacy and retention",
+        englishCopy["settings.tab.privacy"],
       ),
     );
     expect(screen.getAllByRole("tooltip")).toHaveLength(1);
@@ -912,11 +916,12 @@ describe("Rail levels (a section's entries as the second level)", () => {
     // No level at all: no entries, no way back up, and no `leveled` arrangement
     // for the bar to be rearranged by.
     expect(
-      screen.queryByRole("link", { name: "Privacy and retention" }),
+      screen.queryByRole("link", { name: englishCopy["settings.tab.privacy"] }),
     ).toBeNull();
     expect(screen.queryByRole("button", { name: /^Back/ })).toBeNull();
     expect(
-      screen.getByRole("navigation", { name: "Primary navigation" }).className,
+      screen.getByRole("navigation", { name: englishCopy["shell.railAria"] })
+        .className,
     ).not.toContain("leveled");
 
     // And the menu holds the destinations off the bar, and
@@ -924,7 +929,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     await user.click(screen.getByRole("button", { name: "More" }));
     expect(menuLabels()).toEqual(OFF_BAR);
     expect(
-      screen.queryByRole("link", { name: "Privacy and retention" }),
+      screen.queryByRole("link", { name: englishCopy["settings.tab.privacy"] }),
     ).toBeNull();
   });
 
@@ -938,9 +943,13 @@ describe("Rail levels (a section's entries as the second level)", () => {
         section={fixtureSection("account")}
       />,
     );
-    expect(levelLabels()).toEqual(["Account", "Privacy and retention"]);
+    expect(levelLabels()).toEqual([
+      "Account",
+      englishCopy["settings.tab.privacy"],
+    ]);
     expect(
-      screen.getByRole("navigation", { name: "Primary navigation" }).className,
+      screen.getByRole("navigation", { name: englishCopy["shell.railAria"] })
+        .className,
     ).toContain("leveled");
   });
 });

@@ -5,6 +5,7 @@ package projects
 
 import (
 	"context"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -16,6 +17,19 @@ import (
 )
 
 func admitProjectCreation(ctx context.Context, tx pgx.Tx, in CreateProjectInput, fallback *ids.UserID) (CreateProjectInput, error) {
+	in, err := admitSourceAndOwner(ctx, tx, in, fallback)
+	if err != nil {
+		return CreateProjectInput{}, err
+	}
+	if err := auth.EnsureReferenceTarget(ctx, tx, "company_id", "company", in.CompanyID.UUID); err != nil {
+		return CreateProjectInput{}, err
+	}
+	return admitRest(ctx, tx, in)
+}
+
+// admitSourceAndOwner is the admission of the channel the project arrives by and
+// the owner it is given.
+func admitSourceAndOwner(ctx context.Context, tx pgx.Tx, in CreateProjectInput, fallback *ids.UserID) (CreateProjectInput, error) {
 	if err := provenance.AdmitRecordSource(in.Source); err != nil {
 		return CreateProjectInput{}, err
 	}
@@ -24,9 +38,12 @@ func admitProjectCreation(ctx context.Context, tx pgx.Tx, in CreateProjectInput,
 		return CreateProjectInput{}, err
 	}
 	in.OwnerID = owner
-	if err := auth.EnsureReferenceTarget(ctx, tx, "company_id", "company", in.CompanyID.UUID); err != nil {
-		return CreateProjectInput{}, err
-	}
+	return in, nil
+}
+
+// admitRest is the admission of what a create names besides its owner and
+// company: the author's seat, the start phase and the chosen key.
+func admitRest(ctx context.Context, tx pgx.Tx, in CreateProjectInput) (CreateProjectInput, error) {
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return CreateProjectInput{}, err
 	}
@@ -54,15 +71,20 @@ func (in CreateProjectInput) StartPhase() string {
 	return in.Phase
 }
 
+// startPhases are the phases a project may be born in.
+var startPhases = []string{PhaseInitiative, PhasePursuing, PhaseDelivering}
+
+// StartPhases are the phases a project may be born in, for a writer that checks
+// a file's phase before it asks the store.
+func StartPhases() []string { return slices.Clone(startPhases) }
+
 // refuseStartPhase admits every phase but closed: closing is a claim that the
 // work ended, which needs a reason and a project that existed to end.
 func refuseStartPhase(phase string) error {
-	switch phase {
-	case "", PhaseInitiative, PhasePursuing, PhaseDelivering:
+	if phase == "" || slices.Contains(startPhases, phase) {
 		return nil
-	default:
-		return &ProjectStartPhaseError{}
 	}
+	return &ProjectStartPhaseError{}
 }
 
 // ProjectStartPhaseError maps to 422: a project starts in initiative, pursuing

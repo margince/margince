@@ -6,6 +6,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
+import { en as englishCopy } from "../../../i18n/en";
 import { renderWithQueryClient } from "../../../testing/queryrender";
 import {
   installFetchStub,
@@ -62,7 +63,9 @@ describe("the deal's products", () => {
     show();
     expect(await screen.findByText("ERP licence")).toBeTruthy();
     expect(screen.getByText("€12,000.00")).toBeTruthy();
-    expect(screen.getByText("From the offer")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["deal.products.fromOffer"]),
+    ).toBeTruthy();
   });
 
   it("says a deal with no products has none yet", async () => {
@@ -77,7 +80,7 @@ describe("the deal's products", () => {
     installFetchStub({ [`GET ${ROUTE}`]: () => permissionDenied() });
     show();
     expect(
-      await screen.findByText("You may not see the products on this deal."),
+      await screen.findByText(englishCopy["deal.products.denied"]),
     ).toBeTruthy();
     expect(screen.queryByText(/No products yet/)).toBeNull();
   });
@@ -117,7 +120,9 @@ describe("the deal's products", () => {
     show();
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Set products" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.products.edit"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/Saving replaces them/)).toBeTruthy();
@@ -126,7 +131,9 @@ describe("the deal's products", () => {
       within(dialog).getByRole("button", { name: "Remove ERP licence" }),
     );
     await user.type(
-      within(dialog).getByRole("searchbox", { name: "Add a product" }),
+      within(dialog).getByRole("searchbox", {
+        name: englishCopy["deal.products.add"],
+      }),
       "Impl",
     );
     await user.click(
@@ -139,7 +146,9 @@ describe("the deal's products", () => {
       "5000",
     );
     await user.click(
-      within(dialog).getByRole("button", { name: "Save products" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["deal.products.save"],
+      }),
     );
 
     await waitFor(() =>
@@ -177,10 +186,14 @@ describe("the deal's products", () => {
     show();
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Set products" }),
+      await screen.findByRole("button", {
+        name: englishCopy["deal.products.edit"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
-    const save = within(dialog).getByRole("button", { name: "Save products" });
+    const save = within(dialog).getByRole("button", {
+      name: englishCopy["deal.products.save"],
+    });
     await user.click(save);
 
     expect(
@@ -203,7 +216,9 @@ describe("the deal's products", () => {
       [`GET ${ROUTE}`]: () => jsonResponse({ data: FROM_OFFER, tag: "read-1" }),
     });
     show("deal-refused");
-    const edit = await screen.findByRole("button", { name: "Set products" });
+    const edit = await screen.findByRole("button", {
+      name: englishCopy["deal.products.edit"],
+    });
     expect(edit.getAttribute("aria-describedby")).toContain("deal-refused");
     expect(edit.hasAttribute("disabled")).toBe(true);
     await userEvent.setup().click(edit);

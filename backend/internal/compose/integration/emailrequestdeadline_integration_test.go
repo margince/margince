@@ -28,7 +28,7 @@ import (
 // due moment.
 func requestTaskDue(t *testing.T, e *integration.Env, subject string, sent time.Time) *time.Time {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `INSERT INTO capture_connection (user_id, provider, mail_posture, account_label) VALUES ($1, 'gmail', 'shared', (SELECT email FROM app_user WHERE id=$1))`, e.Rep1)
 		return err
 	}); err != nil {
@@ -63,7 +63,7 @@ func requestTaskDue(t *testing.T, e *integration.Env, subject string, sent time.
 func installationDayEnd(t *testing.T, e *integration.Env, day string) time.Time {
 	t.Helper()
 	var end time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		name, err := identity.TimezoneAppliedTx(e.Admin(), tx)
 		if err != nil {
 			return err

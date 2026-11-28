@@ -247,7 +247,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     // recurs_yearly: a checkbox, not a spinbutton or free-text box, and it
     // starts at the schema's own default (false, i.e. unchecked).
     const recurring = screen.getByRole("checkbox", {
-      name: "Repeat each year",
+      name: en["auto.renewal.annual"],
     });
     expect(recurring).not.toBeChecked();
 
@@ -256,10 +256,10 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     // a textbox a typo could break. days_before stays an ordinary spinbutton.
     expect(screen.getByRole("combobox", { name: "Record type" })).toBeTruthy();
     expect(
-      screen.getByRole("combobox", { name: "Renewal date field" }),
+      screen.getByRole("combobox", { name: en["auto.renewal.dateField"] }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("spinbutton", { name: "Days before the renewal" }),
+      screen.getByRole("spinbutton", { name: en["auto.renewal.leadTime"] }),
     ).toBeTruthy();
   });
 
@@ -276,7 +276,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     // No object chosen yet: disabled, with the reason stated rather than a
     // silently broken empty control.
     expect(
-      screen.getByRole("combobox", { name: "Renewal date field" }),
+      screen.getByRole("combobox", { name: en["auto.renewal.dateField"] }),
     ).toBeDisabled();
     expect(screen.getByText(en["auto.dateField.needsObject"])).toBeTruthy();
 
@@ -286,7 +286,9 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
       "Contact",
     );
 
-    const picker = screen.getByRole("combobox", { name: "Renewal date field" });
+    const picker = screen.getByRole("combobox", {
+      name: en["auto.renewal.dateField"],
+    });
     await waitFor(() => expect(picker).not.toBeDisabled());
 
     // Only the active, date-typed field reaches the list. The retired one and
@@ -342,9 +344,11 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
       "Contact",
     );
 
-    const picker = screen.getByRole("combobox", { name: "Renewal date field" });
+    const picker = screen.getByRole("combobox", {
+      name: en["auto.renewal.dateField"],
+    });
     await waitFor(() => expect(picker).toBeDisabled());
-    expect(screen.getByText("Could not load date fields. Retry.")).toBeTruthy();
+    expect(screen.getByText(en["auto.dateField.loadError"])).toBeTruthy();
   });
 
   it("round-trips the boolean and the picked date field through paramsFromValues into the create request", async () => {
@@ -365,16 +369,16 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     );
     await waitFor(() =>
       expect(
-        screen.getByRole("combobox", { name: "Renewal date field" }),
+        screen.getByRole("combobox", { name: en["auto.renewal.dateField"] }),
       ).not.toBeDisabled(),
     );
     await pickOption(
       userEvent.setup(),
-      screen.getByRole("combobox", { name: "Renewal date field" }),
+      screen.getByRole("combobox", { name: en["auto.renewal.dateField"] }),
       "Birthday",
     );
     await userEvent.click(
-      screen.getByRole("checkbox", { name: "Repeat each year" }),
+      screen.getByRole("checkbox", { name: en["auto.renewal.annual"] }),
     );
     await pickOption(
       userEvent.setup(),
@@ -457,7 +461,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
       "Contact",
     );
     const dateField = dialog.getByRole("combobox", {
-      name: "Renewal date field",
+      name: en["auto.renewal.dateField"],
     });
     await waitFor(() => expect(dateField).not.toBeDisabled());
     await pickOption(user, dateField, "Birthday");

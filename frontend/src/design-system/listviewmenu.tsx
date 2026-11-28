@@ -18,7 +18,7 @@ import {
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { OptionCount } from "./atoms";
-import { coveredByDialog } from "./dialogfocus";
+import { coveredByDialog, panelsOpenedFrom } from "./dialogfocus";
 import { MenuHead } from "./listmenu";
 import { PopoverSheet } from "./popover";
 
@@ -266,6 +266,9 @@ function useCloseOnFocusOut(
         !(target instanceof Node) ||
         anchor.current?.contains(target) ||
         body.current?.contains(target) ||
+        panelsOpenedFrom(body.current).some((panel) =>
+          panel.contains(target),
+        ) ||
         // A dialog the panel raised (a name prompt, a calendar) is the panel's.
         coveredByDialog(anchor.current)
       ) {

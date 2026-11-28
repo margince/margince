@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AiProviderKeysCard } from "../features/ai/ai-provider-keys";
 import { ProviderHealthCard } from "../features/settings/providerhealth";
+import { en as englishCopy } from "../i18n/en";
 import { type GrantSpec, meFixture } from "./mefixture";
 import { jsonResponse, render } from "./settings.testkit";
 
@@ -99,7 +100,7 @@ describe("ProviderHealthCard", () => {
     stubBackend([]);
     render(<ProviderHealthCard />);
     expect(
-      await screen.findByText("No provider result recorded yet"),
+      await screen.findByText(englishCopy["health.code.providers_unobserved"]),
     ).toBeInTheDocument();
   });
 
@@ -107,9 +108,7 @@ describe("ProviderHealthCard", () => {
     stubBackend([], DIAGNOSER, []);
     render(<ProviderHealthCard />);
     expect(
-      await screen.findByText(
-        "No AI provider is set up, so there is nothing to check.",
-      ),
+      await screen.findByText(englishCopy["providerHealth.noneConfigured"]),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("All AI providers are answering."),
@@ -126,9 +125,7 @@ describe("ProviderHealthCard", () => {
     const notice = await screen.findByTestId("ai-provider-health-openai");
     expect(within(notice).getByText("Unreachable")).toBeInTheDocument();
     expect(
-      screen.queryByText(
-        "No AI provider is set up, so there is nothing to check.",
-      ),
+      screen.queryByText(englishCopy["providerHealth.noneConfigured"]),
     ).not.toBeInTheDocument();
   });
 
@@ -137,9 +134,7 @@ describe("ProviderHealthCard", () => {
     stubBackend([], DIAGNOSER, "absent");
     render(<ProviderHealthCard />);
     expect(
-      await screen.findByText(
-        "No AI provider is set up, so there is nothing to check.",
-      ),
+      await screen.findByText(englishCopy["providerHealth.noneConfigured"]),
     ).toBeInTheDocument();
   });
 
@@ -236,20 +231,24 @@ describe("Providers list", () => {
     ]);
     render(<AiProviderKeysCard />);
     const row = await screen.findByTestId("ai-provider-row-openai");
-    expect(await within(row).findByText("Key rejected")).toBeInTheDocument();
+    expect(
+      await within(row).findByText(
+        englishCopy["aiProviderHealth.label.unauthorized"],
+      ),
+    ).toBeInTheDocument();
     // The configuration badge stays on the line; the health badge is a second
     // one in the same row, never a replacement for it.
     expect(within(row).getByText("Ready")).toBeInTheDocument();
     expect(
       within(screen.getByTestId("ai-provider-row-gemini")).queryByText(
-        "Key rejected",
+        englishCopy["aiProviderHealth.label.unauthorized"],
       ),
     ).toBeNull();
     expect(screen.getAllByTestId(/^ai-provider-row-/)[0]).toBe(row);
     await userEvent.setup().click(within(row).getByText("OpenAI"));
     expect(
       await screen.findByTestId("ai-provider-health-openai"),
-    ).toHaveTextContent("Key rejected");
+    ).toHaveTextContent(englishCopy["aiProviderHealth.label.unauthorized"]);
     expect(screen.getAllByTestId(/^ai-provider-health-/)).toHaveLength(1);
   });
 
@@ -266,7 +265,11 @@ describe("Providers list", () => {
       allow,
     );
     const { client } = render(<AiProviderKeysCard />);
-    expect(await screen.findByText("Key rejected")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        englishCopy["aiProviderHealth.label.unauthorized"],
+      ),
+    ).toBeInTheDocument();
 
     const previous = client.getQueriesData({
       queryKey: ["ai-provider-health"],
@@ -276,7 +279,9 @@ describe("Providers list", () => {
     await act(() => client.invalidateQueries({ queryKey: ["me"] }));
 
     await waitFor(() => {
-      expect(screen.queryByText("Key rejected")).toBeNull();
+      expect(
+        screen.queryByText(englishCopy["aiProviderHealth.label.unauthorized"]),
+      ).toBeNull();
       for (const [key] of previous)
         expect(client.getQueryData(key)).toBeUndefined();
     });

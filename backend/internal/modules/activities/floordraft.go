@@ -25,12 +25,13 @@ func (s *Store) FloorDraft(ctx context.Context, anchor ids.UUID, activity crmcon
 	recipient := s.floorRecipient(ctx, id, covers)
 	first, last := recipient.GreetingNames()
 	answering := DraftContext{
-		Language:  chosen,
-		Band:      convstate.BandFresh,
-		Threaded:  IsMailThread(activity.Kind, activity.Direction),
-		Recipient: first,
-		LastName:  last,
-		Formal:    recipient.GreetingRegister == greetingregister.Formal,
+		Language:   chosen,
+		Band:       convstate.BandFresh,
+		Threaded:   IsMailThread(activity.Kind, activity.Direction),
+		Recipient:  first,
+		LastName:   last,
+		Salutation: recipient.Salutation,
+		Formal:     recipient.GreetingRegister == greetingregister.Formal,
 	}
 	if activity.Subject != nil {
 		answering.Topic = *activity.Subject

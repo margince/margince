@@ -121,7 +121,7 @@ func (s *Service) ContactPage(
 	if err != nil {
 		return crmcontracts.CompanyContactListResponse{}, err
 	}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// The company gate first, and the same one the 360 opens with: an
 		// account the caller cannot see must answer not-found here too, or this
 		// endpoint becomes the way to discover it.

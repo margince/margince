@@ -190,6 +190,7 @@ export function CompaniesScreen({
   return (
     <div className="wrap">
       <ListTable
+        customFieldsKind="company"
         title={pageName}
         state={state}
         unit="unit.companies"

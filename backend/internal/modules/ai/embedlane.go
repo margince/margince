@@ -32,9 +32,6 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 	// One load per call — see binding: a rebind mid-call must not mix an embedder
 	// with another binding's width or provider label.
 	b := r.binding()
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return model.Embeddings{}, errors.New("ai: embeddings outside workspace context")
-	}
 	// An input is record text, not a request body, so the stripper reads it on
 	// the text lane.
 	stripped := make([]string, len(req.Inputs))

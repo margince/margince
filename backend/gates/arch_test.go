@@ -124,11 +124,16 @@ func TestNoSiblingModuleImports(t *testing.T) {
 	}
 }
 
+// sharedUnicodeForms is an outside package values may use: it composes an
+// identifier to NFC, which the stdlib cannot.
+const sharedUnicodeForms = "golang.org/x/text/unicode/norm"
+
 // TestSharedIsPure: internal/shared (kernel + apperrors + ports) is the
 // Tier-0 leaf layer — stdlib, each other, and the published extension
 // surface beneath it (ports alias published seam types so a core module
 // and an extension register the same type, ADR-0120 §3). Anything else
 // is an architecture defect.
+
 func TestSharedIsPure(t *testing.T) {
 	t.Parallel()
 	for _, dir := range packagesUnder(t, "internal/shared") {
@@ -138,6 +143,9 @@ func TestSharedIsPure(t *testing.T) {
 			}
 			if strings.HasPrefix(imp, modulePath+"/pkg/") {
 				continue // the published surface sits below shared
+			}
+			if imp == sharedUnicodeForms && strings.HasSuffix(dir, "/kernel/values") {
+				continue
 			}
 			t.Errorf("%s imports %s: shared packages must be stdlib-only", dir, imp)
 		}

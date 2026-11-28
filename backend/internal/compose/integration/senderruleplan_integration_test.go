@@ -81,7 +81,7 @@ func TestTheSenderRuleReadsByIndexOverUnrelatedRows(t *testing.T) {
 	if _, err := OwnerConn(t).Exec(e.Admin(), "ANALYZE contact_email, activity_participant, activity"); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for name, plan := range map[string]senderPlanNode{
 			"subject mail from a contact": senderRulePlan(t, tx, e,
 				`SELECT EXISTS (SELECT 1 FROM `+consent.SubjectMailFromSQL("$1::uuid")+`)`, contact),

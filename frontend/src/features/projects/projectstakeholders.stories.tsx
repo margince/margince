@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -52,7 +53,7 @@ export const Adding: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Add stakeholder",
+        name: englishCopy["project.stakeholders.add"],
       }),
     );
     await within(canvasElement.ownerDocument.body).findByRole("dialog");

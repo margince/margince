@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AgentUsageByUserCard } from "./agentusage";
 
@@ -126,7 +127,11 @@ describe("AgentUsageByUserCard", () => {
     expect(within(row).getByText("Team Lead, Ops / Integrations")).toBeTruthy();
     const check = screen.getByTestId("allowance-check");
     expect(within(check).getByText("From Team Lead")).toBeTruthy();
-    expect(within(check).getAllByText("Installation value")).toHaveLength(2);
+    expect(
+      within(check).getAllByText(
+        englishCopy["agentUsage.check.fromInstallation"],
+      ),
+    ).toHaveLength(2);
   });
 
   it("still draws a user row from a server older than the roles", async () => {

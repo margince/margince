@@ -167,7 +167,7 @@ func writeHistoryQueryPlans(ctx context.Context, t *testing.T, measured *pgxpool
 		}
 		err := func() error {
 			if os.Getenv("MARGINCE_IMPORT_BENCH_PREPARED") == "" {
-				return database.WithWorkspaceTx(ctx, measured, readPlan)
+				return database.WithTx(ctx, measured, readPlan)
 			}
 			// Keep other backends acquired so the tenant transaction explains
 			// the statement cached by the connection that actually ran it.
@@ -183,7 +183,7 @@ func writeHistoryQueryPlans(ctx context.Context, t *testing.T, measured *pgxpool
 				if conn.Conn().PgConn().PID() == cost.pid {
 					conn.Release()
 					idle[i] = nil
-					return database.WithWorkspaceTx(ctx, measured, readPlan)
+					return database.WithTx(ctx, measured, readPlan)
 				}
 			}
 			return errors.New("the measured statement's backend is unavailable")

@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { companyDocumentsKey } from "../../lib/attachmentkeys";
 import { ANA, BEN, contactCase } from "../../testing/contactcase.fixtures";
 import { PairDecision } from "./worklist.pair";
@@ -268,7 +269,11 @@ describe("deciding a duplicate pair on the row", () => {
     const fetched = stubOk();
     draw(pairRow());
 
-    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.pair.notDuplicate"],
+      }),
+    );
 
     await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
     const body = await bodyOf(fetched);
@@ -293,8 +298,14 @@ describe("deciding a duplicate pair on the row", () => {
     const fetched = stubOk();
     draw(pairRow());
 
-    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
-    expect(await screen.findByText("Marked as not duplicates.")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.pair.notDuplicate"],
+      }),
+    );
+    expect(
+      await screen.findByText(englishCopy["worklist.pair.dismissed"]),
+    ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Undo" }));
 
     await vi.waitFor(() => expect(fetched).toHaveBeenCalledTimes(2));
@@ -333,7 +344,11 @@ describe("deciding a duplicate pair on the row", () => {
     );
     draw(pairRow());
 
-    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.pair.notDuplicate"],
+      }),
+    );
 
     expect(
       await screen.findByText(/someone may have decided first/),
@@ -359,7 +374,11 @@ describe("deciding a duplicate pair on the row", () => {
     );
     draw(pairRow());
 
-    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.pair.notDuplicate"],
+      }),
+    );
 
     expect(await screen.findByText(/cannot resolve this pair/)).toBeTruthy();
     expect(screen.queryByText(/Retry\./)).toBeNull();
@@ -396,7 +415,11 @@ describe("deciding a duplicate pair on the row", () => {
       );
       draw(pairRow());
 
-      await user.click(screen.getByRole("button", { name: "Not duplicates" }));
+      await user.click(
+        screen.getByRole("button", {
+          name: englishCopy["worklist.pair.notDuplicate"],
+        }),
+      );
 
       expect(await screen.findByRole("button", { name: "Close" })).toBeTruthy();
     },
@@ -419,7 +442,11 @@ describe("deciding a duplicate pair on the row", () => {
     );
     draw(pairRow());
 
-    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.pair.notDuplicate"],
+      }),
+    );
 
     expect(await screen.findByText(/Retry\./)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
@@ -584,7 +611,11 @@ describe("deciding a duplicate pair on the row", () => {
     draw(pairRow());
 
     expect(screen.getByRole("button", { name: "Keep Acme GmbH" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Not duplicates" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.pair.notDuplicate"],
+      }),
+    ).toBeTruthy();
   });
 
   // THE PAIR NOBODY CAN MERGE, which is the case the two above cannot see.
@@ -598,7 +629,11 @@ describe("deciding a duplicate pair on the row", () => {
 
     expect(screen.queryByRole("button", { name: "Keep Acme GmbH" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Keep ACME Gmbh" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Not duplicates" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.pair.notDuplicate"],
+      }),
+    ).toBeTruthy();
     // And NOT the steward sentence: this reader is the one who can act.
     expect(
       screen.queryByText(/Only a user who can edit both records/),
@@ -612,7 +647,7 @@ describe("deciding a duplicate pair on the row", () => {
     draw(pairRow({ actions: ["dismiss"] }));
 
     expect(screen.getByText(/cannot be merged/)).toBeTruthy();
-    expect(screen.queryByText("Which record should be kept?")).toBeNull();
+    expect(screen.queryByText(englishCopy["worklist.pair.ask"])).toBeNull();
   });
 
   // And the ordinary pair still asks its own question, or the case above is
@@ -620,7 +655,7 @@ describe("deciding a duplicate pair on the row", () => {
   it("asks which record survives when the merge is on offer", () => {
     draw(pairRow());
 
-    expect(screen.getByText("Which record should be kept?")).toBeTruthy();
+    expect(screen.getByText(englishCopy["worklist.pair.ask"])).toBeTruthy();
     expect(screen.queryByText(/cannot be merged/)).toBeNull();
   });
 
@@ -633,7 +668,11 @@ describe("deciding a duplicate pair on the row", () => {
     const fetched = stubOk();
     draw(pairRow({ actions: ["dismiss"] }));
 
-    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.pair.notDuplicate"],
+      }),
+    );
 
     await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
     const body = await bodyOf(fetched);
@@ -671,7 +710,7 @@ describe("deciding a duplicate pair on the row", () => {
     await user.click(screen.getByRole("button", { name: "Keep Mira Kovač" }));
 
     const review = await screen.findByRole("dialog", {
-      name: "Possible duplicates",
+      name: englishCopy["contactCase.title"],
     });
     expect(
       await within(review).findByRole("checkbox", { name: /Mira Kovač/ }),

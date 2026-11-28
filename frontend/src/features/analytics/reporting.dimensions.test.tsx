@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
 import { DimensionChips } from "./reporting.dimensions";
 import type { ReportingSelection } from "./reporting.model";
@@ -41,10 +42,16 @@ describe("the profile chip", () => {
 
   it("names an initiative or a product before the scope", () => {
     chips({ ...base, scope: { kind: "owner" }, initiative_id: "i-dach" });
-    expect(screen.getByText("Sales initiative")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["analytics.overview.profileInitiative"]),
+    ).toBeTruthy();
     cleanup();
     chips({ ...base, scope: { kind: "owner" }, product_id: "p-suite" });
-    expect(screen.getByText("Product sales")).toBeTruthy();
-    expect(screen.queryByText("Seller sales")).toBeNull();
+    expect(
+      screen.getByText(englishCopy["analytics.overview.profileProduct"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(englishCopy["analytics.overview.profileSeller"]),
+    ).toBeNull();
   });
 });

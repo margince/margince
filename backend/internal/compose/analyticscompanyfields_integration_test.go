@@ -76,7 +76,7 @@ func seedTierBook(t *testing.T, e *integration.Env) tierBook {
 func askDeals(ctx context.Context, t *testing.T, e *integration.Env, q analyticsquery.Query) map[string]string {
 	t.Helper()
 	var answer AnalyticsAnswer
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = RunAnalyticsQuery(ctx, tx, q, analyticsquery.Floor(1))
 		return err
@@ -124,7 +124,7 @@ func TestTheSchemaSaysHowManyDealsHoldACompanyField(t *testing.T) {
 	records := e.WsCount(t, `SELECT count(*) FROM deal WHERE archived_at IS NULL`)
 
 	var schema analyticsquery.Schema
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		schema, err = AnalyticsSchemaWithCoverage(ctx, tx)
 		return err

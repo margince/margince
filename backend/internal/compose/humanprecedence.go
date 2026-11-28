@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/humanedit"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -65,61 +66,6 @@ func (w humanWrite) moved(entityType, table string) bool {
 	return table == "" || w.differsFromLive
 }
 
-// liveValueOf renders the record's current value of latest.key, or NULL
-// without a table to read it from.
-func liveValueOf(table string) string {
-	if table == "" {
-		return "NULL::jsonb"
-	}
-	return `(SELECT to_jsonb(t) -> latest.key FROM ` + table + ` t WHERE t.id = $2)`
-}
-
-// unauditedHolder renders the predicate deciding whether an UNAUDITED patch
-// key is human-owned. With a table to read, the answer is "only if the row
-// holds a value there that is not the column's own default" — filling an
-// empty field undoes nobody, and neither does moving a value the database
-// supplied — unless the key is an access field, whose every value is the
-// human's. Without a table, every unaudited key on a human-created record is
-// treated as theirs.
-func unauditedHolder(table string) string {
-	if table == "" {
-		return "true"
-	}
-	return `EXISTS (
-			    SELECT 1 FROM ` + table + ` t
-			    WHERE t.id = $2 AND to_jsonb(t) -> p.key IS NOT NULL
-			      AND to_jsonb(t) -> p.key <> 'null'::jsonb
-			      AND to_jsonb(t) -> p.key <> '""'::jsonb
-			      AND (p.key IN (` + accessFields + `)
-			        OR (to_jsonb(t) ->> p.key) IS DISTINCT FROM (` + constantColumnDefault + `))
-			  )`
-}
-
-// accessFields are the pair platform/auth's row scope reads to decide who
-// sees a record. Moving one off its default hides the record from colleagues.
-const accessFields = `'visibility', 'owner_id'`
-
-// constantColumnDefault reads, as text, the catalog default of column p.key on
-// row t when that column holds text or an enum and its default is a quoted
-// literal; any other reads as NULL, so the tie goes to asking the human.
-const constantColumnDefault = `SELECT ` + literalOfDefault + `
-			      FROM pg_attribute att
-			      JOIN pg_type typ ON typ.oid = att.atttypid
-			      JOIN pg_attrdef def ON def.adrelid = att.attrelid AND def.adnum = att.attnum
-			      CROSS JOIN LATERAL (SELECT pg_get_expr(def.adbin, def.adrelid) AS expr) d
-			      WHERE att.attrelid = t.tableoid AND att.attname = p.key`
-
-// literalOfDefault unquotes a default d.expr shaped like
-// 'unknown'::company_lifecycle on a column of type typ. Only a text or enum
-// default is nobody's choice: a number, boolean, date or jsonb default is a
-// value somebody chose — product.active = true is a decision to sell it — so
-// it reads as NULL, as do now(), an array and a domain.
-const literalOfDefault = `CASE
-			        WHEN (typ.typtype = 'e' OR typ.typname IN ('text', 'varchar', 'bpchar', 'citext'))
-			         AND d.expr ~ '^''.*''::[a-z_][a-z_0-9 (),.]*$'
-			          THEN replace(substring(d.expr FROM '^''(.*)''::'), '''''', '''')
-			      END`
-
 // This is NOT superseded.go's question, and the two must not share a reader.
 // SupersededFields asks whether ANYONE wrote a key after a given audit row;
 // this asks which keys a HUMAN last wrote to a DIFFERENT value, with no cutoff.
@@ -153,6 +99,17 @@ const literalOfDefault = `CASE
 // tie goes to asking them. A human who typed exactly the default reads as one
 // who left it.
 func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType string, id ids.UUID, patch json.RawMessage) ([]string, error) {
+	var conflicts []string
+	err := database.WithTx(ctx, f.pool, func(tx pgx.Tx) (err error) {
+		conflicts, err = humanOwnedConflictsIn(ctx, tx, entityType, id, patch)
+		return err
+	})
+	return conflicts, err
+}
+
+// humanOwnedConflictsIn is HumanOwnedConflicts on a transaction already held,
+// for a door that may not take a second connection.
+func humanOwnedConflictsIn(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, patch json.RawMessage) ([]string, error) {
 	if len(patch) == 0 {
 		return nil, nil
 	}
@@ -178,57 +135,54 @@ func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType stri
 	if precedenceTables[entityType] {
 		table = entityType
 	}
-	var conflicts []string
-	err := database.WithWorkspaceTx(ctx, f.pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			WITH proposed AS (
-			  SELECT key, value FROM jsonb_each($3::jsonb)
-			),
-			latest AS (
-			  SELECT DISTINCT ON (p.key) p.key, p.value AS proposed_value,
-			         a.actor_type, a.after -> p.key AS current_value
-			  FROM proposed p
-			  JOIN audit_log a
-			    ON a.entity_type = ANY($1) AND a.entity_id = $2 AND a.after ? p.key
-			  ORDER BY p.key, a.occurred_at DESC, a.id DESC
-			),
-			human_created AS (
-			  SELECT EXISTS (
-			    SELECT 1 FROM audit_log a
-			    WHERE a.entity_type = ANY($1) AND a.entity_id = $2
-			      AND a.action = 'create' AND a.actor_type = 'human'
-			  ) AS yes
-			)
-			SELECT key, true, current_value,
-			       proposed_value IS DISTINCT FROM current_value,
-			       proposed_value IS DISTINCT FROM `+liveValueOf(table)+`
-			FROM latest
-			WHERE actor_type = 'human'
-			UNION ALL
-			SELECT p.key, false, NULL::jsonb, true, true FROM proposed p, human_created h
-			WHERE h.yes
-			  AND NOT EXISTS (SELECT 1 FROM latest l WHERE l.key = p.key)
-			  AND `+unauditedHolder(table)+`
-			ORDER BY 1`,
-			auditTypesFor(entityType), id, patch)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var field string
-			var audited bool
-			var latest humanWrite
-			if err := rows.Scan(&field, &audited, &latest.image, &latest.differsFromImage, &latest.differsFromLive); err != nil {
-				return err
-			}
-			if !audited || latest.moved(entityType, table) {
-				conflicts = append(conflicts, field)
-			}
-		}
-		return rows.Err()
-	})
+	rows, err := tx.Query(ctx, `
+		WITH proposed AS (
+		  SELECT key, value FROM jsonb_each($3::jsonb)
+		),
+		latest AS (
+		  SELECT DISTINCT ON (p.key) p.key, p.value AS proposed_value,
+		         a.actor_type, a.after -> p.key AS current_value
+		  FROM proposed p
+		  JOIN audit_log a
+		    ON a.entity_type = ANY($1) AND a.entity_id = $2 AND a.after ? p.key
+		  ORDER BY p.key, a.occurred_at DESC, a.id DESC
+		),
+		human_created AS (
+		  SELECT EXISTS (
+		    SELECT 1 FROM audit_log a
+		    WHERE a.entity_type = ANY($1) AND a.entity_id = $2
+		      AND a.action = 'create' AND a.actor_type = 'human'
+		  ) AS yes
+		)
+		SELECT key, true, current_value,
+		       proposed_value IS DISTINCT FROM current_value,
+		       proposed_value IS DISTINCT FROM `+humanedit.LiveValueOf(table)+`
+		FROM latest
+		WHERE actor_type = 'human'
+		UNION ALL
+		SELECT p.key, false, NULL::jsonb, true, true FROM proposed p, human_created h
+		WHERE h.yes
+		  AND NOT EXISTS (SELECT 1 FROM latest l WHERE l.key = p.key)
+		  AND `+humanedit.UnauditedHolder(table)+`
+		ORDER BY 1`,
+		auditTypesFor(entityType), id, patch)
 	if err != nil {
+		return nil, fmt.Errorf("compose: human-edit precedence: %w", err)
+	}
+	defer rows.Close()
+	var conflicts []string
+	for rows.Next() {
+		var field string
+		var audited bool
+		var latest humanWrite
+		if err := rows.Scan(&field, &audited, &latest.image, &latest.differsFromImage, &latest.differsFromLive); err != nil {
+			return nil, fmt.Errorf("compose: human-edit precedence: %w", err)
+		}
+		if !audited || latest.moved(entityType, table) {
+			conflicts = append(conflicts, field)
+		}
+	}
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("compose: human-edit precedence: %w", err)
 	}
 	return conflicts, nil

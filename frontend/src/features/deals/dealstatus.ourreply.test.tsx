@@ -8,6 +8,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -108,7 +109,9 @@ it("offers Done on the reminder once we replied, marks it done and refreshes His
   await waitFor(() => expect(patch).toHaveBeenCalledWith({ is_done: true }));
   await waitFor(() => expect(historyReads).toBeGreaterThan(1));
   expect(
-    screen.getByRole("button", { name: "Open the message" }),
+    screen.getByRole("button", {
+      name: englishCopy["deal.standing.next.openMessage"],
+    }),
   ).toBeVisible();
 });
 

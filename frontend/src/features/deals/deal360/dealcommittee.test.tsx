@@ -302,8 +302,8 @@ describe("the buying committee, drawn", () => {
   // an empty one would stay green on an absence-only check.
   it("says the lane is withheld rather than showing it as empty", () => {
     draw({ coverage: undefined, withheld: true, pending: false });
-    expect(screen.getByText("Hidden for your role")).toBeTruthy();
-    expect(screen.queryByText("Nobody named")).toBeNull();
+    expect(screen.getByText(en["state.withheld"])).toBeTruthy();
+    expect(screen.queryByText(en["deal.standing.committee.none"])).toBeNull();
   });
 
   it("says the read is still loading rather than showing it as empty", () => {
@@ -311,7 +311,7 @@ describe("the buying committee, drawn", () => {
     expect(
       document.querySelector('[role="status"][aria-busy="true"]'),
     ).toBeTruthy();
-    expect(screen.queryByText("Nobody named")).toBeNull();
+    expect(screen.queryByText(en["deal.standing.committee.none"])).toBeNull();
   });
 
   it("says nobody is named when the read answers with no seat and no gap", () => {
@@ -320,7 +320,7 @@ describe("the buying committee, drawn", () => {
       withheld: false,
       pending: false,
     });
-    expect(screen.getByText("Nobody named")).toBeTruthy();
+    expect(screen.getByText(en["deal.standing.committee.none"])).toBeTruthy();
     expect(screen.getByText("Lena Fischer")).toBeTruthy();
   });
 });

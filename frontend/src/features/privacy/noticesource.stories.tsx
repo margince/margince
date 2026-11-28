@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   jsonResponse,
   StoryProviders,
@@ -60,7 +61,7 @@ export const AssessmentForm: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Review source",
+        name: englishCopy["notice.source.review"],
       }),
     );
   },
@@ -71,12 +72,14 @@ export const AnotherSource: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Review source",
+        name: englishCopy["notice.source.review"],
       }),
     );
     const drawer = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await drawer.findByRole("radio", { name: "Another source" }),
+      await drawer.findByRole("radio", {
+        name: englishCopy["notice.source.answer.other"],
+      }),
     );
   },
 };

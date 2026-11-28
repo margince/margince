@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import {
   setSingleKeyShortcutsOn,
   singleKeyShortcutsOn,
@@ -84,7 +85,9 @@ it("says an agent set the time zone while the zone is the agent's", async () => 
       </SavePageProvider>
     </StoryProviders>,
   );
-  expect(await screen.findByText("By your agent")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["account.timezoneSetByAgent"]),
+  ).toBeInTheDocument();
 });
 
 it("saves the picked time zone as the user's own choice", async () => {
@@ -139,7 +142,7 @@ it("turns single-key shortcuts off for this browser on the flip", async () => {
     </StoryProviders>,
   );
   const shortcuts = await screen.findByRole("switch", {
-    name: "Single-key shortcuts",
+    name: englishCopy["account.singleKeyShortcuts"],
   });
   expect(shortcuts).toBeChecked();
 

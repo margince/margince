@@ -78,7 +78,7 @@ func TestCommitmentAdmissionUsesCurrentEvidenceBeforeWriting(t *testing.T) {
 			var taskID ids.UUID
 			for range 2 {
 				var outcome CommitmentOutcome
-				err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+				err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 					var err error
 					var produced ids.UUID
 					outcome, produced, err = dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
@@ -123,7 +123,7 @@ func TestCommitmentAdmissionUsesCurrentEvidenceBeforeWriting(t *testing.T) {
 					}
 				}
 				c.AsOf = asOf.AddDate(2, 0, 0)
-				if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+				if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 					outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 					if err == nil && outcome != CommitmentRemembered {
 						t.Fatalf("human work re-evaluated as %q", outcome)
@@ -148,7 +148,7 @@ func TestCapturedMailWithoutASentDateDoesNotCreateFreshWork(t *testing.T) {
 	captureThreadMail(t, e, e.Rep1, raw)
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var source ids.UUID
 		if err := tx.QueryRow(ctx, `SELECT activity_id FROM activity_identity WHERE identity_kind = 'mail' AND identity_key = $1`, "undated@counterparty.test").Scan(&source); err != nil {
 			return err
@@ -189,7 +189,7 @@ func TestHistoricalPromiseRemainsSearchableWithoutBecomingCurrentWork(t *testing
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
 	for range 2 {
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 			if err == nil && outcome != CommitmentOutcome(activities.CommitmentHistorical) {
 				t.Errorf("historical promise = %q", outcome)
@@ -199,7 +199,7 @@ func TestHistoricalPromiseRemainsSearchableWithoutBecomingCurrentWork(t *testing
 			t.Fatal(err)
 		}
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		history, err := e.Contacts.ClaimsForContact(e.Admin(), tx, contactID, nil, 20)
 		if err != nil {
 			return err
@@ -242,7 +242,7 @@ func TestProviderArrivalContradictionRemainsReviewable(t *testing.T) {
 		AsOf:    asOf, SourceActivityID: source.ID, ReadMessages: []ids.UUID{source.ID}, Extractor: signalScanActor,
 		Locator: commitmentLocator(source.ID, claimKindOurs, e.Rep1.String(), "Send pricing"), Seat: &e.Rep1, Summary: "Send pricing", Confidence: 0.95,
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 		if err == nil && outcome != CommitmentOutcome(activities.CommitmentTimeContradicted) {
 			t.Errorf("outcome = %q", outcome)
@@ -308,7 +308,7 @@ func TestAdmissionDoesNotDemoteWatchedOrProposedCommitments(t *testing.T) {
 						want = CommitmentRetained
 					}
 				}
-				if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+				if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 					dispatch := dispatcher.DispatchTx
 					if scenario.legacy && pass == 0 {
 						dispatch = dispatcher.routeCommitment
@@ -329,7 +329,7 @@ func TestAdmissionDoesNotDemoteWatchedOrProposedCommitments(t *testing.T) {
 			if read.CommitmentAdmissions == nil || len(*read.CommitmentAdmissions) != 1 || !(*read.CommitmentAdmissions)[0].CurrentWork {
 				t.Fatalf("admitted commitment was demoted: %#v", read.CommitmentAdmissions)
 			}
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				open, err := e.Contacts.ClaimsForContact(e.Admin(), tx, contactID, nil, 20)
 				if err == nil && (len(open) != 1 || string(open[0].Status) != "open") {
 					t.Fatalf("retained commitments = %#v", open)
@@ -356,7 +356,7 @@ func TestCapturedSourceDateSurvivesOriginalRetention(t *testing.T) {
 			captureThreadMail(t, e, e.Rep1, raw)
 			ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
 			dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				var source ids.UUID
 				if err := tx.QueryRow(ctx, `SELECT activity_id FROM activity_identity WHERE identity_kind = 'mail' AND identity_key = $1`, "retained-date@buyer.test").Scan(&source); err != nil {
 					return err

@@ -48,7 +48,7 @@ func (r *callRuntime) seatRead(ctx context.Context, read extension.SystemRead, a
 		return nil, systemSeat{}, err
 	}
 	var admitted bool
-	err = database.WithWorkspaceTx(sys, r.deps.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(sys, r.deps.pool, func(tx pgx.Tx) error {
 		var err error
 		admitted, err = serviceMemberConnectedTx(sys, tx, r.unit, member)
 		return err
@@ -96,7 +96,7 @@ func (s systemSeat) trace(recordType, recordID string, requested []string) error
 	if requested != nil {
 		detail["requested"] = requested
 	}
-	err := database.WithWorkspaceTx(s.sys, s.rt.deps.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(s.sys, s.rt.deps.pool, func(tx pgx.Tx) error {
 		return logSystemRead(s.sys, tx, detail)
 	})
 	if err != nil {

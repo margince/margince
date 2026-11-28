@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -81,7 +82,9 @@ export const WithCompanyClaimedDomains: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByRole("link", { name: "Open the company profile" }),
+      await canvas.findByRole("link", {
+        name: englishCopy["ownDomains.openCompany"],
+      }),
     ).toHaveAttribute("href", "/#/settings/company");
   },
 };
@@ -121,7 +124,7 @@ export const Adding: Story = {
     await userEvent.click(open);
     const dialog = within(await body.findByRole("dialog"));
     await expect(
-      dialog.getByRole("textbox", { name: "Add own domain" }),
+      dialog.getByRole("textbox", { name: englishCopy["ownDomains.addLabel"] }),
     ).toHaveAccessibleDescription(/Captured mail stays/);
   },
 };

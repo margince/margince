@@ -83,6 +83,9 @@ func TestEachDealsEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 			"tag_mode", "unassigned", "value_max", "value_min", "win_probability_max", "win_probability_min",
 		}},
 	} {
+		if tc.entity == datasource.EntityDeal {
+			tc.want = append(tc.want, datasource.CustomFieldPrefix)
+		}
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {
 			t.Errorf("%s is offered %v, want %v", tc.entity, got, tc.want)
 		}

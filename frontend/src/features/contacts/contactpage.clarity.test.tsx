@@ -47,7 +47,7 @@ describe("a contact with little context", () => {
     // out of records that are not there.
     expect(screen.queryByText(en["standing.next.none"])).toBeNull();
     expect(
-      screen.getAllByText("No interactions recorded").length,
+      screen.getAllByText(en["contact.moment.rule.thin_relationship"]).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText(en["today.quiet"])).toBeNull();
     expect(screen.getByText(en["contact.overview.coverage"])).toBeTruthy();
@@ -144,17 +144,17 @@ describe("a contact with little context", () => {
       },
     });
     const manage = await screen.findByRole("button", {
-      name: "Manage consent and proof history",
+      name: en["consent.manage"],
     });
     expect(ledgerReads).toBe(0);
     expect(screen.getAllByTestId("confirm-details-ask")).toHaveLength(1);
     expect(screen.getByText("Send to dana@brandt.example")).toBeTruthy();
     await user.click(manage);
     const dialog = await screen.findByRole("dialog", {
-      name: "Manage consent and proof history",
+      name: en["consent.manage"],
     });
     await user.click(
-      await within(dialog).findByRole("button", { name: "Record consent" }),
+      await within(dialog).findByRole("button", { name: en["consent.grant"] }),
     );
     await waitFor(() => expect(guardReads).toBeGreaterThan(1));
     expect(await within(dialog).findByText("granted")).toBeTruthy();
@@ -162,7 +162,8 @@ describe("a contact with little context", () => {
     await user.click(within(dialog).getByRole("button", { name: "Close" }));
     // The left column and the Research tab's panel read the one guard.
     expect(
-      (await screen.findAllByText("Permission to write recorded")).length,
+      (await screen.findAllByText(en["contact.consent.fact.saidWeMayWrite"]))
+        .length,
     ).toBe(2);
   });
 
@@ -172,7 +173,7 @@ describe("a contact with little context", () => {
       contact: { ...sparse.contact, writable: false },
     });
     await screen.findByRole("button", {
-      name: "Manage consent and proof history",
+      name: en["consent.manage"],
     });
     expect(screen.queryByTestId("confirm-details-ask")).toBeNull();
   });
@@ -184,7 +185,9 @@ describe("a contact with little context", () => {
     });
     const ask = await screen.findByTestId("confirm-details-ask");
     expect(ask).toHaveProperty("disabled", true);
-    expect(screen.getAllByText("No address on file").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(en["contact.rail.noEmailAddress"]).length,
+    ).toBeGreaterThan(0);
   });
 });
 
@@ -219,14 +222,16 @@ it("names restricted overview sections even when an open commitment leads", asyn
   ).toBeTruthy();
   // Each restricted card says so itself instead of a notice naming them all.
   expect(screen.getAllByText("Not shown").length).toBeGreaterThan(0);
-  expect(screen.queryByText("No interactions recorded")).toBeNull();
+  expect(
+    screen.queryByText(en["contact.moment.rule.thin_relationship"]),
+  ).toBeNull();
   expect(screen.queryByText("Nothing needs you today")).toBeNull();
 });
 
 it("draws the details column beside the feed, with no switch to hide it", async () => {
   mount("overview", sparse);
   expect(
-    await screen.findByRole("heading", { name: "Consent and channels" }),
+    await screen.findByRole("heading", { name: en["contact.aside.consent"] }),
   ).toBeTruthy();
   expect(
     screen.queryByRole("button", { name: /details and permissions/ }),

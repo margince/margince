@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -126,7 +127,9 @@ export const Excluding: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: "New exclusion" }),
+      await body.findByRole("button", {
+        name: englishCopy["captureExclusions.addOpen"],
+      }),
     );
     const dialog = within(await body.findByRole("dialog"));
     await expect(

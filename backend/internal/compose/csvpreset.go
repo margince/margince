@@ -82,7 +82,7 @@ func (h importHandlers) presetsAreVisible(ctx context.Context, links []migration
 		if err != nil {
 			return httperr.Validation("preset_links", "invalid", "A preset link names a contact by its id.")
 		}
-		err = database.WithWorkspaceTx(ctx, h.db.Pool(), func(tx pgx.Tx) error {
+		err = database.WithTx(ctx, h.db.Pool(), func(tx pgx.Tx) error {
 			return auth.EnsureVisibleLive(ctx, tx, link.Type, id)
 		})
 		if err != nil {

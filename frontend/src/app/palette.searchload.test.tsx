@@ -12,6 +12,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SEARCH_DEBOUNCE_MS } from "../design-system/debouncedsearch";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { CommandPalette } from "./palette";
@@ -111,7 +112,9 @@ describe("typing past a search that is still running", () => {
     await waitFor(() => expect(signals.length).toBeGreaterThan(1));
 
     expect(signals[0].aborted).toBe(true);
-    expect(screen.queryByText("Search failed")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["palette.searchFailedTitle"]),
+    ).toBeNull();
   });
 });
 
@@ -266,11 +269,13 @@ describe("words typed before the pause after an earlier answer", () => {
 
     await user.type(box, "ab");
     await pause();
-    await screen.findByText("Search failed");
+    await screen.findByText(englishCopy["palette.searchFailedTitle"]);
     await user.clear(box);
     await user.type(box, "nor");
 
-    expect(screen.queryByText("Search failed")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["palette.searchFailedTitle"]),
+    ).toBeNull();
   });
 });
 
@@ -296,7 +301,9 @@ describe("when the palette says nothing matched", () => {
     answer = () => new Response("nope", { status: 500 });
     await act(() => client.refetchQueries({ queryKey: ["palette-search"] }));
 
-    expect(await screen.findByText("Search failed")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["palette.searchFailedTitle"]),
+    ).toBeTruthy();
     expect(screen.queryByText(/No matches/)).toBeNull();
     expect(screen.getByText("See all results for “zzzzqqq”")).toBeTruthy();
   });

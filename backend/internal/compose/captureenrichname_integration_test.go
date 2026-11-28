@@ -47,7 +47,7 @@ type nameRow struct {
 func seedNamedContact(t *testing.T, e *integration.Env, email, display, capturedBy string) ids.UUID {
 	t.Helper()
 	contact := seedEnrichContact(t, e, email, vietnameseMail)
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE contact SET full_name = $2, captured_by = $3 WHERE id = $1`, contact, display, capturedBy)
 		return err
@@ -69,7 +69,7 @@ func runNamePass(t *testing.T, e *integration.Env, reply string) {
 func readNameRow(t *testing.T, e *integration.Env, contact ids.UUID) nameRow {
 	t.Helper()
 	var row nameRow
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `SELECT first_name, last_name, full_name FROM contact WHERE id = $1`, contact).
 			Scan(&row.First, &row.Last, &row.Full); err != nil {
@@ -133,7 +133,7 @@ func TestTheDisplayRefreshDoesNotReverseAPrintedName(t *testing.T) {
 
 	var stale []ids.ContactID
 	var refreshed bool
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		if stale, err = contacts.StaleDisplayNamesTx(context.Background(), tx, 100); err != nil {
 			return err

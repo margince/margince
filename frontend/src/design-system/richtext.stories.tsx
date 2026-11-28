@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { RichText } from "./richtext";
 
 const meta: Meta<typeof RichText> = {
@@ -129,9 +130,9 @@ export const EditingLink: Story = {
       within(canvasElement).getByRole("button", { name: "Link" }),
     );
     const dialog = within(await within(document.body).findByRole("dialog"));
-    await expect(dialog.getByLabelText("Web or email address")).toHaveValue(
-      "https://example.com",
-    );
+    await expect(
+      dialog.getByLabelText(englishCopy["richtext.linkAddress"]),
+    ).toHaveValue("https://example.com");
     await expect(
       dialog.getByRole("button", { name: "Remove link" }),
     ).toBeEnabled();

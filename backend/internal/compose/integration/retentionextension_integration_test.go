@@ -142,7 +142,7 @@ func TestRetentionClearsAnExtensionRowPastItsWindowOnce(t *testing.T) {
 func TestRetentionStripsTheStoredHistoryOfAnExpiredExtensionRow(t *testing.T) {
 	f := setupKeptTable(t)
 	old := f.seed(t, keptRow{age: twentyYears})
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		_, err := storekit.Audit(f.e.Admin(), tx, "update", keptTable, old,
 			map[string]any{"body": "an earlier draft"}, map[string]any{"body": "what they said"})
 		return err
@@ -302,7 +302,7 @@ func TestAnExtensionRowActedOnTwiceUnderOneIDRollsBack(t *testing.T) {
 	for name, act := range map[string]func(context.Context, pgx.Tx, extdecl.Table, extprivacy.Window, ids.UUID) (bool, error){
 		"clear": registry.ClearDue, "delete": registry.DeleteDue,
 	} {
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := act(e.Admin(), tx, table, window, twin)
 			return err
 		})
@@ -326,7 +326,7 @@ func TestACarriedFloorKeepsOnlyTheExtensionRowsFromBeforeItsChange(t *testing.T)
 	window := extprivacy.Window{OlderThan: now.Add(-6 * year), CarriedBefore: &changed, CarriedSince: &since}
 
 	var due []ids.UUID
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		due, err = f.registry.Due(f.e.Admin(), tx, f.registry.SweptTables()[0], window, true, 10)
 		return err

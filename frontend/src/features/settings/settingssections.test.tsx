@@ -19,10 +19,11 @@ import {
 import { catalogContext } from "../../lib/settingsreach";
 import { settingsHref } from "../../lib/settingsrouting";
 import { meFixture } from "../../testing/mefixture";
+import { COMPANY_CONTEXT_SECTIONS } from "./companycontextsections";
+import { SETTINGS_PAGE_VIEWS } from "./settings";
 import * as stories from "./settings.stories";
 import { COMPANY_CONTEXT_OFF, EVERY_GRANT } from "./settingspages.fixtures";
 import {
-  COMPANY_CONTEXT_SECTIONS,
   SETTINGS_COLUMNS,
   SUBPAGE_SECTIONS,
   settingsSectionKeys,
@@ -218,6 +219,7 @@ async function expectTabDraws(
     ...(DRAWN_NOT_OFFERED[page] ?? []),
     ...(tab === undefined ? [] : (DRAWN_NOT_OFFERED[address] ?? [])),
   ];
+  await SETTINGS_PAGE_VIEWS[page].drawn({ tab: tab ?? "" });
   const view = render(<Story />);
   await waitFor(() => {
     // A tab that drew no panel at all crashed or never loaded.

@@ -111,7 +111,7 @@ func namedActivitiesFor(
 	ctx context.Context, pool *pgxpool.Pool, activityIDs []ids.UUID,
 ) ([]crmcontracts.ActivityReference, error) {
 	var out []crmcontracts.ActivityReference
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var readErr error
 		out, readErr = nameActivities(ctx, tx, activityIDs)
 		return readErr
@@ -131,7 +131,7 @@ func namedActivityGroupsFor(
 		return nameActivityGroups(ctx, nil, groups)
 	}
 	var out [][]crmcontracts.ActivityReference
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var readErr error
 		out, readErr = nameActivityGroups(ctx, tx, groups)
 		return readErr

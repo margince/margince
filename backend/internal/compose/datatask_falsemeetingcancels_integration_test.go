@@ -174,7 +174,7 @@ func TestTheReopenWritesNothingWhenTheMeetingMovedAfterItWasRead(t *testing.T) {
 	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-2", organizer: organizer, guests: declined})
 	repair := datatask.Acting(e.Admin(), falseCancelTask(o.first).ID)
 	var read []activities.CalendarCancellation
-	if err := database.WithWorkspaceTx(repair, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(repair, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		read, err = activities.CalendarCancellationsAfterTx(repair, tx, o.first.AddDate(-1, 0, 0), ids.Nil, 10)
 		return err
@@ -188,7 +188,7 @@ func TestTheReopenWritesNothingWhenTheMeetingMovedAfterItWasRead(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := database.WithWorkspaceTx(repair, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(repair, e.Pool, func(tx pgx.Tx) error {
 		reopened, err := activities.ReopenCalendarCancellationTx(repair, tx, read[0], ids.NewV7())
 		if err == nil && reopened {
 			err = errors.New("a stale candidate reopened the meeting")
@@ -225,7 +225,7 @@ func TestTheRepairRechecksTheScopeItWalkedPast(t *testing.T) {
 			t.Fatal("the walk never finished")
 		}
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = task.Steps[0].Batch(ctx, tx, in)
 			return err
@@ -275,7 +275,7 @@ func TestTheRepairKeepsAStatusAHumanSetAfterTheCalendar(t *testing.T) {
 func closedByTheBackfill(t *testing.T, e *integration.Env, meeting ids.UUID, eventID string, at time.Time) {
 	t.Helper()
 	ctx := principal.SystemActing(e.Admin(), "system:participant_backfill")
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		key := connector.NaturalKey{SourceSystem: sourceGCal, SourceID: eventID}
 		if _, closed, err := activities.CancelCapturedMeetingTx(ctx, tx, key, at); err != nil || !closed {
 			return errors.Join(err, errors.New("the backfill's cancel closed nothing"))
@@ -359,7 +359,7 @@ func TestTheRepairPagesReplaysAndRollsBackWithoutChangingAnythingTwice(t *testin
 	}
 
 	ctx := datatask.Acting(e.Admin(), falseCancelTask(o.first).ID)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := falseCancelTask(o.first).Steps[0].Batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"not an id"`), Limit: 10})
 		return err
 	})
@@ -379,7 +379,7 @@ func walkFalseCancelTask(t *testing.T, o ownershipEnv, cursor json.RawMessage) i
 	changed := 0
 	for range 20 {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = task.Steps[0].Batch(ctx, tx, in)
 			return err

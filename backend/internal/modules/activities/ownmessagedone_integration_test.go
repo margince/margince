@@ -21,7 +21,7 @@ import (
 func ownMessageDoneOf(ctx context.Context, t *testing.T, e *loadEnv, message ids.UUID) OwnMessageDone {
 	t.Helper()
 	var standing OwnMessageDone
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		standing, err = handledStore(e).OwnMessageDoneState(ctx, tx, ids.From[ids.ActivityKind](message), clocktest.Now(t))
 		return err

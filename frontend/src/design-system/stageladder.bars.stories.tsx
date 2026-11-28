@@ -7,6 +7,7 @@ import { LocaleProvider } from "../i18n";
 import type { StageStep } from "./stageladder";
 import { LadderBars } from "./stageladder.bars";
 import "./stageladder.css";
+import { en as englishCopy } from "../i18n/en";
 
 // The bars shape of the stage ladder alone, as How it stands draws it.
 const meta: Meta<typeof LadderBars> = {
@@ -62,7 +63,9 @@ export const LongRunInANarrowCard: Story = {
       await within(canvasElement).findByRole("group", { name: "Stage" }),
     );
     await expect(
-      await ladder.findByRole("button", { name: "Show later stages" }),
+      await ladder.findByRole("button", {
+        name: englishCopy["stageLadder.later"],
+      }),
     ).toBeVisible();
     for (const name of canvasElement.querySelectorAll<HTMLElement>(
       ".stage-ladder-bars .stage-ladder-label",

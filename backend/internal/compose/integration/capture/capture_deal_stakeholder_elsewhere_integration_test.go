@@ -22,7 +22,7 @@ import (
 // endSeat ends every seat the contact holds on a deal.
 func endSeat(t *testing.T, e *integration.SearchEnv, contact ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE relationship SET ended_at = now() - interval '1 day'
 			 WHERE kind = 'deal_stakeholder' AND contact_id = $1`, contact)
 		return err

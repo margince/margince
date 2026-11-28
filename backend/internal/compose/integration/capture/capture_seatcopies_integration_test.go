@@ -306,7 +306,7 @@ func TestSharedMailKeySQLAgreesWithSharedMailKey(t *testing.T) {
 	e := integration.SetupSearch(t)
 	for _, key := range []string{seatCopyKey, connector.SeatScopedMailKey(seatCopyKey, ids.NewV7().String())} {
 		var got string
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `SELECT `+connector.SharedMailKeySQL("a")+
 				` FROM (SELECT 'email'::text AS source_system, $1::text AS source_id) a`, key).Scan(&got)
 		})

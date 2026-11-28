@@ -88,7 +88,7 @@ func TestOnlyTheSeatThatSentAMailSeesItWaiting(t *testing.T) {
 func (o *owedEnv) customerContact(t *testing.T, name, address string) ids.UUID {
 	t.Helper()
 	contact := o.contact(t, name, address)
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		company := ids.NewV7()
 		if _, err := tx.Exec(t.Context(), `INSERT INTO company (id, display_name, status, source, captured_by)
 			VALUES ($1, 'Customer Co', 'customer', 'seed', 'system')`, company); err != nil {

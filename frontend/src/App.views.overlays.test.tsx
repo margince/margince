@@ -12,6 +12,7 @@ import { ScreenView } from "./App.views";
 import { Heading } from "./design-system/heading";
 import { Modal } from "./design-system/modal";
 import { LocaleProvider } from "./i18n";
+import { en as englishCopy } from "./i18n/en";
 import { useRoute } from "./lib/router";
 import { useUnsavedGuard } from "./lib/unsavedclaims";
 import { meFixture, READS_RECORDS } from "./testing/mefixture";
@@ -86,7 +87,10 @@ async function moveTo(hash: string) {
   });
 }
 
-const dialog = () => screen.queryByRole("dialog", { name: "Log activity" });
+const dialog = () =>
+  screen.queryByRole("dialog", {
+    name: englishCopy["shell.shortcuts.logActivity"],
+  });
 
 afterEach(() => {
   cleanup();
@@ -114,10 +118,10 @@ describe("a dialog a routed screen holds, open while the reader moves", () => {
     await moveTo("#/companies");
 
     expect(
-      await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
+      await screen.findByRole("dialog", { name: englishCopy["unsaved.title"] }),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole("dialog", { name: "Discard unsaved changes?" }),
+      screen.getAllByRole("dialog", { name: englishCopy["unsaved.title"] }),
     ).toHaveLength(1);
     expect(dialog()).toBeInTheDocument();
     expect(closed).not.toHaveBeenCalled();
@@ -128,12 +132,12 @@ describe("a dialog a routed screen holds, open while the reader moves", () => {
     renderRouted("#/contacts");
     await user.type(await screen.findByLabelText("Note"), "Called back");
     await moveTo("#/companies");
-    await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+    await screen.findByRole("dialog", { name: englishCopy["unsaved.title"] });
 
     await moveTo("#/deals");
 
     expect(
-      screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
+      screen.getByRole("dialog", { name: englishCopy["unsaved.title"] }),
     ).toBeInTheDocument();
     expect(globalThis.location.hash).toBe("#/deals");
   });

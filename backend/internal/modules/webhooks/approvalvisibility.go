@@ -50,8 +50,8 @@ const (
 // reach an owner who can see the TARGET record. It resolves the approval's
 // polymorphic target and hands the shape to approvalShapeVisible. A missing
 // approval row reads as not-visible. The approval table is read with a raw
-// probe under the existing WithWorkspaceTx boundary rather than importing the
-// approvals module (a module never imports a sibling).
+// probe under the existing WithTx boundary. It does not import the approvals
+// module, because a module never imports a sibling.
 func (s *Store) approvalVisibleTo(ctx context.Context, approvalID ids.UUID) (bool, error) {
 	var (
 		targetType *string

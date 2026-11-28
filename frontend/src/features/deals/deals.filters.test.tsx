@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { useMe } from "../../lib/session";
 import { openFilterValues, showLayout } from "../../testing/listquery.testkit";
 import { openView, openViewStep } from "../../testing/listview.testkit";
@@ -120,7 +121,9 @@ describe("DealsScreen filters", () => {
     // value is picked from inside the step that lists it.
     const values = await openFilterValues(user, "Stalled only");
     await user.click(
-      within(values).getByRole("radio", { name: "Stalled only" }),
+      within(values).getByRole("radio", {
+        name: englishCopy["deals.filterStalled"],
+      }),
     );
 
     await waitFor(() =>
@@ -425,9 +428,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
         <DealsScreen />
       </SignedIn>,
     );
-    expect(
-      await screen.findByText("Could not load this view. Reload the page."),
-    ).toBeTruthy();
+    expect(await screen.findByText(englishCopy["common.error"])).toBeTruthy();
     expect(
       screen.queryByText("Your role cannot narrow deals by", { exact: false }),
     ).toBeNull();

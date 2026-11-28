@@ -325,7 +325,7 @@ describe("CustomFieldsAdmin", () => {
     expect(container.querySelector(".panel")).not.toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
     expect(
-      screen.getByRole("heading", { level: 2, name: "Custom fields" }),
+      screen.getByRole("heading", { level: 2, name: en["cf.title"] }),
     ).toBeInTheDocument();
   });
 

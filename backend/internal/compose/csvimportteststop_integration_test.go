@@ -31,7 +31,7 @@ import (
 func importAdmin(e *integration.Env) context.Context {
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
-	perms.Objects[migration.ImportRunObject] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	perms.Objects[migration.ImportRunObject] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	return e.As(e.AdminUser, nil, perms)
 }
 

@@ -51,7 +51,7 @@ func TestASharedMailboxShowsItsUnreadSpanToItsAdmins(t *testing.T) {
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var categories capture.OperationalCategories
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		categories, err = capture.ReadOperationalCategoriesTx(ctx, tx)
 		return err

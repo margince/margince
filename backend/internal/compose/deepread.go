@@ -436,13 +436,13 @@ func siteReadLegalEntities(entities []corpusLegalEntity) []contacts.SiteReadLega
 }
 
 // finish records the crawl report on the dossier in one terminal write.
-// terminalCtx derives the context for a terminal dossier write: the work
-// context's VALUES (principal, workspace — WithWorkspaceTx reads the tenant
-// GUC from them) with a fresh deadline of its own, NEVER the work context's
-// deadline or cancellation. Closing the dossier must not be starved by the
-// crawl+extract work it reports on — otherwise a read whose model calls
-// exhausted the job budget is left running forever, squatting the company's one
-// in-flight slot. Fifteen seconds bounds the single FinishSiteRead tx.
+// terminalCtx derives the context for a terminal dossier write. It keeps the
+// work context's values (principal, workspace) and gets a fresh deadline of its
+// own, never the work context's deadline or cancellation. Closing the dossier
+// must not starve behind the crawl and extract work it reports on. Otherwise a
+// read whose model calls exhausted the job budget runs forever and squats the
+// company's one in-flight slot. Fifteen seconds bounds the single
+// FinishSiteRead tx.
 func terminalCtx(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 }

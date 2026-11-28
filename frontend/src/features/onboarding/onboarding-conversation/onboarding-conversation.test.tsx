@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { meFixture } from "../../../testing/mefixture";
 import { OnboardingScreen } from "../onboarding";
 
@@ -413,7 +414,7 @@ describe("the conversational company act", () => {
 
     // Only the selection-authorized change lands in the review; the model's
     // extra proposal never auto-applies.
-    await screen.findByRole("heading", { name: "Questions for you" });
+    await screen.findByRole("heading", { name: englishCopy["ob.deck.title"] });
     const digest = digestElement();
     await waitFor(() => {
       expect(
@@ -450,7 +451,9 @@ describe("the conversational company act", () => {
     // Confirm presses whatever is open, and an early press names the three
     // rather than going anywhere: nothing is posted.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Confirm profile" }),
+      await screen.findByRole("button", {
+        name: englishCopy["ob.deck.confirm"],
+      }),
     );
     expect(
       await screen.findByText(
@@ -467,9 +470,9 @@ describe("the conversational company act", () => {
       await userEvent.click(screen.getByRole("button", { name: "Next" }));
     }
     expect(blockingLabels).toEqual([
-      "Company name",
-      "Products and services",
-      "Ideal customer",
+      englishCopy["ob.field.display_name"],
+      englishCopy["ob.field.offer_summary"],
+      englishCopy["ob.field.icp"],
     ]);
   });
 
@@ -492,7 +495,7 @@ describe("the conversational company act", () => {
     await submitWebsite();
 
     const accept = (await screen.findByRole("button", {
-      name: "Confirm profile",
+      name: englishCopy["ob.deck.confirm"],
     })) as HTMLButtonElement;
 
     // The deck's own control carries the question as its accessible name.
@@ -528,7 +531,7 @@ describe("the conversational company act", () => {
     await submitWebsite();
 
     const accept = (await screen.findByRole("button", {
-      name: "Confirm profile",
+      name: englishCopy["ob.deck.confirm"],
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -556,7 +559,7 @@ describe("the conversational company act", () => {
     // heading is the first proof the confirm landed, and Continue carries the
     // installation's prefilled reporting basis forward unchanged.
     await screen.findByRole("heading", {
-      name: "Set the reporting basis",
+      name: englishCopy["ob.conv.basis.title"],
     });
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
@@ -589,7 +592,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: "Confirm profile",
+      name: englishCopy["ob.deck.confirm"],
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -633,7 +636,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: "Confirm profile",
+      name: englishCopy["ob.deck.confirm"],
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -648,7 +651,7 @@ describe("the conversational company act", () => {
     // confirmation any more.
     expect(
       await screen.findByRole("heading", {
-        name: "Set the reporting basis",
+        name: englishCopy["ob.conv.basis.title"],
       }),
     ).toBeTruthy();
     expect(screen.queryByText(/already confirmed/)).toBeNull();
@@ -667,7 +670,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: "Confirm profile",
+      name: englishCopy["ob.deck.confirm"],
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -680,7 +683,7 @@ describe("the conversational company act", () => {
     // re-check, so the machine is still sitting in the company act.
     expect(
       screen.queryByRole("heading", {
-        name: "Will you work in Margince yourself?",
+        name: englishCopy["ob.conv.invite.title"],
       }),
     ).toBeNull();
   });
@@ -691,7 +694,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: "Confirm profile",
+      name: englishCopy["ob.deck.confirm"],
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -707,7 +710,7 @@ describe("the conversational company act", () => {
     // heading is the first proof the confirm landed, and Continue carries the
     // installation's prefilled reporting basis forward unchanged.
     await screen.findByRole("heading", {
-      name: "Set the reporting basis",
+      name: englishCopy["ob.conv.basis.title"],
     });
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
@@ -754,13 +757,15 @@ describe("the conversational company act", () => {
 
     await submitWebsite(user);
     const accept = (await screen.findByRole("button", {
-      name: "Confirm profile",
+      name: englishCopy["ob.deck.confirm"],
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
     });
     await user.click(accept);
-    await screen.findByRole("heading", { name: "Set the reporting basis" });
+    await screen.findByRole("heading", {
+      name: englishCopy["ob.conv.basis.title"],
+    });
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await screen.findByRole("radio", { name: /Yes, I will work in Margince/ });
     await waitFor(() => {
@@ -780,7 +785,9 @@ describe("the conversational company act", () => {
     // The act never stalls: the review still lands, built from the
     // site-read snapshot itself rather than the failed proposal.
     expect(
-      await screen.findByRole("button", { name: "Confirm profile" }),
+      await screen.findByRole("button", {
+        name: englishCopy["ob.deck.confirm"],
+      }),
     ).toBeTruthy();
     // "Gradion GmbH" names both the identity summary and its own row.
     expect(
@@ -827,7 +834,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
 
-    await screen.findByRole("heading", { name: "Questions for you" });
+    await screen.findByRole("heading", { name: englishCopy["ob.deck.title"] });
     const digest = digestElement();
     // "Gradion GmbH" names both the identity summary at the top of the
     // digest and its own settled line further down.
@@ -874,7 +881,7 @@ describe("the conversational company act", () => {
 
     await userEvent.click(screen.getByRole("radio", { name: /Gradion GmbH/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await screen.findByRole("heading", { name: "Questions for you" });
+    await screen.findByRole("heading", { name: englishCopy["ob.deck.title"] });
 
     // The review's own textboxes are the deck's field controls — an answer
     // to a specific, asked question — never a free-text composer beside it.
@@ -956,7 +963,7 @@ describe("the conversational company act", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(
       await screen.findByRole("heading", {
-        name: "Questions for you",
+        name: englishCopy["ob.deck.title"],
       }),
     ).toBeTruthy();
     expect(

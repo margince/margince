@@ -424,8 +424,8 @@ func (e *resolveEnv) putUnderException(t *testing.T, delivery ids.UUID, givenByA
 	ctx := context.Background()
 	var review, instruction ids.UUID
 	if err := e.owner.QueryRow(ctx, `
-		INSERT INTO communication_review (state, kind, reason_code, refusals)
-		VALUES ('needs_repair', 'single', 'no_marketing_consent',
+		INSERT INTO communication_review (state, reason_code, refusals)
+		VALUES ('needs_repair', 'no_marketing_consent',
 		        jsonb_build_array(jsonb_build_object('address', $1::text, 'reason_code', 'no_marketing_consent',
 		          'subject_kind', 'contact', 'subject_id', $2::text)))
 		RETURNING id`, e.address, e.contact.String()).Scan(&review); err != nil {

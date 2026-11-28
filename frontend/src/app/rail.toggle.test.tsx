@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { render, stubPhoneViewport } from "../testing/shellharness";
 import { WorkspaceRail } from "./shell";
 
@@ -24,9 +25,11 @@ describe("the sidebar toggle at the rail's foot", () => {
     const onToggle = vi.fn();
     render(<WorkspaceRail route={{ screen: "home" }} onToggle={onToggle} />);
 
-    const toggle = screen.getByRole("button", { name: "Collapse sidebar" });
+    const toggle = screen.getByRole("button", {
+      name: englishCopy["shell.collapse"],
+    });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(toggle).toHaveTextContent("Collapse sidebar");
+    expect(toggle).toHaveTextContent(englishCopy["shell.collapse"]);
     await user.click(toggle);
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
@@ -42,7 +45,9 @@ describe("the sidebar toggle at the rail's foot", () => {
         onToggle={ignoreToggle}
       />,
     );
-    const toggle = screen.getByRole("button", { name: "Expand sidebar" });
+    const toggle = screen.getByRole("button", {
+      name: englishCopy["shell.expand"],
+    });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(toggle).toHaveAttribute("aria-keyshortcuts", "Meta+B Control+B");
 
@@ -84,8 +89,12 @@ describe("a row the open rail cuts", () => {
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(192);
     render(<WorkspaceRail route={{ screen: "home" }} />);
 
-    act(() => screen.getByRole("link", { name: "Filters and views" }).focus());
-    expect(screen.getByRole("tooltip").textContent).toBe("Filters and views");
+    act(() =>
+      screen.getByRole("link", { name: englishCopy["filters.title"] }).focus(),
+    );
+    expect(screen.getByRole("tooltip").textContent).toBe(
+      englishCopy["filters.title"],
+    );
   });
 
   it("keeps the go-to keys on a row that fits", () => {

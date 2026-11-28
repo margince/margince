@@ -67,7 +67,7 @@ func (h dealCommitmentHandlers) read(ctx context.Context, dealID ids.DealID) (cr
 	}
 	var rows []contacts.CompanyCommitment
 	now := h.now()
-	err = database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		var err error
 		// One past the card's length, to know whether more exist.
 		rows, out.Complete, err = h.contacts.OpenTheirCommitmentsForDeal(ctx, tx, dealID.UUID, dealCommitmentsLimit+1)

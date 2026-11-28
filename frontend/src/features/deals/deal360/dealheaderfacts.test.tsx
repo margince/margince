@@ -561,6 +561,6 @@ describe("a deal an agent created", () => {
   it("says only that an agent made it when the create row is not known", () => {
     created(undefined);
 
-    expect(screen.getByText("Automated by an agent")).toBeInTheDocument();
+    expect(screen.getByText(en["trust.agentUnnamed"])).toBeInTheDocument();
   });
 });

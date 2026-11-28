@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -112,7 +113,9 @@ export const HistorySearchOpen: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Search this timeline" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["timeline.filters.search"],
+      }),
     );
   },
 };

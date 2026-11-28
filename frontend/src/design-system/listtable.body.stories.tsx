@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { ListTable } from "./listtable";
 
 // A generic component takes no `component` here: Storybook would have to infer
@@ -92,7 +93,7 @@ export const SettledEmptyBody: Story = {
       line.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     await userEvent.click(
-      canvas.getByRole("button", { name: "Clear filters" }),
+      canvas.getByRole("button", { name: englishCopy["table.clearFilters"] }),
     );
     await canvas.findByText("Fleet renewal");
     expect(canvas.queryByText(/No deals match these filters\./)).toBeNull();

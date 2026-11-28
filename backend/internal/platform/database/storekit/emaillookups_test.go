@@ -30,3 +30,19 @@ func TestAnAddressIsLookedUpAsItWasTyped(t *testing.T) {
 		t.Errorf("EmailLookups of nothing = %v, want none", got)
 	}
 }
+
+// A row or hash written before the fold dropped hidden characters keeps the
+// older spelling. A lookup matches it and the clean spelling written since.
+func TestAnErasureHashedBeforeTheFoldStillSuppresses(t *testing.T) {
+	t.Parallel()
+	older := "anna" + string(rune(0x200B)) + "@buyer.example"
+	lowered, hashes := StopAddressArgs(older)
+	for _, spelled := range []string{older, "anna@buyer.example"} {
+		if !slices.Contains(lowered, spelled) {
+			t.Errorf("StopAddressArgs lowered = %q, missing %q", lowered, spelled)
+		}
+		if !slices.Contains(hashes, SuppressionHash(spelled)) {
+			t.Errorf("StopAddressArgs hashes miss the hash of %q, so an erasure recorded on it stops suppressing", spelled)
+		}
+	}
+}

@@ -210,7 +210,7 @@ func TestADeclaredRelinkRollsBackWithItsTransaction(t *testing.T) {
 
 	abort := errors.New("abort the merge")
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := sweepreach.Relink(ctx, tx, reach.Company, src.UUID, tgt.UUID); err != nil {
 			return err
 		}
@@ -268,7 +268,7 @@ func TestAuditEachWritesOneRowPerIDAcrossChunks(t *testing.T) {
 	for i := range moved {
 		moved[i] = ids.NewV7()
 	}
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return storekit.AuditEach(e.Admin(), tx, "update", "ext_reachtest_note", moved,
 			map[string]any{"company_id": "from"}, map[string]any{"company_id": "to"})
 	})

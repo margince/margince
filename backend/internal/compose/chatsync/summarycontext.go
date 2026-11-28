@@ -51,8 +51,8 @@ type summaryContext struct {
 func readSummaryContext(ctx context.Context, pool *pgxpool.Pool, link chatlinks.Link, record chatRecord, before time.Time) (summaryContext, error) {
 	var out summaryContext
 	// One snapshot, so every group of readers judges the same company and edges.
-	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithSnapshot(ctx, pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			owner, err := liveOwner(ctx, tx, record)
 			if err != nil {
 				return err
@@ -86,7 +86,7 @@ func readSummaryContext(ctx context.Context, pool *pgxpool.Pool, link chatlinks.
 
 // liveOwner is the record owner's name, empty when the owner has left.
 func liveOwner(ctx context.Context, tx pgx.Tx, record chatRecord) (string, error) {
-	table := "project"
+	table := record.kind
 	if record.kind == chatlinks.RecordDeal {
 		table = "deal"
 	}
@@ -125,7 +125,8 @@ func noteReaders(ctx context.Context, tx pgx.Tx, link chatlinks.Link) ([]princip
 
 // holdsReadOnLink is whether the actor may read the link's deal or project.
 func holdsReadOnLink(ctx context.Context, link chatlinks.Link) bool {
-	return link.DealID != nil && auth.Allows(ctx, chatlinks.RecordDeal, principal.ActionRead) ||
+	return link.CompanyID != nil && auth.Allows(ctx, chatlinks.RecordCompany, principal.ActionRead) ||
+		link.DealID != nil && auth.Allows(ctx, chatlinks.RecordDeal, principal.ActionRead) ||
 		link.ProjectID != nil && auth.Allows(ctx, chatlinks.RecordProject, principal.ActionRead)
 }
 
@@ -304,7 +305,10 @@ func previousNote(ctx context.Context, tx pgx.Tx, link chatlinks.Link, before ti
 	if record.ID.IsZero() {
 		return "", nil
 	}
-	if record.Type == chatlinks.RecordDeal {
+	switch record.Type {
+	case chatlinks.RecordCompany:
+		column = "company_id"
+	case chatlinks.RecordDeal:
 		column = "deal_id"
 	}
 	const seq = `split_part(substring(a.source_id from length($2::text) + 2), ':', 1)::bigint`

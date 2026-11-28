@@ -144,7 +144,7 @@ func (c *linkedInFieldsCase) employ(t *testing.T, company ids.UUID, primary bool
 func (c *linkedInFieldsCase) payload(t *testing.T) map[string]any {
 	t.Helper()
 	var raw []byte
-	if err := database.WithWorkspaceTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT proposed_change FROM approval WHERE id = $1`, c.approval).Scan(&raw)
 	}); err != nil {
@@ -209,7 +209,7 @@ func (c *linkedInFieldsCase) count(t *testing.T, sql string, args ...any) int {
 
 func (c *linkedInFieldsCase) query(t *testing.T, sql string, args []any, dest ...any) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), sql, args...).Scan(dest...)
 	}); err != nil {
 		t.Fatalf("reading %q: %v", sql, err)
@@ -479,7 +479,7 @@ func TestAPromotedEmploymentKeepsItsAuthor(t *testing.T) {
 
 func TestADeciderWhoCannotSeeTheCompanyIsRefusedTheEmployer(t *testing.T) {
 	c := stageLinkedInFieldsCase(t, "", "")
-	if err := database.WithWorkspaceTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE company SET visibility = 'owner', owner_id = $2 WHERE id = $1`, c.acme, c.e.Rep1)
 		return err
@@ -548,7 +548,7 @@ func TestALaterExportNeverWritesTheContactAgain(t *testing.T) {
 
 func TestACardStagedBeforeTheBoxesAppliesOnlyTheLink(t *testing.T) {
 	c := stageLinkedInFieldsCase(t, "", "")
-	if err := database.WithWorkspaceTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE approval SET proposed_change = proposed_change
 			- 'use_as_title' - 'use_as_employer' - 'connection_position' - 'contact_title'
 			- 'employer_company_id' - 'employer_relationship_id' WHERE id = $1`, c.approval)

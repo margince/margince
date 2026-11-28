@@ -95,7 +95,11 @@ const WebFormSource = "web_form"
 // is the channel, the talk's first message and the record, so a replay files
 // nothing. A client that could spell it would claim a summary before it is
 // written.
-const ChatSummarySource = "dispact"
+const (
+	ChatSummarySource = "dispact"
+	// ChatSummaryOrigin identifies recaps whose source provenance must remain traceable.
+	ChatSummaryOrigin = "chat_links"
+)
 
 // WebsiteInquirySource binds a task and its handling run to one accepted submission.
 const WebsiteInquirySource = "website_inquiry"
@@ -324,8 +328,18 @@ func ImportedFrom(sourceSystem *string) *string {
 		name = ""
 	}
 	name = strings.TrimPrefix(name, csvImportConnector+":")
+	if seated, ok := strings.CutPrefix(name, OwnImportSeatSegment); ok && len(seated) >= seatIDLength {
+		name = strings.TrimPrefix(seated[seatIDLength:], ":")
+	}
 	return &name
 }
+
+// OwnImportSeatSegment opens the segment that keeps one seat's own imports in
+// a namespace of their own. ImportedFrom drops it, so the screen shows the
+// source name the importer typed.
+const OwnImportSeatSegment = "seat-"
+
+const seatIDLength = 36
 
 // RefuseWire guards BOTH provenance fields a create wire can carry, in one
 // statement so a mapper spends one line rather than two `if err != nil` blocks.

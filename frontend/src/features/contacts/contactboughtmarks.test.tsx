@@ -289,7 +289,9 @@ describe("bought values on the contact page", () => {
     );
     await screen.findByText("From Surfe");
     expect(screen.queryByText("Bought from Surfe")).toBeNull();
-    expect(screen.getByText("Added by the catch-up sweep")).toBeTruthy();
+    expect(
+      screen.getByText(en["contact.provider.trigger.automatic_backfill"]),
+    ).toBeTruthy();
     const freeChip = en["evidence.explainBeside"]
       .replace("{label}", en["evidence.fromProvider"])
       .replace("{value}", "Head of Revenue");

@@ -1,5 +1,6 @@
 import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
 import { GREETING_REGISTER_LABEL } from "../format/greetingregister";
+import { salutationChoice, salutationField } from "../lib/contactsalutation";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -157,6 +158,7 @@ export function mapContactBody(
     first_name: values.first_name?.trim() || undefined,
     last_name: values.last_name?.trim() || undefined,
     title: values.title?.trim() || undefined,
+    salutation: salutationChoice(values),
     social: linkedin ? { linkedin } : undefined,
     emails: emails.length > 0 ? emails : undefined,
     phones: phones.length > 0 ? phones : undefined,
@@ -221,6 +223,7 @@ export function mapContactUpdate(
     first_name: scalar("first_name"),
     last_name: scalar("last_name"),
     title: scalar("title"),
+    salutation: salutationChoice(values),
     greeting_register: greetingRegisterChoice(values),
     owner_id: scalar("owner_id"),
     visibility:
@@ -255,6 +258,7 @@ export function mapContactUpdate(
 // raw labels already fit to show ("1-10").
 export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
   return [
+    salutationField(t),
     {
       key: "full_name",
       label: "create.fullName",
@@ -403,7 +407,7 @@ export function contactEditFields(t: ReturnType<typeof useT>): CreateField[] {
       if (field.key === "social.linkedin") {
         return [{ ...field, validate: undefined }];
       }
-      return field.key === "title"
+      return field.key === "salutation"
         ? [field, greetingRegisterField(t)]
         : [field];
     });

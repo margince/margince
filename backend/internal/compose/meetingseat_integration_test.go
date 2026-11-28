@@ -38,7 +38,7 @@ import (
 func seatHolds(t *testing.T, e *integration.Env, seat ids.UUID, activity ids.UUID) bool {
 	t.Helper()
 	var held bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		held, err = capture.SeatHoldsActivityTx(
 			calendarOwnerCtx(e, seat), tx, ids.From[ids.ActivityKind](activity))
@@ -53,7 +53,7 @@ func seatHolds(t *testing.T, e *integration.Env, seat ids.UUID, activity ids.UUI
 // standing a second attendee reaches a shared calendar row by.
 func seatOnMeeting(t *testing.T, e *integration.Env, activity ids.UUID, seat ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_participant (activity_id, user_id, role)
 			VALUES ($1, $2, 'attendee')`, activity, seat)
@@ -181,7 +181,7 @@ func TestARefusedCancelReturnsTheZeroActivityID(t *testing.T) {
 
 	var id ids.ActivityID
 	var found bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		id, found, err = activities.CancelCapturedMeetingFor(capture.SeatHoldsActivityTx)(
 			calendarOwnerCtx(e, ids.NewV7()), tx, meetingKey, meetingStart)
@@ -208,7 +208,7 @@ func TestTheBackfillWriterStillCancelsWithoutASeat(t *testing.T) {
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.Rep1)
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, _, err := activities.CancelCapturedMeetingTx(
 			e.Admin(), tx, meetingKey, meetingStart)
 		return err
@@ -324,7 +324,7 @@ func TestAnOrganizerWhoseCalendarLacksTheMeetingDoesNotHostIt(t *testing.T) {
 	host := func() *ids.UUID {
 		t.Helper()
 		var seat *ids.UUID
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `SELECT host_user_id FROM activity WHERE id = $1`, captured).Scan(&seat)
 		}); err != nil {
 			t.Fatalf("reading the meeting's host: %v", err)
@@ -332,7 +332,7 @@ func TestAnOrganizerWhoseCalendarLacksTheMeetingDoesNotHostIt(t *testing.T) {
 		return seat
 	}
 	before := host()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_participant (activity_id, user_id, role)
 			VALUES ($1, $2, 'organizer')`, captured, e.Rep3); err != nil {

@@ -46,7 +46,7 @@ func (d offlineDemoDirectory) Mailbox(ctx context.Context, userID string) (offli
 	var box offlinedemo.Mailbox
 	box.UserID = userID
 
-	err := database.WithWorkspaceTx(ctx, d.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, d.pool, func(tx pgx.Tx) error {
 		return d.load(ctx, tx, userID, &box)
 	})
 	if err != nil {

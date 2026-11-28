@@ -133,15 +133,13 @@ func TestAMachineHousekeepingWriteIsNotOnTheReceipt(t *testing.T) {
 
 // seedMachineAction puts a deal and one audit row about it in place.
 //
-// Through WithWorkspaceTx under the admin context, which is how this harness
-// seeds: the GUC binding is what every read below runs against, and a fixture
-// written outside it would sit in a workspace the reads cannot see.
+// Through WithTx under the admin context, which is how this harness seeds.
 func seedMachineAction(
 	t *testing.T, e *Env, owner ids.UUID, actorType, actorID, action string,
 ) ids.UUID {
 	t.Helper()
 	pipeline, stage, deal := ids.NewV7(), ids.NewV7(), ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `INSERT INTO pipeline (id, name, is_default, position)
 			VALUES ($1, 'Magic fixture', false, 91)`, pipeline); err != nil {
@@ -185,7 +183,7 @@ func TestAnErasedRecordsImagesAreNotRepublishedByTheReceipt(t *testing.T) {
 	since := time.Now().Add(-time.Hour)
 
 	contact := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 			VALUES ($1, $2, 'Dana Buyer', 'manual', 'human:x')`, contact, e.Rep1); err != nil {
 			return err
@@ -229,7 +227,7 @@ func TestAnUnerasedRecordsMachineActionStillReports(t *testing.T) {
 	since := time.Now().Add(-time.Hour)
 
 	contact := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 			VALUES ($1, $2, 'Ines Bauer', 'manual', 'human:x')`, contact, e.Rep1); err != nil {
 			return err
@@ -272,7 +270,7 @@ func TestTheWindowRefusesToReachBackToInstallation(t *testing.T) {
 	ancient := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	contact := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 			VALUES ($1, $2, 'Long ago', 'manual', 'human:x')`, contact, e.Rep1); err != nil {
 			return err

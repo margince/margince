@@ -324,7 +324,7 @@ func TestAChangeNeedsTheBindingChecksFilingNeeds(t *testing.T) {
 func wsCount(t *testing.T, e *integration.SearchEnv, query string, args ...any) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting (%s): %v", query, err)
@@ -335,7 +335,7 @@ func wsCount(t *testing.T, e *integration.SearchEnv, query string, args ...any) 
 func wsScalar(t *testing.T, e *integration.SearchEnv, query string, args ...any) string {
 	t.Helper()
 	var out string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&out)
 	}); err != nil {
 		t.Fatalf("reading (%s): %v", query, err)
@@ -387,7 +387,7 @@ func TestARestatementMustNameTheMessageTheChangeNames(t *testing.T) {
 func (c chatChangeEnv) seedRaw(t *testing.T, id, text string) ids.UUID {
 	t.Helper()
 	var raw ids.UUID
-	err := database.WithWorkspaceTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		raw, err = capturemod.InsertRawCaptureTx(c.e.Admin(), tx, capturemod.RawRecord{
 			SourceSystem: "telegram", SourceID: "raw-" + id + "-" + ids.NewV7().String(),

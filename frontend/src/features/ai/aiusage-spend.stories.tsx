@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
 import { Panel } from "../../design-system/panel";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { aggregate, SpendByDay, SpendByTask, spendRows } from "./aiusage-spend";
 
@@ -79,6 +80,8 @@ export const ByDay: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("columnheader", { name: "Day" });
-    await canvas.findByRole("columnheader", { name: "Estimated cost" });
+    await canvas.findByRole("columnheader", {
+      name: englishCopy["aiusage.col.cost"],
+    });
   },
 };

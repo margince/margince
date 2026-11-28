@@ -6,6 +6,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { bookingProfile } from "../../testing/book.testkit";
 import {
   installFetchStub,
@@ -53,7 +54,8 @@ const withAlias: Profile = {
   public_url: "https://crm.example.test/book/ada",
 };
 
-const field = () => screen.getByRole("textbox", { name: "Short address" });
+const field = () =>
+  screen.getByRole("textbox", { name: englishCopy["scheduling.alias.label"] });
 
 it("explains that a short address is easy to guess before anything is saved", () => {
   mount(bookingProfile);
@@ -73,7 +75,9 @@ it("saves a first short address as the server will store it", async () => {
     screen.getByText("Your link will end in /book/ada-sales"),
   ).toBeTruthy();
   expect(screen.queryByText(/crm\.example\.test\/book\/ada-sales/)).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Save address" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["scheduling.alias.save"] }),
+  );
   await waitFor(() => expect(writes).toEqual([{ alias: "ada-sales" }]));
   expect(screen.queryByRole("dialog")).toBeNull();
 });
@@ -83,7 +87,9 @@ it("asks before a rename, because the old address stops working at once", async 
   const writes = mount(withAlias);
   await user.clear(field());
   await user.type(field(), "ada-lovelace");
-  await user.click(screen.getByRole("button", { name: "Save address" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["scheduling.alias.save"] }),
+  );
   const dialog = await screen.findByRole("dialog");
   expect(dialog.textContent).toContain(
     "https://crm.example.test/book/ada stops working at once",
@@ -92,7 +98,7 @@ it("asks before a rename, because the old address stops working at once", async 
   expect(writes).toEqual([]);
   await user.click(
     screen
-      .getAllByRole("button", { name: "Save address" })
+      .getAllByRole("button", { name: englishCopy["scheduling.alias.save"] })
       .at(-1) as HTMLElement,
   );
   await waitFor(() => expect(writes).toEqual([{ alias: "ada-lovelace" }]));
@@ -102,12 +108,14 @@ it("asks before removing a short address and then clears it", async () => {
   const user = userEvent.setup();
   const writes = mount(withAlias);
   await user.click(
-    screen.getByRole("button", { name: "Remove short address" }),
+    screen.getByRole("button", { name: englishCopy["scheduling.alias.clear"] }),
   );
-  await screen.findByRole("dialog", { name: "Remove your short address?" });
+  await screen.findByRole("dialog", {
+    name: englishCopy["scheduling.alias.clearTitle"],
+  });
   await user.click(
     screen
-      .getAllByRole("button", { name: "Remove short address" })
+      .getAllByRole("button", { name: englishCopy["scheduling.alias.clear"] })
       .at(-1) as HTMLElement,
   );
   await waitFor(() => expect(writes).toEqual([{ alias: "" }]));
@@ -136,11 +144,11 @@ it("shows the server's refusal on the field in the reader's words", async () => 
       ),
   });
   await user.type(field(), "sales");
-  await user.click(screen.getByRole("button", { name: "Save address" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["scheduling.alias.save"] }),
+  );
   expect(
-    await screen.findByText(
-      "Another booking page uses or has used this address. Choose another one.",
-    ),
+    await screen.findByText(englishCopy["scheduling.alias.error.taken"]),
   ).toBeTruthy();
 });
 
@@ -165,7 +173,7 @@ it("names the current address by its path when no public address is configured",
   const user = userEvent.setup();
   mount({ ...withAlias, public_url: undefined });
   await user.click(
-    screen.getByRole("button", { name: "Remove short address" }),
+    screen.getByRole("button", { name: englishCopy["scheduling.alias.clear"] }),
   );
   const dialog = await screen.findByRole("dialog");
   expect(dialog.textContent).toContain("/book/ada stops working at once");

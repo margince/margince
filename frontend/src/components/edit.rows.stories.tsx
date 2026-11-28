@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import type { CreateField } from "./create.fields";
 import { FlowFieldRow, ReadOnlyFieldRow } from "./edit.rows";
 
@@ -48,7 +49,9 @@ export const LockedAndFlowRows: StoryObj<RowArgs> = {
   ),
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
-    const arr = await canvas.findByRole("group", { name: "Expected ARR" });
+    const arr = await canvas.findByRole("group", {
+      name: englishCopy["deal.expectedArr"],
+    });
     await expect(arr).toHaveTextContent("€48,000.00");
     await expect(arr).toHaveAccessibleDescription("Set by the signed offer");
     await userEvent.click(canvas.getByRole("button", { name: "Change Owner" }));

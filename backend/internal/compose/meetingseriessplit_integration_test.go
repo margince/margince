@@ -54,7 +54,7 @@ func newSeriesSplit(t *testing.T) seriesSplit {
 		e: e, sink: NewCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil),
 		slot: clocktest.Now(t).UTC().AddDate(0, 0, 2).Truncate(time.Hour),
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT email FROM app_user WHERE id = $1`, e.AdminUser).Scan(&s.owner)
 	}); err != nil {
 		t.Fatal(err)
@@ -243,7 +243,7 @@ func TestASeriesSplitFoldAsksTheRuleAgainUnderTheLock(t *testing.T) {
 	old, current := storedSplitPair(t, e, [2]string{splitHost, splitHost})
 	meetings := activities.NewStore(InstallationDB(e.Pool))
 	var splits []activities.SeriesSplit
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		splits, err = activities.SeriesSplitsTx(ctx, tx, ids.From[ids.ActivityKind](current), e.AdminUser)
 		return err
@@ -256,7 +256,7 @@ func TestASeriesSplitFoldAsksTheRuleAgainUnderTheLock(t *testing.T) {
 	e.WsExec(t, `UPDATE activity SET occurred_at = occurred_at + interval '1 hour' WHERE id = $1`, current)
 
 	var folded bool
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		folded, err = foldSeriesSplitTx(ctx, tx, meetings, splits[0], e.AdminUser)
 		return err

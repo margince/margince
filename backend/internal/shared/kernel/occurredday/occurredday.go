@@ -439,6 +439,16 @@ func ClockPrecision[P ~string](at *time.Time, isDay bool) *P {
 	return &precision
 }
 
+// DaysSinceSQL counts the calendar days from the date a stored activity clock
+// names to the installation's day at asOf, as DaysSince does. isDay says the
+// clock names a day entry (ClockIsDaySQL). That counts from its own UTC date,
+// and an instant counts from its date in the installation zone. It is NULL for
+// a clock that is NULL. All three are SQL the caller renders.
+func DaysSinceSQL(clock, isDay, asOf string) string {
+	return `(` + TodaySQL(asOf) + ` - CASE WHEN ` + isDay + ` THEN ` + NamedDateSQL(clock) +
+		` ELSE (` + clock + ` AT TIME ZONE ` + InstallationZoneSQL + `)::date END)`
+}
+
 // NamedDateSQL is the date a day entry stored at at names: its UTC date, the
 // same for every reader. at is SQL the caller renders.
 func NamedDateSQL(at string) string {

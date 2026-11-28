@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -54,6 +55,20 @@ func (r approvalPreviewReader) importCreationDetails(ctx, execCtx context.Contex
 		return r.importDealDetails(ctx, writer, row, typed, actor)
 	case migration.ObjectActivity:
 		return r.importActivityDetails(ctx, execCtx, writer, row, typed)
+	case migration.ObjectProject:
+		in, err := importrecords.ProjectPreview(ctx, ProjectsStoreOver(r.db), writer.cols.records, fields, typed, writer.sourceSystem, actor)
+		if err != nil {
+			return nil, nil, err
+		}
+		details, err := r.projectCreationDetails(ctx, in)
+		return details, []string{"create_project_record", "assign_project_key"}, err
+	case migration.ObjectProduct:
+		plan, err := r.deals.PreviewProductCreation(ctx, importrecords.ProductBirth(fields, typed))
+		if err != nil {
+			return nil, nil, err
+		}
+		details, err := r.productCreationDetails(ctx, plan)
+		return details, []string{"create_product_record"}, err
 	default:
 		return nil, nil, apperrors.ErrInvalidArgument
 	}

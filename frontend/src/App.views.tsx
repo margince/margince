@@ -57,7 +57,7 @@ import {
 } from "./lib/corefeatures";
 import { paintsFromEssentialCopy } from "./lib/essentialscreens";
 import { EXTENSION_APP_SCREEN } from "./lib/extensionapps";
-import { EXTENSION_SCREEN } from "./lib/extensions";
+import { EXTENSION_SCREEN } from "./lib/extensionscreen";
 import { traversalInFlight, traverseOr } from "./lib/historydepth";
 import { routeIdentity } from "./lib/routeidentity";
 import {

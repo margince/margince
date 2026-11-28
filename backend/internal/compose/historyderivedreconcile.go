@@ -22,7 +22,7 @@ func (w *captureBackfillReconcileWorker) reconcileDerivedWork(ctx context.Contex
 		return err
 	}
 	graphPending := false
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
 		graphPending, err = search.HasPendingGraphWorkTx(ctx, tx)
 		return err

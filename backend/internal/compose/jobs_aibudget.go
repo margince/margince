@@ -75,13 +75,13 @@ func (w *aiBudgetResumeWorker) resumeWorkspace(ctx context.Context, workspace id
 		if err := resumeSiteReadAuthority(ctx, tx, users, read); err != nil {
 			return false, err
 		}
-		return runner.ResumeScheduledTx(ctx, tx, "site_deep_read", "site_read_id", read.ID, workspace)
+		return runner.ResumeScheduledTx(ctx, tx, "site_deep_read", "site_read_id", read.ID)
 	})
 	scanErr := companyscan.ResumeBudgetScans(ctx, db, func(ctx context.Context, tx pgx.Tx, id, requester, company ids.UUID) (bool, error) {
 		if err := resumeCompanyAuthority(ctx, tx, users, requester, id, company); err != nil {
 			return false, err
 		}
-		return runner.ResumeScheduledTx(ctx, tx, "account_scan", "scan_id", id, workspace)
+		return runner.ResumeScheduledTx(ctx, tx, "account_scan", "scan_id", id)
 	})
 	voice := ai.NewVoiceStore(db)
 	voiceErr := voice.ResumeBudgetBuilds(ctx, func(ctx context.Context, tx pgx.Tx, build ai.VoiceBuild) (bool, error) {
@@ -102,7 +102,7 @@ func (w *aiBudgetResumeWorker) resumeWorkspace(ctx context.Context, workspace id
 		if err != nil || inserted {
 			return inserted, err
 		}
-		return runner.ResumeScheduledTx(ctx, tx, "voice_build", "build_id", build.ID, workspace)
+		return runner.ResumeScheduledTx(ctx, tx, "voice_build", "build_id", build.ID)
 	})
 	return errors.Join(siteErr, scanErr, voiceErr)
 }

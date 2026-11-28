@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../../format/format";
+import { en as englishCopy } from "../../i18n/en";
 import {
   jsonResponse,
   line,
@@ -149,7 +150,7 @@ describe("a done line standing for many records", () => {
       within(dialog).getAllByRole("button", { name: "Undo" }),
     ).toHaveLength(1);
     expect(
-      within(dialog).getByText("This change was already undone."),
+      within(dialog).getByText(englishCopy["history.undo.alreadyUndone"]),
     ).toBeTruthy();
 
     await waitFor(() => {
@@ -186,7 +187,11 @@ describe("a done line standing for many records", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(await within(dialog).findByText("Offer 1")).toBeTruthy();
-    expect(within(dialog).getAllByText("Saved an email")).toHaveLength(2);
+    expect(
+      within(dialog).getAllByText(
+        englishCopy["magic.action.create_activity_email"],
+      ),
+    ).toHaveLength(2);
     expect(within(dialog).queryByRole("button", { name: "Undo" })).toBeNull();
     expect(within(dialog).queryByText(/permission/)).toBeNull();
   });

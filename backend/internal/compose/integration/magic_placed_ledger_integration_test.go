@@ -68,7 +68,7 @@ func (f placedFixture) writeSuggestion(t *testing.T) (company, meeting ids.UUID)
 	mustWrite(t, err)
 	meeting = ids.UUID(logged.Id)
 	scout := principal.SystemActing(e.Admin(), "system:deal-scout")
-	mustWrite(t, database.WithWorkspaceTx(scout, e.Pool, func(tx pgx.Tx) error {
+	mustWrite(t, database.WithTx(scout, e.Pool, func(tx pgx.Tx) error {
 		raised, err := deals.RecordSuggestionTx(scout, tx, deals.SuggestionDraft{
 			CompanyID: company, NameHint: deals.HintMeetingHeld, Confidence: 0.6,
 			Evidence: []deals.SuggestionEvidence{{Kind: deals.EvidenceMeeting, ActivityID: &meeting, OccurredAt: at}},

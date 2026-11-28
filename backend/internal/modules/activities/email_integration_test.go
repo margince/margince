@@ -20,7 +20,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -160,6 +162,9 @@ func setupSend(t *testing.T) *sendEnv {
 	e := &sendEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7()}
 	if _, err := owner.Exec(ctx,
 		`INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.RecordInstallationTx(ctx, owner, e.ws, clocktest.Now(t)); err != nil {
 		t.Fatal(err)
 	}
 	for _, user := range []ids.UUID{e.rep, e.other} {

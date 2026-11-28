@@ -204,7 +204,7 @@ func TestPendingCountReadsTheSnapshotItIsCalledIn(t *testing.T) {
 	e.stageAdvance(t, deal, "snapshot-0", nil)
 	e.stageAdvance(t, deal, "snapshot-1", nil)
 	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact)
-	err := database.WithWorkspaceSnapshot(reader, e.pool, func(ctx context.Context) error {
+	err := database.WithSnapshot(reader, e.pool, func(ctx context.Context) error {
 		before, err := e.svc.CountPending(ctx, ListInput{})
 		if err != nil {
 			return err

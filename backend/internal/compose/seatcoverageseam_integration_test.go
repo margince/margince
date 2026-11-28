@@ -30,7 +30,7 @@ import (
 // from the contact, dated with precision. Invited seats have no mailbox.
 func seedUnmailedSeats(t *testing.T, e *integration.Env, contact ids.UUID, n int, precision string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		var activity ids.UUID
 		addresses := make([]string, 0, n)

@@ -119,5 +119,5 @@ func loopedRecomputes(file *ast.File, path string) []string {
 // are released before the loop comes round again.
 func opensItsOwnTransaction(call *ast.CallExpr) bool {
 	sel, isSel := call.Fun.(*ast.SelectorExpr)
-	return isSel && strings.HasSuffix(sel.Sel.Name, "WithWorkspaceTx")
+	return isSel && strings.HasSuffix(sel.Sel.Name, "WithTx")
 }

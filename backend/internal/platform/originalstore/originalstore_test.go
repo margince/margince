@@ -51,13 +51,17 @@ func TestStoredOriginalsRequireTheirWorkspaceAndExactBytes(t *testing.T) {
 	ctx := principal.WithWorkspaceID(t.Context(), ws)
 	blob := blobstore.NewMemory()
 	ctx = Bind(ctx, nil, blob)
-	root, err := prefix(ctx)
+	svc, err := serviceOf(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prefix, err := svc.prefix(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	payload := []byte(`{"message":"verbatim"}`)
 	sum := sha256.Sum256(payload)
-	ref := Reference{Key: root + "original", SHA256: hex.EncodeToString(sum[:]), Bytes: int64(len(payload))}
+	ref := Reference{Key: prefix + "original", SHA256: hex.EncodeToString(sum[:]), Bytes: int64(len(payload))}
 	put := func(content []byte) {
 		t.Helper()
 		if err := blob.Put(ctx, ref.Key, bytes.NewReader(content), int64(len(content)), "application/json"); err != nil {

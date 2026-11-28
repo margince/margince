@@ -105,7 +105,7 @@ func TestStoredMailLosesItsQuotedTextFromSearchAcrossPagingRollbackAndReplay(t *
 		t.Error("the rebuild moved an edit version or an updated_at; no member edited these rows")
 	}
 
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := rebuild(ctx, tx, datatask.BatchIn{Limit: 100})
 		if err != nil {
 			return err

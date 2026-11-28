@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/importcells"
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/compose/importtextbounds"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -23,18 +24,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// cellProblem is one cell the store would refuse. Target is the mapping
-// target; the part writer turns it into the file's own header.
-type cellProblem struct {
-	Target, Value, Message string
-	// Why is Message as a code, so the report can say it in another language.
-	Why migration.Reason
-}
+// cellProblem is one cell the store would refuse, and problemOf words it by
+// its reason.
+type cellProblem = importrecords.CellProblem
 
-// problemOf is one cell the store would refuse, worded by the reason.
-func problemOf(target, value string, why migration.Reason) *cellProblem {
-	return &cellProblem{Target: target, Value: value, Message: why.English(), Why: why}
-}
+var problemOf = importrecords.ProblemOf
 
 // cellProblems collects the cells of one row the store would refuse, in the
 // order they were checked.
@@ -148,6 +142,8 @@ func (w *csvWriters) checkedCells(row migration.Row) (map[string]any, []migratio
 		}
 	case migration.ObjectActivity:
 		typed, own = checkActivityCells(fields, typed, w.cellClock())
+	case migration.ObjectProject, migration.ObjectProduct:
+		typed, own = w.record.CheckCells(fields, typed)
 	}
 	problems = append(problems, own...)
 	if len(problems) == 0 {

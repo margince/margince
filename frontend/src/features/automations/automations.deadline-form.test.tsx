@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { AutomationDialog } from "./automations.form";
 
 const entry: components["schemas"]["AutomationCatalogEntry"] = {
@@ -48,7 +49,9 @@ describe("automation deadline editor", () => {
   it("saves an existing rule without changing its deadline policy", async () => {
     const submit = openForm({ due_in_days: 3 });
     expect(
-      screen.getByRole("combobox", { name: "Deadline timezone" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["auto.deadlineTimezone"],
+      }),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(submit).toHaveBeenCalledWith("Reply to website inquiries", {
@@ -58,7 +61,9 @@ describe("automation deadline editor", () => {
   it("keeps the saved calendar timezone when the rule is edited", async () => {
     const submit = openForm({ due_in_days: 1, timezone: "Europe/Berlin" });
     expect(
-      screen.getByRole("combobox", { name: "Deadline timezone" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["auto.deadlineTimezone"],
+      }),
     ).toHaveTextContent("Berlin");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(submit).toHaveBeenCalledWith("Reply to website inquiries", {

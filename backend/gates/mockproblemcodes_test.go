@@ -7,11 +7,12 @@ package gates
 
 // Every Problem a frontend test, story or fixture answers carries a code the
 // server can send. A code no handler emits never reaches the screen's branch
-// or copy for it. Only the top-level code is judged, not details.errors[].code
-// nor the pairing of code and status.
+// or copy for it. Body codes, field codes and concrete HTTP status pairs
+// are judged against their server writers.
 //
 // A product file that builds a Problem of its own marks it with
-// `problem-code:client` and a reason, on the line or the one above.
+// `problem-code:client` and a reason, on the line or the one above. A test
+// marks an intentionally unknown field with `problem-code:unknown-field`.
 
 import (
 	"fmt"
@@ -32,9 +33,10 @@ import (
 const (
 	// The floors sit well under what the census and the scan read. A walk gone
 	// blind fails them, and a code or mock retired here and there does not.
-	emittedCodeFloor = 150
-	problemMockFloor = 300
-	clientCodeMarker = "problem-code:client"
+	emittedCodeFloor       = 150
+	problemMockFloor       = 300
+	clientCodeMarker       = "problem-code:client"
+	unknownFieldCodeMarker = "problem-code:unknown-field"
 )
 
 // problemTakerOwners are the frontend modules whose exported functions take a
@@ -79,7 +81,7 @@ func TestEveryProblemMockAnswersACodeTheServerSends(t *testing.T) {
 	}
 	statusCodes := sharedStatusCodes(t)
 	for _, mock := range mocks {
-		if vouched[mock] {
+		if vouched[mock] || mock.field {
 			continue
 		}
 		if message, bad := judgeProblemMock(mock, known, statusCodes); bad {
@@ -122,6 +124,9 @@ func clientMadeSites(scans map[string]*problemFileScan) (vouched map[problemMock
 	vouched = map[problemMock]bool{}
 	for filePath, scan := range scans {
 		for _, marker := range scan.markers {
+			if !strings.Contains(marker.text, clientCodeMarker) {
+				continue
+			}
 			line := scan.reader.lineOfPos(marker.pos)
 			_, reason, _ := strings.Cut(marker.text, clientCodeMarker)
 			at := fmt.Sprintf("%s:%d", filePath, line)
@@ -193,8 +198,8 @@ func collectMocks(scans map[string]*problemFileScan) []problemMock {
 		mocks = append(mocks, scan.mocks...)
 	}
 	slices.SortFunc(mocks, func(a, b problemMock) int {
-		return strings.Compare(fmt.Sprintf("%s:%09d:%s:%v", a.path, a.line, a.code, a.own),
-			fmt.Sprintf("%s:%09d:%s:%v", b.path, b.line, b.code, b.own))
+		return strings.Compare(fmt.Sprintf("%s:%09d:%s:%v:%d:%v:%v:%v", a.path, a.line, a.code, a.own, a.status, a.field, a.statusUnknown, a.computed),
+			fmt.Sprintf("%s:%09d:%s:%v:%d:%v:%v:%v", b.path, b.line, b.code, b.own, b.status, b.field, b.statusUnknown, b.computed))
 	})
 	return slices.Compact(mocks)
 }
@@ -240,7 +245,9 @@ func readImportedHelpers(scan *problemFileScan, scans map[string]*problemFileSca
 				continue
 			}
 			if source, isHelper := owner.helpers[imported.name]; isHelper && exports(owner, imported.name) {
-				scan.reader.readCall(call, source)
+				for _, helper := range source {
+					scan.reader.readCall(call, helper)
+				}
 			}
 		}
 	}

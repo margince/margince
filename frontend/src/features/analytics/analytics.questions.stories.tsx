@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -124,7 +125,9 @@ export const Ready: Story = { render: viewStory({}) };
 export const SavedListed: Story = {
   render: viewStory({ "GET /analytics/runs": () => jsonResponse(SAVED_RUNS) }),
   play: async () => {
-    await screen.findByRole("table", { name: "Your saved questions" });
+    await screen.findByRole("table", {
+      name: englishCopy["analytics.q.savedListTitle"],
+    });
   },
 };
 
@@ -150,7 +153,7 @@ export const AnsweredWithheld: Story = {
   }),
   play: async (context) => {
     await askFixture(context);
-    await screen.findByText("Some groups are withheld");
+    await screen.findByText(englishCopy["analytics.q.withheldTitle"]);
   },
 };
 
@@ -223,7 +226,7 @@ export const Stale: Story = {
     await userEvent.click(
       within(context.canvasElement).getByRole("button", { name: "Add filter" }),
     );
-    await screen.findByText("Report is out of date");
+    await screen.findByText(englishCopy["analytics.q.staleTitle"]);
   },
 };
 

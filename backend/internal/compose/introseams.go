@@ -56,7 +56,7 @@ func introPathLister(pool *pgxpool.Pool) agents.IntroPathLister {
 	return func(ctx context.Context, companyID ids.UUID) ([]agents.IntroRoute, bool, error) {
 		var out []agents.IntroRoute
 		var truncated bool
-		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			// The account gate first. A route names the account's contacts, so a
 			// caller who cannot read the account must not learn who works
 			// there — through a tool any more than through a URL.
@@ -256,7 +256,7 @@ func atRiskLister(pool *pgxpool.Pool, ppl *contacts.Store) agents.AtRiskLister {
 			open = open[:atRiskScanLimit]
 		}
 		out.DealsScanned = len(open)
-		err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		err = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			now := clockNow()
 			for _, d := range open {
 				at, verdict, err := dealAtRisk(ctx, tx, d, now)

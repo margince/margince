@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { EMPTY_DRAFT } from "./onboarding";
 import { CompanyActArtifact } from "./onboarding-conversation/artifact";
 import { CoverageCard, DossierCard } from "./onboarding-live-panel";
@@ -110,10 +111,12 @@ describe("CoverageCard", () => {
     expect(screen.getByText("Sitemap was empty")).toBeTruthy();
     expect(screen.getByText("Skipped")).toBeTruthy();
     expect(screen.getByText("robots.txt disallows it")).toBeTruthy();
-    expect(screen.getByText("Could not read")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["ob.live.coverageFailed"]),
+    ).toBeTruthy();
     expect(screen.getByText("https://example.test/jobs")).toBeTruthy();
     // A failed page with no stated reason says so rather than showing blank.
-    expect(screen.getByText("no reason recorded")).toBeTruthy();
+    expect(screen.getByText(englishCopy["ob.scan.pageNoReason"])).toBeTruthy();
   });
 
   it("says a page cap bounded the read, without calling it a fault", async () => {
@@ -125,12 +128,14 @@ describe("CoverageCard", () => {
     // Still said — the page counts beside it would otherwise read as the whole
     // site — but said as a note, because this is the size the read was
     // configured for rather than something that went wrong.
-    expect(screen.getByText("Limit reached")).toBeTruthy();
-    expect(screen.queryByText("Stopped early")).toBeNull();
     expect(
-      screen.getByText(
-        "The page limit for one read was reached, so some pages were not opened.",
-      ),
+      screen.getByText(englishCopy["ob.live.coverageCapped"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(englishCopy["ob.live.coverageStopped"]),
+    ).toBeNull();
+    expect(
+      screen.getByText(englishCopy["ob.live.stoppedPageCap"]),
     ).toBeTruthy();
     expect(
       document.querySelector('.ob-live-coverage[data-kind="note"]'),
@@ -148,8 +153,12 @@ describe("CoverageCard", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /Review/ }));
 
-    expect(screen.getByText("Limit reached")).toBeTruthy();
-    expect(screen.queryByText("Stopped early")).toBeNull();
+    expect(
+      screen.getByText(englishCopy["ob.live.coverageCapped"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(englishCopy["ob.live.coverageStopped"]),
+    ).toBeNull();
     expect(
       document.querySelector('.ob-live-coverage[data-kind="note"]'),
     ).toBeTruthy();
@@ -161,8 +170,12 @@ describe("CoverageCard", () => {
     render(<CoverageCard pages={pages} warnings={[]} stoppedReason="budget" />);
     await userEvent.click(screen.getByRole("button", { name: /Review/ }));
 
-    expect(screen.getByText("Stopped early")).toBeTruthy();
-    expect(screen.queryByText("Limit reached")).toBeNull();
+    expect(
+      screen.getByText(englishCopy["ob.live.coverageStopped"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(englishCopy["ob.live.coverageCapped"]),
+    ).toBeNull();
     expect(
       document.querySelector('.ob-live-coverage[data-kind="warning"]'),
     ).toBeTruthy();
@@ -172,7 +185,9 @@ describe("CoverageCard", () => {
     render(<CoverageCard pages={pages} warnings={[]} />);
     await userEvent.click(screen.getByRole("button", { name: /Review/ }));
 
-    expect(screen.queryByText("Stopped early")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["ob.live.coverageStopped"]),
+    ).toBeNull();
   });
 
   it("marks each gap with its own kind, so a skip is not painted as a failure", async () => {
@@ -239,11 +254,7 @@ describe("CoverageCard", () => {
 
     expect(screen.getByText("1 read · 0 skipped")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: /Review/ }));
-    expect(
-      screen.getByText(
-        "Every page returned. Nothing was skipped and nothing failed.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["ob.live.coverageClean"])).toBeTruthy();
   });
 });
 

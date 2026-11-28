@@ -41,7 +41,7 @@ func (l *ledger) run(_ context.Context, _ string, plan func(extcapability.Usage)
 }
 
 func objectsOver(store blobstore.Store, l *ledger) extcapability.Objects {
-	return extcapability.Objects{Store: store, Ledger: l.run, Unit: "u", Gate: allow}
+	return extcapability.Objects{Store: store, Ledger: l.run, Unit: "u", Gate: allow, Workspace: atStoredWorkspace}
 }
 
 func TestEachPutAndDeleteIsLoggedAndCounted(t *testing.T) {

@@ -33,10 +33,9 @@ import (
 // installation is bootstrapped at all.
 //
 // A false second return is NOT an error: it is a pre-bootstrap installation, and
-// the caller decides what "not yet" means for its own fact. The returned context
-// is the input one in that case, so a caller that ignores the flag cannot
-// accidentally write against an unbound workspace — database.WithWorkspaceTx
-// answers ErrNoWorkspace instead.
+// the caller decides what "not yet" means for its own fact. In that case the
+// returned context is the input one. A caller that ignores the flag therefore
+// binds no workspace, and a later read of it answers ErrNoWorkspace.
 func bootLedgerScope(ctx context.Context, pool *pgxpool.Pool, actor string) (context.Context, bool, error) {
 	wsID, err := identity.NewService(pool).InstallationWorkspace(ctx)
 	if errors.Is(err, identity.ErrNotBootstrapped) {

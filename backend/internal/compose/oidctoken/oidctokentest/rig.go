@@ -34,10 +34,11 @@ const (
 // counts how many times the /certs endpoint was actually hit, for asserting
 // refresh-throttling behavior.
 type Rig struct {
-	key       *rsa.PrivateKey
-	Base      time.Time
-	Srv       *httptest.Server
-	certsHits atomic.Int32
+	Endorsements []string
+	key          *rsa.PrivateKey
+	Base         time.Time
+	Srv          *httptest.Server
+	certsHits    atomic.Int32
 	// CertsGate, when set before the first fetch, runs at the top of the
 	// /certs handler. The coalescing test uses it to hold a fetch in flight.
 	CertsGate func()
@@ -61,8 +62,8 @@ func NewRig(t *testing.T) *Rig {
 		e := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.E)).Bytes())
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(map[string]any{
-			"keys": []map[string]string{
-				{"kid": KID, "kty": "RSA", "alg": "RS256", "use": "sig", "n": n, "e": e},
+			"keys": []map[string]any{
+				{"kid": KID, "kty": "RSA", "alg": "RS256", "use": "sig", "n": n, "e": e, "endorsements": rig.Endorsements},
 			},
 		}); err != nil {
 			t.Errorf("encode test JWKS response: %v", err)

@@ -53,6 +53,7 @@ import (
 //
 // Held by: TestTheStepSchemaAdmitsExactlyWhatTheStepParserAccepts (internal/modules/agents/runner/stepschema_test.go)
 func stepSchema(offered []mcp.ToolSpec) json.RawMessage {
+	offered = AsOffered(offered)
 	var b strings.Builder
 	b.WriteString(`{"anyOf":[`)
 	for _, branch := range toolCallBranches(offered) {

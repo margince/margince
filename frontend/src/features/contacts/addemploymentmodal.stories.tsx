@@ -11,6 +11,7 @@ import {
 } from "../../testing/story-utils";
 import { Employers } from "./contactemployers";
 import "./contact360.css";
+import { en as englishCopy } from "../../i18n/en";
 
 // The dialog is opened the way a reader opens it — through the employment
 // panel's own verb — so the `create` mutation it writes through and the
@@ -125,11 +126,15 @@ export const PastJob: Story = {
     await openTheDialog(context);
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("combobox", { name: "Employment status" }),
+      await screen.findByRole("combobox", {
+        name: englishCopy["employment.statusLabel"],
+      }),
     );
     await user.click(screen.getByRole("option", { name: "Former" }));
     await expect(
-      screen.getByRole("checkbox", { name: "This is their primary employer" }),
+      screen.getByRole("checkbox", {
+        name: englishCopy["contact.rail.isPrimaryEmployer"],
+      }),
     ).toBeDisabled();
   },
 };

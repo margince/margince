@@ -39,7 +39,7 @@ func TestNewerUnchangedAdmissionPreventsAnOlderResultFromReplacingIt(t *testing.
 		if evaluated.Equal(at.Add(time.Hour)) {
 			decision.Outcome, decision.CurrentWork = string(CommitmentTaskWritten), true
 		}
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return activities.RecordCommitmentAdmissionTx(ctx, tx, id, decision)
 		}); err != nil {
 			t.Fatal(err)
@@ -140,7 +140,7 @@ func sourceWithAdmission(ctx context.Context, t *testing.T, e *integration.Env, 
 		t.Fatal(err)
 	}
 	source := ids.From[ids.ActivityKind](ids.UUID(row.Id))
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return activities.RecordCommitmentAdmissionTx(ctx, tx, source, crmcontracts.CommitmentAdmission{
 			Locator: "pricing", Summary: "Send pricing", SourceQuote: quote, Outcome: string(activities.CommitmentHistorical),
 			RuleVersion: activities.CommitmentAdmissionVersion, EvidenceIds: []openapi_types.UUID{row.Id}, EvaluatedAt: at.AddDate(2, 0, 0),
@@ -163,7 +163,7 @@ func TestStoredCommitmentWithoutAReadSetReportsUnassessedContext(t *testing.T) {
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "email", Body: &body, OccurredAt: &later, Source: "manual", ThreadKey: "unassessed"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		evidence, err := activities.CommitmentAdmissionEvidenceTx(e.Admin(), tx, activities.CommitmentAdmissionInput{SourceID: ids.From[ids.ActivityKind](ids.UUID(source.Id))})
 		if err != nil {
 			return err

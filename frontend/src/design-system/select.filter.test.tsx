@@ -7,6 +7,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { Heading } from "./heading";
 import { Modal } from "./modal";
 import { MultiSelect, Select, type SelectOption } from "./select";
@@ -51,7 +52,7 @@ describe("a long list", () => {
     await user.click(renderLong());
 
     expect(
-      screen.getByRole("combobox", { name: "Filter the list" }),
+      screen.getByRole("combobox", { name: englishCopy["select.filter"] }),
     ).toHaveFocus();
     expect(screen.getAllByRole("option")).toHaveLength(COLLEAGUES.length);
   });
@@ -106,7 +107,7 @@ describe("a long list", () => {
     await user.click(trigger);
 
     expect(
-      screen.getByRole("combobox", { name: "Filter the list" }),
+      screen.getByRole("combobox", { name: englishCopy["select.filter"] }),
     ).toHaveValue("");
     expect(screen.getAllByRole("option")).toHaveLength(COLLEAGUES.length);
   });
@@ -118,7 +119,9 @@ describe("a long list", () => {
       const user = userEvent.setup();
       const trigger = renderLong();
       await user.click(trigger);
-      const box = screen.getByRole("combobox", { name: "Filter the list" });
+      const box = screen.getByRole("combobox", {
+        name: englishCopy["select.filter"],
+      });
 
       expect(fireEvent.keyDown(box, { key: "Tab", shiftKey })).toBe(true);
       expect(trigger).toHaveFocus();
@@ -131,7 +134,9 @@ describe("a long list", () => {
       const changes: string[] = [];
       const user = userEvent.setup();
       await user.click(renderLong((value) => changes.push(value)));
-      const input = screen.getByRole("combobox", { name: "Filter the list" });
+      const input = screen.getByRole("combobox", {
+        name: englishCopy["select.filter"],
+      });
       fireEvent.keyDown(input, { key: "Enter", ...composition });
       expect(changes).toEqual([]);
       expect(input).toHaveFocus();
@@ -157,7 +162,9 @@ describe("a long list", () => {
     await user.click(screen.getByRole("combobox", { name: "Owner" }));
     await user.keyboard("mira");
     rerender(view(COLLEAGUES.slice(-2)));
-    const input = screen.getByRole("combobox", { name: "Filter the list" });
+    const input = screen.getByRole("combobox", {
+      name: englishCopy["select.filter"],
+    });
     expect(input).toHaveFocus();
     await user.clear(input);
     expect(screen.getAllByRole("option")).toHaveLength(2);
@@ -218,7 +225,7 @@ describe("a long list", () => {
     await user.click(screen.getByRole("combobox", { name: "Owner" }));
 
     expect(
-      screen.queryByRole("combobox", { name: "Filter the list" }),
+      screen.queryByRole("combobox", { name: englishCopy["select.filter"] }),
     ).toBeNull();
   });
 });

@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { FieldGuard, RoleBadge } from "./rbac";
 
 afterEach(cleanup);
@@ -59,13 +60,17 @@ describe("RoleBadge", () => {
 describe("FieldGuard", () => {
   it("masked reads as withheld — a visible mask with a11y semantics, the value never rendered", () => {
     renderIn("en", <FieldGuard mode="masked">mgp_secret</FieldGuard>);
-    expect(screen.getByRole("img", { name: "Masked value" })).toBeTruthy();
+    expect(
+      screen.getByRole("img", { name: englishCopy["rbac.masked"] }),
+    ).toBeTruthy();
     expect(screen.queryByText(/mgp_secret/)).toBeNull();
   });
 
   it("visible passes the value through without a mask node", () => {
     renderIn("en", <FieldGuard mode="visible">plain value</FieldGuard>);
     expect(screen.getByText("plain value")).toBeTruthy();
-    expect(screen.queryByRole("img", { name: "Masked value" })).toBeNull();
+    expect(
+      screen.queryByRole("img", { name: englishCopy["rbac.masked"] }),
+    ).toBeNull();
   });
 });

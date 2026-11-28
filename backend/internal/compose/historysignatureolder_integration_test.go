@@ -56,13 +56,13 @@ func TestOlderHistoricalMailCanFillATitleAfterANewerMailWasAlreadyRead(t *testin
 		if err := NewConfidentialityVerdictEngine(b.env.Pool, &answerEveryThreadBrain{}, b.handlers.log).RunWorkspace(repair, 10); err != nil {
 			t.Fatal(err)
 		}
-		if err := database.WithWorkspaceTx(repair, b.env.Pool, func(tx pgx.Tx) error { _, err := b.env.Contacts.PromoteContactCohortTx(repair, tx, id); return err }); err != nil {
+		if err := database.WithTx(repair, b.env.Pool, func(tx pgx.Tx) error { _, err := b.env.Contacts.PromoteContactCohortTx(repair, tx, id); return err }); err != nil {
 			t.Fatal(err)
 		}
 	}
 	write(-1, "Best regards,\nAlice Buyer")
 	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{id}, nil) }); err != nil {
+	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{id}, nil) }); err != nil {
 		t.Fatal(err)
 	}
 	// The newer mail states no title, so the model finds none in it.

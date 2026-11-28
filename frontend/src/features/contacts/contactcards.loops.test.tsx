@@ -4,6 +4,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   meRoute,
@@ -96,7 +97,9 @@ describe("the Commitments card's due pill", () => {
 
   it("calls a promise overdue the moment it passes, not a day later", () => {
     renderDue(at(-23 * HOUR));
-    expect(screen.getByText("Overdue by less than a day")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["contact.loops.overdueUnderDay"]),
+    ).toBeTruthy();
     expect(screen.queryByText(/^Due /)).toBeNull();
   });
 
@@ -122,7 +125,9 @@ describe("the Commitments card's due pill", () => {
 
   it("names tomorrow only for the day after this one", () => {
     renderDue(at(26 * HOUR));
-    expect(screen.getByText("Due tomorrow")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["worklist.dueGroup.tomorrow"]),
+    ).toBeTruthy();
   });
 
   it("reads an unreadable due instant as no date at all", () => {
@@ -230,7 +235,7 @@ describe("the Commitments card's rows", () => {
       claims: undefined,
       sections_omitted: ["claims"],
     });
-    expect(screen.getByText("Hidden for your role")).toBeTruthy();
+    expect(screen.getByText(englishCopy["state.withheld"])).toBeTruthy();
     expect(screen.queryByText(/No commitments or questions/)).toBeNull();
   });
 
@@ -323,7 +328,7 @@ describe("responsibility and historical conversation findings", () => {
       screen.queryByRole("checkbox", { name: /Send the pilot quote/ }),
     ).toBeNull();
     expect(screen.queryByText(/overdue/)).toBeNull();
-    await user.click(screen.getByText("Review conversation findings"));
+    await user.click(screen.getByText(englishCopy["contact.loops.review"]));
     expect(screen.getByText("Send the pilot quote")).toBeVisible();
     expect(screen.getByText(/Rollout planning/)).toBeVisible();
     expect(screen.getByText(/I'll send the quote on Monday/)).toBeVisible();

@@ -95,7 +95,7 @@ func saveActivitiesGroupedBy(ctx context.Context, t *testing.T, e *SearchEnv, gr
 		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "activities"}},
 	}
 	var runID ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		answer, err := compose.RunAnalyticsQuery(ctx, tx, q, analyticsquery.DefaultFloor)
 		if err != nil {
 			return err
@@ -400,7 +400,7 @@ func TestTheWholeRunKeepsTheNarrowingItsGroupingBrought(t *testing.T) {
 		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "projects"}},
 	}
 	var runID ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		answer, err := compose.RunAnalyticsQuery(ctx, tx, q, analyticsquery.DefaultFloor)
 		if err != nil {
 			return err

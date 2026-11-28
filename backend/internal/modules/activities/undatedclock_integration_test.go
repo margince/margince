@@ -54,7 +54,7 @@ func TestAnUndatedMeetingHasTakenPlaceForAReaderWhoseClockIsBehind(t *testing.T)
 		Kind: string(crmcontracts.ActivityKindMeeting), Body: new("Priya: I will send the pricing."),
 	})
 	var evidence CommitmentAdmissionEvidence
-	if err := database.WithWorkspaceTx(meetingCtx(e), e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(meetingCtx(e), e.pool, func(tx pgx.Tx) error {
 		var err error
 		evidence, err = CommitmentAdmissionEvidenceTx(meetingCtx(e), tx, CommitmentAdmissionInput{Preview: true, SourceID: meeting})
 		return err

@@ -41,7 +41,7 @@ func whoKnowsLister(pool *pgxpool.Pool, store *contacts.Store) agents.WhoKnowsLi
 		var gapsTotal int
 		var truncated bool
 		var contactName string
-		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			// Over-fetch, rank by warmth, THEN cap — the same three steps the
 			// HTTP surface takes, for the same reason. EdgesForContact orders
 			// by last contact, so capping it directly would hand a model the
@@ -138,7 +138,7 @@ const agentWhoKnowsFetch = 100
 func coverageReader(pool *pgxpool.Pool, ppl *contacts.Store) agents.CoverageReader {
 	return func(ctx context.Context, dealID ids.UUID) (agents.DealCoverageAnswer, error) {
 		var out agents.DealCoverageAnswer
-		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			// The deal gate before the payload: a coverage answer names the
 			// deal's contacts, so a caller who cannot read the deal must not
 			// learn who sits on it — through a tool any more than a URL.

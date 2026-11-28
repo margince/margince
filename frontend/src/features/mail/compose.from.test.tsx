@@ -7,6 +7,7 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { useConnectors } from "../../lib/connectors";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { stubWithSession } from "../../testing/story-utils";
@@ -108,9 +109,7 @@ describe("the From choice", () => {
     renderWithQueryClient(<FromMailboxRow value="" onChange={vi.fn()} />);
     await user.click(await screen.findByTestId("compose-from-mailbox"));
     const options = await screen.findAllByRole("option");
-    expect(options[0]).toHaveTextContent(
-      "Mailbox the conversation arrived in, or your default",
-    );
+    expect(options[0]).toHaveTextContent(englishCopy["compose.from.automatic"]);
     expect(options).toHaveLength(3);
   });
 });

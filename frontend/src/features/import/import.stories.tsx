@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   formatFixture,
   recentRunsFixture,
@@ -80,10 +81,12 @@ export const Hub: Story = {
   render: story(OPERATOR),
   play: async ({ canvasElement }) => {
     const panel = await within(canvasElement).findByRole("region", {
-      name: "Recent imports",
+      name: englishCopy["import.recent.title"],
     });
     await expect(
-      await within(panel).findByText("Test run ready"),
+      await within(panel).findByText(
+        englishCopy["import.status.awaiting_approval"],
+      ),
     ).toBeVisible();
     await expect(within(panel).getAllByRole("row")).toHaveLength(5);
   },
@@ -112,7 +115,7 @@ export const HistoryUnreadable: Story = {
   render: story(OPERATOR, undefined, "refused"),
   play: async ({ canvasElement }) => {
     const panel = await within(canvasElement).findByRole("region", {
-      name: "Recent imports",
+      name: englishCopy["import.recent.title"],
     });
     await expect(await within(panel).findByRole("alert")).toBeVisible();
   },
@@ -157,7 +160,7 @@ export const RunNotFound: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       await within(canvasElement).findByText(
-        "This import does not exist or was removed.",
+        englishCopy["import.missing.body"],
       ),
     ).toBeVisible();
   },
@@ -201,7 +204,9 @@ export const RunCancelled: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(
-      await within(canvasElement).findByText("This import was canceled"),
+      await within(canvasElement).findByText(
+        englishCopy["import.closed.cancelled"],
+      ),
     ).toBeVisible();
   },
 };

@@ -61,7 +61,7 @@ func publishAnsweredTx(
 func (e *CounterpartyVerdictEngine) PublishAnsweredContactsWorkspace(ctx context.Context) error {
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
 		var owed []capture.AnsweredContact
-		if err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 			var err error
 			owed, err = capture.AnsweredContactsTx(wsCtx, tx,
 				string(contacts.NarrowedOutboundNoAnswer), e.answeredPage)
@@ -71,14 +71,14 @@ func (e *CounterpartyVerdictEngine) PublishAnsweredContactsWorkspace(ctx context
 		}
 		var failed []error
 		for _, c := range owed {
-			if err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 				return publishAnsweredTx(wsCtx, tx, e.contacts,
 					ids.From[ids.ContactKind](c.ContactID), c.Email)
 			}); err != nil {
 				failed = append(failed, fmt.Errorf("verdict: publishing answered contact %s: %w", c.ContactID, err))
 			}
 		}
-		advanced := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+		advanced := database.WithTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 			return capture.AdvanceAnsweredSweepTx(wsCtx, tx, owed, e.answeredPage)
 		})
 		if len(failed) > 0 {

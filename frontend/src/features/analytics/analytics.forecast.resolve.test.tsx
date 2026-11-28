@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { suggestion } from "../../testing/dealsuggestion.fixture";
 import { meFixture } from "../../testing/mefixture";
@@ -324,7 +325,9 @@ it("requires a chosen deal before filing buying evidence and sends that exact de
   await user.click(await answerButton("Acme"));
   const sheet = await screen.findByRole("dialog");
   await user.click(
-    await within(sheet).findByRole("radio", { name: "Link to existing deal" }),
+    await within(sheet).findByRole("radio", {
+      name: englishCopy["dealSuggestion.linkExisting"],
+    }),
   );
   const save = within(sheet).getByRole("button", { name: "Save answer" });
   expect(save.hasAttribute("disabled")).toBe(true);
@@ -362,7 +365,9 @@ it("opens the canonical proposal when a buying finding is already covered", asyn
   await user.click(await answerButton("Acme"));
   const sheet = await screen.findByRole("dialog");
   expect(
-    await within(sheet).findByRole("button", { name: "Link to existing deal" }),
+    await within(sheet).findByRole("button", {
+      name: englishCopy["dealSuggestion.linkExisting"],
+    }),
   ).toBeTruthy();
   expect(
     within(sheet).queryByRole("button", { name: "Save answer" }),
@@ -388,9 +393,7 @@ it("shows an unavailable proposal when its finding has lost the company claim", 
   await user.click(await answerButton("Acme"));
   const sheet = await screen.findByRole("dialog");
   expect(
-    await within(sheet).findByText(
-      "This suggestion is no longer available. Refresh the findings to see its current state.",
-    ),
+    await within(sheet).findByText(englishCopy["dealSuggestion.changed"]),
   ).toBeTruthy();
   expect(
     vi
@@ -424,7 +427,9 @@ it("does not offer deal linking to a reader without deal update permission", asy
     await within(sheet).findByRole("radio", { name: /Not relevant/ }),
   ).toBeTruthy();
   expect(
-    within(sheet).queryByRole("radio", { name: "Link to existing deal" }),
+    within(sheet).queryByRole("radio", {
+      name: englishCopy["dealSuggestion.linkExisting"],
+    }),
   ).toBeNull();
   expect(
     within(sheet).queryByRole("combobox", { name: /Existing deal/ }),
@@ -449,7 +454,9 @@ it("keeps a newly qualified deal in the answer and files the signal only after c
   await user.click(await answerButton("Acme"));
   const answer = await screen.findByRole("dialog");
   await user.click(
-    within(answer).getByRole("radio", { name: "Link to existing deal" }),
+    within(answer).getByRole("radio", {
+      name: englishCopy["dealSuggestion.linkExisting"],
+    }),
   );
   await user.click(
     await within(answer).findByRole("button", { name: "New deal" }),
@@ -535,7 +542,9 @@ describe("a finding about two deals that may be one buying motion", () => {
       await within(sheet).findByRole("button", { name: "Merge deal" }),
     ).toBeInTheDocument();
     await userEvent.click(
-      within(sheet).getByRole("button", { name: "These are separate" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["review.duplicateSeparate"],
+      }),
     );
     await waitFor(() =>
       expect(posted.map((p) => p.body)).toEqual([{ outcome: "separate" }]),
@@ -551,20 +560,26 @@ describe("a finding about two deals that may be one buying motion", () => {
       within(sheet).queryByRole("button", { name: "Merge deal" }),
     ).not.toBeInTheDocument();
     expect(
-      within(sheet).queryByRole("button", { name: "These are separate" }),
+      within(sheet).queryByRole("button", {
+        name: englishCopy["review.duplicateSeparate"],
+      }),
     ).not.toBeInTheDocument();
   });
 
   it("names no second deal and offers no merge when the reader may not see it", async () => {
     const { sheet } = await openPairSheet({ other_withheld: true });
     expect(
-      await within(sheet).findByText("A deal you cannot open"),
+      await within(sheet).findByText(
+        englishCopy["review.duplicateOtherWithheld"],
+      ),
     ).toBeInTheDocument();
     expect(
       within(sheet).queryByRole("button", { name: "Merge deal" }),
     ).not.toBeInTheDocument();
     expect(
-      within(sheet).queryByRole("button", { name: "These are separate" }),
+      within(sheet).queryByRole("button", {
+        name: englishCopy["review.duplicateSeparate"],
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -575,7 +590,9 @@ describe("a finding about two deals that may be one buying motion", () => {
       "close_past",
     );
     expect(
-      within(sheet).queryByRole("button", { name: "These are separate" }),
+      within(sheet).queryByRole("button", {
+        name: englishCopy["review.duplicateSeparate"],
+      }),
     ).not.toBeInTheDocument();
     expect(
       within(sheet).queryByRole("button", { name: "Merge deal" }),

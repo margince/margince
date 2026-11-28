@@ -101,7 +101,7 @@ func prepareFollowUpSource(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 	}
 	assignee := taskAssignee(ctx, *in)
 	if assignee != nil {
-		seat, err := auth.SeatPrincipal(ctx, tx, assignee.UUID)
+		seat, err := sourceHolder(ctx, tx, assignee.UUID, in.sourceAuthority)
 		if err != nil {
 			return err
 		}
@@ -167,7 +167,7 @@ func preparePatchedTaskSource(ctx context.Context, tx pgx.Tx, current crmcontrac
 	if in.sourceActivityID == nil || in.recordsMeeting {
 		return nil
 	}
-	return prepareFollowUpSource(ctx, tx, &LogActivityInput{Kind: string(current.Kind), SourceActivityID: in.sourceActivityID, AssigneeID: in.AssigneeID})
+	return prepareFollowUpSource(ctx, tx, &LogActivityInput{sourceAuthority: in.sourceAuthority, Kind: string(current.Kind), SourceActivityID: in.sourceActivityID, AssigneeID: in.AssigneeID})
 }
 
 func admitOutcomeFollowUp(ctx context.Context, current crmcontracts.Activity, in UpdateActivityInput) error {

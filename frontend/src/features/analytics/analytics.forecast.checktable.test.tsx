@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { ReviewActionsProvider } from "../../testing/reviewactions";
@@ -97,9 +98,7 @@ describe("a door from Sales review", () => {
   it("says a finding answered since the link was made is no longer open", async () => {
     show("#/analytics/forecast?finding=f-9", [HARBOUR]);
     expect(
-      await screen.findByText(
-        "This finding is no longer open. It was answered or withdrawn after the link was made.",
-      ),
+      await screen.findByText(englishCopy["review.findingGone"]),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Answer" })).toBeVisible();
   });
@@ -117,7 +116,7 @@ describe("a door from Sales review", () => {
     ).toBeNull();
     const user = userEvent.setup({ delay: null });
     await user.click(
-      screen.getByRole("button", { name: "Show every finding" }),
+      screen.getByRole("button", { name: englishCopy["review.showAll"] }),
     );
     expect(
       await screen.findByRole("link", { name: "Quayside fleet tools" }),

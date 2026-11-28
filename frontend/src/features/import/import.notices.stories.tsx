@@ -193,7 +193,7 @@ export const RefusedUnknownCode: Story = {
     <StoryProviders>
       <ImportRefusal
         title="File could not be read"
-        error={refusal("file", "from_a_newer_server")}
+        error={refusal("file", "from_a_newer_server")} // problem-code:unknown-field proves the fallback for a code from a newer server
       />
     </StoryProviders>
   ),

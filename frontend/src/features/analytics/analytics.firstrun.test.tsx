@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
 import type { AnalyticsScope } from "./analytics.context";
@@ -46,16 +47,22 @@ function notice(
 
 it("points an empty own scope to Whole company", async () => {
   const select = notice(false, mine);
-  expect(screen.getByText("You own no deals")).toBeInTheDocument();
-  await userEvent
-    .setup()
-    .click(screen.getByRole("button", { name: "Show Whole company" }));
+  expect(
+    screen.getByText(englishCopy["analytics.emptyOwnTitle"]),
+  ).toBeInTheDocument();
+  await userEvent.setup().click(
+    screen.getByRole("button", {
+      name: englishCopy["analytics.emptyOwnAction"],
+    }),
+  );
   expect(select).toHaveBeenCalledWith(company);
 });
 
 it("names the first step when the whole company holds no deal", async () => {
   notice(false, company);
-  expect(screen.getByText("No deals to report on yet")).toBeInTheDocument();
+  expect(
+    screen.getByText(englishCopy["analytics.firstRunTitle"]),
+  ).toBeInTheDocument();
   await userEvent
     .setup()
     .click(screen.getByRole("button", { name: "Open Deals" }));
@@ -70,8 +77,8 @@ it("says an empty team holds no deal", () => {
 it("says nothing when the scope holds deals or the server did not say", () => {
   notice(true, mine);
   notice(undefined, mine);
-  expect(screen.queryByText("You own no deals")).toBeNull();
-  expect(screen.queryByText("No deals to report on yet")).toBeNull();
+  expect(screen.queryByText(englishCopy["analytics.emptyOwnTitle"])).toBeNull();
+  expect(screen.queryByText(englishCopy["analytics.firstRunTitle"])).toBeNull();
 });
 
 it("tells Pipeline's empty own scope from the server flag, without asking for deals", async () => {
@@ -89,7 +96,9 @@ it("tells Pipeline's empty own scope from the server flag, without asking for de
   vi.stubGlobal("fetch", stub);
   window.location.hash = "#/analytics/pipeline";
   renderScreen(<AnalyticsScreen />);
-  expect(await screen.findByText("You own no deals")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["analytics.emptyOwnTitle"]),
+  ).toBeInTheDocument();
   const asked = stub.mock.calls.map(([input]) =>
     input instanceof Request ? input.url : String(input),
   );
@@ -108,7 +117,7 @@ it("draws no notice on Pipeline when the scope holds deals", async () => {
   window.location.hash = "#/analytics/pipeline";
   renderScreen(<AnalyticsScreen />);
   await screen.findByText("Qualify");
-  expect(screen.queryByText("You own no deals")).toBeNull();
+  expect(screen.queryByText(englishCopy["analytics.emptyOwnTitle"])).toBeNull();
 });
 
 it("says on Delivery that every readable project is covered", async () => {
@@ -116,6 +125,6 @@ it("says on Delivery that every readable project is covered", async () => {
   window.location.hash = "#/analytics/delivery";
   renderScreen(<AnalyticsScreen />);
   expect(
-    await screen.findByText("These numbers cover every project you can read."),
+    await screen.findByText(englishCopy["analytics.deliveryCoversAll"]),
   ).toBeInTheDocument();
 });

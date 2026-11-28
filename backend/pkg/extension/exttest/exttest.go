@@ -131,6 +131,9 @@ func (Core) CustomFields() extension.CustomFieldRepo { return nil }
 // Notices answers nil: this kit hands back no door.
 func (Core) Notices() extension.NoticeRepo { return nil }
 
+// Members answers nil: this kit hands back no door.
+func (Core) Members() extension.MemberRepo { return nil }
+
 // LinkSuggestions answers nil: this kit hands back no door.
 func (Core) LinkSuggestions() extension.LinkSuggestionRepo { return nil }
 

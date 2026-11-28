@@ -89,7 +89,7 @@ func TestAC_TG_6_IdentityPhoneDisagreementIsAConflictNotAMerge(t *testing.T) {
 	admin := c.adminStoreCtx(t)
 	var routed ids.ContactID
 	var conflict *contacts.LaneConflict
-	if err := database.WithWorkspaceTx(admin, c.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, c.Pool, func(tx pgx.Tx) error {
 		res, err := contacts.DedupeContact(admin, tx, contacts.ContactCandidate{
 			FullName:          "Phone Half",
 			Phones:            []string{phone},
@@ -460,7 +460,7 @@ func (c *telegramEnv) accountSuppressed(t *testing.T, account string) bool {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), c.workspaceID(t))
 	var answer bool
-	if err := database.WithWorkspaceTx(ctx, c.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, c.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = storekit.ChannelIdentitySuppressed(ctx, tx, "telegram", account)
 		return err

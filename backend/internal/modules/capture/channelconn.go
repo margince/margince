@@ -152,6 +152,7 @@ var ErrChannelWiringIncomplete = errors.New("capture: no credential custodian is
 // every entry point that needs it refuses by name rather than proceeding
 // half-wired.
 type ChannelStore struct {
+	authority func(context.Context, pgx.Tx) (context.Context, error)
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db    *database.DB
 	vault keyvault.Vault
@@ -223,6 +224,10 @@ func (s *ChannelStore) Connect(ctx context.Context, req ConnectRequest) (Channel
 	}
 	row, err := s.insertConnected(ctx, req.Provider, address, bot, refs)
 	if err != nil {
+		if channelAuthorityRefused(err) {
+			s.destroyDetached(ctx, ws, "channel-connect-authority-refused", refs.token, refs.events)
+			return ChannelConnection{}, err
+		}
 		// A lost race for a unique index GUARANTEES no row persisted, so the
 		// just-sealed refs are safe to destroy. Any other error leaves the commit
 		// outcome ambiguous, and deleting then could strand a live credential.
@@ -338,6 +343,10 @@ func (s *ChannelStore) insertConnected(ctx context.Context, provider, address st
 	}
 	var out ChannelConnection
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		ctx, err = s.writeAuthority(ctx, tx, principal.ActionCreate)
+		if err != nil {
+			return err
+		}
 		out, err = scanChannelConnection(tx.QueryRow(ctx, `
 			INSERT INTO channel_connection
 			  (provider, channel_id, channel_label, address, credential_ref, events_credential_ref, status, poll_offset, connected_by)

@@ -24,8 +24,9 @@ import (
 )
 
 type CreateLeadInput struct {
-	FullName *string
-	Email    *string
+	FullName   *string
+	Salutation *crmcontracts.Salutation
+	Email      *string
 	// Phone is E.164 by the time it reaches the column, normalised through the
 	// same values.ParsePhone a contact's number goes through. One number, like
 	// the one email beside it: a lead is a single enquiry until it is promoted.
@@ -187,7 +188,7 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	auditID, err := storekit.Audit(ctx, tx, "create", "lead", id.UUID, nil,
 		map[string]any{
 			leadEmailColumn: in.Email, leadPhoneColumn: in.Phone, leadCompanyColumn: in.CompanyName,
-			leadOriginField: in.Origin, leadOriginDetailField: in.OriginDetail,
+			leadOriginField: in.Origin, leadOriginDetailField: in.OriginDetail, "salutation": in.Salutation,
 		})
 	if err != nil {
 		return crmcontracts.Lead{}, false, fmt.Errorf("audit lead create: %w", err)
@@ -217,11 +218,14 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return ids.LeadID{}, err
 	}
+	if err := checkSalutation(in.Salutation); err != nil {
+		return ids.LeadID{}, err
+	}
 	fixed := []any{
 		id, in.FullName, in.Email, in.Title, in.CompanyName, foldedCompanyKey(in.CandidateCompanyKey),
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
 		in.Phone, in.Origin, storedArrivalOrigin(in.Origin), in.OriginDetail, leadEmailDomain(in.Email), in.Industry, in.OwnerID,
-		in.PartnerCompanyID, in.ProductID,
+		in.PartnerCompanyID, in.ProductID, in.Salutation,
 	}
 	holders := strings.Split(storekit.Placeholders(fixed), ",")
 	// The email is the third bind: lower() holds the dedupe key's spelling at the column, whatever door wrote it.
@@ -234,7 +238,7 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
-		                   phone, origin, arrival_origin, origin_detail, email_domain_folded, `+leadIndustryField+`, `+arrivalOwnerColumn+`, `+leadPartnerField+`, `+leadProductField+authorCols+cfCols+`)
+		                   phone, origin, arrival_origin, origin_detail, email_domain_folded, `+leadIndustryField+`, `+arrivalOwnerColumn+`, `+leadPartnerField+`, `+leadProductField+`, salutation`+authorCols+cfCols+`)
 		 VALUES (`+strings.Join(holders, ", ")+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {

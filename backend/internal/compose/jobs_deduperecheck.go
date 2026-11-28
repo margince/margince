@@ -63,7 +63,7 @@ func (w *dedupeRecheckWorker) retractUnsupportedPhones(ctx context.Context) erro
 	after := ids.Nil
 	for {
 		var page contacts.SignaturePhoneRepairPage
-		if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 			var err error
 			page, err = contacts.RetractUnsupportedSignaturePhonesTx(ctx, tx, after, limit)
 			return err

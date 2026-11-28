@@ -21,8 +21,9 @@ tree. So a new module comes under the rules as soon as its directory exists, wit
 
 What each directory owns, and the rule that goes with it:
 
-- `internal/shared/`: the leaves of tier 0, which use only the standard library (a test holds this). It
-  holds `kernel/` value packages (`ids`, `events`, `provenance`, `principal`, `values`, `diffhash` and
+- `internal/shared/`: the leaves of tier 0, which use only the standard library and each other. The
+  one exception is `values`, which composes text to NFC with `golang.org/x/text/unicode/norm`. A test
+  holds both. It holds `kernel/` value packages (`ids`, `events`, `provenance`, `principal`, `values`, `diffhash` and
   others).
   - It also holds `apperrors`, the fixed sentinel registry. Add to it only together with the error
     contract it implements, never for one call site.
@@ -31,9 +32,8 @@ What each directory owns, and the rule that goes with it:
     directory is the list of every seam. Read it before you add one, because a second seam for a
     question already answered is how drift starts.
 - `internal/platform/`: technical base code that owns no domain.
-  - `database` holds the `pg` pool and the `WithWorkspaceTx` contract for workspace transactions. It is a
-    transaction boundary with a check, failing closed, that a workspace is on the context. It binds no
-    database GUC, and no table has a `workspace_id` column or a policy per row.
+  - `database` holds the `pg` pool and the `WithTx` contract. A module statement runs inside this one transaction,
+    so its row, audit row and outbox row commit together. It binds no database GUC, and no table has a `workspace_id` column or a policy per row.
   - `database/storekit` is the one spelling of the audit and outbox write shape, the keyset cursor, and
     version patches.
   - `auth` is the one admission point: `Admit` (scope ∧ tier) + object RBAC + the row scope clauses, which

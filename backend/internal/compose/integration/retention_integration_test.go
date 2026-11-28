@@ -33,7 +33,7 @@ func seedOverAgeRecords(t *testing.T, e *Env) (staleLead, heldLead, staleDeal, t
 	staleLead, heldLead = ids.NewV7(), ids.NewV7()
 	staleDeal = ids.NewV7()
 	transcript = ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, stmt := range []struct {
 			sql  string
 			args []any
@@ -65,7 +65,7 @@ func seedOverAgeRecords(t *testing.T, e *Env) (staleLead, heldLead, staleDeal, t
 	}
 	// A pipeline+stage pair carries the aged-out lost deal.
 	pipelineID, stageID := ids.NewV7(), ids.NewV7()
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(),
 			`INSERT INTO pipeline (id, name, is_default) VALUES ($1, 'Retention P', true)`,
 			pipelineID); err != nil {
@@ -103,7 +103,7 @@ func TestRetentionActsOnOverAgeRecordsAndHonorsLegalHold(t *testing.T) {
 	var heldName string
 	var dealArchived, transcriptBodyGone bool
 	var retentionAudits int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `SELECT full_name FROM lead WHERE id = $1`, staleLead).Scan(&leadName); err != nil {
 			return err
 		}
@@ -146,7 +146,7 @@ func TestRetentionActsOnOverAgeRecordsAndHonorsLegalHold(t *testing.T) {
 		t.Fatal(err)
 	}
 	var second int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM audit_log WHERE evidence ? 'retention_action'`).Scan(&second)
 	})
@@ -163,7 +163,7 @@ func TestRetentionErasesOverAgeVoiceSignalPlaintext(t *testing.T) {
 	profileID := ids.NewV7()
 	overAge := ids.NewV7()
 	inWindow := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO voice_profile (id, owner_id, scope, source, captured_by)
 			VALUES ($1, $2, 'user', 'manual', 'human:x')`, profileID, e.Rep1); err != nil {
@@ -198,7 +198,7 @@ func TestRetentionErasesOverAgeVoiceSignalPlaintext(t *testing.T) {
 	var erasedText *string
 	var erasedAtSet bool
 	var freshText *string
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT generated_original, content_erased_at IS NOT NULL FROM voice_learning_signal WHERE id = $1`,
 			overAge).Scan(&erasedText, &erasedAtSet); err != nil {

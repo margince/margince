@@ -109,7 +109,7 @@ describe("a late promise on the contact's Next bar", () => {
         en["promise.late.sentence_other"].replace("{days}", "2"),
       ),
     ).toBeTruthy();
-    expect(screen.queryByText("Due one day ago and still open.")).toBeNull();
+    expect(screen.queryByText(en["promise.late.sentence_one"])).toBeNull();
   });
 
   it("counts a claim's days the same in its badge and its sentence", () => {

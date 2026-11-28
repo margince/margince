@@ -22,6 +22,7 @@ import {
   useToast,
 } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { installComposeClock, pressSend } from "./compose.testkit";
 import {
   calls,
@@ -51,7 +52,9 @@ describe("a saved draft", () => {
     const sent = stubRoutes({ "GET /mail-drafts": () => jsonResponse(SAVED) });
     render(composer(vi.fn()));
 
-    expect(await screen.findByText("Saved draft restored")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["compose.savedDraftRestored"]),
+    ).toBeTruthy();
     expect(screen.getByDisplayValue("Pricing for 40 seats")).toBeTruthy();
     await waitFor(() =>
       expect(messageText("Body")).toBe("Half written before lunch"),
@@ -79,7 +82,9 @@ describe("a saved draft", () => {
 
     act(() => answer(jsonResponse(SAVED)));
 
-    expect(await screen.findByText("Saved draft restored")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["compose.savedDraftRestored"]),
+    ).toBeTruthy();
     expect(
       screen.getByRole<HTMLInputElement>("combobox", { name: "To" }).value,
     ).toBe("ada@br");
@@ -109,7 +114,7 @@ describe("a saved draft", () => {
       "PUT /mail-drafts": () => jsonResponse({ data: [], page: {} }),
     });
     render(composer(onClose));
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
     writeMessage("Body", "Finished after lunch");
 
     await user.click(screen.getByRole("button", { name: "Close" }));
@@ -127,7 +132,7 @@ describe("a saved draft", () => {
       "PUT /mail-drafts": () => jsonResponse({ ...SAVED, version: 4 }),
     });
     render(composer(onClose));
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
     writeMessage("Body", "Finished after lunch");
 
     await user.click(screen.getByRole("button", { name: "Close" }));
@@ -217,9 +222,13 @@ describe("a saved draft", () => {
 
     await user.click(screen.getByRole("button", { name: "Write again" }));
 
-    expect(await screen.findByText("Saved draft restored")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Delete saved draft" }),
+      await screen.findByText(englishCopy["compose.savedDraftRestored"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["compose.savedDraftRemove"],
+      }),
     ).toBeTruthy();
     await waitFor(() =>
       expect(messageText("Body")).toBe("Half written before lunch"),
@@ -231,9 +240,13 @@ describe("a saved draft", () => {
       screen.queryByText("Draft saved", { selector: ".toast-said" }),
     ).toBeNull();
     await user.click(
-      screen.getByRole("button", { name: "Delete saved draft" }),
+      screen.getByRole("button", {
+        name: englishCopy["compose.savedDraftRemove"],
+      }),
     );
-    expect(await screen.findByText("Saved draft deleted")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["compose.savedDraftDeleted"]),
+    ).toBeTruthy();
   });
 
   it("leaves another screen's toast alone when it reopens", async () => {
@@ -284,7 +297,9 @@ describe("a saved draft", () => {
     await user.click(screen.getByRole("button", { name: "Write again" }));
 
     expect(await screen.findByRole("dialog")).toBeTruthy();
-    expect(screen.getByText("Task completed")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["worklist.verb.completed"]),
+    ).toBeTruthy();
   });
 
   it("is not written when the composer closes as it opened", async () => {
@@ -292,7 +307,7 @@ describe("a saved draft", () => {
     const onClose = vi.fn();
     const sent = stubRoutes({ "GET /mail-drafts": () => jsonResponse(SAVED) });
     render(composer(onClose));
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
 
     await user.click(screen.getByRole("button", { name: "Close" }));
 
@@ -330,7 +345,9 @@ describe("a saved draft", () => {
 
     await user.click(await screen.findByRole("button", { name: "Delete" }));
 
-    expect(await screen.findByText("Saved draft deleted")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["compose.savedDraftDeleted"]),
+    ).toBeTruthy();
     expect(calls(sent, "DELETE /mail-drafts/md-1")).toHaveLength(1);
     await waitFor(() => expect(messageText("Body")).toBe(""));
   });
@@ -344,10 +361,16 @@ describe("a saved draft", () => {
       "PUT /mail-drafts": () => jsonResponse({ ...SAVED, id: "md-2" }),
     });
     render(composer(onClose));
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
 
-    await user.click(screen.getByRole("button", { name: "Delete draft" }));
-    expect(await screen.findByText("Saved draft deleted")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["compose.discardMessage"],
+      }),
+    );
+    expect(
+      await screen.findByText(englishCopy["compose.savedDraftDeleted"]),
+    ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Undo" }));
 
     await waitFor(() =>
@@ -363,9 +386,9 @@ describe("a saved draft", () => {
     expect(
       calls(sent, "PUT /mail-drafts")[0]?.headers.get("If-Match"),
     ).toBeNull();
-    expect(await screen.findAllByText("Saved draft restored")).not.toHaveLength(
-      0,
-    );
+    expect(
+      await screen.findAllByText(englishCopy["compose.savedDraftRestored"]),
+    ).not.toHaveLength(0);
   });
 
   describe("Undo after a delete", () => {
@@ -428,7 +451,7 @@ describe("a saved draft", () => {
     ) => {
       await waitFor(() => expect(hook.result.current.held).not.toBeNull());
       act(() => hook.result.current.remove());
-      await screen.findByText("Saved draft deleted");
+      await screen.findByText(englishCopy["compose.savedDraftDeleted"]);
       between();
       await user.click(screen.getByRole("button", { name: "Undo" }));
     };
@@ -444,7 +467,7 @@ describe("a saved draft", () => {
       await waitFor(() => expect(hook.result.current.held).not.toBeNull());
       restored.mockClear();
       act(() => hook.result.current.remove());
-      await screen.findByText("Saved draft deleted");
+      await screen.findByText(englishCopy["compose.savedDraftDeleted"]);
       await user.click(screen.getByRole("button", { name: "Undo" }));
 
       await waitFor(() =>
@@ -532,9 +555,7 @@ describe("a saved draft", () => {
       });
 
       expect(
-        await screen.findByText(
-          "The message was sent, so its draft stays deleted.",
-        ),
+        await screen.findByText(englishCopy["compose.savedDraftUndoSent"]),
       ).toBeTruthy();
       expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
       expect(restored).not.toHaveBeenCalled();
@@ -548,15 +569,19 @@ describe("a saved draft", () => {
       "DELETE /mail-drafts/md-1": () => new Response(null, { status: 204 }),
     });
     render(composer(vi.fn()));
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
 
     await user.click(
-      screen.getByRole("button", { name: "Delete saved draft" }),
+      screen.getByRole("button", {
+        name: englishCopy["compose.savedDraftRemove"],
+      }),
     );
 
     await waitFor(() => expect(messageText("Body")).toBe(""));
     expect(calls(sent, "DELETE /mail-drafts/md-1")).toHaveLength(1);
-    expect(screen.queryByText("Saved draft restored")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["compose.savedDraftRestored"]),
+    ).toBeNull();
     expect(screen.queryByDisplayValue("Pricing for 40 seats")).toBeNull();
   });
 
@@ -581,20 +606,22 @@ describe("a saved draft", () => {
       "PUT /mail-drafts": () => problem("version_skew", 409),
     });
     render(composer(onClose));
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
     writeMessage("Body", "Written here");
 
     await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(
-      await screen.findByText("Draft changed in another window"),
+      await screen.findByText(englishCopy["compose.savedDraftChangedTitle"]),
     ).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
     expect(messageText("Body")).toBe("Written here");
     expect(calls(sent, "GET /mail-drafts")).toHaveLength(2);
 
     await user.click(
-      screen.getByRole("button", { name: "Load saved version" }),
+      screen.getByRole("button", {
+        name: englishCopy["compose.savedDraftLoad"],
+      }),
     );
     await waitFor(() =>
       expect(messageText("Body")).toBe("Written in the other tab"),
@@ -605,14 +632,18 @@ describe("a saved draft", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = foundUnderTyping(onClose);
-    await screen.findByText("You have a saved draft here");
+    await screen.findByText(englishCopy["compose.savedDraftFoundTitle"]);
     expect(messageText("Body")).toBe("Written before the read");
 
     await user.click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).not.toHaveBeenCalled();
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
 
-    await user.click(screen.getByRole("button", { name: "Open saved draft" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["compose.savedDraftLoadFound"],
+      }),
+    );
     await waitFor(() =>
       expect(messageText("Body")).toBe("Half written before lunch"),
     );
@@ -622,9 +653,13 @@ describe("a saved draft", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = foundUnderTyping(onClose);
-    await screen.findByText("You have a saved draft here");
+    await screen.findByText(englishCopy["compose.savedDraftFoundTitle"]);
 
-    await user.click(screen.getByRole("button", { name: "Delete draft" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["compose.discardMessage"],
+      }),
+    );
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(calls(sent, "DELETE /mail-drafts/md-1")).toHaveLength(0);
@@ -633,10 +668,12 @@ describe("a saved draft", () => {
   it("is replaced only when the reader says so", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = foundUnderTyping(vi.fn());
-    await screen.findByText("You have a saved draft here");
+    await screen.findByText(englishCopy["compose.savedDraftFoundTitle"]);
 
     await user.click(
-      screen.getByRole("button", { name: "Replace it with this text" }),
+      screen.getByRole("button", {
+        name: englishCopy["compose.savedDraftReplace"],
+      }),
     );
 
     await waitFor(() =>
@@ -652,7 +689,7 @@ describe("a saved draft", () => {
     const sent = foundUnderTyping(vi.fn(), {
       "POST /emails": () => jsonResponse({ id: "act-9" }, 202),
     });
-    await screen.findByText("You have a saved draft here");
+    await screen.findByText(englishCopy["compose.savedDraftFoundTitle"]);
     await user.type(
       screen.getByRole("combobox", { name: "To" }),
       "buyer@acme.test{enter}",
@@ -660,7 +697,7 @@ describe("a saved draft", () => {
     await user.type(screen.getByLabelText("Subject"), "Pricing");
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Reason for contact" }),
+      screen.getByRole("combobox", { name: englishCopy["compose.why"] }),
       "They asked for it",
     );
 
@@ -689,7 +726,7 @@ describe("a saved draft", () => {
 
     const line = await screen.findByRole("alert");
     expect(line.firstChild?.textContent).toBe(
-      "The draft was not saved. Retry, or close again to discard the text.",
+      englishCopy["compose.savedDraftFailed"],
     );
     expect(within(line).getByRole("button", { name: "Retry" })).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
@@ -744,7 +781,7 @@ describe("a saved draft", () => {
     });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(composer(vi.fn()));
-    await screen.findByRole("combobox", { name: "Reason for contact" });
+    await screen.findByRole("combobox", { name: englishCopy["compose.why"] });
     writeMessage("Body", "Half written before lunch");
     await user.click(screen.getByRole("button", { name: "Close" }));
     await screen.findByText(/The draft was not saved/);
@@ -755,7 +792,7 @@ describe("a saved draft", () => {
     );
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Reason for contact" }),
+      screen.getByRole("combobox", { name: englishCopy["compose.why"] }),
       "They asked for it",
     );
 
@@ -776,10 +813,10 @@ describe("a saved draft", () => {
       "POST /emails": () => jsonResponse({ id: "act-9" }, 202),
     });
     render(composer(onClose));
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Reason for contact" }),
+      screen.getByRole("combobox", { name: englishCopy["compose.why"] }),
       "They asked for it",
     );
 

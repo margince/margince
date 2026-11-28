@@ -54,7 +54,6 @@ invariant a change touches (rule 1: fix the invariant, with every call site).
   its fixture dials does not decide it. Trace the act to the first chokepoint that answers.
   - **Unit lane**: a refusal above the transaction boundary. Examples:
     `auth.Require`/`RequireHuman`/`RequireAdmin` (`platform/auth/rbac.go`),
-    `database.WithWorkspaceTx` returning `ErrNoWorkspace` before `pool.Begin`,
     `connector.Recipient.Validate`, a `params.*.Valid()` guard, a zero-value handler
     answering 501. Moving it with a nil pool *proves* the refusal precedes the query.
   - **Integration lane**: the live fixture is the control the claim needs. Examples: a

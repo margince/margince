@@ -162,7 +162,7 @@ func TestAReaderDuringALongWriteTransactionDoesNotKeepTheOldValue(t *testing.T) 
 	if err := settings.Set(ctx, store, cachedProbe, "old"); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := settings.SetTx(ctx, store, tx, cachedProbe, "new"); err != nil {
 			return err
 		}

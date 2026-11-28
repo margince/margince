@@ -41,7 +41,7 @@ func repairStaleDisplayNamesBatch(ctx context.Context, pool *pgxpool.Pool, limit
 	// looking as though the job had simply not run yet.
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	var repaired int
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		stale, err := contacts.StaleDisplayNamesTx(ctx, tx, limit)
 		if err != nil {
 			return err

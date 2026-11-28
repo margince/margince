@@ -206,6 +206,9 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 		// A marker, like the kind: it stays out of filtersOnContent.
 		where = append(where, sprintf("a.call_outcome = $%d", arg(*in.CallOutcome)))
 	}
+	if in.ChatProvider != nil {
+		where = append(where, "("+chatSummarySourceSQL()+" AND a.raw IS NOT NULL AND coalesce(a.raw->>'provider','dispact')="+sprintf("$%d", arg(*in.ChatProvider))+")")
+	}
 	if in.ChannelProvider != nil {
 		where = append(where, sprintf("a.channel_provider = $%d", arg(*in.ChannelProvider)))
 	}
@@ -373,7 +376,7 @@ func occurredWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // message must drop out of the candidate set rather than surface as a row
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
-	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
+	return in.ChatProvider != nil || (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
 		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil || in.WebsiteFormID != nil ||
 		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.SourceIDs) > 0 || len(in.CustomFilters) > 0
 }

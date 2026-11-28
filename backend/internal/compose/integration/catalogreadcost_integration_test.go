@@ -117,7 +117,7 @@ func TestTenWritesInOneTransactionReadTheCatalogOnce(t *testing.T) {
 	updateAll := func(provider *contacts.Provider) func(context.Context) error {
 		round++
 		return func(ctx context.Context) error {
-			return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			return database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				for _, id := range contactIDs {
 					write, err := provider.PrepareUpdateTx(ctx, datasource.EntityContact)
 					if err != nil {
@@ -167,7 +167,7 @@ func TestAFieldRetiredInTheTransactionRefusesAWriteAfterAReadThere(t *testing.T)
 	id := ids.From[ids.ContactKind](ids.UUID(created.Id))
 
 	var written error
-	err = database.WithWorkspaceWriteTx(admin, e.Pool, func(ctx context.Context) error {
+	err = database.WithWriteTx(admin, e.Pool, func(ctx context.Context) error {
 		if _, err := store.GetContact(ctx, id, storekit.LiveOnly); err != nil {
 			return err
 		}

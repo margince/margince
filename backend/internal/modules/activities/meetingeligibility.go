@@ -148,7 +148,7 @@ func (s *Store) ReadyForRecap(ctx context.Context, id ids.ActivityID, asOf time.
 		return true, nil
 	}
 	var notes bool
-	err = database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM audit_log edit
  WHERE edit.entity_type='activity' AND edit.entity_id=@id AND `+meetingBodyAuthoredSQL+`)`, pgx.NamedArgs{"id": id}).Scan(&notes)
 	})

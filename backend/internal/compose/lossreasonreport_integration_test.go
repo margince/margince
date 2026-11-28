@@ -169,7 +169,7 @@ func askWinLoss(t *testing.T, e *integration.Env, groupBy ...string) map[string]
 		Entity: "win-loss", GroupBy: append(groupBy, "currency"),
 		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll}, {Fn: analyticsquery.Sum, Field: "amount_minor", As: "amount"}},
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = RunAnalyticsQuery(ctx, tx, q, analyticsquery.Floor(1))
 		return err

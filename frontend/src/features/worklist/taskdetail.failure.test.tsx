@@ -97,7 +97,9 @@ test("Snooze 1 day on a task that changed elsewhere says so", async () => {
   open();
 
   await openDue(user);
-  await user.click(await screen.findByRole("button", { name: "Snooze 1 day" }));
+  await user.click(
+    await screen.findByRole("button", { name: en["tasks.snooze"] }),
+  );
 
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toContain(en["common.versionSkew"]);

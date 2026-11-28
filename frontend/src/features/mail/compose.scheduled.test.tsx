@@ -17,6 +17,7 @@ import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
   allowedPreview,
@@ -162,10 +163,12 @@ describe("a scheduled send is reachable again", () => {
     // on: a confirmation reading "sent" beside a door to withdraw it would
     // contradict itself.
     expect(
-      await screen.findByText("Email scheduled. It has not been sent yet."),
+      await screen.findByText(englishCopy["compose.scheduledQueued"]),
     ).toBeTruthy();
 
-    const door = screen.getByRole("button", { name: "Scheduled messages" });
+    const door = screen.getByRole("button", {
+      name: englishCopy["compose.scheduledOpenQueue"],
+    });
     await user.click(door);
     expect(window.location.hash).toBe("#/scheduled");
   });
@@ -183,10 +186,12 @@ describe("a scheduled send is reachable again", () => {
     // door being added back.
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(
-      screen.queryByRole("button", { name: "Scheduled messages" }),
+      screen.queryByRole("button", {
+        name: englishCopy["compose.scheduledOpenQueue"],
+      }),
     ).toBeNull();
     expect(
-      screen.queryByText("Email scheduled. It has not been sent yet."),
+      screen.queryByText(englishCopy["compose.scheduledQueued"]),
     ).toBeNull();
   });
 });

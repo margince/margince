@@ -170,7 +170,7 @@ function surface(): HTMLElement {
 
 async function pressConfirm(): Promise<HTMLElement> {
   const button = await screen.findByRole("button", {
-    name: "Confirm profile",
+    name: en["ob.deck.confirm"],
   });
   expect(button).toBeEnabled();
   fireEvent.click(button);

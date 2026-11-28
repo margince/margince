@@ -31,7 +31,7 @@ func leadScoreOf(t *testing.T, e *integration.Env, leadID ids.UUID) (displayed i
 	t.Helper()
 	var count int
 	var factors json.RawMessage
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `SELECT score FROM lead WHERE id = $1`, leadID).Scan(&displayed); err != nil {
 			return err
@@ -58,7 +58,7 @@ func leadScoreOf(t *testing.T, e *integration.Env, leadID ids.UUID) (displayed i
 func TestACapturedLeadOpensWithTheScoreAHandCreatedLeadGets(t *testing.T) {
 	e := integration.Setup(t)
 	var origin string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT key FROM lead_origin WHERE active AND intent = 'high' ORDER BY key LIMIT 1`).Scan(&origin)
 	}); err != nil {
 		t.Fatal(err)

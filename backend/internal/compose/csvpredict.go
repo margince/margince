@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -69,7 +70,7 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // Checks run in Ensure's order: create grant, then cells, then a contact's
 // company link under the run's policy. A dropped link rides on the outcome.
 func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, *migration.SkippedRow, error) {
-	w.predictedWarnings, w.predictedFaults, w.predictedChange = nil, nil, nil
+	w.predictedWarnings, w.predictedFaults, w.predictedChange, w.predictedLinks = nil, nil, nil, nil
 	if refused := w.createRefusal(ctx, row); refused != nil {
 		return predictUnwritable, refused, nil
 	}
@@ -86,6 +87,7 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 	if link.skip {
 		return predictUnwritable, link.problem, nil
 	}
+	w.predictedLinks = link.links
 	outcome, refusal, err := w.predictLanding(ctx, row, link.into(typed))
 	if refusal.Code != "" {
 		why := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(refusal)
@@ -169,6 +171,9 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 	if why, err := w.newRecordRefusal(ctx, row, typed); err != nil || why.Code != "" {
 		return predictUnwritable, why, err
 	}
+	if why, err := w.record.PredictCreate(ctx, textFields(row.Fields), typed); err != nil || why.Code != "" {
+		return predictUnwritable, why, err
+	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err == nil && !collides {
 		collides, err = w.collidesInFile(ctx, row)
@@ -203,6 +208,9 @@ func (w *csvWriters) reconcilePrediction(
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
+	if why, err := importwire.NotYourRecord(current, migration.OwnSeat(ctx)); err != nil || why.Code != "" {
+		return predictUnwritable, why, err
+	}
 	changed, kept, err := w.landingChanges(ctx, row, current, typed)
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
@@ -212,6 +220,9 @@ func (w *csvWriters) reconcilePrediction(
 	}
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return predictUnwritable, cannotEditWhy(w.object), nil
+	}
+	if why := w.record.RefuseChange(current, changed, typed); why.Code != "" {
+		return predictUnwritable, why, nil
 	}
 	why, err := w.movedKeyRefusal(ctx, id, row, typed, changed)
 	if err != nil || why.Code != "" {

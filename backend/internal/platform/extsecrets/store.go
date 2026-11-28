@@ -32,9 +32,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -188,7 +188,7 @@ func (s *store) read(ctx context.Context, user *ids.UserID, key string) ([]byte,
 		ref     keyvault.Ref
 		outcome string
 	)
-	if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		switch err := requireUser(ctx, tx, user); {
 		case err == nil:
 			// fall through to the lookup below
@@ -283,7 +283,7 @@ func (s *store) write(ctx context.Context, user *ids.UserID, key string, secret 
 
 	var oldRef keyvault.Ref
 	committing := false
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := requireUser(ctx, tx, user); err != nil {
 			return err
 		}
@@ -339,7 +339,7 @@ func (s *store) remove(ctx context.Context, user *ids.UserID, key string) error 
 	}
 	scope := s.scopeOf(user, key)
 	var ref keyvault.Ref
-	if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := requireUser(ctx, tx, user); err != nil {
 			return err
 		}
@@ -373,11 +373,9 @@ func (s *store) prepare(ctx context.Context, key string) (ids.WorkspaceID, error
 	if s.prefix == "" && strings.HasPrefix(key, CoreHeldKeyPrefix) {
 		return ids.WorkspaceID{}, fmt.Errorf("extsecrets: %q: %w", key, ErrReservedKey)
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		// The same refusal WithWorkspaceTx would give, raised before a
-		// connection is taken from the pool.
-		return ids.WorkspaceID{}, database.ErrNoWorkspace
+	ws, err := storekit.ReadStoredKeyWorkspace(ctx, s.pool)
+	if err != nil {
+		return ids.WorkspaceID{}, fmt.Errorf("extsecrets: reading the installation's stored-key id: %w", err)
 	}
 	return ids.From[ids.WorkspaceKind](ws), nil
 }

@@ -13,6 +13,7 @@ import {
   UnsavedGuard,
   useUnsavedGuard,
 } from "../components/unsaved";
+import { en as englishCopy } from "../i18n/en";
 import { memoryStorage } from "../testing/appharness";
 import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
 import { Shell } from "./shell";
@@ -94,7 +95,7 @@ describe("Sign-out (AS-1)", () => {
     await user.click(screen.getByRole("button", { name: /account$/i }));
     await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
 
-    await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+    await screen.findByRole("dialog", { name: englishCopy["unsaved.title"] });
     expect(loggedOut).toBe(false);
   });
 
@@ -133,13 +134,17 @@ describe("Sign-out (AS-1)", () => {
     await user.click(screen.getByRole("button", { name: /account$/i }));
     await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
     const question = await screen.findByRole("dialog", {
-      name: "Discard unsaved changes?",
+      name: englishCopy["unsaved.title"],
     });
     await user.click(
-      within(question).getByRole("button", { name: "Discard changes" }),
+      within(question).getByRole("button", {
+        name: englishCopy["unsaved.discard"],
+      }),
     );
 
-    expect(await screen.findByText("Sign-out failed")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["shell.signOutErr"]),
+    ).toBeVisible();
     expect(client.getQueryData(["me"])).toBeTruthy();
   });
 
@@ -198,7 +203,9 @@ describe("Sign-out (AS-1)", () => {
     // seeing 401, render the auth (signup/login) screen — the rail must be
     // gone. AuthScreen defaults to its signup mode, so assert on that
     // heading rather than assuming "Sign in" is the first thing shown.
-    await screen.findByRole("heading", { name: "Sign in to Margince" });
+    await screen.findByRole("heading", {
+      name: englishCopy["auth.loginTitle"],
+    });
     expect(screen.queryByRole("navigation")).toBeNull();
     expect(loggedOut).toBe(true);
     expect(meCalls).toBeGreaterThan(probesBeforeSignOut);

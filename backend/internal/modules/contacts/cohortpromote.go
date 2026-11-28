@@ -64,7 +64,7 @@ const cohortRepairBatch = 500
 type CohortPromotion struct {
 	// Linked is activities that gained a contact link they did not have.
 	Linked int64
-	// Promoted is address-only participant rows that now name the contact.
+	// Promoted is unresolved participant rows that now name the contact.
 	Promoted int64
 }
 
@@ -195,32 +195,6 @@ func (s *Store) promoteCohortTx(
 	return CohortPromotion{Linked: int64(len(linked)), Promoted: int64(len(promoted))}, nil
 }
 
-// changedActivities folds the two halves of a pass into the messages to publish,
-// dropping a repeat. An activity commonly appears in both — the same message
-// gains its link and has its participant row named in one go — and it needs one
-// event either way, because the graph refolds the whole activity rather than one
-// row of it.
-//
-// A participant-only promotion counts. The interaction graph folds its edges
-// from participant rows, so a message whose link already existed and whose
-// participant row just learned the contact is precisely a message whose edges
-// are now wrong, and staying silent about it leaves "who knows this contact"
-// answering from before.
-func changedActivities(linked, promoted []ids.UUID) []ids.UUID {
-	seen := make(map[ids.UUID]struct{}, len(linked)+len(promoted))
-	out := make([]ids.UUID, 0, len(linked)+len(promoted))
-	for _, group := range [][]ids.UUID{linked, promoted} {
-		for _, id := range group {
-			if _, already := seen[id]; already {
-				continue
-			}
-			seen[id] = struct{}{}
-			out = append(out, id)
-		}
-	}
-	return out
-}
-
 // capturedCohortMailSQL is the predicate on activity a for the mail
 // linkCapturedCohort files under contact @cohort_contact.
 const capturedCohortMailSQL = `a.captured_by LIKE 'connector:%'
@@ -309,6 +283,12 @@ func (s *Store) ContactsOwedACohortRepair(ctx context.Context, limit int) ([]ids
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			WITH owed AS (
+				SELECT owner.contact_id
+				  FROM contact_channel_identity owner
+				  JOIN activity_participant ap ON ap.channel_user_id = owner.channel_user_id
+				 WHERE owner.archived_at IS NULL AND ap.channel_user_id IS NOT NULL
+				   AND `+promotableChannelParticipantSQL("ap", "owner.contact_id")+`
+				UNION
 				SELECT pe.contact_id
 				  FROM activity_participant ap
 				  JOIN contact_email pe ON pe.email = ap.address AND pe.archived_at IS NULL

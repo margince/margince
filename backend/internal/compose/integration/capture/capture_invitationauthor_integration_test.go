@@ -95,7 +95,7 @@ func TestAColleaguesInvitationNamesTheColleagueAsItsAuthor(t *testing.T) {
 // confirming it in settings would.
 func claimOwnDomain(t *testing.T, e *integration.SearchEnv, domain string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
 			SELECT id, $1, false, 'manual', 'human:test' FROM company WHERE is_anchor`, domain)
@@ -117,7 +117,7 @@ func listedAuthor(t *testing.T, e *integration.SearchEnv, seat ids.UUID, sourceI
 		},
 	})
 	var listed []crmcontracts.Activity
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		listed, _, err = activities.ListActivitiesTx(reader, tx, activities.ListActivitiesInput{})
 		return err

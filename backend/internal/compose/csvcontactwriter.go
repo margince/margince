@@ -191,7 +191,7 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		return false, nil
 	}
 	var visible bool
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		// The workspace's own free-mail list, read through capture.MatcherTx. On
 		// the shipped baseline alone, a domain an admin declared a company's
 		// would score as free mail, and the preview would part from the commit.

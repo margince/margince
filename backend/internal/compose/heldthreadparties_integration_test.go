@@ -26,7 +26,7 @@ import (
 func seedHeldMessage(t *testing.T, e *integration.Env, holder, capturer ids.UUID, threadKey, audience string) ids.UUID {
 	t.Helper()
 	activityID := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, audience)

@@ -200,6 +200,9 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 			return EnsureChannelCounterpartyResult{}, err
 		}
 	}
+	if _, err := materializeChannelPhone(ctx, tx, res.ContactID, in.Identity); err != nil {
+		return EnsureChannelCounterpartyResult{}, err
+	}
 	return res, nil
 }
 

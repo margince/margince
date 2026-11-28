@@ -35,7 +35,7 @@ func TestASettingIsReadOncePerTransactionAndAgainAfterItsWriter(t *testing.T) {
 		}
 		return name
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		before := meter.Cost()
 		first, second := zone(ctx, tx), zone(ctx, tx)
 		if read := meter.Cost().Minus(before).Statements; read != 1 || first != second {
@@ -64,7 +64,7 @@ func TestASettingWriteIsNotFooledByWhatItsTransactionReadBeforeTheLock(t *testin
 	})
 	write := func(name string) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return settings.SetTx(ctx, store, tx, identity.Timezone, name)
 		}); err != nil {
 			t.Fatal(err)
@@ -73,7 +73,7 @@ func TestASettingWriteIsNotFooledByWhatItsTransactionReadBeforeTheLock(t *testin
 	read := func() string {
 		t.Helper()
 		var name string
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			name, err = identity.TimezoneAppliedTx(ctx, tx)
 			return err
@@ -83,7 +83,7 @@ func TestASettingWriteIsNotFooledByWhatItsTransactionReadBeforeTheLock(t *testin
 		return name
 	}
 	write("Europe/Lisbon")
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		seen, err := identity.TimezoneAppliedTx(ctx, tx)
 		if err != nil || seen != "Europe/Lisbon" {
 			t.Fatalf("the transaction first read %q (%v), want Europe/Lisbon", seen, err)

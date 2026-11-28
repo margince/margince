@@ -6,6 +6,7 @@ import { composeStories } from "@storybook/react-vite";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { footerFinding } from "./systemhealth.fixtures";
 import { readHealthReport } from "./systemhealth.report";
 import * as stories from "./systemhealthfinding.stories";
@@ -27,11 +28,11 @@ describe("the missing company details finding panel", () => {
     ).toBeTruthy();
     expect(screen.getByText("Privacy contact, How to object")).toBeTruthy();
     expect(
-      screen.getByText("Sends by users held since the last change")
+      screen.getByText(englishCopy["health.footerHeldByUser"])
         .nextElementSibling?.textContent,
     ).toBe("2");
     expect(
-      screen.getByText("Background sends held or dropped since the last change")
+      screen.getByText(englishCopy["health.footerHeldInBackground"])
         .nextElementSibling?.textContent,
     ).toBe("1");
   });
@@ -39,7 +40,9 @@ describe("the missing company details finding panel", () => {
   it("opens the page where the details are filled in", async () => {
     render(<FooterIncomplete />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Open Jurisdiction" }),
+      await screen.findByRole("button", {
+        name: englishCopy["health.openDisclosures"],
+      }),
     );
     expect(window.location.hash).toBe("#/settings/jurisdiction");
   });

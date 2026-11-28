@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { browserZone } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -173,7 +174,9 @@ export const ArchivedTeamsShown: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("switch", { name: "Show archived teams" }),
+      await canvas.findByRole("switch", {
+        name: englishCopy["users.showArchivedTeams"],
+      }),
     );
     await canvas.findByRole("button", { name: "Restore" });
   },

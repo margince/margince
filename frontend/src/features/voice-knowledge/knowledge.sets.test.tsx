@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { KnowledgeCard } from "./knowledge";
 import {
   ADMIN,
@@ -60,7 +61,7 @@ describe("KnowledgeCard set verbs", () => {
     );
     await waitFor(() => expect(screen.queryByText("How-to")).toBeNull());
     expect(globalThis.document.activeElement?.textContent).toBe(
-      "Document sets",
+      englishCopy["knowledge.title"],
     );
   });
 
@@ -187,9 +188,7 @@ describe("KnowledgeCard, a set Margince ships", () => {
     const dialog = within(screen.getByRole("dialog"));
     await user.click(dialog.getByRole("button", { name: /^archive set$/i }));
     expect(
-      await dialog.findByText(
-        "This set ships with Margince, so it cannot be archived.",
-      ),
+      await dialog.findByText(englishCopy["knowledge.archiveShipped"]),
     ).toBeInTheDocument();
   });
 
@@ -210,7 +209,11 @@ describe("KnowledgeCard, a set Margince ships", () => {
       await screen.findByLabelText(/add document/i),
       new File(["notes"], "notes.md", { type: "text/markdown" }),
     );
-    await user.click(screen.getByRole("button", { name: "Add document" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["knowledge.upload.label"],
+      }),
+    );
     expect(
       await screen.findByText(
         "notes.md: This set ships with Margince, so only Margince adds documents to it.",

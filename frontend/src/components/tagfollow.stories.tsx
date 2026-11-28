@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -88,7 +89,7 @@ export const ToContacts: Story = {
     const user = userEvent.setup();
     await user.click(
       await within(canvasElement).findByRole("button", {
-        name: "Choose contacts",
+        name: englishCopy["tags.offerContactsAccept"],
       }),
     );
     await expect(

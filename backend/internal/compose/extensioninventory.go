@@ -66,7 +66,7 @@ func ObserveExtensionInventory(ctx context.Context, pool *pgxpool.Pool, log *slo
 	})
 
 	changed := false
-	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		// api and worker boot concurrently and both observe: without a
 		// lock the two check-and-insert transactions each read the same
 		// previous inventory and one change lands twice.

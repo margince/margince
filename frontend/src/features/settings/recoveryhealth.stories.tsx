@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -103,7 +104,9 @@ export const NeverDrilled: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByText(/No restore drill has been recorded/);
-    await expect(canvas.queryByText("Last restore drill")).toBeNull();
+    await expect(
+      canvas.queryByText(englishCopy["recoveryHealth.lastDrill"]),
+    ).toBeNull();
   },
 };
 

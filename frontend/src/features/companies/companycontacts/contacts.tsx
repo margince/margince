@@ -180,6 +180,7 @@ export function CompanyContactsList({
       <DomainContactsCallout companyId={companyId} />
       {bandSlot?.(narrow)}
       <ListTable
+        customFieldsKind="contact"
         state={state}
         unit="unit.contacts"
         // The contacts screen keeps its own layout under the same unit.

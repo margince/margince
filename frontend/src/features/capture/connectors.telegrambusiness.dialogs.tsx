@@ -123,29 +123,23 @@ export function ApproveBusinessDialog({
 
 /** Changes who reads an approved company account's messages. */
 export function BusinessVisibilityDialog({
-  connection,
+  owner,
+  mailVisibility,
+  patch,
   onClose,
   onDone,
 }: Readonly<{
-  connection: BusinessConnection;
+  owner: string;
+  mailVisibility?: BusinessConnection["mailVisibility"];
+  patch: (next: Visibility) => Promise<unknown>;
   onClose: () => void;
   onDone: () => void;
 }>) {
   const t = useT();
-  const current: Visibility =
-    connection.mailVisibility === "shared" ? "shared" : "held";
+  const current: Visibility = mailVisibility === "shared" ? "shared" : "held";
   const [visibility, setVisibility] = useState<Visibility>(current);
   const change = useMutation({
-    mutationFn: async (next: Visibility) =>
-      unwrap(
-        await api.PATCH(
-          "/channel-connections/telegram-business/{id}/visibility",
-          {
-            params: { path: { id: connection.id } },
-            body: { mail_visibility: next, confirm: true },
-          },
-        ),
-      ),
+    mutationFn: (next: Visibility) => patch(next),
     onSuccess: onDone,
   });
   return (
@@ -154,7 +148,7 @@ export function BusinessVisibilityDialog({
       intent="form"
       onClose={onClose}
       title={t("connectors.tgbiz.visibilityTitle", {
-        owner: connection.ownerLabel,
+        owner,
       })}
       confirmLabel={t("connectors.tgbiz.visibilityConfirm")}
       confirmDisabled={visibility === current}

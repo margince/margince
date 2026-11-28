@@ -17,6 +17,7 @@ import type { components } from "../../api/schema";
 import { RecordDetails } from "../../design-system/recorddetails";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { useContact360 } from "./contact360";
@@ -216,10 +217,12 @@ describe("The signature’s company on the Company card", () => {
     expect(await screen.findByRole("button", { name: "Link" })).toBeEnabled();
     expect(screen.getByText(PROPOSAL)).toBeInTheDocument();
     expect(
-      screen.getByText("Link or create this company?"),
+      screen.getByText(englishCopy["contact.proposal.ask"]),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Create and link" }),
+      screen.getByRole("button", {
+        name: englishCopy["contact.proposal.create"],
+      }),
     ).toBeEnabled();
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeEnabled();
   });
@@ -230,7 +233,9 @@ describe("The signature’s company on the Company card", () => {
     const user = userEvent.setup();
 
     await user.click(
-      await screen.findByRole("button", { name: "Create and link" }),
+      await screen.findByRole("button", {
+        name: englishCopy["contact.proposal.create"],
+      }),
     );
 
     await waitFor(() => expect(sent).toHaveLength(2));
@@ -280,7 +285,9 @@ describe("The signature’s company on the Company card", () => {
     const user = userEvent.setup();
 
     await user.click(
-      await screen.findByRole("button", { name: "Create and link" }),
+      await screen.findByRole("button", {
+        name: englishCopy["contact.proposal.create"],
+      }),
     );
 
     expect(
@@ -288,7 +295,11 @@ describe("The signature’s company on the Company card", () => {
         "Nordlicht Logistik AG already has this contact’s work email domain, so no company was created.",
       ),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Link that company" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["contact.proposal.linkExisting"],
+      }),
+    );
     const dialog = await screen.findByRole("dialog");
     expect(
       within(dialog).getByText("Nordlicht Logistik AG"),
@@ -379,7 +390,7 @@ describe("The signature’s company on the Company card", () => {
     );
 
     expect(
-      await screen.findByText("No work history recorded yet."),
+      await screen.findByText(englishCopy["contact.rail.noEmployment"]),
     ).toBeInTheDocument();
     expect(screen.queryByText(PROPOSAL)).toBeNull();
   });
@@ -391,11 +402,13 @@ describe("The signature’s company on the Company card", () => {
     mount(contactView());
 
     const reason = await screen.findByText(
-      "Your role cannot link companies to contacts. Ask an admin.",
+      englishCopy["contact.proposal.linkDenied"],
     );
     expect(screen.getByRole("button", { name: "Link" })).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Create and link" }),
+      screen.getByRole("button", {
+        name: englishCopy["contact.proposal.create"],
+      }),
     ).toBeDisabled();
     expect(screen.getByRole("button", { name: "Link" })).toHaveAttribute(
       "aria-describedby",
@@ -415,12 +428,12 @@ describe("The signature’s company on the Company card", () => {
     mount(contactView());
 
     expect(
-      await screen.findByText(
-        "Your role cannot create companies. Ask an admin.",
-      ),
+      await screen.findByText(englishCopy["contact.proposal.createDenied"]),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Create and link" }),
+      screen.getByRole("button", {
+        name: englishCopy["contact.proposal.create"],
+      }),
     ).toBeDisabled();
     expect(screen.getByRole("button", { name: "Link" })).toBeEnabled();
   });
@@ -430,9 +443,11 @@ describe("The signature’s company on the Company card", () => {
     mount(contactView({}, false));
 
     expect(await screen.findByText(PROPOSAL)).toBeInTheDocument();
-    expect(screen.queryByText("Link or create this company?")).toBeNull();
+    expect(screen.queryByText(englishCopy["contact.proposal.ask"])).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Create and link" }),
+      screen.queryByRole("button", {
+        name: englishCopy["contact.proposal.create"],
+      }),
     ).toBeNull();
   });
 });
@@ -443,7 +458,9 @@ describe("The signature’s company in the rail’s About section", () => {
     mount(contactView(), "rail");
 
     expect(
-      await screen.findByRole("button", { name: "Create and link" }),
+      await screen.findByRole("button", {
+        name: englishCopy["contact.proposal.create"],
+      }),
     ).toBeEnabled();
     expect(screen.getByText("Employer")).toBeVisible();
     expect(screen.getByText(PROPOSAL)).toBeInTheDocument();
@@ -456,7 +473,9 @@ describe("The signature’s company in the rail’s About section", () => {
     const user = userEvent.setup();
 
     await user.click(
-      await screen.findByRole("button", { name: "Create and link" }),
+      await screen.findByRole("button", {
+        name: englishCopy["contact.proposal.create"],
+      }),
     );
 
     await waitFor(() => expect(sent).toHaveLength(2));

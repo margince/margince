@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -98,7 +99,9 @@ type Story = StoryObj<typeof RefreshFromSources>;
 const press: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await userEvent.click(
-    await canvas.findByRole("button", { name: "Refresh from sources" }),
+    await canvas.findByRole("button", {
+      name: englishCopy["settings.rates.refresh"],
+    }),
   );
 };
 

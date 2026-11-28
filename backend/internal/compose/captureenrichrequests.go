@@ -40,7 +40,7 @@ func (g *CaptureEnrichTrigger) requestContacts(ctx context.Context, env events.E
 	requested := false
 	err := runPerWorkspace(ctx, g.pool, func(ctx context.Context, workspace ids.UUID) error {
 		ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "agent:enrich")
-		return database.WithWorkspaceTx(ctx, g.pool, func(tx pgx.Tx) error {
+		return database.WithTx(ctx, g.pool, func(tx pgx.Tx) error {
 			changed, err := g.requestContactsTx(ctx, tx, env, target)
 			requested = requested || changed
 			return err
@@ -99,7 +99,7 @@ const (
 func releaseTerminalImportWork(ctx context.Context, pool *pgxpool.Pool) (bool, error) {
 	ctx = principal.SystemActing(ctx, "agent:enrich")
 	more := false
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		replacement, err := historyDeferRunTx(ctx, tx, nil)
 		if err != nil {
 			return err

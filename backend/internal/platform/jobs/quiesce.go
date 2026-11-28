@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // allQueues is River's documented literal for "every queue at once"
@@ -82,28 +80,11 @@ func CountRunning(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 	return n, nil
 }
 
-// PurgeWorkspace deletes this workspace's job rows and every fleet dispatcher
-// row, in EVERY state — no state predicate. The count it returns is therefore
-// job rows deleted, not a backlog depth.
-//
-// Two disjoint sets, and both belong to a reset. A row whose
-// args->>'workspace_id' matches is this tenant's work, and the rows it would
-// act on are about to stop existing. A row with a NULL workspace key is a
-// DISPATCHER by the invariant TestEveryWorkspaceScopedArgsSpellsItsWorkspace-
-// KeyTheSameWay holds (role.go): deleting it is safe because the periodic
-// ticks re-insert it on the next cadence.
-//
-// River's retained completed/discarded/cancelled history goes with them: an
-// installation wiped back to first-boot state must not carry a job record of
-// the work it no longer has the rows for.
-//
-// Running rows go too. The reset refuses to reach this point after a drain
-// timeout, so after a completed drain there are none.
-func PurgeWorkspace(ctx context.Context, pool *pgxpool.Pool, ws ids.UUID) (int, error) {
-	tag, err := pool.Exec(ctx, `
-		DELETE FROM river_job
-		WHERE args->>'workspace_id' = $1
-		   OR args->>'workspace_id' IS NULL`, ws.String())
+// PurgeJobs deletes the installation's job rows in every state, retained
+// history included. The count is rows deleted, not a backlog depth. Running
+// rows go too: the reset refuses to reach this point after a drain timeout.
+func PurgeJobs(ctx context.Context, pool *pgxpool.Pool) (int, error) {
+	tag, err := pool.Exec(ctx, `DELETE FROM river_job`)
 	if err != nil {
 		return 0, fmt.Errorf("jobs: purging job rows: %w", err)
 	}

@@ -9,6 +9,7 @@ import { ScheduleDialog } from "./composescheduledialog";
 // The dialog's rows and hour buttons are styled by the composer's stylesheet,
 // which compose.tsx loads in the product; the story mounts the dialog alone.
 import "./compose.css";
+import { en as englishCopy } from "../../i18n/en";
 
 // When a message goes out: the three presets most sends take, then the calendar
 // and the four business hours. The hours use tabular figures, one width a digit.
@@ -58,7 +59,9 @@ export const PickingAnHour: Story = {
     // `screen`, because Modal portals to document.body rather than into the
     // story's canvas.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Select date and time" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.schedulePick"],
+      }),
     );
     await screen.findByRole("button", { name: "13:00", pressed: true });
   },
@@ -72,7 +75,9 @@ export const LateInTheDay: Story = {
   render: () => <Dialog now={LATE} />,
   play: async () => {
     await userEvent.click(
-      await screen.findByRole("button", { name: "Select date and time" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.schedulePick"],
+      }),
     );
     await screen.findByRole("button", { name: "17:00", pressed: true });
   },
@@ -83,8 +88,10 @@ export const MomentPassed: Story = {
   render: () => <Dialog now={LATE} sendAt="2026-09-14T09:00" />,
   play: async () => {
     await userEvent.click(
-      await screen.findByRole("button", { name: "Select date and time" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.schedulePick"],
+      }),
     );
-    await screen.findByText("Choose a time in the future.");
+    await screen.findByText(englishCopy["compose.schedulePast"]);
   },
 };

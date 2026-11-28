@@ -274,7 +274,7 @@ func storedGoogleRef(ctx context.Context, t *testing.T, e *SearchEnv) string {
 func storedGoogleAppJSON(t *testing.T, e *SearchEnv) string {
 	t.Helper()
 	var raw string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(value::text, '') FROM setting WHERE key = $1`, capture.GoogleAppKey).Scan(&raw)
 	}); err != nil {
@@ -287,7 +287,7 @@ func storedGoogleAppJSON(t *testing.T, e *SearchEnv) string {
 func googleAppAuditImages(t *testing.T, e *SearchEnv) string {
 	t.Helper()
 	var images string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT coalesce(string_agg(coalesce(before::text, '') || '|' || coalesce(after::text, ''), ' '), '')
 			FROM audit_log WHERE entity_type = $1`, capture.SettingsObject).Scan(&images)
@@ -302,7 +302,7 @@ func googleAppAuditImages(t *testing.T, e *SearchEnv) string {
 func googleSealedCount(t *testing.T, e *SearchEnv) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM vault_secret`).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting sealed blobs: %v", err)

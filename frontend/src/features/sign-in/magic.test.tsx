@@ -93,20 +93,22 @@ describe("the receipt draws every lane it promises", () => {
     );
     renderMagic();
     expect(
-      within(await lane("Done for you")).getByText(
-        "A deal moved to its next stage",
+      within(await lane(en["magic.lane.done"])).getByText(
+        en["magic.action.advance_stage"],
       ),
     ).toBeTruthy();
     expect(
-      within(await lane("Waiting on you")).getByText("Review message"),
+      within(await lane(en["magic.lane.needsYou"])).getByText(
+        en["magic.action.approval_send_email"],
+      ),
     ).toBeTruthy();
     expect(
-      within(await lane("Could not be finished")).getByText(
+      within(await lane(en["magic.lane.couldNotComplete"])).getByText(
         "Could not finish (Failed): the record it acts on no longer exists",
       ),
     ).toBeTruthy();
     expect(
-      within(await lane("Needs restoring")).getByText(
+      within(await lane(en["magic.lane.watching"])).getByText(
         "Gmail needs to be connected again",
       ),
     ).toBeTruthy();
@@ -114,10 +116,10 @@ describe("the receipt draws every lane it promises", () => {
     expect(
       screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
     ).toEqual([
-      "Waiting on you",
-      "Could not be finished",
-      "Needs restoring",
-      "Done for you",
+      en["magic.lane.needsYou"],
+      en["magic.lane.couldNotComplete"],
+      en["magic.lane.watching"],
+      en["magic.lane.done"],
     ]);
   });
 
@@ -130,20 +132,22 @@ describe("the receipt draws every lane it promises", () => {
     );
     renderMagic();
     expect(
-      await screen.findByRole("heading", { name: "Done for you" }),
+      await screen.findByRole("heading", { name: en["magic.lane.done"] }),
     ).toBeTruthy();
     // A clear lane draws nothing, rather than a heading over nothing.
     expect(
-      screen.queryByRole("heading", { name: "Waiting on you" }),
+      screen.queryByRole("heading", { name: en["magic.lane.needsYou"] }),
     ).toBeNull();
-    expect(screen.queryByRole("list", { name: "Waiting on you" })).toBeNull();
+    expect(
+      screen.queryByRole("list", { name: en["magic.lane.needsYou"] }),
+    ).toBeNull();
   });
 
   it("names the section and leaves its window to the server", async () => {
     stub(receipt({ done: [line()] }));
     renderMagic();
     expect(
-      await screen.findByRole("region", { name: "Since your last brief" }),
+      await screen.findByRole("region", { name: en["magic.heading.brief"] }),
     ).toBeTruthy();
     const reads = vi
       .mocked(fetch)
@@ -166,7 +170,7 @@ describe("the receipt draws every lane it promises", () => {
     );
     renderMagic("en", undefined, { lanes: WAITING_LANES });
     expect(
-      await screen.findByRole("region", { name: "Since your last brief" }),
+      await screen.findByRole("region", { name: en["magic.heading.brief"] }),
     ).toBeTruthy();
     expect(screen.getByText("Source did not load: Proposals")).toBeTruthy();
     expect(screen.getByText(/^Source not available to you:/)).toBeTruthy();
@@ -281,7 +285,7 @@ describe("the receipt draws every lane it promises", () => {
       }),
     );
     renderMagic();
-    expect(await screen.findByText("Activity not described")).toBeTruthy();
+    expect(await screen.findByText(en["magic.undescribed"])).toBeTruthy();
     // The row still says what it was about, so the reader loses a sentence
     // rather than the line.
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
@@ -356,9 +360,7 @@ describe("the receipt draws every lane it promises", () => {
     expect(within(waiting).queryAllByRole("button")).toEqual([]);
     expect(within(waiting).queryByText("Undo")).toBeNull();
     expect(
-      within(waiting).queryByText(
-        "Nothing changed, so there is nothing to put back.",
-      ),
+      within(waiting).queryByText(en["magic.undoReason.noCompletedChange"]),
     ).toBeNull();
   });
 
@@ -371,7 +373,7 @@ describe("the receipt draws every lane it promises", () => {
     );
     renderMagic();
     expect(
-      await screen.findByText("This change was already undone."),
+      await screen.findByText(en["history.undo.alreadyUndone"]),
     ).toBeTruthy();
   });
 
@@ -399,12 +401,8 @@ describe("the receipt draws every lane it promises", () => {
       }),
     );
     renderMagic();
-    expect(
-      await screen.findByText("Filed captured email under this contact"),
-    ).toBeTruthy();
-    expect(
-      screen.getByText("The sender’s address belongs to this contact."),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["magic.action.mail_filed"])).toBeTruthy();
+    expect(screen.getByText(en["magic.why.mail_filed"])).toBeTruthy();
     const filed = await lane("Done for you");
     expect(within(filed).getByText("Mail filing")).toBeTruthy();
     expect(within(filed).getByText("Anna Keller and 1,199 more")).toBeTruthy();
@@ -481,9 +479,7 @@ describe("the receipt draws every lane it promises", () => {
     );
     renderMagic();
     expect(
-      await screen.findByText(
-        "Anonymized unconverted leads past their retention period",
-      ),
+      await screen.findByText(en["magic.action.retention_lead_anonymize"]),
     ).toBeTruthy();
     expect(screen.getByText("Retention rule: after 365 days.")).toBeTruthy();
     expect(screen.getByText("1,200 records")).toBeTruthy();
@@ -531,15 +527,13 @@ describe("the receipt draws every lane it promises", () => {
     stubPending();
     const { container } = renderMagic();
     expect(container.querySelector("section")).toBeNull();
-    expect(screen.queryByText("Reading what the machinery did")).toBeNull();
+    expect(screen.queryByText(en["magic.loading"])).toBeNull();
   });
 
   it("says it is reading inside a section that waits for it", () => {
     stubPending();
     renderMagic("en", undefined, { lanes: ["done"], embedded: true });
-    expect(
-      screen.getAllByText("Reading what the machinery did").length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(en["magic.loading"]).length).toBeGreaterThan(0);
   });
 
   it("reports a refusal as a refusal, never as a quiet morning", async () => {
@@ -594,7 +588,9 @@ describe("the receipt draws every lane it promises", () => {
     expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
     // Nor does it date a window it could not read.
     expect(screen.queryByText(/What Margince did since/)).toBeNull();
-    expect(screen.queryByRole("list", { name: "Done for you" })).toBeNull();
+    expect(
+      screen.queryByRole("list", { name: en["magic.lane.done"] }),
+    ).toBeNull();
   });
 
   // A watching line's occurred_at is when the condition was seen, so a source
@@ -643,7 +639,7 @@ describe("the receipt draws every lane it promises", () => {
       }),
     );
     renderMagic();
-    within(await lane("Needs restoring")).getByText(
+    within(await lane(en["magic.lane.watching"])).getByText(
       "google needs to be connected again",
     );
     expect(screen.queryByText(/Failing since/)).toBeNull();

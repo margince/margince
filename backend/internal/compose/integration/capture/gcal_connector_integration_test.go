@@ -119,7 +119,7 @@ func TestGcalConnectorSyncsExternalMeetingAndSkipsInternal(t *testing.T) {
 
 	var activities int
 	var capturedBy, sourceID, kind string
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity WHERE source_system = 'gcal'`).Scan(&activities); err != nil {
 			return err
@@ -143,7 +143,7 @@ func TestGcalConnectorSyncsExternalMeetingAndSkipsInternal(t *testing.T) {
 
 	// The cursor advanced to the returned syncToken.
 	var cursor []byte
-	err = database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT sync_cursor FROM capture_connection WHERE id = $1`, connID).Scan(&cursor)
 	})
 	if err != nil {

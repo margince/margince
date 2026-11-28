@@ -11,6 +11,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { plainTextOf, RichText, safeEditorHTML } from "./richtext";
 
 afterEach(cleanup);
@@ -238,7 +239,9 @@ describe("the keys of the writing surface", () => {
     await user.click(screen.getByRole("button", { name: "Link" }));
 
     expect(
-      screen.getByRole("textbox", { name: "Web or email address" }),
+      screen.getByRole("textbox", {
+        name: englishCopy["richtext.linkAddress"],
+      }),
     ).toHaveValue("https://example.com");
     expect(screen.getByRole("button", { name: "Remove link" })).toBeVisible();
   });

@@ -239,11 +239,7 @@ describe("ContactNetworkTab", () => {
         screen.getByText("Direct Dana already corresponds with them."),
       ).toBeTruthy(),
     );
-    expect(
-      screen.queryByText(
-        "No one in the company corresponds with this contact or their company yet.",
-      ),
-    ).toBeNull();
+    expect(screen.queryByText(en["contact.graph.noRoute"])).toBeNull();
   });
 
   // A group withheld for lack of a grant says so. Rendering it as empty would
@@ -428,9 +424,7 @@ describe("ContactNetworkTab", () => {
     );
     renderPanel();
 
-    expect(
-      await screen.findByText("The request failed. No cause reported."),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["common.errorNoCause"])).toBeTruthy();
     // The internal cause never reaches the reader, whatever the surface.
     expect(screen.queryByText(/ECONNREFUSED/)).toBeNull();
   });

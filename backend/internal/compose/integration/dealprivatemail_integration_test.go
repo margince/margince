@@ -76,7 +76,7 @@ func (w privateMailWorld) engaged(t *testing.T) []ids.UUID {
 	t.Helper()
 	ctx := w.e.Admin()
 	var out []ids.UUID
-	err := database.WithWorkspaceTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = deals.EngagedStakeholders(ctx, tx, w.deal, w.now)
 		return err

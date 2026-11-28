@@ -139,7 +139,7 @@ func (g *ContactAutoEnrich) systemContext(ctx context.Context, env events.Envelo
 // published, and fill the contact from the one entry that is unmistakably
 // them.
 func (g *ContactAutoEnrich) enrich(ctx context.Context, contactID ids.ContactID) error {
-	return database.WithWorkspaceTx(ctx, g.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, g.pool, func(tx pgx.Tx) error {
 		companyID, ok, err := g.employerOf(ctx, tx, contactID)
 		if err != nil || !ok {
 			// No employer means nothing to match against. That is the common

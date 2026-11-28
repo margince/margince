@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -152,7 +153,9 @@ export const OnlyActiveColleagues: Story = {
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
     await userEvent.type(
-      await dialog.findByRole("searchbox", { name: "Find a colleague" }),
+      await dialog.findByRole("searchbox", {
+        name: englishCopy["assignments.findColleague"],
+      }),
       "Jo",
     );
     await dialog.findByText("Jonas Weiler");

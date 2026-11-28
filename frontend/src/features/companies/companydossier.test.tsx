@@ -123,7 +123,7 @@ describe("what this company is", () => {
     serving({ ...DESCRIBED, needs_refresh: true });
     show();
 
-    expect(await screen.findByText("Last read over a month ago")).toBeTruthy();
+    expect(await screen.findByText(en["co.dossier.stale"])).toBeTruthy();
     // A stale dossier is more useful than none, so the content stays.
     expect(
       screen.getByText(/What they offer: load-shifting software/),

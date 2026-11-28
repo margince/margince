@@ -201,7 +201,7 @@ func TestACapturedFileEmitsNoAttachmentEventOfItsOwn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("staging the captured part: %v", err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return e.Activities.RecordCapturedFiles(ctx, tx, activityID,
 			activities.CapturedFileSource{
 				System: "imap", MessageID: "msa-" + activityID.String(),

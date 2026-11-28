@@ -1,6 +1,6 @@
 import { ChevronLeft } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
-import { coveredByDialog } from "./dialogfocus";
+import { coveredByDialog, panelsOpenedFrom } from "./dialogfocus";
 
 export function Menu({
   open,
@@ -124,6 +124,13 @@ export function useCloseOnOutsideClick(close: () => void) {
       if (
         target.closest(".lt-menu-wrap, .lt-menu, .lt-vpopover") ||
         inViewSheet(target) ||
+        [
+          ...document.querySelectorAll<HTMLElement>(
+            ".lt-vpanel, .lt-menu.open",
+          ),
+        ].some((menu) =>
+          panelsOpenedFrom(menu).some((panel) => panel.contains(target)),
+        ) ||
         inPopupOfAMenu(target)
       ) {
         return;

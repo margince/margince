@@ -165,7 +165,7 @@ func withdrawStaleLinkedInMatches(ctx context.Context, pool *pgxpool.Pool) error
 	if !ok || actor.UserID == ids.Nil {
 		return apperrors.ErrPermissionDenied
 	}
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		_, err := approvals.WithdrawStaleLinkedInMatchesInTx(ctx, tx, linkedInMatchKind, actor.UserID)
 		return err
 	})

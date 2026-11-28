@@ -4,7 +4,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSource, resolveRelative } from "../../scripts/lib/source-tree";
-import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../../src/features/sign-in/aicaches";
+import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../../src/lib/aicaches";
 import { plantedFindings, srcDir } from "../tree";
 import { queryPrefixes, rule } from "./aicaches.census";
 

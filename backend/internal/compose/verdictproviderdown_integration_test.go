@@ -126,7 +126,7 @@ func TestAPlainProviderErrorStillChargesTheThread(t *testing.T) {
 func assertScheduledNear(t *testing.T, e *integration.Env, table string, id ids.UUID, want time.Time) {
 	t.Helper()
 	var next time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		// The table is a compile-time literal at each call site.
 		return tx.QueryRow(context.Background(),
 			`SELECT next_attempt_at FROM `+table+` WHERE id = $1`, id).Scan(&next)

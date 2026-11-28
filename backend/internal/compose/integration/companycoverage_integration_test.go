@@ -49,7 +49,7 @@ func companyCoverageFor(
 			UserID: ids.NewV7(), Permissions: perms,
 		})
 	var out network.CompanyCoverage
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = network.CompanyCoverageFor(ctx, tx, companyID)
 		return err
@@ -333,7 +333,7 @@ func TestAnAccountTheReaderCannotOpenIsRefused(t *testing.T) {
 	// An id naming no company this workspace holds. A caller who guessed
 	// one must learn nothing from the answer.
 	absent := ids.NewV7()
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := network.CompanyCoverageFor(ctx, tx, absent)
 		return err
 	})

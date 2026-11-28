@@ -47,6 +47,16 @@ var ErrDocumentShipped = errors.New("this page ships with Margince, so it cannot
 // can run against a row that never commits, or be lost when one does.
 type QueueIngest func(ctx context.Context, tx pgx.Tx, documentID ids.UUID) error
 
+// documentKey is where a corpus document's bytes live, under the id every object
+// of this installation was stored with.
+func (s *Store) documentKey(ctx context.Context, id ids.UUID) (string, error) {
+	company, err := storekit.StoredKeyWorkspaceOn(ctx, s.db)
+	if err != nil {
+		return "", err
+	}
+	return blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](company), string(storedobjects.KindKnowledge), id.String()), nil
+}
+
 // UploadDocument stores the file and records it queued for ingest.
 //
 // The corpus is checked BEFORE any bytes are written, so an upload to a corpus
@@ -60,8 +70,10 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 	}
 
 	id := ids.NewV7()
-	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx)),
-		string(storedobjects.KindKnowledge), id.String())
+	key, err := s.documentKey(ctx, id)
+	if err != nil {
+		return crmcontracts.KnowledgeDocument{}, err
+	}
 	// Declared BEFORE the put, on its own transaction, so the declaration survives
 	// the failure of the one below. The cleanup after this transaction covers the
 	// ordinary refusal; what it cannot cover is this process dying between here and

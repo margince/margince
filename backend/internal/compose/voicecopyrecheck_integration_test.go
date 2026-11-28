@@ -30,7 +30,7 @@ import (
 func deliverOutboxFor(t *testing.T, l learnedMail, activityID ids.UUID) int {
 	t.Helper()
 	var envelopes []events.Envelope
-	if err := database.WithWorkspaceTx(l.env.e.Admin(), l.env.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.env.e.Admin(), l.env.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `SELECT envelope FROM event_outbox
 			WHERE envelope->'entity'->>'id' = $1 ORDER BY seq`, activityID.String())
 		if err != nil {

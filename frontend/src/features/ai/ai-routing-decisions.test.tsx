@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { AiRoutingCard } from "./ai-routing";
 import {
   BOUND,
@@ -33,15 +34,19 @@ describe("the decision model lane", () => {
     const absent = await screen.findByTestId("ai-routing-decisions");
     expect(within(absent).getByText(/no decision model/i)).toBeInTheDocument();
     await user.click(
-      within(absent).getByRole("button", { name: "Add decision model" }),
+      within(absent).getByRole("button", {
+        name: englishCopy["aiRouting.decisions.add"],
+      }),
     );
     // Adding opens the lane's editor, named for the add, with nothing yet to
     // remove.
     const lane = await screen.findByRole("dialog", {
-      name: "Add decision model",
+      name: englishCopy["aiRouting.decisions.add"],
     });
     expect(
-      within(lane).queryByRole("button", { name: "Remove decision model" }),
+      within(lane).queryByRole("button", {
+        name: englishCopy["aiRouting.decisions.remove"],
+      }),
     ).toBeNull();
 
     const provider = within(lane).getByRole("combobox", { name: "Provider" });
@@ -50,13 +55,13 @@ describe("the decision model lane", () => {
       .getAllByRole("option")
       .map((option) => option.textContent);
     expect(offered).toEqual([
-      "TypeSafe Jev",
-      "Jev-compatible",
-      "Gemini Decisions API",
+      englishCopy["aiProviders.name.jev"],
+      englishCopy["aiProviders.name.jevCompatible"],
+      englishCopy["aiProviders.name.geminiDecision"],
     ]);
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", {
-        name: "Jev-compatible",
+        name: englishCopy["aiProviders.name.jevCompatible"],
       }),
     );
     await user.type(
@@ -95,7 +100,7 @@ describe("the decision model lane", () => {
     await user.click(within(lane).getByRole("combobox", { name: "Provider" }));
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", {
-        name: "Gemini Decisions API",
+        name: englishCopy["aiProviders.name.geminiDecision"],
       }),
     );
     await user.click(within(lane).getByRole("combobox", { name: "Model" }));
@@ -146,7 +151,9 @@ describe("the decision model lane", () => {
     render(<AiRoutingCard />);
 
     const lane = await openEditor(user, "ai-routing-decisions");
-    expect(within(lane).getByText("Provider key missing")).toBeInTheDocument();
+    expect(
+      within(lane).getByText(englishCopy["aiRouting.keyMissing"]),
+    ).toBeInTheDocument();
   });
 
   it("offers gemini_decision to a new binding only once the gemini key is held", async () => {
@@ -166,7 +173,9 @@ describe("the decision model lane", () => {
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);
-    expect(offered).not.toContain("Gemini Decisions API");
+    expect(offered).not.toContain(
+      englishCopy["aiProviders.name.geminiDecision"],
+    );
   });
 
   // An installation that reaches decisions only through OpenRouter holds no
@@ -207,8 +216,10 @@ describe("the decision model lane", () => {
     );
     expect(
       within(dialog).getByRole("combobox", { name: "Provider" }),
-    ).toHaveTextContent("Jev-compatible");
-    expect(within(dialog).queryByText("Provider key missing")).toBeNull();
+    ).toHaveTextContent(englishCopy["aiProviders.name.jevCompatible"]);
+    expect(
+      within(dialog).queryByText(englishCopy["aiRouting.keyMissing"]),
+    ).toBeNull();
   });
 
   // OpenRouter's endpoint is a URL nobody remembers, so jev_compatible offers
@@ -230,7 +241,9 @@ describe("the decision model lane", () => {
       within(lane).getByText(/The key goes in JEV_COMPATIBLE_API_KEY/),
     ).toBeInTheDocument();
     await user.click(
-      within(lane).getByRole("button", { name: "Preset: OpenRouter" }),
+      within(lane).getByRole("button", {
+        name: englishCopy["aiRouting.decisions.preset.openrouter"],
+      }),
     );
     expect(within(lane).getByRole("combobox", { name: "Model" })).toHaveValue(
       OPENROUTER_DECISION_PRESET.model,
@@ -240,7 +253,7 @@ describe("the decision model lane", () => {
     expect(sent?.decisions).toEqual({
       provider: "jev_compatible",
       model: "typesafe/jev-1.13",
-      base_url: "https://openrouter.ai/api/alpha/decisions",
+      base_url: englishCopy["aiRouting.baseUrl.placeholder.jevCompatible"],
     });
   });
 
@@ -258,7 +271,9 @@ describe("the decision model lane", () => {
     await screen.findByTestId("ai-routing-decisions");
     const lane = await openEditor(user, "ai-routing-decisions");
     expect(
-      within(lane).queryByRole("button", { name: "Preset: OpenRouter" }),
+      within(lane).queryByRole("button", {
+        name: englishCopy["aiRouting.decisions.preset.openrouter"],
+      }),
     ).toBeNull();
   });
 
@@ -279,7 +294,9 @@ describe("the decision model lane", () => {
     await screen.findByTestId("ai-routing-decisions");
     const lane = await openEditor(user, "ai-routing-decisions");
     expect(
-      within(lane).queryByRole("button", { name: "Preset: OpenRouter" }),
+      within(lane).queryByRole("button", {
+        name: englishCopy["aiRouting.decisions.preset.openrouter"],
+      }),
     ).toBeNull();
   });
 
@@ -304,7 +321,7 @@ describe("the decision model lane", () => {
     await user.click(within(lane).getByRole("combobox", { name: "Provider" }));
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", {
-        name: "TypeSafe Jev",
+        name: englishCopy["aiProviders.name.jev"],
       }),
     );
 
@@ -351,7 +368,9 @@ describe("the decision model lane", () => {
 
     const lane = await openEditor(user, "ai-routing-decisions");
     await user.click(
-      within(lane).getByRole("button", { name: "Remove decision model" }),
+      within(lane).getByRole("button", {
+        name: englishCopy["aiRouting.decisions.remove"],
+      }),
     );
     await waitFor(() => expect(backend.getPutCount()).toBe(1));
     const sent = backend.getCapturedPut();

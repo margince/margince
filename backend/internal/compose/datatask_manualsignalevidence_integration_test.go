@@ -120,7 +120,7 @@ func TestTheNoEvidenceTaskMarksOnlyStockSentencesAndReplaysSafely(t *testing.T) 
 	}
 	step := manualSignalNoEvidenceDataTask().Steps[0]
 	var estimated int64
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		estimated, _, err = step.Estimate(ctx, tx, 1000)
 		return err
@@ -175,7 +175,7 @@ func TestTheNoEvidenceBatchRollsBackWithItsTransaction(t *testing.T) {
 	e.WsExec(t, `UPDATE lead_manual_signal SET reason = $2 WHERE lead_id = $1`, lead.UUID, stock)
 
 	rollback := errors.New("rolled back")
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := manualSignalNoEvidenceDataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		if err != nil || out.Changed != 1 {
 			t.Errorf("batch changed %d, err %v, want 1", out.Changed, err)

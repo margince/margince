@@ -13,6 +13,7 @@ import {
   wallClockIntent,
 } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { BookingReschedule } from "./booking-reschedule";
 
 afterEach(() => {
@@ -51,7 +52,9 @@ function renderReschedule(onSelect: (slot: unknown) => void = () => undefined) {
 }
 
 const startingDate = () =>
-  screen.getByRole<HTMLInputElement>("textbox", { name: "Starting date" });
+  screen.getByRole<HTMLInputElement>("textbox", {
+    name: englishCopy["scheduling.date"],
+  });
 
 it("asks for the times from the start of the day picked on the calendar", async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -100,7 +103,9 @@ it("sends the chosen time with the local clock and zone it was picked in", async
       name: formatDateTime(slot.start, "en", browserZone()),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Confirm new time" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["scheduling.saveTime"] }),
+  );
 
   expect(chosen).toEqual([
     { ...slot, start_intent: wallClockIntent(slot.start, browserZone()) },

@@ -90,7 +90,7 @@ func (s *Service) DismissMoment(ctx context.Context, contactID ids.ContactID, in
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// Anything that names a record is gated: dismissing a moment about a
 		// contact the caller cannot read would confirm that contact exists.
 		if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID.UUID); err != nil {
@@ -126,7 +126,7 @@ func (s *Service) RestoreMoment(ctx context.Context, contactID ids.ContactID, di
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}

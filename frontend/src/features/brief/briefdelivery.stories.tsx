@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -84,7 +85,7 @@ export const SaveRefused: Story = {
     if (!morning) throw new Error("no delivery choice drawn");
     await userEvent.click(morning);
     await userEvent.click(
-      await page.findByRole("option", { name: "Not by email" }),
+      await page.findByRole("option", { name: englishCopy["delivery.none"] }),
     );
     // The page writes through the save bar, so the choice alone drafts and
     // refuses nothing. The notice answers the write.

@@ -38,7 +38,7 @@ func TestEmploymentCurrencySharedClientServerCases(t *testing.T) {
 	if len(cases) < 8 {
 		t.Fatal("currency corpus unexpectedly empty")
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, c := range cases {
 			var args []any
 			arg := func(v any) string { args = append(args, v); return storekit.SQLf("$%d", len(args)) }

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { ProblemError } from "../../lib/problem";
 import { StoryProviders } from "../../testing/story-utils";
 import { FieldBuilder } from "./customfields.builder";
@@ -45,7 +46,9 @@ export const Phone: Story = {
     await userEvent.click(
       await page.findByRole("option", { name: "Currency" }),
     );
-    await canvas.findByRole("textbox", { name: "Currency code" });
+    await canvas.findByRole("textbox", {
+      name: englishCopy["cf.currencyCode"],
+    });
   },
 };
 

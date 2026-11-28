@@ -45,7 +45,7 @@ func TestAHoldReleaseRetriesWhenItsEvidenceMovesToAnotherComponent(t *testing.T)
 	ctx, cancel := context.WithCancel(e.Admin())
 	go func() {
 		defer close(workerDone)
-		finished <- database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error { return capture.LockHoldEvidenceTx(ctx, tx, []string{email}) })
+		finished <- database.WithTx(ctx, pool, func(tx pgx.Tx) error { return capture.LockHoldEvidenceTx(ctx, tx, []string{email}) })
 	}()
 	var once sync.Once
 	release := func() { once.Do(func() { close(barrier.release) }) }
@@ -55,7 +55,7 @@ func TestAHoldReleaseRetriesWhenItsEvidenceMovesToAnotherComponent(t *testing.T)
 	case err := <-finished:
 		t.Fatalf("release missed its evidence boundary: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error { return mergeThreadsTx(e.Admin(), tx, oldKey, newKey) }); err != nil {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error { return mergeThreadsTx(e.Admin(), tx, oldKey, newKey) }); err != nil {
 		t.Fatal(err)
 	}
 	release()

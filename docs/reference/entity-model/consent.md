@@ -122,6 +122,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `consent_purpose_keys`: `BEFORE INSERT FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('purpose_key', 'decision')`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "country_source": 20000, "legacy_verdict": 20000, "ruleset_digest": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"country_source":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"ruleset_digest":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "country_source": 20000, "legacy_verdict": 20000, "ruleset_digest": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"country_source":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"ruleset_digest":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')`
 
@@ -237,14 +238,13 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_review
 
-10 columns · primary key `(id)` · referenced by 2 foreign keys
+9 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `delivery_intent_id` | `uuid` |  | The held message this review can resume. |
 | `initiated_by` | `uuid` |  | Points at `app_user.id`. |
-| `kind` | `text`, default `'single'::text` | yes | Always `single`: the column exists for the values it may hold later. |
 | `opened_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `reason_code` | `text` | yes | The strongest reason across the recipients, so a queue can order without opening the snapshot. |
 | `refusals` | `jsonb`, default `'[]'::jsonb` | yes | What was refused, per recipient. |
@@ -262,7 +262,6 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `communication_review_kind`: `CHECK ((kind = 'single'))`
 - `communication_review_resolution_shape`: `CHECK (((state = ANY (ARRAY['resolved', 'superseded', 'cancelled'])) = (resolved_at IS NOT NULL)))`
 - `communication_review_state`: `CHECK ((state = ANY (ARRAY['needs_context', 'needs_repair', 'resolved', 'superseded', 'cancelled'])))`
 - `communication_review_supersession_shape`: `CHECK (((state = 'superseded') = (superseded_by IS NOT NULL)))`
@@ -276,8 +275,8 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "state": 20000, "reason_code": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"reason_code":2000,"state":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "reason_code": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"reason_code":2000,"state":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "reason_code": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"reason_code":2000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "reason_code": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"reason_code":2000,"state":20000}')`
 
 ## communication_suppression
 
@@ -316,6 +315,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `communication_suppression_address_is_canonical`: `CHECK ((address = lower(btrim(address))))`
+- `communication_suppression_address_one_spelling`: `CHECK (is_identifier_text(address))`
 - `communication_suppression_decided_by_level`: `CHECK ((decided_by_level = ANY (ARRAY['machine', 'user', 'admin', 'subject'])))`
 - `communication_suppression_kind`: `CHECK ((kind = ANY (ARRAY['marketing_objection', 'processing_restriction', 'hard_bounce', 'subject_request'])))`
 - `communication_suppression_names_a_target`: `CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL) OR (address_hash IS NOT NULL)))`
@@ -333,6 +333,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `live_consent_purpose_reference`: `BEFORE INSERT OR UPDATE OF purpose_id FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "source": 20000, "address": 20000, "captured_by": 20000, "address_hash": 20000, "address_key_id": 20000, "decided_by_level": 20000, "recorded_through": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"address_hash":20000,"address_key_id":20000,"captured_by":20000,"decided_by_level":20000,"kind":20000,"recorded_for_addresses":20000,"recorded_through":20000,"source":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "source": 20000, "address": 20000, "captured_by": 20000, "address_hash": 20000, "address_key_id": 20000, "decided_by_level": 20000, "recorded_through": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"address_hash":20000,"address_key_id":20000,"captured_by":20000,"decided_by_level":20000,"kind":20000,"recorded_for_addresses":20000,"recorded_through":20000,"source":20000}')`
 
@@ -390,6 +391,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `live_consent_purpose_reference`: `BEFORE INSERT OR UPDATE OF purpose_id FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "token_hash": 20000, "delivered_to": 20000, "question_key": 20000, "question_locale": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"delivered_to":20000,"kind":20000,"question_key":20000,"question_locale":20000,"token_hash":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "token_hash": 20000, "delivered_to": 20000, "question_key": 20000, "question_locale": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"delivered_to":20000,"kind":20000,"question_key":20000,"question_locale":20000,"token_hash":20000}')`
 
@@ -428,6 +430,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `live_consent_purpose_reference`: `BEFORE INSERT OR UPDATE OF purpose_id FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')`
 
@@ -481,6 +484,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `live_consent_purpose_reference`: `BEFORE INSERT OR UPDATE OF purpose_id FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "new_state": 20000, "confirm_ip": 20000, "captured_by": 20000, "lawful_basis": 20000, "policy_version": 20000, "issuance_trigger": 20000, "confirm_user_agent": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"confirm_ip":20000,"confirm_user_agent":20000,"issuance_trigger":20000,"lawful_basis":20000,"new_state":20000,"policy_version":20000,"source":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "new_state": 20000, "confirm_ip": 20000, "captured_by": 20000, "lawful_basis": 20000, "policy_version": 20000, "issuance_trigger": 20000, "confirm_user_agent": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"confirm_ip":20000,"confirm_user_agent":20000,"issuance_trigger":20000,"lawful_basis":20000,"new_state":20000,"policy_version":20000,"source":20000}')`
 
@@ -514,6 +518,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "class": 20000, "label": 120, "frequency": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"frequency":20000,"key":20000,"label":120}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "class": 20000, "label": 120, "frequency": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"frequency":20000,"key":20000,"label":120}')`
+- `used_purpose_does_not_change`: `BEFORE UPDATE OF key, label, archived_at FOR EACH ROW EXECUTE FUNCTION refuse_a_used_purpose_change()`
 
 ## consent_qualifying_event
 
@@ -605,7 +610,9 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `consent_purpose_keys`: `BEFORE INSERT OR UPDATE OF key FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('key', 'live')`
 - `consent_text_version_no_edit_after_publish`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION consent_text_version_is_immutable()`
+- `live_consent_purpose_reference`: `BEFORE INSERT OR UPDATE OF purpose_id FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "locale": 20000, "channel": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel":20000,"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "locale": 20000, "channel": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel":20000,"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')`
 
@@ -695,6 +702,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `live_consent_purpose_reference`: `BEFORE INSERT OR UPDATE OF purpose_id FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "source": 20000, "lawful_basis": 20000, "policy_version": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"lawful_basis":20000,"policy_version":20000,"recorded_for_addresses":20000,"source":20000,"state":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "source": 20000, "lawful_basis": 20000, "policy_version": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"lawful_basis":20000,"policy_version":20000,"recorded_for_addresses":20000,"source":20000,"state":20000}')`
 
@@ -818,6 +826,10 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 - `existing_customer_notice_purpose_pkey`: `unique, btree (notice_id, purpose_id)`
 - `idx_existing_customer_notice_purpose_purpose`: `btree (purpose_id)`
+
+**Triggers**
+
+- `live_consent_purpose_reference`: `BEFORE INSERT OR UPDATE OF purpose_id FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')`
 
 ## lawful_basis_confirmation
 
@@ -1122,5 +1134,6 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `live_consent_purpose_reference`: `BEFORE INSERT OR UPDATE OF purpose_id FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"scope": 20000, "address": 20000, "token_hash": 20000, "revoked_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"revoked_reason":2000,"scope":20000,"token_hash":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "address": 20000, "token_hash": 20000, "revoked_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"revoked_reason":2000,"scope":20000,"token_hash":20000}')`

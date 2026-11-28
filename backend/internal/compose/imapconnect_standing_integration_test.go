@@ -191,7 +191,7 @@ func TestStandingIMAPConnectTransport(t *testing.T) {
 			t.Fatalf("connection = %+v, want a connected imap row", resp.Connection)
 		}
 		// The credential is a vault ref; the secret never touches the row.
-		err := database.WithWorkspaceTx(authed, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(authed, e.Pool, func(tx pgx.Tx) error {
 			var ref *string
 			var auth []byte
 			if err := tx.QueryRow(context.Background(), `
@@ -221,7 +221,7 @@ func TestStandingIMAPConnectTransport(t *testing.T) {
 			t.Fatalf("status = %d, want 200 (%s)", rec.Code, rec.Body.String())
 		}
 		var ref string
-		err := database.WithWorkspaceTx(authed, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(authed, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `
 				SELECT credential_ref FROM capture_connection WHERE provider = 'imap'`).Scan(&ref)
 		})

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -164,9 +165,10 @@ export const RefusedAsDropped: Story = {
   render: story(DOCUMENTS, true),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.upload(await canvas.findByLabelText("Add document"), [
-      new File([], "empty.md", { type: "text/markdown" }),
-    ]);
+    await userEvent.upload(
+      await canvas.findByLabelText(englishCopy["knowledge.upload.label"]),
+      [new File([], "empty.md", { type: "text/markdown" })],
+    );
     await expect(
       await canvas.findByText(
         "empty.md: The file is empty, so there is nothing to add. Choose a file that has content.",

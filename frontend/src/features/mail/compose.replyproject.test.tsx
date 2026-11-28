@@ -7,6 +7,7 @@ import {
   SLOWEST_MEASURED_TEST_MS,
 } from "../../../vitest.budget";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { draftButton, pressDraft } from "../../testing/composedraft.testkit";
 import {
   installComposeClock,
@@ -333,7 +334,7 @@ describe("the project a reply files under", () => {
         { "GET /mail-drafts": () => jsonResponse(savedReply(saved)) },
       );
       const subject = await openReply();
-      await screen.findByText("Saved draft restored");
+      await screen.findByText(englishCopy["compose.savedDraftRestored"]);
 
       await waitFor(() =>
         expect(
@@ -370,7 +371,7 @@ describe("the project a reply files under", () => {
         { "GET /mail-drafts": () => jsonResponse(savedReply(saved)) },
       );
       const subject = await openReply();
-      await screen.findByText("Saved draft restored");
+      await screen.findByText(englishCopy["compose.savedDraftRestored"]);
       await screen.findByRole("switch", { name: KEY_SWITCH });
 
       await pickOption(user, screen.getByLabelText("Project"), pick);
@@ -422,7 +423,7 @@ describe("the project a reply files under", () => {
         },
       );
       const subject = await openReply();
-      await screen.findByText("Saved draft restored");
+      await screen.findByText(englishCopy["compose.savedDraftRestored"]);
       await pickOption(user, screen.getByLabelText("Project"), pick);
       expect(subject().value).toBe(saved);
 
@@ -508,7 +509,7 @@ describe("the project a reply files under", () => {
       },
     );
     const subject = await openReply();
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
     await screen.findByRole("switch", { name: KEY_SWITCH });
 
     for (const [step, after] of steps) {
@@ -550,7 +551,7 @@ describe("the project a reply files under", () => {
       },
     );
     const subject = await openReply();
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
     expect(subject().value).toBe("[N2P-1] Re: Angebot");
 
     release?.();

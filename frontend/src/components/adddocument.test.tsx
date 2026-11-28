@@ -20,6 +20,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "../design-system/atoms";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { companyDocumentsKey, dealFilesKey } from "../lib/attachmentkeys";
 import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../lib/attachmentupload";
 import { AddDocumentDialog } from "./adddocument";
@@ -426,9 +427,7 @@ describe("adding a document from the account", () => {
     // deal fields, so the fallback is a silent downgrade.
     const submit = screen.getByRole("button", { name: "Upload" });
     await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(true));
-    expect(
-      screen.getByText("Select the deal to file this under."),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["docs.add.errNoDeal"])).toBeTruthy();
     await user.click(submit);
     expect(uploads(calls)).toHaveLength(0);
   });
@@ -535,10 +534,14 @@ describe("adding a document from the account", () => {
     // arrived on none, so choosing one would mint a false answer to the exact
     // question the document library reads that column for.
     expect(
-      within(listbox).queryByRole("option", { name: "Email attachment" }),
+      within(listbox).queryByRole("option", {
+        name: englishCopy["docs.category.email"],
+      }),
     ).toBeNull();
     expect(
-      within(listbox).queryByRole("option", { name: "Message attachment" }),
+      within(listbox).queryByRole("option", {
+        name: englishCopy["docs.category.message"],
+      }),
     ).toBeNull();
   });
 
@@ -573,9 +576,7 @@ describe("adding a document from the account", () => {
     // The dialog stays open — but the file it holds is gone, because that file
     // is already on the record.
     expect(closed).not.toHaveBeenCalled();
-    expect(
-      screen.getByText("Drop a file here, or click to choose one"),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["docs.add.fileEmpty"])).toBeTruthy();
   });
 
   it("reports an upload that never landed as nothing stored, which is a different sentence", async () => {
@@ -599,7 +600,9 @@ describe("adding a document from the account", () => {
 
     // Awaited, because until /me answers the refusal on offer is the seat one:
     // asserting immediately would pass on the wrong reason.
-    expect(await screen.findByText("Choose a file to upload.")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["docs.add.errNoFile"]),
+    ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Upload" }).hasAttribute("disabled"),
     ).toBe(true);
@@ -621,11 +624,7 @@ describe("adding a document from the account", () => {
 
     await user.upload(screen.getByLabelText(/File/), orderForm());
     await waitFor(() =>
-      expect(
-        screen.getByText(
-          "You do not have permission to add documents to this record.",
-        ),
-      ).toBeTruthy(),
+      expect(screen.getByText(englishCopy["docs.add.errRefused"])).toBeTruthy(),
     );
     // The seat is clamped by the server on the METHOD, before RBAC — a grant
     // alone is not permission to write, and the button must not pretend it is.
@@ -682,10 +681,12 @@ describe("adding a document from the account", () => {
     view.rerender(dialog(true));
 
     expect(
-      await screen.findByText("Drop a file here, or click to choose one"),
+      await screen.findByText(englishCopy["docs.add.fileEmpty"]),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Upload" })).toBeTruthy();
-    expect(await screen.findByText("Choose a file to upload.")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["docs.add.errNoFile"]),
+    ).toBeTruthy();
   });
 
   it("does not greet the next visit with a warning about the last one", async () => {
@@ -710,11 +711,13 @@ describe("adding a document from the account", () => {
     // watching.
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     release?.();
-    await waitFor(() => expect(screen.queryByText("Add document")).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByText(englishCopy["docs.add.title"])).toBeNull(),
+    );
 
     await user.click(screen.getByRole("button", { name: "reopen" }));
     expect(
-      await screen.findByText("Drop a file here, or click to choose one"),
+      await screen.findByText(englishCopy["docs.add.fileEmpty"]),
     ).toBeTruthy();
     expect(screen.queryByText(/Uploaded, but not filed/)).toBeNull();
   });
@@ -743,7 +746,7 @@ describe("adding a document from the account", () => {
         lists.getQueryState(companyDocumentsKey("o-1"))?.isInvalidated,
       ).toBe(true),
     );
-    expect(screen.getByText("Add document")).toBeTruthy();
+    expect(screen.getByText(englishCopy["docs.add.title"])).toBeTruthy();
     expect(screen.getByLabelText<HTMLInputElement>(/Title/).value).toBe(
       "Second draft",
     );

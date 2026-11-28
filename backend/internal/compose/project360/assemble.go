@@ -172,7 +172,7 @@ func (s *Service) Read(ctx context.Context, projectID ids.ProjectID, reading Rea
 		return Result{}, err
 	}
 	var tasks []activities.OpenTask
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		project, err := s.projects.GetProjectTx(ctx, tx, projectID, storekit.LiveOnly, cats.project)
 		if err != nil {
 			return err

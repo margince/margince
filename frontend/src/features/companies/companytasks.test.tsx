@@ -15,6 +15,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   company,
   company360,
@@ -253,7 +254,11 @@ describe("CompanyScreen — the Tasks tab", () => {
     // The ask is the step, in the words the button writes — not "Set the next
     // step", which hands the reader back the finding as an instruction.
     await waitFor(() => expect(screen.getByText(RECOMMENDED)).toBeTruthy());
-    await user.click(screen.getByRole("button", { name: "Add next step" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["co.suggest.act.addTask"],
+      }),
+    );
 
     await waitFor(() => expect(posted).toEqual(preparedStep));
     // The POST returning is not the end of the write: it invalidates the
@@ -298,11 +303,11 @@ describe("CompanyScreen — the Tasks tab", () => {
       throw new Error("the tasks tab has no section wrapper");
     }
     await waitFor(() =>
-      expect(within(tasks).getByText("Hidden for your role")).toBeTruthy(),
+      expect(
+        within(tasks).getByText(englishCopy["state.withheld"]),
+      ).toBeTruthy(),
     );
-    expect(
-      within(tasks).queryByText("No open tasks for this company."),
-    ).toBeNull();
+    expect(within(tasks).queryByText(englishCopy["co.next.empty"])).toBeNull();
   });
 
   it("opens a link to an archived account's Tasks tab on its Overview", async () => {

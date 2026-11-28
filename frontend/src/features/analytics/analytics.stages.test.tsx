@@ -3,6 +3,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { AnalyticsScreen } from "./analytics";
 import { render, reportsStub } from "./analytics.testkit";
 import { stagesOfEveryPipeline } from "./pipelinestages";
@@ -98,7 +99,9 @@ describe("the pipeline stage table", () => {
       .setup()
       .click(await screen.findByRole("button", { name: "Pipeline" }));
     const table = within(
-      await screen.findByRole("table", { name: "Open deals by stage" }),
+      await screen.findByRole("table", {
+        name: englishCopy["analytics.reportDeals"],
+      }),
     );
     expect(
       await table.findByText("Old partners (retired) · Legacy intake"),

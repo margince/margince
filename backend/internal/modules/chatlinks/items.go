@@ -47,15 +47,17 @@ type Event struct {
 	Detail     map[string]any
 	Deals      []ids.UUID
 	Projects   []ids.UUID
+	Companies  []ids.UUID
 }
 
 // Item is one pending or posted event of a link.
 type Item struct {
-	ID         ids.UUID
-	EventType  string
-	ActivityID *ids.UUID
-	Detail     map[string]any
-	CreatedAt  time.Time
+	ID            ids.UUID
+	EventType     string
+	ActivityID    *ids.UUID
+	Detail        map[string]any
+	CreatedAt     time.Time
+	MessageDetail string
 }
 
 // RecordEvent adds the event to every active link of the records it touches,
@@ -71,17 +73,14 @@ func (s *Store) RecordEvent(ctx context.Context, ev Event) error {
 		return fmt.Errorf("chatlinks: encoding the detail of %s: %w", ev.EventType, err)
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		links, err := linksTouching(ctx, tx, ev.Deals, ev.Projects)
+		links, err := linksTouchingCompanies(ctx, tx, ev.Deals, ev.Projects, ev.Companies)
 		if err != nil {
 			return err
 		}
 		for _, link := range links {
-			if admits(link.Verbosity, ev.Tier) {
-				if _, err := tx.Exec(ctx, `INSERT INTO chat_post_item
-					(link_id, event_id, event_type, activity_id, detail)
-					VALUES ($1, $2, $3, $4, $5)
-					ON CONFLICT DO NOTHING`,
-					link.ID, ev.EventID, ev.EventType, ev.ActivityID, detail); err != nil {
+			if !link.PostDisabled && admits(link.Verbosity, ev.Tier) {
+				if _, err := tx.Exec(ctx, `INSERT INTO chat_post_item(link_id,event_id,event_type,activity_id,detail,message_detail)
+                VALUES(@link,@event,@type,@activity,@detail,@mode) ON CONFLICT DO NOTHING`, pgx.StrictNamedArgs{linkKey: link.ID, "event": ev.EventID, "type": ev.EventType, "activity": ev.ActivityID, "detail": detail, "mode": link.MessageDetail}); err != nil {
 					return err
 				}
 			}
@@ -94,13 +93,13 @@ func (s *Store) RecordEvent(ctx context.Context, ev Event) error {
 }
 
 // linksTouching reads the active links of any of the records.
-func linksTouching(ctx context.Context, tx pgx.Tx, deals, projects []ids.UUID) ([]Link, error) {
-	if len(deals) == 0 && len(projects) == 0 {
+func linksTouchingCompanies(ctx context.Context, tx pgx.Tx, deals, projects, companies []ids.UUID) ([]Link, error) {
+	if len(deals) == 0 && len(projects) == 0 && len(companies) == 0 {
 		return nil, nil
 	}
 	rows, err := tx.Query(ctx, `SELECT `+linkColumns+` FROM chat_link
 		WHERE archived_at IS NULL AND status = $3
-		  AND (deal_id = ANY($1) OR project_id = ANY($2))`, deals, projects, StatusActive)
+		  AND (deal_id = ANY($1) OR project_id = ANY($2) OR company_id = ANY($4))`, deals, projects, StatusActive, companies)
 	if err != nil {
 		return nil, err
 	}
@@ -144,9 +143,12 @@ func (s *Store) PendingFor(ctx context.Context, linkID ids.UUID) (Pending, error
 			return err
 		}
 		out.Link = link
-		if out.Items, err = queryItems(ctx, tx, `link_id = $1 AND posted_at IS NULL AND withdrawn_at IS NULL
+		if out.Items, err = queryItems(ctx, tx, `link_id = $1 AND posted_at IS NULL AND withdrawn_at IS NULL AND (retry_at IS NULL OR retry_at<=now())
 			ORDER BY created_at, id LIMIT `+fmt.Sprint(flushBatchLimit), linkID); err != nil {
 			return err
+		}
+		for i := range out.Items {
+			out.Items[i].MessageDetail = link.MessageDetail
 		}
 		out.Rewrites, err = rewritesOf(ctx, tx, linkID)
 		return err
@@ -176,14 +178,14 @@ func rewritesOf(ctx context.Context, tx pgx.Tx, linkID ids.UUID) ([]Rewrite, err
 }
 
 func queryItems(ctx context.Context, tx pgx.Tx, where string, args ...any) ([]Item, error) {
-	rows, err := tx.Query(ctx, `SELECT id, event_type, activity_id, detail, created_at
+	rows, err := tx.Query(ctx, `SELECT id, event_type, activity_id, detail, created_at, coalesce(message_detail,'legacy')
 		FROM chat_post_item WHERE `+where, args...)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (Item, error) {
 		var it Item
-		err := row.Scan(&it.ID, &it.EventType, &it.ActivityID, &it.Detail, &it.CreatedAt)
+		err := row.Scan(&it.ID, &it.EventType, &it.ActivityID, &it.Detail, &it.CreatedAt, &it.MessageDetail)
 		return it, err
 	})
 }
@@ -191,14 +193,13 @@ func queryItems(ctx context.Context, tx pgx.Tx, where string, args ...any) ([]It
 // MarkPosted stamps the items one post carried with the post and the chat's
 // message id. Withdrawn items are rewritten out of their post first, so only
 // items still pending are stamped.
-func (s *Store) MarkPosted(ctx context.Context, linkID, postID ids.UUID, messageID string, items []ids.UUID) error {
+func (s *Store) MarkPosted(ctx context.Context, linkID, postID ids.UUID, messageID string, items []ids.UUID, detail string) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE chat_post_item
-			SET post_id = $2, message_id = NULLIF($3, ''), posted_at = now()
-			WHERE link_id = $1 AND id = ANY($4) AND posted_at IS NULL`, linkID, postID, messageID, items)
+		_, err := tx.Exec(ctx, `UPDATE chat_post_item SET post_id=@post,message_id=NULLIF(@message,''),posted_at=now(),message_detail=@detail,last_error=NULL,retry_at=NULL
+ WHERE link_id=@link AND id=ANY(@items) AND posted_at IS NULL`, pgx.StrictNamedArgs{"post": postID, messageKey: messageID, "detail": detail, linkKey: linkID, "items": items})
 		return err
 	})
 }
@@ -210,7 +211,7 @@ func (s *Store) MarkRewritten(ctx context.Context, linkID ids.UUID, messageID st
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE chat_post_item SET message_id = NULL
+		_, err := tx.Exec(ctx, `UPDATE chat_post_item SET message_id = NULL, redacted_at = now()
 			WHERE link_id = $1 AND message_id = $2 AND withdrawn_at IS NOT NULL`, linkID, messageID)
 		return err
 	})
@@ -257,20 +258,29 @@ func (s *Store) SetCard(ctx context.Context, linkID ids.UUID, messageID, fingerp
 
 // MarkChannelGone pauses a link whose channel the chat no longer has.
 func (s *Store) MarkChannelGone(ctx context.Context, linkID ids.UUID) error {
+	return s.setLinkStatus(ctx, linkID, StatusChannelGone)
+}
+
+// MarkIdentityNeedsReview pauses use of a link whose stored identity needs repair.
+func (s *Store) MarkIdentityNeedsReview(ctx context.Context, linkID ids.UUID) error {
+	return s.setLinkStatus(ctx, linkID, StatusIdentityNeedsReview)
+}
+
+func (s *Store) setLinkStatus(ctx context.Context, linkID ids.UUID, status string) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		before, err := scanLink(tx.QueryRow(ctx, `SELECT `+linkColumns+` FROM chat_link
 			WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, linkID))
-		if err == pgx.ErrNoRows || (err == nil && before.Status == StatusChannelGone) {
+		if err == pgx.ErrNoRows || (err == nil && before.Status == status) {
 			return nil
 		}
 		if err != nil {
 			return err
 		}
 		after, err := scanLink(tx.QueryRow(ctx, `UPDATE chat_link SET status = $2
-			WHERE id = $1 RETURNING `+linkColumns, linkID, StatusChannelGone))
+			WHERE id = $1 RETURNING `+linkColumns, linkID, status))
 		if err != nil {
 			return err
 		}

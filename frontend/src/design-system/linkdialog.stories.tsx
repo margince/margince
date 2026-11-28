@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { LinkDialog } from "./linkdialog";
 
 // The editor owns the selection; the dialog owns only the address.
@@ -31,7 +32,9 @@ type Story = StoryObj<typeof LinkDialog>;
 export const NewLink: Story = {
   play: async () => {
     const dialog = within(await within(document.body).findByRole("dialog"));
-    await expect(dialog.getByLabelText("Web or email address")).toHaveValue("");
+    await expect(
+      dialog.getByLabelText(englishCopy["richtext.linkAddress"]),
+    ).toHaveValue("");
     await expect(dialog.queryByRole("button", { name: "Remove link" })).toBe(
       null,
     );
@@ -46,9 +49,9 @@ export const EditingLink: Story = {
   },
   play: async () => {
     const dialog = within(await within(document.body).findByRole("dialog"));
-    await expect(dialog.getByLabelText("Web or email address")).toHaveValue(
-      "https://example.com/pricing",
-    );
+    await expect(
+      dialog.getByLabelText(englishCopy["richtext.linkAddress"]),
+    ).toHaveValue("https://example.com/pricing");
     // Not toBeVisible: the dialog is still fading in when play runs.
     await expect(
       dialog.getByRole("button", { name: "Remove link" }),
@@ -60,7 +63,7 @@ export const EditingLink: Story = {
 export const RefusedAddress: Story = {
   play: async () => {
     const dialog = within(await within(document.body).findByRole("dialog"));
-    const field = dialog.getByLabelText("Web or email address");
+    const field = dialog.getByLabelText(englishCopy["richtext.linkAddress"]);
     await userEvent.type(field, "javascript:alert(1)");
     await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
     await expect(field).toHaveAttribute("aria-invalid", "true");

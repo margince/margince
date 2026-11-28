@@ -8,6 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { LinkDialog } from "./linkdialog";
 import { linkHref } from "./richtext-html";
 
@@ -73,7 +74,9 @@ describe("the link dialog", () => {
     const { onApply } = open();
 
     await user.type(
-      screen.getByRole("textbox", { name: "Web or email address" }),
+      screen.getByRole("textbox", {
+        name: englishCopy["richtext.linkAddress"],
+      }),
       "example.com/x{Enter}",
     );
 
@@ -83,7 +86,9 @@ describe("the link dialog", () => {
   it("refuses a script address on the field and keeps refusing", async () => {
     const user = userEvent.setup({ delay: null });
     const { onApply } = open();
-    const field = screen.getByRole("textbox", { name: "Web or email address" });
+    const field = screen.getByRole("textbox", {
+      name: englishCopy["richtext.linkAddress"],
+    });
 
     await user.type(field, "javascript:alert(1){Enter}");
     await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -101,7 +106,9 @@ describe("the link dialog", () => {
     open("https://example.com", onRemove);
 
     expect(
-      screen.getByRole("textbox", { name: "Web or email address" }),
+      screen.getByRole("textbox", {
+        name: englishCopy["richtext.linkAddress"],
+      }),
     ).toHaveValue("https://example.com");
     expect(screen.getByRole("heading", { name: "Edit link" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Remove link" }));

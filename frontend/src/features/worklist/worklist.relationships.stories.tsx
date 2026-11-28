@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders, stubWithSession } from "../../testing/story-utils";
 import { row } from "./worklist.fixtures";
 import { OptionalRelationships } from "./worklist.relationships";
@@ -56,18 +57,24 @@ type Story = StoryObj<typeof OptionalRelationships>;
 export const Optional: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("Optional reconnections")).toBeVisible();
+    await expect(
+      canvas.getByText(englishCopy["worklist.relationships.optional"]),
+    ).toBeVisible();
     await expect(
       canvas.getByText("No recent contact with Demo contact"),
     ).toBeVisible();
     await expect(
-      canvas.getByText("More optional contacts are outside this view."),
+      canvas.getByText(englishCopy["worklist.relationships.more"]),
     ).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "Dismiss all shown" }),
+      canvas.getByRole("button", {
+        name: englishCopy["worklist.verb.dismissAll"],
+      }),
     ).toBeVisible();
     await expect(
-      canvas.getAllByRole("button", { name: "Stop following" }),
+      canvas.getAllByRole("button", {
+        name: englishCopy["worklist.verb.stopFollowing"],
+      }),
     ).toHaveLength(2);
   },
 };

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Row } from "../../design-system/stack";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { EmailDrawerActions } from "./emailreply";
 
@@ -78,7 +79,9 @@ export const ReadOnlySeat: Story = {
     presentation: { ...message, can_reply: false, can_forward: false },
   },
   play: async () => {
-    await screen.findByRole("button", { name: "More actions" });
+    await screen.findByRole("button", {
+      name: englishCopy["record.moreActions"],
+    });
     await expect(screen.queryByRole("button", { name: "Reply" })).toBeNull();
     await expect(screen.queryByRole("button", { name: "Forward" })).toBeNull();
   },

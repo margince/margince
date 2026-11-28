@@ -15,21 +15,21 @@ anything. This page shows what each declared agent pays, how much room that leav
 what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
 [mcp-info.md](mcp-info.md#index).
 
-The heaviest menu is `overnight_at_risk_sweep`: 6825 of the window's 32768 tokens per step (20%).
+The heaviest menu is `overnight_at_risk_sweep`: 6564 of the window's 32768 tokens per step (20%).
 
 ## The declared agents
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 48 | 2108 | 1692 | 4530 | 13% | 11854 | 0 | 4 |
-| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3420 | 2674 | 6825 | 20% | 9559 | 4 | 5 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 54122 |  |  | 165% |  |  |  |
+| `morning_brief` | 5 | 5 of 48 | 2087 | 1671 | 4489 | 13% | 11895 | 0 | 4 |
+| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3239 | 2595 | 6564 | 20% | 9820 | 0 | 5 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 54138 |  |  | 165% |  |  |  |
 
 ### `morning_brief`
 
 ```text
 Prepare the existing Morning Brief of the user this run acts for. First call read_brief. Its items
-are the queue already ranked for them; do not assemble a workspace-wide list. Read every record an
+are the queue already ranked for them; do not assemble a company-wide list. Read every record an
 item cites in its evidence_ids, its activities as well as its deal, then call annotate_brief ONCE,
 with one concise narrative and a grounded finding for every item in that same call: why it matters,
 what changed and the next move. An item with a previous_rank was already on this queue on the run's
@@ -40,8 +40,8 @@ there are no items, finish without inventing a brief. A tool refusal means the f
 saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 4530 tokens on every step (2108 listing, 1692 step schema), leaving
-11854 of its budget and 28238 tokens of the
+Attaches 5 tools and pays 4489 tokens on every step (2087 listing, 1671 step schema), leaving
+11895 of its budget and 28279 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -65,8 +65,8 @@ body states the finding and the evidence (cite the records you read). A note wit
 refused. Do not advance stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 6825 tokens on every step (3420 listing, 2674 step schema), leaving
-9559 of its budget and 25943 tokens of the
+Attaches 7 tools and pays 6564 tokens on every step (3239 listing, 2595 step schema), leaving
+9820 of its budget and 26204 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -76,14 +76,6 @@ window for the goal, the grounding and everything it reads.
 - `read_record`
 - `review_commitments`
 - `whats_slipping_this_week`
-
-**4 dangling cross-references**: this agent's own tool copy points at tools it
-cannot call, so a run may spend a step discovering the refusal:
-
-- at_risk_relationships → read_relationships
-- log_activity → draft_outbound
-- log_activity → send_outbound
-- whats_slipping_this_week → draft_outbound
 
 ## Why a tool is paid for twice
 
@@ -145,7 +137,7 @@ menu. Lowering it is not always an improvement either: a tool its goal needs rai
 this count whenever its copy names a neighbour.
 
 **Temptation weight** sums, over an agent's tools, how many of that agent's own
-certification scenarios (of 8 in the corpus) name the tool as the wrong reach. Each
+certification scenarios (of 12 in the corpus) name the tool as the wrong reach. Each
 scenario certifies one scheduled agent's window (its goal and its tools), so a near
 miss is a tool that run can see and reach for.
 
@@ -154,6 +146,13 @@ Each scenario lists the tools its goal makes tempting, in a `near_misses:` list 
 expected step. A weight of 5 does not mean a model went wrong five times; it means five
 scenarios name a tool on this menu as the reach to avoid. The measurement that
 would replace it is sampling real runs for chosen-vs-wanted.
+
+**4 scenarios were skipped by the scan** and are named here rather than dropped:
+
+- morning_brief_recovers_bad_arguments.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)
+- morning_brief_recovers_field_shape.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)
+- morning_brief_recovers_unknown_field.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)
+- morning_brief_recovers_unsupported.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)
 
 ## Related
 

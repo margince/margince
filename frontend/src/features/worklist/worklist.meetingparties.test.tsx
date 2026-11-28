@@ -8,6 +8,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { day, renderWorklist, row, stub } from "../../testing/worklist.testkit";
 import { hostText } from "./worklist.meetingparties";
 
@@ -86,7 +87,9 @@ describe("a meeting row names its parties", () => {
 describe("hostText", () => {
   it("says the reader hosted their own meeting, without a name", () => {
     const item = aMeetingOwedAnAnswer({ host: { kind: "user", id: READER } });
-    expect(hostText(item, READER, t)).toBe("hosted by you");
+    expect(hostText(item, READER, t)).toBe(
+      englishCopy["worklist.meeting.hostedByYou"],
+    );
   });
 
   it("names a colleague by the label the server resolved", () => {

@@ -83,7 +83,7 @@ func (r *Refresher) check(ctx context.Context, record generatedsummary.StandingR
 	}
 	var shown generatedsummary.StandingLine
 	var found bool
-	if err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		shown, found, err = generatedsummary.ReadStandingLineTx(ctx, tx, record)
 		return err
 	}); err != nil {
@@ -101,7 +101,7 @@ func (r *Refresher) check(ctx context.Context, record generatedsummary.StandingR
 	if err != nil {
 		return fmt.Errorf("check the status line of a %s: %w", record.EntityType, err)
 	}
-	return database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		if answer.Text == "" {
 			// Kept, or too little to say: the line stands and this input is read.
 			return generatedsummary.TouchStandingLineTx(ctx, tx, record, fingerprint)

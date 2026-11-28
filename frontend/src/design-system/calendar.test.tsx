@@ -11,6 +11,7 @@ import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { weekdayInitial } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { Calendar, dateOf, isoDay, monthGrid } from "./calendar";
 
 afterEach(cleanup);
@@ -93,7 +94,9 @@ it("steps a month at a time from a date no shorter month holds", async () => {
     />,
   );
 
-  await userEvent.click(screen.getByRole("button", { name: "Previous month" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: englishCopy["calendar.previousMonth"] }),
+  );
 
   expect(isoDay(paged.mock.calls[0][0])).toBe("2026-06-01");
 });

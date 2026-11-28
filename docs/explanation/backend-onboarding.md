@@ -51,7 +51,7 @@ one company; boot refuses a second.
 1. **`cmd/api`** gets the request. The middleware binds actor + workspace + `correlation_id` onto the context (and, for an agent, finds the autonomy tier).
 2. The **generated router** sends it to the operation's method on `compose.Server`. That is a real module handler, in place of a generated 501 stub.
 3. The **handler** reads the request and calls its module's **Store/Service**, where the RBAC gate and the workspace transaction sit. Handlers never decide authorization.
-4. The **Store** runs SQL over the tables it owns inside `WithWorkspaceTx`. A change writes the domain row + an `audit_log` row + an `event_outbox` row in that one transaction.
+4. The **Store** runs SQL over the tables it owns inside `WithTx`. A change writes the domain row + an `audit_log` row + an `event_outbox` row in that one transaction.
 5. After commit, the **outbox relay** ships the event to Redis. There reader groups act on it (context graph, workflows, the reasoning run while the team sleeps).
 6. The handler maps any error through a sentinel and returns.
 
@@ -158,7 +158,7 @@ event row together. That is the whole write contract in one call site (an exampl
 ```go
 func (s *Store) CreateDeal(ctx context.Context, in CreateDealInput) (Deal, error) {
     if err := auth.Require(ctx, "deal", principal.Create); err != nil { return Deal{}, err }
-    return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+    return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
         // INSERT INTO deal (...) VALUES (...)                        ← the domain row(s)
         auditID, err := storekit.Audit(ctx, tx, "create", "deal", id, nil, after) // ← audit_log row
         if err != nil { return err }
@@ -167,8 +167,7 @@ func (s *Store) CreateDeal(ctx context.Context, in CreateDealInput) (Deal, error
 }
 ```
 
-`WithWorkspaceTx` fails closed before any SQL runs if no workspace is bound to the context, and the three
-rows commit in one transaction. Go deeper where you need to. **Authorization** (`WithWorkspaceTx`, the app
+`WithTx` opens one transaction, so the three rows commit together or not at all. Go deeper where you need to. **Authorization** (`WithTx`, the app
 role's own grants, the auth gate) is in [authorization.md](authorization.md). The **write backbone** (the
 `audit_log` DDL, the outbox envelope, the relay, dedupe) is in [write-backbone.md](write-backbone.md).
 

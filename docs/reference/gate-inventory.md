@@ -146,6 +146,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `humanonlyenforcement_test.go` | H1 | The declaration reaches the thing that enforces it. |
 | `idempotencymap_test.go` | H3 | The contract decides which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must list the same operations. |
 | `identifierfields_test.go` | H3 | A provider's match rules are checked against IdentifierFields(), so that list has to name every field a contact actually carries. |
+| `identifierspellingparity_test.go` | H3 | The characters drop\_hidden\_characters removes in the database are the ones values.IdentifierText drops in Go. |
 | `inboundsigningrecipe_test.go` | H3 | The signing scope is one invariant spelled on both sides of a wire. |
 | `issuelabels_test.go` | H3 | The label taxonomy is written down once and read from there. |
 | `jsonbpathkeys_test.go` | H1 | A SQL path into a jsonb column names a key the Go struct actually writes. |
@@ -192,12 +193,17 @@ The eight shapes, what each is for, and how each one silently passes:
 | `preservedtableparity_test.go` | H3 | Two lists say which tables a wipe must leave alone, and this fails when they disagree. |
 | `previewauthority_test.go` | H2 | The authority levels a composer can receive are the ones the engine can send. |
 | `privacypagefallback_test.go` | H3 | TestThePrivacyPageFallbackIsOneOnBothSides holds the subscription question's rights link to one order. |
+| `problemfieldcodes_test.go` | H2 | Field codes travel inside details.errors and have their own server census. |
+| `problemstatuscorrelation_cases_test.go` | H2 | TestProblemMocksKeepTheStatusAndCodeOfEachTableRowTogether checks the emitted Problem contract. |
+| `problemstatuspairs_test.go` | H2 | Bind both arguments together when a writer receives status and code. |
+| `problemstatussources_cases_test.go` | H2 | TestProblemStatusPairsKeepEachServerTableRowTogether rejects a cross product of unrelated rows. |
 | `processingrecord_test.go` | H3 | The Art. 30 processing record names the code that enforces each entry, and this fails when that code is not there any more. |
 | `promptwindow_test.go` | H1 | runner.MinimumPromptWindow is the supported floor (the smallest prompt window any provider this build binds will carry), and this holds it equal to the adapter that owns the figure. |
 | `providercategoryallowlist_test.go` | H2 | The allow-list of provider-defined containers lives in two places (the CHECK on capture\_exclusion and the Go the writer consults), and the two must agree. |
 | `providername_test.go` | H2 | The rule a registered name must satisfy is the contract's, on both surfaces that have one. |
 | `publicevents_test.go` | H3 | The outbound-webhook surface has three moving parts that must stay in lock-step, and nothing in the build forces them to. |
 | `queryparamexplode_test.go` | H2 | Every query parameter in crm.yaml is encoded the way the frontend client sends it. |
+| `ratelimitreference_test.go` | H3 | TestRateLimitReferenceMatchesTheEnforcedConstructors derives the reference from every fixed-window limiter constructor and the configurable form defaults. |
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is declared in the contract and restated in Go, and the two must not drift. |
 | `recordkindopenlist_test.go` | H3 | A column that names a kind of record accepts an extension's kind only when a writer puts one there. |
 | `regionalformats_test.go` | H3 | The store validates through the generated read enum. |
@@ -552,7 +558,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `bounceobserver_test.go` | H2 | The bounce sink stops the address it just marked dead. |
 | `commsreconciler_test.go` | H2 | No role this repository assembles builds a delivery store without the seam that re-keys a sent message's timeline row. |
 | `companyrenamerecheck_test.go` | H2 | A company's name is the axis on which two records of one company converge, so every rename has to ask whether it just created a duplicate. |
-| `composerowscope_test.go` | H2 | Anything in the compose tier that returns a record is a read. |
+| `composerowscope_test.go` | H2 | A returned record reference is a read. |
 | `consentproof_test.go` | H2 | Every write that sets a contact\_consent state appends a consent\_event proof row in the same function, so the current state is always backed by an append-only event saying when, how, and by whom. |
 | `contactemployer_test.go` | H2 | TestEveryContactInsertResolvesItsEmployer derives the obligation from the actual insert statements. |
 | `contactscrub_test.go` | H2 | Erasing a contact and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |
@@ -641,6 +647,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `calendarday_test.go` | H2 | A calendar day is one derivation, and this is the census that keeps it one. |
 | `calendarverbseat_test.go` | H2 | A calendar verb acting on a row it found by the provider's event id proves the acting seat holds that row. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
+| `catalogcopyvocabulary_test.go` | H2 | _(no doc comment)_ |
 | `catalogrequirementcodes_test.go` | H2 | No internal requirement code reaches the copy a model reads. |
 | `catalogvocabulary_test.go` | H2 | The tool catalog calls the record a company, and the other word for it fails here. |
 | `claimpickonce_test.go` | H2 | A claim query picks its rows once, in a MATERIALIZED CTE, and never in an IN subquery. |
@@ -793,6 +800,9 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendobjectkeys_test.go` | H2 | The word map reader reads each shape a frontend map is declared in, and fails one it cannot read. |
 | `geministrictwire_test.go` | H2 | Each tool's arguments and the runner's step schema go through the Gemini rewrite. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
+| `historyimageguards_falsify_test.go` | H3 | _(no doc comment)_ |
+| `historyimagestoredfield_falsify_test.go` | H3 | _(no doc comment)_ |
+| `historylabelconsumers_test.go` | H3 | History also reads stored column labels, the address dialog and company profile. |
 | `individualperformancereachfixtures_test.go` | H2 | The individual-performance path walk read against planted packages, one shape per package, each of which an any-path reading of the switch accepts. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification: every dispatch shape the tree uses is proven accepted, and the shapes it exists to reject (a dispatcher doing a tenant's work, and a fan-out built around the chokepoints) are proven rejected. |
 | `jobkindgate_test.go` | H2 | Registration probes compile the real generated constraint through a source overlay. |
@@ -801,6 +811,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `noopprobematch_test.go` | H2 | noOpProbeHelpers are the helpers that send a save of the stored values and check nothing moved, with where each takes its method and path. |
 | `piicolumnreading_test.go` | H3 | Which way the PII census fails when it cannot read a statement. |
 | `piisqlreader_test.go` | H2 | Reading the SQL the PII census judges: where one statement ends and the next begins, which table a write lands on, which columns its SET clause names, and which of those the reader could not read at all. |
+| `problemarrayflow_test.go` | H3 | An unreadable array is a census finding, even when its body code is readable. |
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |
 | `retainedcolumncases_test.go` | H1 | The retention sweep's two SQL claims, driven with synthetic statements rather than the tree, for the reason extensionsqlscopecases\_test.go gives for its own cases. |
 | `retentionconstants_test.go` | H2 | _(no doc comment)_ |

@@ -19,7 +19,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -106,11 +105,6 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 		// No model bound. Every thread stays held, which is the answer this
 		// deployment gets until an admin binds a lane.
 		return nil
-	}
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		// Exported, so a caller other than the worker can reach it: refuse
-		// rather than run a pass against a context whose tenant nobody bound.
-		return errors.New("confidentiality: a verdict pass requires a workspace-bound context")
 	}
 	wsCtx := e.workspaceCtx(ctx)
 	if maxVerdicts <= 0 {
@@ -392,9 +386,6 @@ func asActivityIDs(raw []ids.UUID) []ids.ActivityID {
 // skipped on every deployment with no model bound, which is the deployment
 // where threads exhaust their attempts.
 func (e *ConfidentialityVerdictEngine) RetireExhausted(ctx context.Context) (int64, error) {
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return 0, errors.New("confidentiality: retiring threads requires a workspace-bound context")
-	}
 	return e.threads.RetireExhausted(e.workspaceCtx(ctx),
 		"no confidentiality answer was reached before the attempts ran out")
 }
@@ -458,7 +449,7 @@ func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 	// stage that opened its transaction with one context and wrote with another
 	// fails at the first audited write.
 	wsCtx := e.workspaceCtx(ctx)
-	err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 		if err := capture.LockThreadHoldTx(wsCtx, tx, t.ThreadKey); err != nil {
 			return err
 		}

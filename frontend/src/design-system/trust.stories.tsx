@@ -3,6 +3,7 @@ import { type CSSProperties, type ReactNode, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { identifierNumber } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import {
   AutonomyDot,
   ConfidenceMeter,
@@ -162,7 +163,9 @@ export const AutonomyWithLabel: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const word = await within(canvasElement).findByText("Approval first");
+    const word = await within(canvasElement).findByText(
+      englishCopy["autonomy.confirm"],
+    );
     const dot = word.querySelector(".dot");
     if (!dot) throw new Error("the tier's word drew without its dot");
     const line = word.getBoundingClientRect();

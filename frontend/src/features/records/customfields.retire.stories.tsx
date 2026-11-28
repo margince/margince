@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -58,7 +59,7 @@ export const NoLists: Story = {
   play: async () => {
     await screen.findByRole("dialog", { name: /Loyalty band/ });
     await expect(
-      await screen.findByText("No Live List filters on this field."),
+      await screen.findByText(englishCopy["cf.retire.noLists"]),
     ).toBeInTheDocument();
   },
 };

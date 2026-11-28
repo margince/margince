@@ -196,8 +196,8 @@ func reportScopeHoldsDeals(ctx context.Context, tx pgx.Tx, spec reportSpec, requ
 // withReportSnapshot runs one report read in one `REPEATABLE READ` snapshot, so
 // the small-group floor and the figures it guards read the same instant.
 func withReportSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
-	return database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, pool, fn)
+	return database.WithSnapshot(ctx, pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, pool, fn)
 	})
 }
 

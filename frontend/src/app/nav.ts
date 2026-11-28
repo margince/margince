@@ -21,7 +21,7 @@ import {
   type ExtensionAppGroup,
   type UnitApp,
 } from "../lib/extensionapps";
-import { EXTENSION_SCREEN } from "../lib/extensions";
+import { EXTENSION_SCREEN } from "../lib/extensionscreen";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import type { Route, Screen } from "../lib/router";
 import { NO_URL_PARAMS, type UrlParams } from "../lib/urlstate";

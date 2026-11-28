@@ -3,13 +3,7 @@
 
 package compose
 
-// Every job worker that reaches a store must bind an actor, not just a workspace.
-// A queue inherits no principal, so a tenant-only worker meets the first RBAC
-// gate with nothing to check. That fault lives in the wiring, so this reads it.
-//
-// A binder one call away counts, because the gate follows one level.
-// webhookRetryWorker stays waived: its authority question is asked under the
-// subscription owner. A waived worker that starts binding an actor fails this.
+// Every worker that reaches a store must bind an actor as well as a workspace.
 
 import (
 	"go/scanner"
@@ -26,56 +20,17 @@ import (
 // jobActorUnbound: workers that reach a store and bind no actor because they
 // need none. The audit behind the one entry left is in this file's doc.
 var jobActorUnbound = gatekit.Waive(map[string]string{
-	"voiceBuildWorker":      "binds its actors in its voiceBuildWorkerCtx method through forColleague: the system for the build's bookkeeping, the requester's agent for the work. This follow does not resolve a method call",
-	"documentExtractWorker": "binds its actors in its withDocumentReader method through forColleague: the system for the reading's bookkeeping, the requester's agent for the work. This follow does not resolve a method call",
-	"webhookRetryWorker":    "the retry sweep resolves no principal of its own and reaches no RBAC gate under one. Its path is dueRetries → loadTarget → stillVisible → markVisibilityRevoked → deliverOnce, and none of those asks auth.Require; the two entry points in that store which do (ListDeliveries, requireReplay) are the human dead-letter surfaces this pass never touches. The one authority question it DOES ask — may this subscription's owner still see the record this delivery carries — is asked under the OWNER's principal, resolved per delivery from the row (Deliverer.canSee binds it with principal.WithActor from EffectiveRBAC). An actor bound here would be a second, wrong answer to that question. SweepOnce binds the tenant from its own handle and nothing else. Held by webhookretry_unreachable_integration_test.go, whose job-runner test calls the sweep through this worker and whose other tests call it with a bare context",
+	"webhookRetryWorker": "the retry sweep resolves no principal of its own and reaches no RBAC gate under one. Its path is dueRetries → loadTarget → stillVisible → markVisibilityRevoked → deliverOnce, and none of those asks auth.Require; the two entry points in that store which do (ListDeliveries, requireReplay) are the human dead-letter surfaces this pass never touches. The one authority question it DOES ask — may this subscription's owner still see the record this delivery carries — is asked under the OWNER's principal, resolved per delivery from the row (Deliverer.canSee binds it with principal.WithActor from EffectiveRBAC). An actor bound here would be a second, wrong answer to that question. SweepOnce binds the tenant from its own handle and nothing else. Held by webhookretry_unreachable_integration_test.go, whose job-runner test calls the sweep through this worker and whose other tests call it with a bare context",
 })
 
-// storeBuilders are the handle constructors a store is built on. A Work method
-// that calls one is about to reach an RBAC-gated entry point.
-//
-// InstallationDB belongs here for the same reason workspaceJobDB does, and it
-// had to be added rather than assumed: a pass that collapses out of the
-// per-tenant fan-out (ADR-0103 §1) stops calling workspaceJobDB and starts
-// calling this one, so a regex naming only the old constructor would let every
-// collapsed worker slip out of this gate's sight while reading as green.
-// database.BindTo joined the list with ADR-0103. workspaceJobDB reads the
-// workspace off a job's ARGS, and a collapsed pass has none — it takes the
-// workspace from the fleet walk instead and binds the handle directly, so a
-// pass that reaches a store now does it through BindTo. Leaving it out would
-// have let every collapsed pass build a store unwatched.
+// A worker may construct its store through a helper; trace the data handle too.
 var storeBuilders = regexp.MustCompile(`(providerRunStore|workspaceJobDB|InstallationDB|database\.BindTo)\(`)
 
-// actorBinders are the ways a worker legitimately names its principal: one of
-// this package's context helpers, principal.SystemActing — which binds the
-// actor and the correlation id a pass owes together — or principal.WithActor
-// directly, which is what a pass acting on a named human's behalf still needs.
-//
-// reconcileWorkerCtx is one of those helpers — it binds the workspace, the
-// actor and a correlation id together and returns the context. It is listed for
-// the same reason providerJobActor is, and it was found the way a missing entry
-// here always will be: as a false positive, on a worker whose actor is bound
-// one call away.
-//
-// The ASSIGNMENT is part of the pattern, not decoration. Both calls return a
-// new context and mutate nothing, so `providerJobActor(wsCtx)` on its own line
-// compiles, reads like a binding, and leaves the store holding a context with
-// no actor in it — the precise bug this gate exists to catch, sailing past a
-// check that only asked whether the name appeared.
+// A nested tool’s passport does not authorize the worker that called it.
 var actorBinders = regexp.MustCompile(
-	`\w+\s*(=|:=)\s*(providerJobActor|reconcileWorkerCtx|partSlimJobActor|principal\.(WithActor|SystemActing))\(`)
+	`\w+\s*(=|:=)\s*(forColleague|providerJobActor|reconcileWorkerCtx|partSlimJobActor|principal\.(WithActor|SystemActing))\(`)
 
-// workMethod matches a River worker's entry point and captures its receiver,
-// which is the worker's name in the failure message.
-// A worker's ENTRY POINTS, which is Work and — since ADR-0103 collapsed the
-// workspace dispatchers — the per-workspace turn Work walks the fleet with.
-//
-// Both, because the collapse MOVED the store build out of Work. A collapsed
-// pass's Work is one line handing runPerWorkspace a method, and the store is
-// built inside that method, per tenant. Reading Work alone would have quietly
-// emptied this gate of subjects exactly as the passes were rewritten — every
-// one of them would have stopped being checked, and the gate would have gone
-// green by having nothing left to look at.
+// Work signatures may omit the job argument; the receiver identifies the worker.
 var workMethod = regexp.MustCompile(`func \(\w+ \*(\w+)\) (?:Work|\w*[Ww]orkspace)\(`)
 
 func TestEveryJobWorkerThatReachesAStoreBindsAnActor(t *testing.T) {
@@ -174,15 +129,7 @@ func packageFunctions(t *testing.T, files []os.DirEntry) map[string]string {
 	return out
 }
 
-// indexFunctions records one file's RECEIVER-LESS functions by name.
-//
-// Receiver-less only, and that is what makes the lookup resolve rather than
-// guess. A bare `foo()` in Go can only reach a package-level function, so
-// indexing methods under the same bare name let an unrelated
-// `(s *Store) mode()` answer for a call to `mode()` — a binder in a body the
-// worker never reaches, reported as the worker's own. Go forbids two
-// package-level functions of one name in a package, so every name that
-// resolves here resolves to exactly one body.
+// Only unqualified package functions can inherit their caller’s actor binding.
 func indexFunctions(out map[string]string, text string) {
 	locs := anyFunc.FindAllStringSubmatchIndex(text, -1)
 	for i, loc := range locs {
@@ -202,38 +149,14 @@ func indexFunctions(out map[string]string, text string) {
 // clause when there is one, the second the name.
 var anyFunc = regexp.MustCompile(`(?m)^func (\([^)]*\) )?(\w+)\(`)
 
-// withCalledHelpers is the Work body plus the bodies of the compose-package
-// functions it calls, one level deep.
-//
-// One level, because a binder is a HELPER by nature — it takes a context,
-// returns one carrying the principal, and reads better beside the pass it names
-// than inlined into a Work method. Two of the three workers waived here for
-// weeks were binding correctly one call away, and a gate that produces waivers
-// for correct code is a gate whose waiver list stops meaning anything.
-//
-// WHAT THIS CANNOT SEE, so nobody has to rediscover it: a helper that binds an
-// actor for its own path leaves this body looking bound, so a SECOND, unbound
-// gated call in the same Work method would pass. That is a narrower hole than
-// the one it closes — every helper-bound worker was invisible before — and it
-// is the shape to plant a case for if this gate is ever extended again. It also
-// follows names, not call graphs: a call into another package (the automation
-// scanner, the webhook deliverer) is not read at all, which is why a worker
-// whose only binding lives in another module still needs an entry above.
-//
-// What it does NOT do is guess which body a name means — indexFunctions says
-// why, and it is the reason this follow resolves rather than guesses.
+// Follow local helpers so a binding one call below Work counts.
+// Imported functions and methods need their own binding.
 func withCalledHelpers(body string, pkg map[string]string) string {
 	var b strings.Builder
 	b.WriteString(body)
 	bound := namesBoundIn(body)
 	for _, call := range callee.FindAllStringSubmatch(afterSignature(body), -1) {
-		// A name this body binds ITSELF is a value, not the package function
-		// that happens to share its spelling: `bindActor := w.transform` makes
-		// `bindActor(ctx)` a call through a field, and reading the package's
-		// own bindActor for it would report the worker as bound on the strength
-		// of a body it never runs. Over-collecting is the safe direction — a
-		// name bound anywhere counts as bound throughout, which can lose a real
-		// call and cannot invent one.
+		// A local name shadows the package helper and cannot borrow its body.
 		if bound[call[1]] {
 			continue
 		}
@@ -244,22 +167,12 @@ func withCalledHelpers(body string, pkg map[string]string) string {
 	return b.String()
 }
 
-// namesBoundIn collects the names a body declares: short variable
-// declarations, plain assignments and `var` lines.
-//
-// Text rather than syntax, like the rest of this gate. It over-collects — an
-// assignment to a package-level variable of the same name counts too — and that
-// is the direction to over-collect in: the cost is a call not followed, and the
-// alternative is a worker reported as bound by a body it does not reach.
+// Parameters and control-clause declarations also shadow package helpers.
 func namesBoundIn(body string) map[string]bool {
 	bound := map[string]bool{}
 	for _, m := range localBinding.FindAllStringSubmatch(codeOnly(body), -1) {
 		for part := range strings.SplitSeq(m[1], ",") {
-			// The LAST word of each comma-separated part. The capture is
-			// deliberately loose enough to reach a name introduced in a control
-			// clause, which means it also takes the keyword in front of it —
-			// `switch bindActor`, `for _, bindActor` — and the name is what
-			// follows.
+			// The comma-separated identifiers precede their shared type.
 			words := strings.Fields(part)
 			if len(words) == 0 {
 				continue
@@ -270,29 +183,10 @@ func namesBoundIn(body string) map[string]bool {
 	return bound
 }
 
-// localBinding captures the left-hand side of any declaration or assignment,
-// wherever it appears on a line.
-//
-// NOT anchored to the start of a line, which the first version was and which
-// missed every control-clause declaration: `if h := w.bind; …`, `for _, h := range …`,
-// `switch h := w.bind; …`. A helper name shadowed in one of those read as the
-// package's own function, and the worker came back bound on the strength of a
-// body it never runs — the exact hole this guard exists to close, in the three
-// places Go lets a name be introduced without a statement of its own.
+// Only the left side declares a shadow; selector assignments do not.
 var localBinding = regexp.MustCompile(`(?:^|[^\w.])(?:var\s+)?([\w][\w, ]*?)\s*:?=[^=]`)
 
-// codeOnly blanks every comment and every string or rune literal, leaving the
-// body's offsets and therefore the regex's own idea of a word boundary intact.
-//
-// The scanner is here for one reason: a name is bound by Go, not by text that
-// merely looks like Go. `// bindActor := …` in a note, or `"n := 1"` in a
-// message, made namesBoundIn suppress the follow to the package's real helper,
-// and the gate then read a bound worker as unbound and went red. Prose a
-// contributor writes must not be able to decide a gate, least of all in the
-// cry-wolf direction that gets a gate deleted.
-//
-// Blanking rather than deleting because the regex reads what sits either side
-// of a match: closing the gap could join two words that were never adjacent.
+// Quoted source and comments cannot bind an actor.
 func codeOnly(body string) string {
 	fset := token.NewFileSet()
 	file := fset.AddFile("", fset.Base(), len(body))
@@ -317,14 +211,7 @@ func codeOnly(body string) string {
 	return string(out)
 }
 
-// afterSignature drops a method's own declaration line, so the method's NAME is
-// not read as a call it makes.
-//
-// It matters because the names here are shared: every worker's entry point is
-// called Work, so reading the signature pulled every other worker's Work body
-// in — and one of those binds an actor, which made this gate answer yes for a
-// worker that binds none. It read as a working follow-one-level and was a
-// self-satisfying lookup.
+// A method’s own name cannot count as a binder in its body.
 func afterSignature(body string) string {
 	if open := strings.Index(body, "{\n"); open >= 0 {
 		return body[open:]
@@ -337,12 +224,7 @@ func afterSignature(body string) string {
 // and a method on somebody else's type is not in it.
 var callee = regexp.MustCompile(`(?:^|[^.\w])(\w+)\(`)
 
-// The follow resolves a name; it does not guess which body the name means.
-//
-// The rule and its reason are on indexFunctions; this is the case that fails
-// when the rule goes. What it costs to lose is the gate's own failure
-// direction: a worker reported as bound on the strength of a binder in a body
-// it never runs, which is a waiver nobody asked for, granted silently.
+// Helper lookup preserves its declaration’s package and receiver.
 func TestTheFollowDoesNotResolveABareCallToAMethod(t *testing.T) {
 	t.Parallel()
 	const pkg = `package compose
@@ -367,13 +249,7 @@ func (s *Store) mode(ctx context.Context) context.Context {
 	}
 }
 
-// A Work body that SHADOWS a package helper's name does not borrow its body.
-//
-// `bindActor := w.transform` makes `bindActor(ctx)` a call through a field, and
-// the package's own bindActor is a different function entirely. Reading it
-// anyway reports the worker as bound on the strength of a body it never runs —
-// this gate's own failure direction, and the same shape the receiver-name guard
-// in the tx-seam walk exists for.
+// A shadowed helper cannot lend the worker an actor.
 func TestTheFollowDoesNotBorrowAShadowedHelpersBody(t *testing.T) {
 	t.Parallel()
 	// The helper binds in the ASSIGNMENT form actorBinders recognises — a bare
@@ -403,12 +279,7 @@ func bindActor(ctx context.Context) context.Context {
 	}
 }
 
-// The shadow guard reads a name declared in a control clause.
-//
-// `if`, `for` and `switch` each let a name be introduced without a statement of
-// its own, and a guard anchored to the start of a line sees none of them — so a
-// helper name shadowed in one read as the package's own function and vouched
-// for a worker that binds nothing.
+// Control-clause bindings shadow helpers before their bodies run.
 func TestTheFollowSeesAShadowDeclaredInAControlClause(t *testing.T) {
 	t.Parallel()
 	const pkg = `package compose
@@ -440,15 +311,7 @@ func bindActor(ctx context.Context) context.Context {
 	}
 }
 
-// Prose is not a binding. A comment or a string that happens to contain an
-// assignment must not decide this gate.
-//
-// The guard reads text, and text a contributor writes is not Go: a note saying
-// `bindActor := w.transform` and a log line carrying the same words used to
-// suppress the follow to the package's real bindActor, and the worker — which
-// calls it and IS bound — came back unbound. That is the cry-wolf direction,
-// and this file's own prose says what a gate that cries wolf gets: deleted by
-// the next contact who sees it red.
+// Quoted code and comments must not manufacture local declarations.
 func TestTheFollowIgnoresAnAssignmentInsideACommentOrAString(t *testing.T) {
 	t.Parallel()
 	const pkg = `package compose
@@ -479,5 +342,13 @@ func bindActor(ctx context.Context) context.Context {
 					"so the follow never reached the helper it really calls")
 			}
 		})
+	}
+}
+
+func TestColleagueJobsRecognizeBothBoundContexts(t *testing.T) {
+	bound := "books, work, err = forColleague(ctx, users, requester, job)"
+	unbound := "forColleague(ctx, users, requester, job)"
+	if !actorBinders.MatchString(bound) || actorBinders.MatchString(unbound) {
+		t.Fatal("colleague binding must retain its returned contexts")
 	}
 }

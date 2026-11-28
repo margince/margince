@@ -12,6 +12,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { isConversationKind } from "../../design-system/timelineentry";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { ContactTimelineTab } from "./contacttabs";
@@ -127,7 +128,9 @@ describe("the Threads cut", () => {
     await user.click(await screen.findByRole("button", { name: "Threads" }));
 
     expect(await screen.findByText("Re: Fleet renewal")).toBeTruthy();
-    expect(screen.queryByText("No threads yet.")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["chronology.conversationsEmpty"]),
+    ).toBeNull();
     expect(reads.at(-1)?.searchParams.getAll("kind")).toEqual([
       ...ACTIVITY_KINDS.filter((kind) => isConversationKind(kind)),
     ]);
@@ -138,7 +141,11 @@ describe("the Threads cut", () => {
     draw();
 
     await user.click(await screen.findByRole("button", { name: "Threads" }));
-    await pickOption(user, screen.getByLabelText("Activity kind"), "Email");
+    await pickOption(
+      user,
+      screen.getByLabelText(englishCopy["timeline.filters.kind"]),
+      "Email",
+    );
 
     await waitFor(() =>
       expect(reads.at(-1)?.searchParams.getAll("kind")).toEqual(["email"]),

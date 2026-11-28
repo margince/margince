@@ -149,7 +149,7 @@ func TestProjectMoneyDistinguishesAnEmptyPopulationFromUnpricedAmounts(t *testin
 				}
 			}
 			var totals deals.ProjectDealTotals
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				var err error
 				totals, err = e.Deals.ProjectDealTotalsTx(ctx, tx, projectID)
 				return err

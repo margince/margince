@@ -59,7 +59,7 @@ func TestTheRepairMasksAPasswordStoredBeforeTheRulesAndLeavesTypedTextAlone(t *t
 
 	run := func() int {
 		var changed int
-		if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 			out, err := repairTask(e).Steps[0].Batch(
 				system, tx, datatask.BatchIn{Limit: 50},
 			)
@@ -177,7 +177,7 @@ func TestTheRepairMasksAnAuditImageOnlyUnderItsOwnSetting(t *testing.T) {
 	}
 
 	var changed int
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		out, err := repairTask(e).Steps[1].Batch(
 			system, tx, datatask.BatchIn{Limit: 50},
 		)
@@ -189,7 +189,7 @@ func TestTheRepairMasksAnAuditImageOnlyUnderItsOwnSetting(t *testing.T) {
 	if changed != 1 {
 		t.Fatalf("the repair masked the images of %d mails, want 1", changed)
 	}
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		out, err := repairTask(e).Steps[1].Batch(
 			system, tx, datatask.BatchIn{Limit: 50},
 		)
@@ -266,7 +266,7 @@ func TestTheRepairErasesTheStoredOriginalOfAMailItMasked(t *testing.T) {
 
 	run := func(step int) int {
 		var changed int
-		if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 			out, err := repairTask(e).Steps[step].Batch(
 				system, tx, datatask.BatchIn{Limit: 50},
 			)
@@ -333,7 +333,7 @@ func TestTheRepairLeavesAMailUnderAStatutoryHoldAlone(t *testing.T) {
 			'commercial_correspondence', now())`, held, body)
 
 	var changed int
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		out, err := repairTask(e).Steps[0].Batch(
 			system, tx, datatask.BatchIn{Limit: 50},
 		)
@@ -374,7 +374,7 @@ func TestTheRepairTakesTheMaskedPasswordOutOfSearch(t *testing.T) {
 	if n := matches(); n != "1" {
 		t.Fatalf("the password was not searchable before the repair: count %s", n)
 	}
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		_, err := repairTask(e).Steps[0].Batch(
 			system, tx, datatask.BatchIn{Limit: 50},
 		)
@@ -438,7 +438,7 @@ func TestTheRepairSkipsTheAuditStepWhereTheTrailRefusesIt(t *testing.T) {
 	restoreTheStrictTrigger(t)
 
 	var out datatask.BatchOut
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = repairTask(e).Steps[1].Batch(
 			system, tx, datatask.BatchIn{Limit: 50},
@@ -456,7 +456,7 @@ func TestTheRepairSkipsTheAuditStepWhereTheTrailRefusesIt(t *testing.T) {
 	}
 	// The step the credential's own row depends on is unaffected: the trail
 	// refusing a rewrite is not a reason to leave the mail readable.
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		_, err := repairTask(e).Steps[0].Batch(
 			system, tx, datatask.BatchIn{Limit: 50},
 		)
@@ -492,7 +492,7 @@ func TestTheRepairLeavesTheAuditImagesOfAHeldMailAlone(t *testing.T) {
 	auditRow := seedAnAuditImageOfAnEditTo(t, e, held)
 
 	var changed int
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		out, err := repairTask(e).Steps[1].Batch(
 			system, tx, datatask.BatchIn{Limit: 50},
 		)
@@ -526,7 +526,7 @@ func TestTheRepairMasksTheTrailOfAMailThatIsGone(t *testing.T) {
 	// No activity row for this id: the mail it described was deleted.
 	orphan := seedAnAuditImageOfAnEditTo(t, e, ids.NewV7())
 
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		_, err := repairTask(e).Steps[1].Batch(
 			system, tx, datatask.BatchIn{Limit: 50},
 		)
@@ -565,7 +565,7 @@ func TestTheRepairMasksEveryRecordTypeTheRulesReach(t *testing.T) {
 			[]byte(`{"subject":"Passwort: `+seededCredential+`"}`))
 	}
 
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		_, err := repairTask(e).Steps[1].Batch(
 			system, tx, datatask.BatchIn{Limit: 100},
 		)
@@ -589,7 +589,7 @@ func runSteps(t *testing.T, e *integration.Env, steps ...int) []int {
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
 	changed := make([]int, 0, len(steps))
 	for _, step := range steps {
-		if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 			out, err := repairTask(e).Steps[step].Batch(system, tx, datatask.BatchIn{Limit: 50})
 			changed = append(changed, out.Changed)
 			return err
@@ -770,7 +770,7 @@ func runStepsQuietly(e *integration.Env, steps ...int) []int {
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
 	var changed []int
 	for _, step := range steps {
-		if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 			out, err := repairTask(e).Steps[step].Batch(system, tx, datatask.BatchIn{Limit: 50})
 			changed = append(changed, out.Changed)
 			return err

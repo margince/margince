@@ -87,7 +87,7 @@ func captureFromAlice(t *testing.T, e *integration.Env) ids.UUID {
 func contactsHolding(t *testing.T, e *integration.Env, address string) []ids.UUID {
 	t.Helper()
 	var held []ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT c.id FROM contact c JOIN contact_email ce ON ce.contact_id = c.id
 			 WHERE ce.email = $1 AND ce.archived_at IS NULL AND c.archived_at IS NULL`, address)
@@ -189,7 +189,7 @@ func TestAnEmaillessNameMatchingTwoNamesakesQueuesAPairWithEach(t *testing.T) {
 		t.Fatalf("after the verdict %v hold %s, want the sender %s alone", held, aliceSender, sender)
 	}
 	var unmerged int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM contact
 			 WHERE id = ANY($1) AND archived_at IS NULL AND merged_into_id IS NULL`,

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { GroupedTimelineList } from "./timeline";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
 
@@ -56,7 +57,9 @@ describe("a thread's card", () => {
     expect(
       screen.getByText("10 messages · 4 from them, 5 from your team"),
     ).toBeTruthy();
-    expect(screen.getByText("Calendar invitation")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["timeline.automatic.calendar"]),
+    ).toBeTruthy();
   });
 
   it("marks a newsletter and leaves it out of either side's count", () => {
@@ -86,7 +89,9 @@ describe("a thread's card", () => {
     expect(
       screen.getByText("3 messages · 1 from them, 1 from your team"),
     ).toBeTruthy();
-    expect(screen.getByText("Sent to a mailing list")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["timeline.automatic.bulk"]),
+    ).toBeTruthy();
   });
 
   it("names the kind, the count and who it was with, and seats the verbs in its head", () => {

@@ -287,7 +287,7 @@ it("names why the row in hand is first, whose it is, and its inbox", () => {
   );
   const head = container.querySelector(".brief-triage-lead-head");
   expect(head?.querySelector(".task-meta-status")?.textContent).toBe(
-    "Customer waiting",
+    en["worklist.category.customer_waiting"],
   );
   expect(head?.textContent).toContain(en["visibility.team"]);
   expect(
@@ -451,10 +451,12 @@ it.each([true, false])(
     expect(hero.textContent).not.toContain(failed.detail);
     const card = inHand(container);
     expect(container.querySelector(".worklist-row-title")?.textContent).toBe(
-      hasTitle ? "Move deal to Won" : "Approved action did not run",
+      hasTitle ? "Move deal to Won" : en["worklist.untitled.failed_approval"],
     );
     expect(card.getAllByText(failed.detail ?? "")).toHaveLength(1);
-    expect(card.getAllByText("Approved but not run").length).toBeGreaterThan(0);
+    expect(
+      card.getAllByText(en["worklist.source.failed_approval"]).length,
+    ).toBeGreaterThan(0);
     expect(
       card.getByRole("button", { name: en["worklist.verb.retry"] }),
     ).toBeTruthy();

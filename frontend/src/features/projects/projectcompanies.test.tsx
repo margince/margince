@@ -5,6 +5,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { type Locale, LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { vi } from "../../i18n/vi";
 import { parseHash } from "../../lib/router";
 import { ProjectCompanies } from "./projectcompanies";
@@ -83,7 +84,9 @@ describe("the companies on a project", () => {
     expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Remove" }));
     expect(
-      screen.getByRole("button", { name: "Remove company" }),
+      screen.getByRole("button", {
+        name: englishCopy["projectCompanies.detachConfirm"],
+      }),
     ).toBeInTheDocument();
   });
 

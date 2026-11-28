@@ -14,9 +14,9 @@ package automation
 // code that knows about River); a River dispatcher enqueues one
 // ScanWorkspace per tenant.
 //
-// Mirrors deals/closedatesweep.go's CloseDateCorrector.Sweep shape: fleet-
-// enumerate workspaces (the rls-exempt marker below), then a per-workspace
-// pass whose own failure is logged, never returned, so one bad tenant
+// Mirrors the shape of deals/closedatesweep.go's CloseDateCorrector.Sweep.
+// It enumerates workspaces (database.LiveWorkspaces), then runs a per-workspace
+// pass whose own failure is logged, never returned. One bad tenant therefore
 // never starves the rest of the fleet.
 
 import (

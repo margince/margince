@@ -80,7 +80,7 @@ func TestColdStartStagesOnlyEvidencedFields(t *testing.T) {
 	// the approval.requested and the coldstart lifecycle event.
 	var kind, status string
 	var eventCount int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT kind, status FROM approval WHERE id = $1`, ids.From[ids.ApprovalKind](ids.UUID(proposal.ProposalId))).Scan(&kind, &status); err != nil {
 			return err
@@ -103,7 +103,7 @@ func TestColdStartStagesOnlyEvidencedFields(t *testing.T) {
 		t.Fatalf("accepting the proposal: %v", err)
 	}
 	var accepted int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'coldstart.accepted'`).Scan(&accepted)
 	})
@@ -235,7 +235,7 @@ func TestColdStartPreviewReturnsEvidencedFieldsAndStagesNothing(t *testing.T) {
 	// a human who abandons the form leaves no approval behind for someone else
 	// to find in the inbox.
 	var approvalRows, events int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `SELECT count(*) FROM approval`).Scan(&approvalRows); err != nil {
 			return err
 		}
@@ -342,7 +342,7 @@ func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
 	// The approval is consumed; deciding again is refused and applies
 	// nothing twice.
 	var consumed bool
-	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT consumed_at IS NOT NULL FROM approval WHERE id = $1`, ids.From[ids.ApprovalKind](ids.UUID(proposal.ProposalId))).Scan(&consumed)
 	})
@@ -363,7 +363,7 @@ func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
 		t.Fatalf("reject: %v", err)
 	}
 	var companies int
-	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM company`).Scan(&companies)
 	})
 	if err != nil || companies != 1 {
@@ -377,7 +377,7 @@ func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
 func seedAcmeCompanyWithHumanIndustry(admin context.Context, t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	companyID := ids.NewV7()
-	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO company (id, display_name, industry, source, captured_by)
 			VALUES ($1, 'Acme', 'Handcrafted Industry', 'manual', 'human:owner')`, companyID); err != nil {
@@ -402,7 +402,7 @@ func assertAcceptFilledOnlyEmptyColumns(admin context.Context, t *testing.T, e *
 	t.Helper()
 	var legalName, industry, capturedBy string
 	var profileRows, companies int
-	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT coalesce(legal_name, ''), industry FROM company WHERE id = $1`, companyID).Scan(&legalName, &industry); err != nil {
 			return err

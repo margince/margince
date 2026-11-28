@@ -29,8 +29,8 @@ func (p *CapturePurger) purgePersonalSelection(ctx context.Context, subject capt
 
 func (p *CapturePurger) purgePersonalMessage(ctx context.Context, id, seat ids.UUID, windows capture.PersonalPurgeWindows) (int, error) {
 	destroyed := 0
-	err := database.WithWorkspaceWriteTx(ctx, p.pool, func(ctx context.Context) error {
-		if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err := database.WithWriteTx(ctx, p.pool, func(ctx context.Context) error {
+		if err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 			return capture.LockPersonalPurgeSenderTx(ctx, tx, seat, id)
 		}); err != nil {
 			return err

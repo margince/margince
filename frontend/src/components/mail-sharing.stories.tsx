@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -92,7 +93,7 @@ export const SyncRefused: Story = {
     const box = await canvas.findByTestId("capture-mail-sync");
     await userEvent.clear(box);
     await userEvent.type(box, "60{Enter}");
-    await canvas.findByText("Setting not changed");
+    await canvas.findByText(englishCopy["captureSettings.updateFailed"]);
     await expect(box).toHaveAccessibleDescription(
       expect.stringContaining("Setting not changed"),
     );
@@ -112,6 +113,6 @@ export const SaveRefused: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByTestId("mail-sharing-toggle"));
-    await canvas.findByText("Setting not saved");
+    await canvas.findByText(englishCopy["mailSharing.saveFailed"]);
   },
 };

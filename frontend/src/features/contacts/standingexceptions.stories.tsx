@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -53,7 +54,9 @@ export const Scoped: Story = {
       within(canvasElement).findByText("Sending company: Example Company"),
     ).resolves.toBeVisible();
     await expect(
-      within(canvasElement).findByRole("button", { name: "Revoke exception" }),
+      within(canvasElement).findByRole("button", {
+        name: englishCopy["consent.exceptionRevoke"],
+      }),
     ).resolves.toBeVisible();
   },
 };
@@ -89,11 +92,13 @@ export const Revoking: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Revoke exception" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["consent.exceptionRevoke"],
+      }),
     );
     const dialog = await within(canvasElement.ownerDocument.body).findByRole(
       "dialog",
-      { name: "Revoke exception" },
+      { name: englishCopy["consent.exceptionRevoke"] },
     );
     await waitFor(() => expect(dialog).toBeVisible());
   },

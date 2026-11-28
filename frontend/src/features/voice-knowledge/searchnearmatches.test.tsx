@@ -5,6 +5,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { routeHash } from "../../lib/router";
 import { searchHitRoute } from "../../lib/searchkinds";
 import { NearMatches } from "./searchnearmatches";
@@ -31,7 +32,7 @@ describe("NearMatches", () => {
       { type: "contact", id: "c1", title: "Anna Kowalczyk" },
       { type: "lead", id: "l1", title: "Ida Fenn", snippet: "Brandtmeier" },
     ]);
-    expect(screen.getByText("Did you mean:")).toBeTruthy();
+    expect(screen.getByText(englishCopy["search.nearMatches"])).toBeTruthy();
     const route = searchHitRoute("contact", "c1");
     if (!route) {
       throw new Error("a contact has a route");

@@ -5,6 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { CompanyZoneProvider } from "../../lib/companyzone";
 import {
   installFetchStub,
@@ -174,15 +175,19 @@ it("binds a filtered saved question from its link, and sends none of its filters
     </StoryProviders>,
   );
   await user.click(
-    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+    screen.getByText(englishCopy["reporting.blocks"], {
+      selector: ".disclosure-label",
+    }),
   );
   await user.type(
     await screen.findByRole("textbox", {
-      name: "Link to a saved custom report",
+      name: englishCopy["reporting.questionLink"],
     }),
     runId,
   );
-  await user.click(screen.getByRole("button", { name: "Add question" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["reporting.addQuestion"] }),
+  );
   await user.click(screen.getByRole("button", { name: "Save report" }));
   await waitFor(() => expect(write).toHaveBeenCalled());
   expect(JSON.stringify(write.mock.calls)).not.toContain("c-1");
@@ -232,15 +237,19 @@ it("adds a saved question from its link, without its own scope", async () => {
     </StoryProviders>,
   );
   await user.click(
-    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+    screen.getByText(englishCopy["reporting.blocks"], {
+      selector: ".disclosure-label",
+    }),
   );
   await user.type(
     await screen.findByRole("textbox", {
-      name: "Link to a saved custom report",
+      name: englishCopy["reporting.questionLink"],
     }),
     `https://crm.example/app#/analytics/questions/${runId}`,
   );
-  await user.click(screen.getByRole("button", { name: "Add question" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["reporting.addQuestion"] }),
+  );
   await user.click(screen.getByRole("button", { name: "Save report" }));
   await waitFor(() => expect(write).toHaveBeenCalled());
   expect(write).toHaveBeenCalledWith(
@@ -282,19 +291,25 @@ it("reads the reader's saved questions only once asked, and binds the one picked
     </StoryProviders>,
   );
   await user.click(
-    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+    screen.getByText(englishCopy["reporting.blocks"], {
+      selector: ".disclosure-label",
+    }),
   );
   const saved = SAVED_RUNS.data[1];
   await screen.findByRole("button", {
-    name: "Choose from your saved questions",
+    name: englishCopy["reporting.questionBrowse"],
   });
   expect(list).not.toHaveBeenCalled();
   await user.click(
-    screen.getByRole("button", { name: "Choose from your saved questions" }),
+    screen.getByRole("button", {
+      name: englishCopy["reporting.questionBrowse"],
+    }),
   );
   await pickOption(
     user,
-    await screen.findByRole("combobox", { name: "Your saved questions" }),
+    await screen.findByRole("combobox", {
+      name: englishCopy["reporting.questionPick"],
+    }),
     /· Count · /,
   );
   await user.click(screen.getByRole("button", { name: "Save report" }));
@@ -339,22 +354,26 @@ it("offers a filtered saved question, and no unfiltered one the report already h
     </StoryProviders>,
   );
   await user.click(
-    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+    screen.getByText(englishCopy["reporting.blocks"], {
+      selector: ".disclosure-label",
+    }),
   );
   await user.click(
     await screen.findByRole("button", {
-      name: "Choose from your saved questions",
+      name: englishCopy["reporting.questionBrowse"],
     }),
   );
   const picker = await screen.findByRole("combobox", {
-    name: "Your saved questions",
+    name: englishCopy["reporting.questionPick"],
   });
   await user.click(picker);
   expect(screen.getAllByRole("option")).toHaveLength(3);
   await user.keyboard("{Escape}");
   await pickOption(user, picker, /· Count · /);
   await user.click(
-    screen.getByRole("combobox", { name: "Your saved questions" }),
+    screen.getByRole("combobox", {
+      name: englishCopy["reporting.questionPick"],
+    }),
   );
   expect(screen.getAllByRole("option")).toHaveLength(2);
   expect(screen.getByRole("option", { name: /filtered/ })).toBeInTheDocument();

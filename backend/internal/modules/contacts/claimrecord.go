@@ -55,7 +55,7 @@ func ourPromiseNotYetATask(asOf time.Time, arg func(any) int) string {
 
 // ourPromiseWithNoTask is ourPromiseNotYetATask whatever its status: the
 // claims a Worklist promise row names, open or settled since.
-const ourPromiseWithNoTask = `c.kind = 'commitment_ours' AND NOT c.needs_review AND c.task_activity_id IS NULL`
+const ourPromiseWithNoTask = `c.kind = 'commitment_ours' AND c.task_activity_id IS NULL`
 
 // RecordConversationClaimTx files an extracted claim inside the caller's
 // transaction, so the claim commits with whatever the extraction did about it.
@@ -194,13 +194,13 @@ func filedClaim(
 	var taskID *ids.UUID
 	err := tx.QueryRow(ctx, `
 		SELECT id, kind, body, source_activity_id, source_quote, status, due_at,
-		       needs_review, corrected_at, task_activity_id
+		       corrected_at, task_activity_id
 		  FROM conversation_claim
 		 WHERE contact_id = $1 AND source_activity_id = $2 AND evidence_fingerprint = $3
 		   FOR UPDATE`,
 		in.ContactID, in.ActivityID, fingerprint).Scan(&id, &claim.Kind, &claim.Body,
 		&activityID, &claim.SourceQuote, &claim.Status, &claim.DueAt,
-		&claim.NeedsReview, &claim.CorrectedAt, &taskID)
+		&claim.CorrectedAt, &taskID)
 	if err != nil {
 		return crmcontracts.ConversationClaim{}, fmt.Errorf("read the claim already filed for this evidence: %w", err)
 	}

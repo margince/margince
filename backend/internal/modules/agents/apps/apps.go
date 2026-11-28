@@ -112,7 +112,7 @@ var catalog = []view{
 		uri:         AttentionURI,
 		name:        "attention_view",
 		title:       "What needs attention",
-		description: "Deals slipping this week, relationships at risk or promises still open, ranked, with the reason for each and a way to ask about it.",
+		description: "Deals slipping this week, relationships at risk or commitments still open, ranked, with the reason for each and a way to ask about it.",
 	},
 	{
 		uri:         ForecastURI,
@@ -124,7 +124,7 @@ var catalog = []view{
 		uri:         ContextURI,
 		name:        "context_view",
 		title:       "The story so far",
-		description: "Who is coming to a meeting, the open threads and what was promised, what has been happening on one record, or this morning's brief.",
+		description: "Who is coming to a meeting, the open threads and commitments made, what has been happening on one record, or this morning's brief.",
 	},
 	{
 		uri:         UpdateURI,

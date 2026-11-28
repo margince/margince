@@ -34,7 +34,7 @@ import (
 // shape a seat takes when somebody leaves.
 func deactivate(t *testing.T, e *Env, user ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.As(e.AdminUser, nil, roomStewardAdmin), e.DB().Pool(),
+	if err := database.WithTx(e.As(e.AdminUser, nil, roomStewardAdmin), e.DB().Pool(),
 		func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(),
 				`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, user)
@@ -47,7 +47,7 @@ func deactivate(t *testing.T, e *Env, user ids.UUID) {
 // own gives the deal an owner, which the fixture seeder does not.
 func own(t *testing.T, e *Env, deal, user ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.As(e.AdminUser, nil, roomStewardAdmin), e.DB().Pool(),
+	if err := database.WithTx(e.As(e.AdminUser, nil, roomStewardAdmin), e.DB().Pool(),
 		func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(),
 				`UPDATE deal SET owner_id = $2 WHERE id = $1`, deal, user)

@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	"github.com/margince/margince/backend/internal/compose/readerlocale"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -50,6 +52,7 @@ func (s Server) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, 
 // writeBookingPreviewUnavailable answers a missing, revoked, throttled or
 // failed read with a card that names no host. Its status says which.
 func (s Server) writeBookingPreviewUnavailable(w http.ResponseWriter, r *http.Request, hostSlug string, cause error) {
+	ratelimit.SetRefusalHeaders(w.Header(), cause)
 	s.writePreviewCard(w, r, previewCard{Title: systemtext.Copy("preview.page_unavailable", readerlocale.Anonymous(r)), Href: bookingAppHref(hostSlug, linkLength(r.URL.Query())), LinkText: systemtext.Copy("preview.open_booking", readerlocale.Anonymous(r))}, "booking", cause)
 }
 

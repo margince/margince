@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { InternalMailCaptureCard } from "./internalmailsettings";
 
 const SOURCE = {
@@ -125,7 +126,7 @@ it("requires a selected source and saves only an explicit future-capture authori
   const { patches, folders } = show();
   await user.click(
     await screen.findByRole("checkbox", {
-      name: "Enable internal operational mail capture",
+      name: englishCopy["internalMail.enable"],
     }),
   );
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
@@ -155,16 +156,22 @@ it("lists the selected connection's real folders and preserves provider identifi
   );
   await user.click(
     screen.getByRole("checkbox", {
-      name: "Enable internal operational mail capture",
+      name: englishCopy["internalMail.enable"],
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Choose folders" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["internalMail.chooseFolders"],
+    }),
+  );
   await waitFor(() => expect(folders).toHaveLength(1));
   expect(folders[0]?.searchParams.get("connection_id")).toBe(
     SOURCE.connection_id,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Choose folders" }),
+    await screen.findByRole("button", {
+      name: englishCopy["internalMail.chooseFolders"],
+    }),
   );
   await user.click(
     await screen.findByRole("checkbox", { name: "Customer Operations" }),
@@ -193,14 +200,14 @@ it("keeps the source choices after the server refuses a save", async () => {
   );
   await user.click(
     screen.getByRole("checkbox", {
-      name: "Enable internal operational mail capture",
+      name: englishCopy["internalMail.enable"],
     }),
   );
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(patches).toHaveLength(1));
   expect(
     screen.getByRole("checkbox", {
-      name: "Enable internal operational mail capture",
+      name: englishCopy["internalMail.enable"],
     }),
   ).toBeChecked();
   expect(
@@ -215,7 +222,7 @@ it("shows no source controls when the server omits administrator-only settings",
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument(),
   );
   expect(
-    screen.queryByText("Internal operational mail"),
+    screen.queryByText(englishCopy["internalMail.title"]),
   ).not.toBeInTheDocument();
 });
 

@@ -117,7 +117,7 @@ func TestANewerBusinessVerdictInvalidatesAnAlreadySelectedPersonalPurge(t *testi
 	agePersonalMail(t, e, mail, sender, 31*24*time.Hour)
 	var subject capture.PurgeSubject
 	windows := capture.DefaultPersonalPurgeWindows()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		floor, _, err := purgeFloorTx(e.Admin(), tx)
 		if err != nil {
 			return err
@@ -214,7 +214,7 @@ func TestAColleaguesImportAfterPersonalSelectionKeepsTheMessage(t *testing.T) {
 	agePersonalMail(t, e, mail, sender, 31*24*time.Hour)
 	windows := capture.DefaultPersonalPurgeWindows()
 	var selected capture.PurgeSubject
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		floor, _, err := purgeFloorTx(e.Admin(), tx)
 		if err != nil {
 			return err

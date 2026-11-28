@@ -32,7 +32,7 @@ import (
 func (w dealEvidenceWorld) companyClock(t *testing.T) *time.Time {
 	t.Helper()
 	var got *time.Time
-	if err := database.WithWorkspaceTx(w.e.Admin(), w.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(w.e.Admin(), w.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(w.e.Admin(), `SELECT c.last_activity_at FROM deal d JOIN company c ON c.id = d.company_id
 			WHERE d.id = $1`, w.deal.UUID).Scan(&got)
 	}); err != nil {
@@ -95,7 +95,7 @@ func TestTheDataTaskTakesAPersonalMailOffAStoredCompanyClock(t *testing.T) {
 	step := companyclockrefold.PersonalMailTask().Steps[0]
 	ctx := principal.SystemActing(w.e.Admin(), "system:datatask-test")
 	for pass, want := range []int{1, 0} {
-		if err := database.WithWorkspaceTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
 			out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 200, RunID: ids.NewV7()})
 			if err == nil && out.Changed != want {
 				t.Errorf("pass %d refolded %d company clocks, want %d", pass+1, out.Changed, want)

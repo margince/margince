@@ -5,6 +5,7 @@
     "company.read",
     "contact.read",
     "deal.read",
+    "lead.read",
     "list.read",
     "project.read",
     "relationship.read",

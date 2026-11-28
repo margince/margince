@@ -126,7 +126,7 @@ func coverageFor(
 	t.Helper()
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 	var out network.DealCoverage
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		coverage, err := network.CoverageFor(ctx, tx, dealID, now)
 		out = coverage
 		return err

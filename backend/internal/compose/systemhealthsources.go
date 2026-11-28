@@ -20,19 +20,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/continuity"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func (s Server) jobsSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
 	source := healthSource("jobs", healthReadObject)
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return source, nil, apperrors.ErrPermissionDenied
-	}
 	// The compact read omits the historical failure sample.
-	rows, err := jobs.WorkspaceKindHealth(ctx, s.jobHealthHandlers.pool, ws.String(), dispatcherKinds())
+	rows, err := jobs.ReadKindHealth(ctx, s.jobHealthHandlers.pool, dispatcherKinds())
 	if err != nil {
 		return source, nil, err
 	}

@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { QuestionBuilder } from "./analytics.questions.builder";
 import { newDraft, type QuestionDraft } from "./analytics.questions.draft";
 import {
@@ -94,7 +95,7 @@ describe("the question builder", () => {
     const user = userEvent.setup();
     const asked = renderBuilder();
     const ask = screen.getByRole("button", { name: "Run report" });
-    expect(description(ask)).toBe("Choose a report to ask about.");
+    expect(description(ask)).toBe(englishCopy["analytics.q.needEntity"]);
     await user.click(ask);
     expect(asked).toEqual([]);
 
@@ -126,10 +127,13 @@ describe("the question builder", () => {
     const offered = (await screen.findAllByRole("option")).map(
       (option) => option.textContent,
     );
-    expect(offered).toEqual(["Amount", "Weighted amount"]);
+    expect(offered).toEqual([
+      "Amount",
+      englishCopy["analytics.field.weighted_amount_minor"],
+    ]);
     expect(
       description(screen.getByRole("button", { name: "Run report" })),
-    ).toBe("Choose a field for every measure.");
+    ).toBe(englishCopy["analytics.q.needField"]);
   });
 
   it("draws a filter's value by the field's shape, and none for a null test", async () => {

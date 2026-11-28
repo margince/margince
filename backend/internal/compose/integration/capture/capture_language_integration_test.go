@@ -173,7 +173,7 @@ func writerCtx(e *integration.SearchEnv, user ids.UUID) context.Context {
 func languageOf(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) string {
 	t.Helper()
 	var language *string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT language FROM activity WHERE id = $1`, activityID).Scan(&language)
 	})
@@ -190,7 +190,7 @@ func languageOf(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) str
 func newestActivity(t *testing.T, e *integration.SearchEnv) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE kind = 'email' ORDER BY created_at DESC, id DESC LIMIT 1`).Scan(&id)
 	})

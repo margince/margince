@@ -78,7 +78,7 @@ func TestMergingTheSuggestedContactReplacesItsPendingProposal(t *testing.T) {
 
 	id := onlyPendingLinkedInMatch(t, e)
 	var contact ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT (proposed_change->>'contact_id')::uuid FROM approval WHERE id = $1`, id).Scan(&contact)
 	}); err != nil {

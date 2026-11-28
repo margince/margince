@@ -35,7 +35,7 @@ func (s *sharedMailboxSuite) seatFor(t *testing.T, account string, team ids.UUID
 	t.Helper()
 	ctx := s.admin()
 	var seat ids.UUID
-	err := database.WithWorkspaceTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		seat, err = capture.EnsureChatSeatTx(ctx, tx, capture.ChatSeat{
 			Provider: chatSeatProvider, Account: account, ReaderTeam: team, Owner: owner, By: s.e.AdminUser,
@@ -208,7 +208,7 @@ func TestEndingASeatKeepsItsMessagesWithTheReaderTeamAndAReconnectWakesIt(t *tes
 	s.bindAnnaToChat(t)
 	chat := s.fileChat(t, connector.ChatBinding{Ownership: connector.ChatOwnedByWorkspace, SeatID: seat}, "1", "before the disconnect")
 
-	err := database.WithWorkspaceTx(s.admin(), e.Pool, func(tx pgx.Tx) error { return capture.EndChatSeatTx(s.admin(), tx, seat) })
+	err := database.WithTx(s.admin(), e.Pool, func(tx pgx.Tx) error { return capture.EndChatSeatTx(s.admin(), tx, seat) })
 	if err != nil {
 		t.Fatalf("ending the seat: %v", err)
 	}

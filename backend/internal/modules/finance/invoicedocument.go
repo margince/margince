@@ -63,6 +63,7 @@ func (e documentCeilingError) FaultReference() map[string]any {
 }
 
 func (e documentCeilingError) RetryAfterSeconds() int { return e.waitSeconds }
+func (e documentCeilingError) RateLimit() (int, int)  { return invoiceDocumentsPerMinute, e.waitSeconds }
 
 // unsafeFileRune is what a source's invoice number may not carry into a file name.
 var unsafeFileRune = regexp.MustCompile(`[^A-Za-z0-9._-]+`)

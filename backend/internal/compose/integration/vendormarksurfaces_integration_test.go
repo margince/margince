@@ -88,7 +88,7 @@ func TestAMarkedPeerIsNotObservedWithTheAnchor(t *testing.T) {
 	peers := func() int {
 		rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
 		var got []search.PeerEdge
-		if err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			got, err = search.ContactEdgesForContact(rep, tx, anchor, 10)
 			return err

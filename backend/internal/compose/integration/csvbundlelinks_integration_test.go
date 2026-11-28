@@ -329,7 +329,7 @@ func failAfterTheCompanyRow(t *testing.T, e *apptest.AppEnv, runID, named string
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{migration.ImportRunObject: {Create: true}},
+			Objects:  map[string]principal.ObjectGrant{migration.ImportRunObject: {Create: true, Read: true, Update: true, Delete: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -338,7 +338,7 @@ func failAfterTheCompanyRow(t *testing.T, e *apptest.AppEnv, runID, named string
 		t.Fatal(err)
 	}
 	system := provenance.ReservedSourceSystemPrefix + migration.ConnectorCSV + ":n"
-	if err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
 		run, err := ids.Parse(runID)
 		if err != nil {
 			return err

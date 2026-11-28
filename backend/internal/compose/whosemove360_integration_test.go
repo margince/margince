@@ -46,7 +46,7 @@ func (o *owedEnv) accountOf(t *testing.T, name, address string) ids.CompanyID {
 func (o *owedEnv) shareMailbox(t *testing.T, seat ids.UUID) {
 	t.Helper()
 	o.e.GrantRole(t, seat, "rep")
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(context.Background(),
 			`UPDATE capture_connection SET mail_posture = 'shared' WHERE user_id = $1`, seat)
 		if err == nil && tag.RowsAffected() != 1 {

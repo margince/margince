@@ -409,7 +409,7 @@ func championCoverFor(
 	t.Helper()
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 	var out map[ids.UUID]deals.ChampionCover
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		cover, err := deals.ChampionCoverFor(ctx, tx, []ids.UUID{dealID},
 			time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC))
 		out = cover

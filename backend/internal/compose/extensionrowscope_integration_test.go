@@ -169,7 +169,7 @@ func engineVisits(ctx context.Context, t *testing.T, e *integration.Env, visits 
 		t.Fatalf("the kind's engine: ok=%v err=%v", ok, err)
 	}
 	var found []ids.UUID
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var selectErr error
 		found, selectErr = engine.SelectIDs(ctx, tx, storekit.Predicate{Field: "title", Op: storekit.OpContains, Value: "visit"}, 10)
 		return selectErr
@@ -217,7 +217,7 @@ func probedVisits(ctx context.Context, t *testing.T, e *integration.Env, visits 
 	t.Helper()
 	var out []string
 	for title, id := range visits.byTitle {
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return auth.EnsureLinkTarget(ctx, tx, scopeDemoKind, id)
 		})
 		switch {

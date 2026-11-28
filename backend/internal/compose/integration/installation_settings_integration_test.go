@@ -64,7 +64,7 @@ func (e *SearchEnv) installationSettingsCtx(grant principal.ObjectGrant) context
 func installationAuditCount(t *testing.T, e *SearchEnv) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM audit_log WHERE entity_type = 'installation_settings'`).Scan(&n)
 	}); err != nil {
@@ -384,7 +384,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 
 	// Prove the fixture landed before trusting what the probe says about it.
 	var converted int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM deal WHERE fx_rate_to_base IS NOT NULL`).Scan(&converted)
 	}); err != nil {
@@ -428,7 +428,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	wantFrozenFacts(t, "the write", err, wantFacts, got.BaseCurrencyLock)
 
 	settingsStore := compose.NewSettingsStore(e.Pool)
-	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		_, err := settingsStore.DeleteRawTx(admin, tx, identity.BaseCurrency.Key())
 		return err
 	})
@@ -473,7 +473,7 @@ func TestBaseCurrencyFreezesOnASentOfferWithNoClosedDeal(t *testing.T) {
 
 	// Prove the fixture is the one this test claims: no deal froze anything.
 	var dealsFrozen int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM deal WHERE fx_rate_to_base IS NOT NULL`).Scan(&dealsFrozen)
 	}); err != nil {

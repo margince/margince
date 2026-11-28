@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../../api/schema";
+import { en as englishCopy } from "../../../i18n/en";
 import type { GrantSpec } from "../../../testing/mefixture";
 import {
   installFetchStub,
@@ -210,7 +211,7 @@ export const CalloutOpensDialog: Story = {
     const user = userEvent.setup();
     await user.click(
       await within(canvasElement).findByRole("button", {
-        name: "Review contacts",
+        name: englishCopy["co.domainContacts.review"],
       }),
     );
     const dialog = await screen.findByRole("dialog");

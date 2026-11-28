@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ClientSurfaceScreen } from "./client";
 
 afterEach(() => {
@@ -83,7 +84,9 @@ describe("ClientSurfaceScreen", () => {
     expect(screen.getByText("Jonas Brandt")).toBeTruthy();
     expect(screen.getByText("Head of Fleet")).toBeTruthy();
     expect(screen.queryByText("Brandt Automotive GmbH")).toBeNull();
-    const links = screen.getAllByRole("link", { name: "Open 360 view" });
+    const links = screen.getAllByRole("link", {
+      name: englishCopy["client.open360"],
+    });
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/#/contacts/p-1",
       "/#/contacts/p-2",
@@ -95,7 +98,7 @@ describe("ClientSurfaceScreen", () => {
     const { container } = render();
     await lookUp("stranger@nowhere.example");
 
-    expect(await screen.findByText("Not in your company yet.")).toBeTruthy();
+    expect(await screen.findByText(englishCopy["client.unknown"])).toBeTruthy();
     const answer = container.querySelector<HTMLElement>(
       ".clientsurface-answer",
     );
@@ -104,7 +107,7 @@ describe("ClientSurfaceScreen", () => {
     }
     expect(
       within(answer)
-        .getByRole("link", { name: "Capture as lead" })
+        .getByRole("link", { name: englishCopy["client.createLead"] })
         .getAttribute("href"),
     ).toBe("/#/leads");
   });

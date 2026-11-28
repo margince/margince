@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -58,7 +59,7 @@ export const CreateTaskBlocked: Story = {
   },
   play: async () => {
     const button = await screen.findByRole("button", {
-      name: "Create follow-up",
+      name: englishCopy["deal360.createTask"],
     });
     await expect(button).toBeDisabled();
     await expect(button).toHaveAccessibleDescription(TASK_REFUSAL);
@@ -83,7 +84,7 @@ export const DraftFollowUpBlocked: Story = {
   },
   play: async () => {
     const button = await screen.findByRole("button", {
-      name: "Draft follow-up",
+      name: englishCopy["worklist.verb.draft_follow_up_now"],
     });
     await expect(button).toBeDisabled();
     await expect(button).toHaveAccessibleDescription(EMAIL_REFUSAL);
@@ -154,7 +155,9 @@ export const CreateTaskRefused: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Create follow-up" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["deal360.createTask"],
+      }),
     );
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "The deal this task names is archived.",
@@ -179,16 +182,18 @@ export const CreateTaskCreated: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Create follow-up" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["deal360.createTask"],
+      }),
     );
     await expect(await canvas.findByRole("status")).toHaveTextContent(
-      "Follow-up created",
+      englishCopy["deal360.followUpCreated"],
     );
     await expect(
       canvas.getByRole("button", { name: "Open task" }),
     ).toBeVisible();
     await expect(
-      canvas.queryByRole("button", { name: "Create follow-up" }),
+      canvas.queryByRole("button", { name: englishCopy["deal360.createTask"] }),
     ).toBeNull();
   },
 };

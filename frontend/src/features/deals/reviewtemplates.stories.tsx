@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { Locale } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -107,7 +108,7 @@ export const Editable: Story = {
   render: served(() => jsonResponse({ data: TEMPLATES }), EDITOR),
   play: async ({ canvasElement }) => {
     await within(canvasElement).findAllByRole("button", {
-      name: "Edit questions",
+      name: englishCopy["reviewTemplates.edit"],
     });
   },
 };

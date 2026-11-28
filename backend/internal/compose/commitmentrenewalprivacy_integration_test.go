@@ -107,7 +107,7 @@ func setupRenewalPrivacy(t *testing.T, confidence float64) renewalPrivacyFixture
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	var task ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		_, task, err = dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 		return err
@@ -137,7 +137,7 @@ func TestNarrowingOnlyTheRenewalWithholdsDerivedContentButKeepsTheOriginalReadab
 		if (source.CommitmentAdmissions != nil) != visible {
 			t.Fatalf("renewal review visible = %v, want %v", source.CommitmentAdmissions != nil, visible)
 		}
-		if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 			claims, err := e.Contacts.ClaimsForContact(reader, tx, contact, nil, 10)
 			if err == nil && (len(claims) > 0) != visible {
 				t.Errorf("claim visible = %v, want %v", len(claims) > 0, visible)
@@ -232,7 +232,7 @@ func TestHeldDerivedWorkSurvivesErasureWithoutReleasingItsContent(t *testing.T) 
 	if err != nil || systemTask.Subject != nil {
 		t.Fatalf("system reader exposed held task content: %v", err)
 	}
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(f.e.Admin(), `DELETE FROM activity WHERE id=$1`, f.messages[0])
 		return err
 	}); err == nil {
@@ -330,7 +330,7 @@ func TestRefusedRenewalPreservesTheClaimAndItsEvidence(t *testing.T) {
 			}
 			ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), f.e.WS), "human:"+f.e.Rep1.String(), ids.NewV7())
 			dispatcher := NewCommitmentDispatcher(f.e.Pool, approvals.NewService(f.e.DB()))
-			if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 				_, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 				return err
 			}); err != nil {
@@ -441,7 +441,7 @@ func assertHeldRenewalRefused(t *testing.T, f renewalPrivacyFixture, before stri
 	c.RenewalEvidence = &approvals.Evidence{SourceType: "activity", SourceID: renewal, Snippet: body}
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), f.e.WS), "human:"+f.e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(f.e.Pool, approvals.NewService(f.e.DB()))
-	if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 		if err == nil && outcome.wroteWork() {
 			t.Errorf("held evidence produced new work: %s", outcome)

@@ -190,7 +190,7 @@ func seedTransactionalReply(t *testing.T, e *integration.Env) (anchorID ids.UUID
 		t.Fatalf("grant: %v", err)
 	}
 	anchorID = ids.NewV7()
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 			VALUES ($1, 'email', 'Angebot', now(), 'manual', 'human:x')`, anchorID)
@@ -297,7 +297,7 @@ func TestPersonalMarkupOmissionClearingAndUnicodeLimitsUseTheSignatureStore(t *t
 		t.Fatal(err)
 	}
 	var proof string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT jsonb_agg(jsonb_build_object('before', a.before, 'after', a.after, 'event', o.envelope))::text
    FROM event_outbox o JOIN audit_log a ON a.id = (o.envelope->'trace'->>'audit_log_id')::uuid
    WHERE o.envelope->>'type' = 'email_signature.changed'`).Scan(&proof)

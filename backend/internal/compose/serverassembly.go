@@ -93,7 +93,7 @@ func newBookerContacts(pool *pgxpool.Pool) hostauthority.BookerContacts {
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	gate := consentGateFor(pool)
-	return activities.NewHandlers(InstallationDB(pool)).WithMeetingNotesAccess(capturehealth.MeetingNotesAccess{}).WithIdentityProver(capture.ProvedUnambiguouslyTx).
+	return activities.NewHandlers(InstallationDB(pool)).WithMeetingNotesAccess(capturehealth.MeetingNotesAccess{}).WithSourceAuthority(identity.WorkPrincipalTx).WithIdentityProver(capture.ProvedUnambiguouslyTx).
 		WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).
 		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithInquiryAssignment(newInquiryAssignment(InstallationDB(pool))).

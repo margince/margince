@@ -11,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { downloadBytes } from "../../lib/download";
 import {
   installFetchStub,
@@ -57,7 +58,9 @@ it("sends independent pipeline, target-period and expected-close filters and ope
       <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Sales won over time" });
+  await screen.findByRole("heading", {
+    name: englishCopy["reporting.bookings_trend"],
+  });
   await pickOption(
     user,
     screen.getByRole("combobox", { name: "Pipeline" }),
@@ -70,7 +73,9 @@ it("sends independent pipeline, target-period and expected-close filters and ope
   );
   await pickOption(
     user,
-    screen.getByRole("combobox", { name: "Expected close window" }),
+    screen.getByRole("combobox", {
+      name: englishCopy["reporting.closeWindow"],
+    }),
     "All open deals",
   );
   await waitFor(() =>
@@ -118,7 +123,9 @@ it("captures the saved revision with an idempotency key and exposes report editi
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Save snapshot" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.freeze"],
+    }),
   );
   await waitFor(() => expect(freeze).toHaveBeenCalledOnce());
   const request = fetch.mock.calls
@@ -133,7 +140,9 @@ it("captures the saved revision with an idempotency key and exposes report editi
     request instanceof Request && request.headers.get("Idempotency-Key"),
   ).toMatch(/^[\da-f-]{36}$/);
   await user.click(
-    await screen.findByRole("button", { name: "Report actions" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.actions"],
+    }),
   );
   await user.click(screen.getByRole("button", { name: "Edit report" }));
   expect(
@@ -159,7 +168,7 @@ it("captures the saved revision with an idempotency key and exposes report editi
     within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }),
   );
   expect(
-    screen.getByRole("combobox", { name: "Saved snapshots" }),
+    screen.getByRole("combobox", { name: englishCopy["reporting.editions"] }),
   ).toHaveTextContent("Live report");
   expect(window.location.hash).toBe("#/analytics/reports/report/edition-2");
 });
@@ -179,12 +188,16 @@ it("puts the reports list in an archived report's place", async () => {
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Report actions" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.actions"],
+    }),
   );
-  await user.click(screen.getByRole("button", { name: "Archive report" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["reporting.archive"] }),
+  );
   await user.click(
     within(await screen.findByRole("dialog")).getByRole("button", {
-      name: "Archive report",
+      name: englishCopy["reporting.archive"],
     }),
   );
   await waitFor(() => expect(window.location.hash).toBe("#/analytics/reports"));
@@ -231,7 +244,9 @@ it("creates a fiscal-quarter count target on every pipeline and pages the target
   expect(dialog.queryByRole("combobox", { name: "Pipeline" })).toBeNull();
   await pickOption(
     user,
-    dialog.getByRole("combobox", { name: "Target period" }),
+    dialog.getByRole("combobox", {
+      name: englishCopy["reporting.targetBasis"],
+    }),
     "Fiscal quarter",
   );
   fireEvent.change(dialog.getByLabelText(/Year/), {
@@ -276,19 +291,27 @@ it("removes a capture context without leaving an enabled phantom capture", async
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Reporting setup" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.framework"],
+    }),
   );
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Add capture" })).toBeEnabled(),
   );
   await user.click(screen.getByRole("button", { name: "Add capture" }));
-  await user.click(screen.getByRole("button", { name: "Remove capture" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["reporting.removeCapture"],
+    }),
+  );
   expect(
-    screen.queryByRole("button", { name: "Remove capture" }),
+    screen.queryByRole("button", {
+      name: englishCopy["reporting.removeCapture"],
+    }),
   ).not.toBeInTheDocument();
   await user.type(screen.getByLabelText(/Reason/), "Stop unnecessary capture");
   await user.click(
-    screen.getByRole("button", { name: "Save reporting settings" }),
+    screen.getByRole("button", { name: englishCopy["reporting.publish"] }),
   );
   await waitFor(() =>
     expect(publish).toHaveBeenCalledWith(

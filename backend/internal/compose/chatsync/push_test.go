@@ -385,7 +385,7 @@ func TestANoticeWhoseActionFailedIsTakenOnRetry(t *testing.T) {
 
 func TestANoticeOfUnknownShapeIsRefusedBeforeItCounts(t *testing.T) {
 	for name, body := range map[string]string{
-		"an unknown type":   notice("message.deleted", pushTeam, "deal-acme"),
+		"an unknown type":   notice("message.unknown", pushTeam, "deal-acme"),
 		"no type":           `{"workspace_id":"team-ours","channel_slug":"deal-acme"}`,
 		"no channel":        notice("message.created", pushTeam, ""),
 		"a check, no value": `{"type":"url_verification"}`,

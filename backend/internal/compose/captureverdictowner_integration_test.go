@@ -102,7 +102,7 @@ func TestAPersonalVerdictMakesNoRecordAtAll(t *testing.T) {
 func visibilityIn(t *testing.T, e *integration.Env, email string) string {
 	t.Helper()
 	var visibility string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT p.visibility FROM contact p
 			  JOIN contact_email pe ON pe.contact_id = p.id

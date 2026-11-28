@@ -6,6 +6,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { Panel } from "../../design-system/panel";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { monthTotals, SpendByTask, spendRows } from "./aiusage-spend";
 
 afterEach(cleanup);
@@ -36,7 +37,9 @@ it("marks a task's cost as partly priced when one of its tiers had no rate", () 
   expect(total.partlyPriced).toBe(true);
   show([line("cheap_cloud", 120), line("premium")]);
   const row = screen.getByTestId("spend-triage");
-  expect(within(row).getByText("Partly priced")).toBeTruthy();
+  expect(
+    within(row).getByText(englishCopy["aiusage.partlyPriced"]),
+  ).toBeTruthy();
   expect(
     within(screen.getByTestId("spend-triage-premium")).getByText("—"),
   ).toBeTruthy();
@@ -46,7 +49,7 @@ it("marks a priced line that also carried calls with no rate", () => {
   show([line("premium", 300, 1)]);
   expect(
     within(screen.getByTestId("spend-triage-premium")).getByText(
-      "Partly priced",
+      englishCopy["aiusage.partlyPriced"],
     ),
   ).toBeTruthy();
 });
@@ -56,7 +59,7 @@ it("reads a task whose every call was priced as its plain total", () => {
   expect(total.cost).toBe(200);
   expect(total.partlyPriced).toBe(false);
   show([line("cheap_cloud", 120), line("premium", 80)]);
-  expect(screen.queryByText("Partly priced")).toBeNull();
+  expect(screen.queryByText(englishCopy["aiusage.partlyPriced"])).toBeNull();
 });
 
 it("sums the month over every task and tier, and counts the calls with no rate", () => {
@@ -101,7 +104,7 @@ it("says a cost too large to add is too large, not unpriced", () => {
   show([line("cheap_cloud", big), line("premium", big)]);
   expect(
     within(screen.getByTestId("spend-triage")).getByText(
-      "Too large to show exactly",
+      englishCopy["format.tooLargeExact"],
     ),
   ).toBeTruthy();
 });

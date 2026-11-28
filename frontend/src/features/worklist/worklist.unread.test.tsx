@@ -65,9 +65,7 @@ describe("what a team day did not read", () => {
     const day = aDay({ members: [ben], truncated: false });
     draw(day);
 
-    expect(
-      screen.getByText("Weekly plan read for the team’s one member."),
-    ).toBeTruthy();
+    expect(screen.getByText(en["worklist.planCoverage.all_one"])).toBeTruthy();
     expect(screen.queryByText(en["worklist.partialTitle"])).toBeNull();
     expect(dayPartlyRead(day)).toBe(false);
   });

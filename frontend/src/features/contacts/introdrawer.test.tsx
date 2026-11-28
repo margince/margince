@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { IntroDrawer } from "./introdrawer";
 
 const route = {
@@ -68,7 +69,9 @@ it("reviews a fresh ask and keeps its words when the replacement is refused", as
       />
     </QueryClientProvider>,
   );
-  const submit = screen.getByRole("button", { name: "Request introduction" });
+  const submit = screen.getByRole("button", {
+    name: englishCopy["contact.intro.askAction"],
+  });
   await user.click(submit);
   expect(writes).toHaveLength(0);
   expect(screen.getByText("Reason for request is required.")).toBeTruthy();

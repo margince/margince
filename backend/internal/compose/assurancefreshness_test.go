@@ -75,3 +75,11 @@ func TestEventsThatBearOnSignalsAreFollowedToThem(t *testing.T) {
 		t.Errorf("suggestion audits = %v, want the event's audit row", changes.suggestionAudits)
 	}
 }
+
+func TestAnOfferSourceCorrectionKeepsTheCommercialReadingCurrent(t *testing.T) {
+	t.Parallel()
+	changes, err := inputChangesOf([]events.Envelope{{Type: "offer.updated", Payload: json.RawMessage(`{"source":"manual","changed_fields":["source"]}`)}})
+	if err != nil || !changes.empty() {
+		t.Fatalf("source-only correction marked commercial inputs: %+v %v", changes, err)
+	}
+}

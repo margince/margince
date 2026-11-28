@@ -220,6 +220,7 @@ export function activityTimeline(
       automaticKind: activity.automatic_kind,
       aiAssisted: activity.ai_assisted,
       chatEpisode: activity.chat_episode,
+      chatUpdatedAt: activity.updated_at,
       atIso: activity.occurred_at,
       atPrecision: activity.occurred_precision,
       provenance: withControllerSend(

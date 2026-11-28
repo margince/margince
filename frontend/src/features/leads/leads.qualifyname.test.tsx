@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { steppedClock } from "../../testing/steppedclock";
 import { QualifyDialog } from "./leads.qualify";
@@ -68,9 +69,13 @@ function heldNameDialog() {
 it("waits for the linked company's own name before opening a deal named after it", async () => {
   const { user, releaseName, body } = heldNameDialog();
   await user.click(
-    await screen.findByRole("radio", { name: "Open a new deal" }),
+    await screen.findByRole("radio", {
+      name: englishCopy["lead.qualify.newDeal"],
+    }),
   );
-  const confirm = screen.getByRole("button", { name: "Qualify and open deal" });
+  const confirm = screen.getByRole("button", {
+    name: englishCopy["lead.qualify.confirmWithDeal"],
+  });
   expect(confirm).toBeDisabled();
 
   releaseName();
@@ -87,10 +92,14 @@ it("waits for the linked company's own name before opening a deal named after it
 it("does not wait for the company's name when the deal is named by hand", async () => {
   const { user, body } = heldNameDialog();
   await user.click(
-    await screen.findByRole("radio", { name: "Open a new deal" }),
+    await screen.findByRole("radio", {
+      name: englishCopy["lead.qualify.newDeal"],
+    }),
   );
   await user.type(screen.getByLabelText("Deal name"), "Fleet renewal");
-  const confirm = screen.getByRole("button", { name: "Qualify and open deal" });
+  const confirm = screen.getByRole("button", {
+    name: englishCopy["lead.qualify.confirmWithDeal"],
+  });
   expect(confirm).toBeEnabled();
   await user.click(confirm);
   await waitFor(() =>

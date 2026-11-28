@@ -40,7 +40,7 @@ func threadedReply(msgID string, references ...string) []byte {
 // the case rather than the join.
 func clearThreadOf(t *testing.T, e *integration.SearchEnv, user ids.UUID, sourceID, seen string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, seen_addresses, resolved_at)
 			SELECT a.thread_key, $2, $3, $4, ARRAY[$5], now() FROM activity a WHERE a.source_id = $1
@@ -60,7 +60,7 @@ func clearThreadOf(t *testing.T, e *integration.SearchEnv, user ids.UUID, source
 // what a fixture can state without an LLM in the lane.
 func holdThreadOf(t *testing.T, e *integration.SearchEnv, user ids.UUID, sourceID string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, seen_addresses, resolved_at)
 			SELECT a.thread_key, $2, $3, $4, '{}', now() FROM activity a WHERE a.source_id = $1
@@ -76,7 +76,7 @@ func holdThreadOf(t *testing.T, e *integration.SearchEnv, user ids.UUID, sourceI
 func threadKeyOf(t *testing.T, e *integration.SearchEnv, sourceID string) string {
 	t.Helper()
 	var key string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(thread_key, '') FROM activity WHERE source_id = $1`, sourceID).Scan(&key)
 	}); err != nil {

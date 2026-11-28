@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
@@ -22,7 +23,9 @@ export const Setup: Story = {
   ...Default,
   play: async () => {
     await userEvent.click(
-      await screen.findByRole("button", { name: "Reporting setup" }),
+      await screen.findByRole("button", {
+        name: englishCopy["reporting.framework"],
+      }),
     );
   },
 };

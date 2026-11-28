@@ -32,7 +32,7 @@ func TestErasureDestroysTheAuditAndOutboxCopiesWrittenByContactCreation(t *testi
 			}
 			id := ids.UUID(contact.Id)
 			if held {
-				if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+				if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 					_, err := tx.Exec(ctx, `UPDATE contact SET legal_hold=true WHERE id=$1`, id)
 					return err
 				}); err != nil {
@@ -43,7 +43,7 @@ func TestErasureDestroysTheAuditAndOutboxCopiesWrittenByContactCreation(t *testi
 			if (held && !errors.Is(err, apperrors.ErrConflict)) || (!held && err != nil) {
 				t.Fatalf("erasure under legal hold=%v: %v", held, err)
 			}
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				var namedAudit, namedEvent, metadata bool
 				err := tx.QueryRow(ctx, `SELECT
 				 EXISTS(SELECT 1 FROM audit_log WHERE entity_type='contact' AND entity_id=@id

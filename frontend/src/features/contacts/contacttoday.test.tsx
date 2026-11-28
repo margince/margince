@@ -634,7 +634,9 @@ it("shows a privacy duty in place of the quiet answer and opens its review actio
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  expect(screen.getByText("Privacy notice owed")).not.toBeNull();
+  expect(
+    screen.getByText(en["contact.moment.rule.privacy_notice_due"]),
+  ).not.toBeNull();
   expect(
     screen.queryByRole("button", {
       name: en["worklist.disposition.verb.notNow"],

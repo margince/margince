@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -73,7 +74,7 @@ export const Default: Story = { render: () => <Action /> };
 async function openList(canvasElement: HTMLElement) {
   await userEvent.click(
     await within(canvasElement).findByRole("button", {
-      name: "Assign to a colleague",
+      name: englishCopy["project.assignOwner"],
     }),
   );
   return within(await screen.findByRole("dialog"));
@@ -94,7 +95,7 @@ export const SearchingForAColleague: Story = {
   play: async ({ canvasElement }) => {
     const panel = await openList(canvasElement);
     await userEvent.type(
-      panel.getByRole("combobox", { name: "Search colleagues" }),
+      panel.getByRole("combobox", { name: englishCopy["ownerPick.search"] }),
       "Jane",
     );
     await panel.findByRole("option", { name: "Jane Doe" });

@@ -13,6 +13,7 @@ import {
 } from "../../testing/story-utils";
 import { Employers } from "./contactemployers";
 import "./contact360.css";
+import { en as englishCopy } from "../../i18n/en";
 
 // The proposal drawn where a reader meets it: the contact's Company card,
 // for a contact who works nowhere yet and whose signature named a company.
@@ -158,10 +159,14 @@ export const DuplicateDomain: Story = {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
     await user.click(
-      await canvas.findByRole("button", { name: "Create and link" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["contact.proposal.create"],
+      }),
     );
     await expect(
-      await canvas.findByRole("button", { name: "Link that company" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["contact.proposal.linkExisting"],
+      }),
     ).toBeVisible();
   },
 };

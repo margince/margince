@@ -54,7 +54,7 @@ func (s systemSetAside) Contacts(ctx context.Context, user extension.UserID, con
 		}
 	}
 	connected := false
-	err = database.WithWorkspaceTx(ctx, s.rt.deps.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.rt.deps.pool, func(tx pgx.Tx) error {
 		var err error
 		connected, err = memberConnectedTx(ctx, tx, s.rt.unit, reader)
 		return err
@@ -69,7 +69,7 @@ func (s systemSetAside) Contacts(ctx context.Context, user extension.UserID, con
 		return nil, err
 	}
 	var states map[ids.UUID]contacts.NudgeState
-	err = database.WithWorkspaceTx(ctx, s.rt.deps.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.rt.deps.pool, func(tx pgx.Tx) error {
 		var err error
 		states, err = contacts.NudgeStatesOf(ctx, tx, reader, asked, s.rt.clockNow())
 		return err

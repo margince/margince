@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ContactResearchTab } from "./contactresearch";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -157,10 +158,12 @@ describe("the research tab's enrichment evidence", () => {
         })}
       />,
     );
-    expect(screen.getByText("Hidden for your role")).toBeTruthy();
+    expect(screen.getByText(englishCopy["state.withheld"])).toBeTruthy();
     // A withheld section is not merely "nothing here" — the tab-wide empty
     // sentence must not also fire while the fields panel still has rows.
-    expect(screen.queryByText("No research on this contact yet.")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["contact.research.empty"]),
+    ).toBeNull();
   });
 
   it("says the enrichment evidence is withheld rather than claiming no field carries evidence", () => {
@@ -171,19 +174,21 @@ describe("the research tab's enrichment evidence", () => {
         })}
       />,
     );
-    expect(screen.getByText("Hidden for your role")).toBeTruthy();
+    expect(screen.getByText(englishCopy["state.withheld"])).toBeTruthy();
     expect(
-      screen.queryByText("No enriched fields have evidence yet."),
+      screen.queryByText(englishCopy["contact.research.fieldsEmpty"]),
     ).toBeNull();
   });
 
   it("says the tab has nothing once, not twice, when neither half has anything to show", () => {
     withProviders(<ContactResearchTab view={view({ profile_fields: [] })} />);
-    expect(screen.getByText("No research on this contact yet.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["contact.research.empty"]),
+    ).toBeTruthy();
     // The fields panel's own empty sentence must not ALSO render beside the
     // tab-wide one — that would be the same fact stated twice.
     expect(
-      screen.queryByText("No enriched fields have evidence yet."),
+      screen.queryByText(englishCopy["contact.research.fieldsEmpty"]),
     ).toBeNull();
   });
 
@@ -208,7 +213,9 @@ describe("the research tab's enrichment evidence", () => {
         })}
       />,
     );
-    expect(screen.getByText("Read from conversations")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["contact.research.readings"]),
+    ).toBeTruthy();
     expect(screen.getByText("Send the pilot quote")).toBeTruthy();
   });
 });

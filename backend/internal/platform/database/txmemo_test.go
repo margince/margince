@@ -4,7 +4,9 @@
 package database
 
 import (
+	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -84,5 +86,28 @@ func TestATransactionWithoutAMemoReadsEveryTime(t *testing.T) {
 	}
 	if reads != 3 {
 		t.Fatalf("read ran %d times, want every time once the memo ended and for a transaction that never had one", reads)
+	}
+}
+
+func TestBeforeCommitWorkFinishesBeforeAnEarlierCallback(t *testing.T) {
+	tx := &memoTx{}
+	defer openTxMemo(tx)()
+	var order []int
+	first := func(context.Context, pgx.Tx) error { order = append(order, 1); return nil }
+	second := func(context.Context, pgx.Tx) error {
+		order = append(order, 2)
+		if !BeforeCommit(tx, func(context.Context, pgx.Tx) error { order = append(order, 3); return nil }) {
+			t.Fatal("new work was not registered")
+		}
+		return nil
+	}
+	if !BeforeCommit(tx, first) || !BeforeCommit(tx, second) {
+		t.Fatal("callbacks were not registered")
+	}
+	if err := runBeforeCommit(context.Background(), tx); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(order, []int{2, 3, 1}) {
+		t.Fatalf("callback order %v, want 2,3,1", order)
 	}
 }

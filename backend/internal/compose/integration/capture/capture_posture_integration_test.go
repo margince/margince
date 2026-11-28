@@ -65,7 +65,7 @@ func allowSharedPosture(t *testing.T, e *integration.SearchEnv) {
 func postureOf(t *testing.T, e *integration.SearchEnv, user ids.UUID) string {
 	t.Helper()
 	var posture string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT mail_posture FROM capture_connection WHERE user_id = $1 AND archived_at IS NULL`,
 			user).Scan(&posture)
@@ -163,7 +163,7 @@ func TestAnOwnerHoldOnAMessageBornOpenStillShowsItsEvidence(t *testing.T) {
 	sync(t, customerMail("owner-hold-open-1@acme.example"))
 	activityID := oneActivityID(t, e)
 	var threadKey string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activityID).Scan(&threadKey)
 	}); err != nil {
@@ -230,7 +230,7 @@ func TestAConfidentialMarkerHoldsTheMessageInsideTheCaptureTransaction(t *testin
 	// And the audit trail of the capture never says it was anything else: one
 	// create row, and no update moving the audience.
 	var moves int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM audit_log
 			 WHERE entity_type = 'activity' AND entity_id = $1 AND action = 'update'`,
@@ -308,7 +308,7 @@ func TestACaptureWithNoIdentifiableConnectionIsBornHeld(t *testing.T) {
 	// Archive the connection out from under the sync. The seat can no longer be
 	// asked what they want, and a message whose provenance the product cannot
 	// establish is the last one to publish on a guess.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_connection SET archived_at = now() WHERE user_id = $1`, e.Rep1)
 		return err
@@ -335,7 +335,7 @@ func TestACalendarEventFollowsTheWorkspaceDefaultNotTheMailPosture(t *testing.T)
 	syncAsKind(t, map[string]string{"cal-1@acme.example": "meeting"},
 		customerMail("cal-1@acme.example"))
 	var activityID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE kind = 'meeting'`).Scan(&activityID)
 	}); err != nil {
@@ -438,7 +438,7 @@ func TestApplyingAPostureToHistoryNarrowsOnlyBackwards(t *testing.T) {
 func openActivityCount(t *testing.T, e *integration.SearchEnv) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity WHERE kind = 'email' AND audience = 'workspace'`).Scan(&n)
 	}); err != nil {
@@ -483,7 +483,7 @@ func TestNarrowingToClassifiedNeverLoosensAHeldMessage(t *testing.T) {
 func importPostureOf(t *testing.T, e *integration.SearchEnv, activityID, user ids.UUID) string {
 	t.Helper()
 	var posture *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT posture_at_import FROM capture_import WHERE activity_id = $1 AND user_id = $2`,
 			activityID, user).Scan(&posture)
@@ -585,7 +585,7 @@ func TestACounterpartyHoldSurvivesAnotherSeatsClearedVerdict(t *testing.T) {
 // different contributor's answer wins, and the state a hold has to survive.
 func clearRowReason(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET audience_reason = NULL WHERE id = $1`, activityID)
 		return err
@@ -600,7 +600,7 @@ func clearRowReason(t *testing.T, e *integration.SearchEnv, activityID ids.UUID)
 // the capture already decided, rather than replacing it.
 func setImportVerdictKeepingPosture(t *testing.T, e *integration.SearchEnv, activityID, user ids.UUID, status string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_import SET verdict_status = $3 WHERE activity_id = $1 AND user_id = $2`,
 			activityID, user, status)
@@ -654,7 +654,7 @@ func TestAClearedThreadIsInheritedOnlyBySendersTheVerdictSaw(t *testing.T) {
 // shape it must produce, asserted now so that change inherits a spec.
 func seedThreadVerdict(t *testing.T, e *integration.SearchEnv, user ids.UUID, threadKey, status string, seen []string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, status, seen_addresses, resolved_at)
 			VALUES ($1, $2, $3, $4, now())`, threadKey, user, status, seen)
@@ -668,7 +668,7 @@ func seedThreadVerdict(t *testing.T, e *integration.SearchEnv, user ids.UUID, th
 func threadVerdictStatus(t *testing.T, e *integration.SearchEnv, user ids.UUID, threadKey string) string {
 	t.Helper()
 	var status string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status FROM capture_thread_verdict WHERE thread_key = $1 AND user_id = $2`,
 			threadKey, user).Scan(&status)
@@ -749,7 +749,7 @@ func recordThreadVerdict(
 ) {
 	t.Helper()
 	ctx := seatContext(e, seat)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var threadKey string
 		if err := tx.QueryRow(ctx,
 			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activityID).Scan(&threadKey); err != nil {
@@ -783,7 +783,7 @@ func shareThreadAsOwner(t *testing.T, e *integration.SearchEnv, seat, activityID
 	t.Helper()
 	ctx := sharingContext(e, seat)
 	var threadKey string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activityID).Scan(&threadKey)
 	}); err != nil {
@@ -819,7 +819,7 @@ func sharingContext(e *integration.SearchEnv, user ids.UUID) context.Context {
 func recomputeAudience(t *testing.T, e *integration.SearchEnv, seat, activityID ids.UUID) {
 	t.Helper()
 	ctx := seatContext(e, seat)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return activitiesmod.RecomputeAudienceTx(
 			ctx, tx, ids.From[ids.ActivityKind](activityID))
 	}); err != nil {
@@ -914,7 +914,7 @@ func setImportVerdictReason(
 ) {
 	t.Helper()
 	ctx := seatContext(e, seat)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			UPDATE capture_import SET verdict_reason = $3
 			 WHERE activity_id = $1 AND user_id = $2`, activityID, seat, reason)
@@ -935,7 +935,7 @@ func TestAnAgentHoldsAThreadOfItsUsersMailbox(t *testing.T) {
 	sync(t, customerMail("agent-hold-open-1@acme.example"))
 	activityID := oneActivityID(t, e)
 	var threadKey string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activityID).Scan(&threadKey)
 	}); err != nil {

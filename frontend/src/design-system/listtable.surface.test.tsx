@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { openViewStep, viewButton } from "../testing/listview.testkit";
 import { type ListChip, ListTable, type ListView } from "./listtable";
 import { PAGER_SLOTS, pagerSlots } from "./listtable.paging";
@@ -158,7 +159,9 @@ describe("a folded header's verbs are live", () => {
     );
     // The fold happened: the verbs are behind one menu rather than in the row.
     expect(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", {
+        name: englishCopy["list.headActions"],
+      }),
     ).toBeTruthy();
     // And the verb is mounted anyway. The check is on the mount, not on the
     // button being visible, because the fold sets `hidden` on it. Visibility is
@@ -241,7 +244,7 @@ describe("pagination", () => {
     const user = userEvent.setup();
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Rows per page" }),
+      screen.getByRole("combobox", { name: englishCopy["table.rowsPerPage"] }),
       "50 per page",
     );
     // The page size is the server's page size: the table reports the choice and
@@ -258,7 +261,9 @@ describe("pagination", () => {
         unit="rows"
       />,
     );
-    const picker = screen.getByRole("combobox", { name: "Rows per page" });
+    const picker = screen.getByRole("combobox", {
+      name: englishCopy["table.rowsPerPage"],
+    });
     expect(picker).toHaveProperty("disabled", false);
     expect(screen.getAllByRole("row")).toHaveLength(26);
 
@@ -537,7 +542,9 @@ describe("empty state", () => {
       />,
     );
     expect(screen.getByText("No rows match these filters.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: englishCopy["table.clearFilters"] }),
+    ).toBeTruthy();
   });
 
   it("shows the plain none-yet copy when nothing is filtered", () => {
@@ -551,7 +558,9 @@ describe("empty state", () => {
     );
     const table = screen.getByRole("table");
     expect(within(table).getByText("No rows yet.")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["table.clearFilters"] }),
+    ).toBeNull();
   });
 
   it("does not tell the count line nothing exists when a dial is hiding it", () => {
@@ -594,7 +603,9 @@ describe("empty state", () => {
     expect(screen.getByText(/No rows match these filters/)).toBeTruthy();
     // And no verb, because there is nothing here that could clear it. A Clear
     // that cleared nothing is a control that does nothing.
-    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["table.clearFilters"] }),
+    ).toBeNull();
   });
 
   it("names a likelier cause under the none-yet copy", () => {
@@ -637,7 +648,9 @@ describe("empty state", () => {
     expect(
       screen.getByText("Your role cannot narrow this list by Owner."),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: englishCopy["table.clearFilters"] }),
+    ).toBeTruthy();
   });
 
   it("puts a caller's empty line in place of the no-matches copy and its Clear", () => {
@@ -654,7 +667,9 @@ describe("empty state", () => {
     );
     expect(screen.getByText("You own no rows.")).toBeTruthy();
     expect(screen.queryByText(/match these filters/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["table.clearFilters"] }),
+    ).toBeNull();
   });
 });
 

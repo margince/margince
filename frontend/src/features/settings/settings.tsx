@@ -309,7 +309,7 @@ export const SETTINGS_PAGE_VIEWS = {
       [
         { FinanceSourceCard },
         { WebhooksCard },
-        { WorkspaceBotPanel, TelegramBusinessPanel },
+        { WorkspaceBotPanel, TelegramBusinessPanel, BusinessAccountsPanel },
         { SharedMailboxesCard },
         { ExtensionUnitsCard },
         { ProviderCard },
@@ -321,8 +321,11 @@ export const SETTINGS_PAGE_VIEWS = {
         webhooks: <WebhooksCard />,
         telegram: (
           <>
+            <MessagingProvidersHost />
             <WorkspaceBotPanel provider="telegram" />
             <TelegramBusinessPanel />
+            <BusinessAccountsPanel provider="whatsapp" />
+            <BusinessAccountsPanel provider="zalo-oa" />
             <WorkspaceBotPanel provider="dispact" />
           </>
         ),
@@ -421,6 +424,10 @@ export const SETTINGS_PAGE_VIEWS = {
     ({ ExtensionAccessCard }) => <ExtensionAccessCard />,
   ),
 } satisfies Record<SettingsPageId, ReturnType<typeof page>>;
+
+const MessagingProvidersHost = lazyPageCode(async () => ({
+  default: (await import("./messagingproviders")).MessagingProvidersPanel,
+}));
 
 const VoiceIntakeHost = lazyPageCode(async () => ({
   default: (await import("../voice-knowledge/voice-dna")).VoiceIntakeHost,

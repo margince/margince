@@ -157,7 +157,7 @@ func TestMergeContact_consentMergesRestrictively(t *testing.T) {
 
 	var state string
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT state FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2`, target, purpose).Scan(&state)
 	}); err != nil {
 		t.Fatalf("read survivor consent: %v", err)

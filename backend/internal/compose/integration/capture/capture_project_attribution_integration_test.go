@@ -77,7 +77,7 @@ func newProjectSeeder(t *testing.T, e *integration.SearchEnv) projectSeeder {
 		},
 	})
 	var companyID, pipelineID, stageID ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `SELECT id FROM company WHERE is_anchor LIMIT 1`).Scan(&companyID); err != nil {
 			return err
 		}
@@ -127,7 +127,7 @@ func (s projectSeeder) project(t *testing.T, name string) seededProject {
 // the bracket rule exists to stop, so it is written here directly.
 func (s projectSeeder) rekey(t *testing.T, project seededProject, key string) seededProject {
 	t.Helper()
-	if err := database.WithWorkspaceTx(s.ctx, s.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(s.ctx, s.pool, func(tx pgx.Tx) error {
 		_, execErr := tx.Exec(context.Background(), `UPDATE project SET key = $2 WHERE id = $1`, project.ID, key)
 		return execErr
 	}); err != nil {
@@ -182,7 +182,7 @@ func (s projectSeeder) createDeal(t *testing.T, name string, projectID *ids.Proj
 func linkedProject(t *testing.T, e *integration.SearchEnv, sourceID string) ids.UUID {
 	t.Helper()
 	var projectID ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT coalesce(
 			         (SELECT al.project_id
@@ -209,7 +209,7 @@ type capturedStamp struct {
 func stampOfCaptured(t *testing.T, e *integration.SearchEnv, sourceID string) capturedStamp {
 	t.Helper()
 	var got capturedStamp
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT a.retention_class,
 			       (SELECT count(*) FROM activity_retention_evidence e
@@ -339,7 +339,7 @@ func TestCaptureFilesAReplyUnderItsThreadsProject(t *testing.T) {
 // this is a real permission change rather than a fixture pretending to be one.
 func revokeCaptureGrant(t *testing.T, e *integration.SearchEnv, object string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE role SET permissions = jsonb_set(permissions, '{objects}', (permissions->'objects') - $1)
 			  WHERE key = 'capture_rep'`, object)
@@ -410,7 +410,7 @@ func TestCaptureAttributesNothingWithoutTheActivityUpdateGrant(t *testing.T) {
 
 	// Narrow the role to create+read, which is what an ordinary capture-only
 	// role holds. Capture must go on working; only the filing stops.
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, execErr := tx.Exec(context.Background(), `
 			UPDATE role
 			   SET permissions = jsonb_set(permissions, '{objects,activity}',

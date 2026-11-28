@@ -84,7 +84,7 @@ func (h dataResetHandlers) sealedRefsToPurge(ctx context.Context, counts *resetC
 		}
 	}
 	var orphans []string
-	if err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		var err error
 		orphans, err = orphanedSecretRefs(ctx, tx)
 		return err

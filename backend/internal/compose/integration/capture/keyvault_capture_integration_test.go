@@ -95,7 +95,7 @@ func TestConnectSealsCredentialInVaultNotOnTheRow(t *testing.T) {
 
 	var credentialRef *string
 	var authBytes []byte
-	err = database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT credential_ref, auth FROM capture_connection WHERE id = $1`, connID).
 			Scan(&credentialRef, &authBytes)
@@ -303,7 +303,7 @@ func TestBackfillMigratesLegacyAuthRowOntoTheVault(t *testing.T) {
 	// The row now carries a ref and the legacy bytes are cleared.
 	var credentialRef *string
 	var authBytes []byte
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT credential_ref, auth FROM capture_connection WHERE id = $1`, connID).
 			Scan(&credentialRef, &authBytes)

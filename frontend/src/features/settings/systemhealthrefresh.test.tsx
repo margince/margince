@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { SystemHealthPage } from "./settings.systemhealth";
@@ -61,7 +62,7 @@ it("starts no summary poll while hidden and refreshes on return", async () => {
   act(() => document.dispatchEvent(new Event("visibilitychange")));
   await settle();
   expect(
-    screen.getByRole("heading", { name: "Attention needed" }),
+    screen.getByRole("heading", { name: englishCopy["health.attention"] }),
   ).toBeInTheDocument();
   const before = calls.length;
   visibility.mockReturnValue("hidden");
@@ -84,20 +85,18 @@ it("keeps last-known findings visible after bounded read failures", async () => 
   fireEvent.click(refresh);
   await settle(4_000);
   expect(
-    screen.getByRole("heading", { name: "Refresh needed" }),
+    screen.getByRole("heading", { name: englishCopy["health.refreshNeeded"] }),
   ).toBeInTheDocument();
   expect(screen.queryByRole("list", { name: "Passing" })).toBeNull();
-  expect(
-    screen.getByText("Last known evidence; the latest check did not complete."),
-  ).toBeInTheDocument();
+  expect(screen.getByText(englishCopy["health.stale"])).toBeInTheDocument();
   expect(
     screen.getByRole("heading", {
       name: "Mail sorting: delayed",
     }),
   ).toBeInTheDocument();
-  expect(screen.getByText("Needs fixing").closest(".badge")).toHaveClass(
-    "badge-danger",
-  );
+  expect(
+    screen.getByText(englishCopy["health.needsFix"]).closest(".badge"),
+  ).toHaveClass("badge-danger");
   expect(
     screen.getByText("Problem needing action: 1").closest(".badge"),
   ).toHaveClass("badge-danger");
@@ -124,7 +123,7 @@ it("coalesces automatic polling with an in-flight explicit refresh", async () =>
   });
   await settle();
   expect(
-    screen.getByRole("heading", { name: "Attention needed" }),
+    screen.getByRole("heading", { name: englishCopy["health.attention"] }),
   ).toBeInTheDocument();
 });
 
@@ -152,7 +151,7 @@ it("rejects an all-clear payload that omits its available source observation", a
   expect(screen.getByRole("alert")).toBeInTheDocument();
   expect(
     screen.queryByRole("heading", {
-      name: "No action needed",
+      name: englishCopy["health.checked"],
     }),
   ).toBeNull();
 });
@@ -259,12 +258,12 @@ it("ignores routine priority changes but reports reordered action findings", asy
   phase = 1;
   await settle(60_000);
   expect(
-    screen.queryByText("Priorities changed. Refresh to apply the new order."),
+    screen.queryByText(englishCopy["health.prioritiesChanged"]),
   ).toBeNull();
   phase = 2;
   await settle(60_000);
   expect(
-    screen.getByText("Priorities changed. Refresh to apply the new order."),
+    screen.getByText(englishCopy["health.prioritiesChanged"]),
   ).toBeInTheDocument();
 });
 
@@ -347,6 +346,6 @@ it("rejects an action count that hides a required finding", async () => {
   await settle(4_000);
   expect(screen.getByRole("alert")).toBeInTheDocument();
   expect(
-    screen.queryByRole("heading", { name: "No action needed" }),
+    screen.queryByRole("heading", { name: englishCopy["health.checked"] }),
   ).toBeNull();
 });

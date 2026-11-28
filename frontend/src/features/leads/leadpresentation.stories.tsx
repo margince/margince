@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { ListQuery } from "../../components/listquery";
 import { translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
   installFetchStub,
@@ -93,7 +94,7 @@ export const CountsUnavailable: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       await within(canvasElement).findByRole("alert"),
-    ).toHaveTextContent("Qualified and Disqualified counts did not load.");
+    ).toHaveTextContent(englishCopy["lead.boardCountsUnavailable"]);
   },
 };
 

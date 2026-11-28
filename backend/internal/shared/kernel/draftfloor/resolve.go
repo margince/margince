@@ -147,6 +147,8 @@ type Written struct {
 	// Greeting is the register a rep set on the addressee. It outranks every
 	// reading of the text, because the rep decided it once for this contact.
 	Greeting greetingregister.Register
+	// Salutation is an explicitly stored mr, ms or none; it is never inferred.
+	Salutation string
 	// Stored is the language recorded on the message, empty when none is.
 	// It outranks the rest of the text: the same message read twice must not
 	// answer two languages because a quoted chain grew underneath it.
@@ -205,6 +207,10 @@ func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate
 		register(written), state, now, name, email)
 	if greetingregister.Valid(written.Greeting) {
 		envelope.GreetingRegister = string(written.Greeting)
+	}
+	switch written.Salutation {
+	case "mr", "ms", "none":
+		envelope.Salutation = written.Salutation
 	}
 	return envelope
 }

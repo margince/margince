@@ -317,7 +317,7 @@ func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 		return Run{}, err
 	}
 	var out Run
-	err := database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			SELECT id, as_of, eligible_deals, eligible_signals, status, readiness,
 			       eligible_deal_owners, eligible_signal_owners
@@ -368,7 +368,7 @@ func (s *Store) InTx(ctx context.Context, fn func(context.Context, pgx.Tx) error
 	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		return fn(ctx, tx)
 	})
 }
@@ -402,7 +402,7 @@ func (s *Store) CoverageFor(ctx context.Context, runID ids.UUID) ([]SourceCovera
 		return nil, err
 	}
 	var out []SourceCoverage
-	err := database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT source, state, checked_through
 			FROM assurance_source_coverage

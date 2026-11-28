@@ -60,11 +60,11 @@ func publicPreferences(store *consent.Store, limits publicPreferenceLimiters) fu
 				return
 			}
 			if !limits.perIP.Allow(httpserver.ClientIP(r)) {
-				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+				httperr.Write(w, r, ratelimit.Refused(limits.perIP))
 				return
 			}
 			if r.Method != http.MethodGet && !limits.perToken.Allow(token) {
-				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+				httperr.Write(w, r, ratelimit.Refused(limits.perToken))
 				return
 			}
 

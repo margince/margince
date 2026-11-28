@@ -106,7 +106,7 @@ func promiseForThisWeek(t *testing.T, workdays []int, away bool, lastDay int) {
 	}
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		got, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 		if err == nil && got != CommitmentTaskWritten {
 			t.Errorf("dispatch = %s, want the rep's task", got)
@@ -117,7 +117,7 @@ func promiseForThisWeek(t *testing.T, workdays []int, away bool, lastDay int) {
 	}
 	var due *time.Time
 	var assignee ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT due_at, assignee_id FROM activity WHERE kind = 'task' AND source_activity_id = $1`, sourceID).Scan(&due, &assignee)
 	}); err != nil {
 		t.Fatalf("reading the promise's task: %v", err)
@@ -134,7 +134,7 @@ func promiseForThisWeek(t *testing.T, workdays []int, away bool, lastDay int) {
 func recordZoneOf(t *testing.T, e *integration.Env) *time.Location {
 	t.Helper()
 	var zone *time.Location
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		zone, err = installationZoneTx(e.Admin(), tx)
 		return err
@@ -169,7 +169,7 @@ func TestARenewedPromiseForThisWeekIsDatedInTheRenewalsWeek(t *testing.T) {
 	}
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
 	var dated Commitment
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		dated, err = withStatedWeek(ctx, tx, c)
 		return err

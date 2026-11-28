@@ -134,6 +134,9 @@ commonComponents:
   - pkg
 
 deps:
+  # xtext: values composes an identifier to NFC, a transform the stdlib lacks.
+  shared:
+    canUse: [xtext]
   # The generated contract package carries its transport runtime; it
   # imports no project component.
   contracts:

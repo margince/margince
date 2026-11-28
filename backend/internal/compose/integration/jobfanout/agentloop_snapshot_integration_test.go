@@ -133,7 +133,7 @@ func (re *runnerEnv) auditedCalls(t *testing.T, world *loopWorld) ([]auditedCall
 	t.Helper()
 	var calls []auditedCall
 	var raw strings.Builder
-	err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		found, err := tx.Query(context.Background(), `
 			SELECT xmin::text, entity_type, entity_id::text, coalesce(after::text, '')
 			FROM audit_log WHERE passport_id = $1 ORDER BY occurred_at, id`, re.passportID)

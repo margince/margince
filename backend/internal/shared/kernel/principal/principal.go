@@ -320,11 +320,9 @@ const (
 	sendingHumanKey
 )
 
-// WithWorkspaceID binds the workspace a request resolved. No statement
-// narrows by it — an installation holds exactly one workspace (ADR-0061) —
-// but WithWorkspaceTx still refuses to open a transaction without one bound,
-// as a programming-error check: a domain call reached with no workspace
-// resolved at all, not an isolation boundary.
+// WithWorkspaceID binds the workspace a request resolved. No statement narrows
+// by it, because an installation holds one workspace. Code that names the
+// workspace in an id, a storage key or a job envelope reads it back.
 func WithWorkspaceID(ctx context.Context, id ids.UUID) context.Context {
 	return context.WithValue(ctx, workspaceKey, id)
 }

@@ -232,6 +232,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "connectors.provGmail",
   "connectors.provGraph",
   "connectors.provTelegram",
+  "connectors.business.whatsapp",
   "connectors.bot.provDispact",
   "connectors.vendorGoogle",
   "connectors.vendorMicrosoft",
@@ -252,6 +253,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // "deal", "pipeline" and "lead" are loanwords Vietnamese keeps.
   "board.count_one",
+  "history.field.lead_id",
   "lead.boardCount_one",
   "deals.pipeline",
   "filters.field.pipeline_id",
@@ -339,6 +341,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // catalog leaves it untranslated, and the marker on the record page names
   // the same object those keys do.
   "lead.marker",
+  "history.field.lead_id",
   // The singular kind name on a search hit: "Deal" and "Lead" are loanwords, and
   // only the plural headings differ because English pluralises.
   "search.kind.deal",

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { expect, within } from "storybook/test";
 import type { components } from "../../../api/schema";
+import { en as englishCopy } from "../../../i18n/en";
 import { StoryProviders } from "../../../testing/story-utils";
 import { CommitteeReading } from "./dealcommittee";
 
@@ -123,7 +124,9 @@ async function sides(canvasElement: HTMLElement) {
   return {
     ours: within(await canvas.findByRole("region", { name: "Your team" })),
     theirs: within(canvas.getByRole("region", { name: "Their team" })),
-    legend: within(canvas.getByRole("list", { name: "What the marks mean" })),
+    legend: within(
+      canvas.getByRole("list", { name: englishCopy["deal.committee.legend"] }),
+    ),
   };
 }
 
@@ -138,10 +141,12 @@ const oneStakeholder: Story = {
   play: async ({ canvasElement }) => {
     const { ours, theirs, legend } = await sides(canvasElement);
     await expect(ours.getAllByRole("listitem")).toHaveLength(6);
-    await expect(ours.getByText("Handles most exchanges")).toBeVisible();
+    await expect(
+      ours.getByText(englishCopy["deal.committee.carriesContact"]),
+    ).toBeVisible();
     await expect(theirs.getByText("Dana Weiss")).toBeVisible();
     await expect(
-      theirs.getByText("Only one contact. Add a second one."),
+      theirs.getByText(englishCopy["deal.committee.missing.secondContact"]),
     ).toBeVisible();
     await expect(legend.getByText("Your team")).toBeVisible();
   },
@@ -170,10 +175,12 @@ const aGap: Story = {
   play: async ({ canvasElement }) => {
     const { theirs, legend } = await sides(canvasElement);
     await expect(
-      theirs.getByText("Missing: an engaged champion"),
+      theirs.getByText(englishCopy["deal.committee.missing.champion"]),
     ).toBeVisible();
     await expect(theirs.getByText("No role set · Not engaged")).toBeVisible();
-    await expect(legend.getByText("Missing seat")).toBeVisible();
+    await expect(
+      legend.getByText(englishCopy["deal.committee.legendGap"]),
+    ).toBeVisible();
   },
 };
 
@@ -196,7 +203,9 @@ const fullCommittee: Story = {
     await expect(
       theirs.getByText("champion · Engaged · last wrote 2026-10-20"),
     ).toBeVisible();
-    await expect(legend.queryByText("Missing seat")).toBeNull();
+    await expect(
+      legend.queryByText(englishCopy["deal.committee.legendGap"]),
+    ).toBeNull();
     await expect(legend.getAllByRole("listitem")).toHaveLength(3);
   },
 };
@@ -242,7 +251,7 @@ export const Withheld: Story = {
   },
   play: async ({ canvasElement }) => {
     const { theirs } = await sides(canvasElement);
-    await expect(theirs.getByText("Hidden for your role")).toBeVisible();
+    await expect(theirs.getByText(englishCopy["state.withheld"])).toBeVisible();
   },
 };
 
@@ -254,6 +263,8 @@ export const Empty: Story = {
   },
   play: async ({ canvasElement }) => {
     const { theirs } = await sides(canvasElement);
-    await expect(theirs.getByText("Nobody named")).toBeVisible();
+    await expect(
+      theirs.getByText(englishCopy["deal.standing.committee.none"]),
+    ).toBeVisible();
   },
 };

@@ -43,7 +43,7 @@ func setupMailbox(t *testing.T) mailbox {
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	m := mailbox{e: e, owner: e.Rep1, seat: "seat-" + e.Rep1.String() + "@ws.example"}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label, mail_posture)
 			VALUES ($1, 'gmail', 'connected', 'vault:test', $2, 'shared')

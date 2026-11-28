@@ -88,7 +88,7 @@ func TestEveryCredentialModelIsBornWithAReader(t *testing.T) {
 		}
 		id := captureCensusMessage(ctx, t, sink, ws, fixture)
 		var reachable bool
-		if err := database.WithWorkspaceTx(
+		if err := database.WithTx(
 			principal.WithWorkspaceID(ctx, ws), pool, func(tx pgx.Tx) error {
 				var err error
 				reachable, err = auth.ActivityHasAReaderTx(ctx, tx, id)

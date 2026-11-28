@@ -116,7 +116,7 @@ func TestALinkTheClassifierDoubtsDoesNotWarmTheDeal(t *testing.T) {
 	w.meeting(t, "budget review", reviewAt, false)
 	dinner := w.meeting(t, "dinner", dinnerAt, false)
 	system := principal.SystemActing(w.e.Admin(), "system:dealrelevance-test")
-	if err := database.WithWorkspaceTx(system, w.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, w.e.Pool, func(tx pgx.Tx) error {
 		changed, err := activities.MarkDealLinkTx(system, tx, ids.From[ids.ActivityKind](dinner), w.deal.UUID, "uncertain", nil)
 		if err == nil && !changed {
 			t.Error("the classifier's first mark changed nothing")

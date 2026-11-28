@@ -66,7 +66,7 @@ func (p *CapturePurger) purgeRemovedWith(
 		return apperrors.ErrPermissionDenied
 	}
 	var subject capture.PurgeSubject
-	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		if admit != nil {
 			if err := admit(ctx, tx); err != nil {
 				return err

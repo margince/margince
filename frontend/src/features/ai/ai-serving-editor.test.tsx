@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { summarize } from "./ai-request-summary";
 import { jsonResponse, render } from "./ai-routing.testkit";
@@ -97,9 +98,12 @@ afterEach(() => {
 });
 
 function type(text: string) {
-  fireEvent.change(screen.getByRole("textbox", { name: "Serving JSON" }), {
-    target: { value: text },
-  });
+  fireEvent.change(
+    screen.getByRole("textbox", { name: englishCopy["aiServing.json"] }),
+    {
+      target: { value: text },
+    },
+  );
 }
 
 describe("servingBlocked", () => {
@@ -149,7 +153,9 @@ describe("ServingSection", () => {
         previewDelayMs={0}
       />,
     );
-    expect(screen.queryByRole("textbox", { name: "Serving JSON" })).toBeNull();
+    expect(
+      screen.queryByRole("textbox", { name: englishCopy["aiServing.json"] }),
+    ).toBeNull();
     expect(
       screen.getByText(/Google Gemini serves this model itself/),
     ).toBeTruthy();
@@ -239,15 +245,11 @@ describe("ServingSection", () => {
     type(`{"provider":{"sort":"latency"}}`);
 
     expect(await screen.findByText("Pick the host by latency.")).toBeTruthy();
-    expect(
-      screen.getByText("Only hosts that keep no copy of prompts or replies."),
-    ).toBeTruthy();
-    expect(screen.getByText("You set here")).toBeTruthy();
+    expect(screen.getByText(englishCopy["aiServing.say.zdr"])).toBeTruthy();
+    expect(screen.getByText(englishCopy["aiServing.source.tier"])).toBeTruthy();
     expect(screen.getByText("Connection")).toBeTruthy();
     expect(
-      screen.getByText(
-        "Thinking level comes from each task’s setting under AI tasks.",
-      ),
+      screen.getByText(englishCopy["aiServing.say.taskEffort"]),
     ).toBeTruthy();
     expect(onChange).toHaveBeenLastCalledWith({
       provider: { sort: "latency" },
@@ -256,7 +258,9 @@ describe("ServingSection", () => {
     expect(sent.at(-1)?.tiers.cheap_cloud.routing).toEqual({
       provider: { sort: "latency" },
     });
-    expect(await screen.findByText("connection only")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["aiServing.connectionOnly"]),
+    ).toBeTruthy();
   });
 
   it("empties to the shipped default", async () => {
@@ -283,10 +287,12 @@ describe("ServingSection", () => {
       />,
     );
     fireEvent.click(
-      screen.getByRole("button", { name: "Use shipped default" }),
+      screen.getByRole("button", { name: englishCopy["aiServing.useDefault"] }),
     );
     expect(onChange).toHaveBeenLastCalledWith(undefined);
-    expect(await screen.findByText("Shipped default")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["aiServing.shippedDefault"]),
+    ).toBeTruthy();
   });
 });
 
@@ -400,13 +406,9 @@ describe("RequestSummary", () => {
         pending={false}
       />,
     );
+    expect(screen.getByText(englishCopy["aiServing.brokerOwn"])).toBeTruthy();
     expect(
-      screen.getByText("Nothing extra: OpenRouter picks the host on its own."),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Thinking level comes from each task’s setting under AI tasks.",
-      ),
+      screen.getByText(englishCopy["aiServing.say.taskEffort"]),
     ).toBeTruthy();
     expect(screen.getByText(/every call from Everyday cloud,/)).toBeTruthy();
     expect(screen.queryByText(/cheap_cloud/)).toBeNull();

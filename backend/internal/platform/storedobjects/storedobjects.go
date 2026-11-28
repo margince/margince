@@ -175,7 +175,7 @@ func (l *Ledger) ListProvisional(ctx context.Context, before time.Time, limit in
 		return nil, err
 	}
 	var out []Provisional
-	err := database.WithWorkspaceTx(ctx, l.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, l.db.Pool(), func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT storage_key, kind, recorded_at
 			  FROM stored_object_intent
@@ -206,7 +206,7 @@ func (l *Ledger) Retire(ctx context.Context, pending Provisional) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, l.db.Pool(), func(tx pgx.Tx) error {
+	return database.WithTx(ctx, l.db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `DELETE FROM stored_object_intent WHERE storage_key = @key
  AND recorded_at = @recorded AND reaped_at IS NULL`, pgx.NamedArgs{storageKeyArg: pending.Key, "recorded": pending.RecordedAt})
 		return err

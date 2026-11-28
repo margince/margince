@@ -178,7 +178,9 @@ describe("an opened list", () => {
     expect(
       screen.getByRole("columnheader", { name: "last touch" }),
     ).toBeInTheDocument();
-    expect(await within(row).findByText("Manufacturing")).toBeInTheDocument();
+    expect(
+      await within(row).findByText(en["industry.manufacturing"]),
+    ).toBeInTheDocument();
     expect(
       within(row).getByText(en["lists.members.hidden"]),
     ).toBeInTheDocument();

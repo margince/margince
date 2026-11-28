@@ -32,11 +32,13 @@ function reasonOf(verb: BulkVerb, undo = false): string | null {
 }
 
 it("says which way a tag or Shortlist change found the record already", () => {
-  expect(reasonOf("add_tag")).toBe("Already has this tag");
-  expect(reasonOf("remove_tag")).toBe("Does not have this tag");
-  expect(reasonOf("add_to_list")).toBe("Already on this Shortlist");
-  expect(reasonOf("remove_from_list")).toBe("Not on this Shortlist");
-  expect(reasonOf("complete")).toBe("Already done");
+  expect(reasonOf("add_tag")).toBe(en["bulk.reason.no_change_tagged"]);
+  expect(reasonOf("remove_tag")).toBe(en["bulk.reason.no_change_untagged"]);
+  expect(reasonOf("add_to_list")).toBe(en["bulk.reason.no_change_listed"]);
+  expect(reasonOf("remove_from_list")).toBe(
+    en["bulk.reason.no_change_unlisted"],
+  );
+  expect(reasonOf("complete")).toBe(en["bulk.reason.no_change_done"]);
 });
 
 it("says an undo skips a record the change never reached, whatever its verb", () => {

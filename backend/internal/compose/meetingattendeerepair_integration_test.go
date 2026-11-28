@@ -37,7 +37,7 @@ const graphCalOwner = "rep@myco.test"
 
 func seedGraphCalendarConnection(t *testing.T, e *integration.Env) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (provider, user_id, status, account_label)
 			VALUES ('graphcal', $1, 'connected', $2)`, e.AdminUser, graphCalOwner)
@@ -77,7 +77,7 @@ func repairOutcome(t *testing.T, e *integration.Env, id ids.UUID) (string, bool)
 	t.Helper()
 	var outcome string
 	var found bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT outcome, true FROM activity_meeting_attendee_repair WHERE activity_id = $1`,
 			id).Scan(&outcome, &found)

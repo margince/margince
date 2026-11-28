@@ -104,10 +104,9 @@ func (s *Store) OpenCommitmentsForCompany(
 }
 
 // theirPromiseOpen is a commitment the customer made that nobody has settled
-// yet. A disputed one (needs_review) is left out, as the project read leaves
-// it out, because stating a contested promise as owed states it as a fact.
+// yet. Only a claim passing the current evidence checks states an obligation.
 func theirPromiseOpen(asOf time.Time, arg func(any) int) string {
-	return `c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review AND ` + currentCommitmentAdmission(asOf, arg)
+	return `c.kind = 'commitment_theirs' AND c.status = 'open' AND ` + currentCommitmentAdmission(asOf, arg)
 }
 
 // OpenTheirCommitmentsForCompany reads the open commitments the contacts

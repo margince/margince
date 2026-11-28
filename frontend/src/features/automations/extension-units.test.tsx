@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ExtensionUnitsCard } from "./extension-units";
 
@@ -160,11 +161,17 @@ describe("the units offered on a settings page", () => {
     };
     renderFor({ ext_dispact_connector_x: ["read"] });
     expect(
-      screen.getByRole("link", { name: "Open Dispact" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: englishCopy["messenger.dispactOpen"] })
+        .getAttribute("href"),
     ).toBe("/#/app/dispact-connector");
     cleanup();
     renderFor({});
-    expect(screen.queryByRole("link", { name: "Open Dispact" })).toBeNull();
+    expect(
+      screen.queryByRole("link", {
+        name: englishCopy["messenger.dispactOpen"],
+      }),
+    ).toBeNull();
   });
 
   it("gives every offered unit its own row", () => {

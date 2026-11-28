@@ -228,7 +228,7 @@ func TestAWithheldMessageRefusesToNameItsMailbox(t *testing.T) {
 // the shape of a row captured before capture_import existed.
 func dropImportRows(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`DELETE FROM capture_import WHERE activity_id = $1`, activityID)
 		return err
@@ -242,7 +242,7 @@ func dropImportRows(t *testing.T, e *integration.SearchEnv, activityID ids.UUID)
 // the current writer can no longer produce.
 func setCapturedBy(t *testing.T, e *integration.SearchEnv, activityID ids.UUID, stamp string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET captured_by = $2 WHERE id = $1`, activityID, stamp)
 		return err

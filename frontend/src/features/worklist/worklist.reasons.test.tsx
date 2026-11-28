@@ -349,7 +349,7 @@ describe("a follow-up row says why it is there", () => {
 
     await screen.findByText(/Pricing for the pilot/);
     const line = container.querySelector(".worklist-row-because")?.textContent;
-    expect(line).toBe("you wrote last");
+    expect(line).toBe(en["worklist.because.you_wrote_last"]);
   });
 
   // The row a meeting with nobody on file leaves behind offers no "Draft

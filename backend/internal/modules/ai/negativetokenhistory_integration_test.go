@@ -38,7 +38,7 @@ func zeroNegativeTokens(t *testing.T, e *rateEnv, ws ids.UUID) int {
 	in, changed := datatask.BatchIn{Limit: 1}, 0
 	for {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(system, e.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = ZeroNegativeTokenCountsTx(system, tx, in)
 			return err

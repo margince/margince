@@ -106,9 +106,9 @@ func refuseUnreadableTagSuggestBatch(batch tagSuggestFixture) error {
 			len(batch.Items), tagSuggestBatchSize)
 	}
 	for i, item := range batch.Items {
-		if n := utf8.RuneCountInString(item.Body); n > tagSuggestBodyLimit {
+		if n := utf8.RuneCountInString(item.Body); n > tagsuggest.BodyReadLimit {
 			return fmt.Errorf("tag_suggest/interest: item %d carries %d characters, but the read truncates every body to %d",
-				i+1, n, tagSuggestBodyLimit)
+				i+1, n, tagsuggest.BodyReadLimit)
 		}
 	}
 	keys := map[string]bool{}

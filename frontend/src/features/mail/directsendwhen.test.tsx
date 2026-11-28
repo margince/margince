@@ -7,6 +7,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse, stubRoutes } from "./compose.testkit";
 import { DirectSendModal } from "./directsendmodal";
 
@@ -16,7 +17,6 @@ import { DirectSendModal } from "./directsendmodal";
 const review: components["schemas"]["CommunicationReview"] = {
   id: "review-1",
   state: "needs_context",
-  kind: "single",
   reason_code: "marketing_objection",
   refusals: [],
   warning: { version: "override-v2", text: "The refusal stands." },
@@ -112,7 +112,7 @@ describe("Send anyway at a later moment", () => {
     expect(
       confirm.getAttribute("aria-disabled") ?? String(confirm.disabled),
     ).toBe("true");
-    expect(screen.getByText("Choose a time in the future.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["compose.schedulePast"])).toBeTruthy();
   });
 
   it("sends now with no moment when Now stays chosen", async () => {

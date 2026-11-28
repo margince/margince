@@ -1,6 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  type ReactNode,
   Suspense,
   useEffect,
   useMemo,
@@ -12,20 +11,21 @@ import {
 // every address the product answers has a view. An address it does not answer
 // is a not-found page rather than a surface that reads as unbuilt.
 import { ResetRoute } from "./App.screens";
+import { type OnboardingHold, ScreenFrame } from "./App.shell";
 import { ScreenView } from "./App.views";
-import { useWarmRouteChunks } from "./App.warmchunks";
 import { ApprovalHost } from "./app/approvalhost";
 import { AskFromAddress } from "./app/askfromaddress";
-import { AuthScreen, ReleaseSkewScreen } from "./app/authscreens";
+import { ReleaseSkewScreen } from "./app/authscreens";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { lockScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
+import { isEmbedded, SignInScreen, unservedEmbedAddress } from "./app/embedded";
 import { useFeatureLanding } from "./app/featurelanding";
 import { useHomePrefetch } from "./app/homeprefetch";
 import { ONBOARDING_ENTRY, passesOnboardingGate } from "./app/onboarding-gate";
 import { useCommandPalette } from "./app/palettehotkey";
-import { useRecordPrefetch } from "./app/recordprefetch";
+import { RaillessFrame } from "./app/railless";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
 import { UnavailableOrClaimable } from "./app/unavailableorclaimable";
@@ -46,7 +46,6 @@ import { screenEnabled, useHiddenCoreFeatures } from "./lib/corefeatures";
 import { useInstallationDescribed } from "./lib/installationcompany";
 import { notifyNavigate } from "./lib/instruments";
 import { markJourney } from "./lib/journeymarks";
-import { useWarmProgressName } from "./lib/progressreader";
 import { SPA_RELEASE } from "./lib/release";
 import { routePattern } from "./lib/routepattern";
 import { type Screen, takeHashCredential, watchAddress } from "./lib/router";
@@ -111,6 +110,11 @@ export function App() {
   // than by whichever request happens to fail first. It is inert on any build
   // that carries no release version, which is every local one.
   const skewedApiRelease = useSkewedApiRelease(SPA_RELEASE);
+  // Draws nothing while recordaddress reloads a core address off the embed
+  // path, so not even a public screen renders in a frame first.
+  if (unservedEmbedAddress()) {
+    return null;
+  }
   if (skewedApiRelease !== null) {
     return (
       <RaillessFrame>
@@ -205,8 +209,6 @@ function homeMayRead(state: HomeReadState): boolean {
   );
 }
 
-type OnboardingHold = Readonly<{ held: boolean; turnedAway: boolean }>;
-
 // The route is a dependency so the gate holds on every navigation. Otherwise
 // the palette or a typed hash walks past onboarding.
 // passesOnboardingGate's screens are exempt, or this effect would fight its
@@ -218,7 +220,13 @@ function useOnboardingHold(
   unfinished: boolean,
   route: ReturnType<typeof useRoute>,
 ): OnboardingHold {
-  const held = authed && described !== undefined && (!described || unfinished);
+  // A unit's screen in a frame is not the place to walk a reader through
+  // onboarding: the gate's own screens never load there.
+  const held =
+    authed &&
+    !isEmbedded() &&
+    described !== undefined &&
+    (!described || unfinished);
   const { screen, id, id2 } = route;
   const { navigateReplacing } = useAddressWriters();
   useEffect(() => {
@@ -298,6 +306,7 @@ function AuthedApp({
     [storedZone],
   );
 
+  const embedded = isEmbedded();
   const hold = useOnboardingHold(authed, described, progress.unfinished, route);
 
   const { refusal, confinement } = useProbeAnswer(me);
@@ -353,17 +362,16 @@ function AuthedApp({
       );
     }
     return (
-      <RaillessFrame>
-        <AuthScreen
-          onAuthed={async () => {
-            const result = await me.refetch();
-            if (result.error) {
-              throw result.error;
-            }
-          }}
-          notice={notice}
-        />
-      </RaillessFrame>
+      <SignInScreen
+        onAuthed={async () => {
+          const result = await me.refetch();
+          if (result.error) {
+            throw result.error;
+          }
+        }}
+        notice={notice}
+        onRetry={() => void me.refetch()}
+      />
     );
   }
 
@@ -408,7 +416,8 @@ function AuthedApp({
                 <ApprovalHost>
                   {/* Sign out in the shell's account menu asks the page's guard. */}
                   <UnsavedExits>
-                    <AuthedShell
+                    <ScreenFrame
+                      embedded={embedded}
                       hold={hold}
                       onOpenSearch={() => palette.show("all")}
                     >
@@ -417,65 +426,42 @@ function AuthedApp({
                         id={route.id}
                         id2={route.id2}
                       />
-                    </AuthedShell>
+                    </ScreenFrame>
                   </UnsavedExits>
                 </ApprovalHost>
               </SourceHost>
             </CallLogHost>
           </WriteToHost>
-          {palette.open !== null && (
-            <Suspense fallback={null}>
-              <CommandPalette
-                open={palette.open}
-                mode={palette.mode}
-                onClose={palette.hide}
-              />
-            </Suspense>
-          )}
-          {/* Over whatever the reader was doing, not on a screen of its own. */}
-          <AskFromAddress />
+          <CoreOverlays embedded={embedded} palette={palette} />
         </ViewerZoneProvider>
       </CompanyZoneProvider>
     </DateFormatsProvider>
   );
 }
 
-function AuthedShell({
-  children,
-  hold,
-  onOpenSearch,
+// The palette and the address-opened ask are core's own. A unit's screen in a
+// frame never carries them, so an address there cannot reach a core action.
+function CoreOverlays({
+  embedded,
+  palette,
 }: Readonly<{
-  children: ReactNode;
-  hold: OnboardingHold;
-  onOpenSearch: () => void;
+  embedded: boolean;
+  palette: ReturnType<typeof useCommandPalette>;
 }>) {
-  useWarmRouteChunks();
-  useRecordPrefetch();
-  useWarmProgressName(!hold.held);
-  // The gate is replacing this address, and its shell would only start the
-  // full app's reads.
-  if (hold.turnedAway) {
-    return (
-      <RaillessFrame>
-        <AuthSplash />
-      </RaillessFrame>
-    );
-  }
+  if (embedded) return null;
   return (
-    <Shell onOpenSearch={onOpenSearch} held={hold.held}>
-      {children}
-    </Shell>
-  );
-}
-
-// The rail-less page frame (same shape Shell renders for onboarding/booking),
-// so the pre-session screens get the app background and scroll container.
-function RaillessFrame({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className="app railless">
-      <main className="main">
-        <div className="scroll">{children}</div>
-      </main>
-    </div>
+    <>
+      {palette.open !== null && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            open={palette.open}
+            mode={palette.mode}
+            onClose={palette.hide}
+          />
+        </Suspense>
+      )}
+      {/* Over whatever the reader was doing, not on a screen of its own. */}
+      <AskFromAddress />
+    </>
   );
 }

@@ -7,6 +7,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
@@ -157,7 +158,9 @@ describe("TierSwitchedBadge", () => {
         <TierSwitchedBadge tier="cheap_cloud" />
       </>,
     );
-    expect(await screen.findAllByText("Model switched")).toHaveLength(1);
+    expect(
+      await screen.findAllByText(englishCopy["aiFigures.switchedBadge"]),
+    ).toHaveLength(1);
   });
 });
 
@@ -175,7 +178,9 @@ describe("ProviderRecentCalls", () => {
     expect(host.getAttribute("href")).toBe(
       "/#/settings/model-calls?provider=openai_compatible&served_provider=Cerebras",
     );
-    expect(screen.getByText("No host answered").closest("a")).toBeNull();
+    expect(
+      screen.getByText(englishCopy["aiFigures.noHost"]).closest("a"),
+    ).toBeNull();
     expect(screen.getAllByText(/0\.02/)).toHaveLength(2);
 
     await user.click(screen.getByRole("button", { name: "By model" }));
@@ -202,18 +207,24 @@ describe("ProviderRecentCalls", () => {
 
     await user.click(await screen.findByRole("button", { name: "By tier" }));
 
-    const tier = await screen.findByRole("link", { name: "Everyday cloud" });
+    const tier = await screen.findByRole("link", {
+      name: englishCopy["aiTier.cheap_cloud"],
+    });
     expect(tier.getAttribute("href")).toBe(
       "/#/settings/model-calls?provider=gemini&tier=cheap_cloud",
     );
-    expect(screen.getByRole("link", { name: "Decision model" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: englishCopy["aiTier.decide"] }),
+    ).toBeTruthy();
     expect(screen.queryByText(/cheap_cloud|\bdecide\b/)).toBeNull();
   });
 
   it("offers no host grouping off a broker, and says when a window is empty", async () => {
     statsServer(() => []);
     render(<ProviderRecentCalls provider="gemini" broker={false} />);
-    expect(await screen.findByText("No calls in this window.")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["aiFigures.empty"]),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "By host" })).toBeNull();
     expect(screen.getByRole("button", { name: "By tier" })).toBeTruthy();
   });
@@ -283,8 +294,10 @@ describe("TierRecentCalls", () => {
   it("names a hostless row by whether any call was answered", async () => {
     statsServer(() => [row("", { calls: 41, failed: 0, timeouts: 0 })]);
     render(<TierRecentCalls tier="embed" broker />);
-    expect(await screen.findByText("Host not recorded")).toBeTruthy();
-    expect(screen.queryByText("No host answered")).toBeNull();
+    expect(
+      await screen.findByText(englishCopy["aiFigures.hostUnrecorded"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(englishCopy["aiFigures.noHost"])).toBeNull();
   });
 });
 
@@ -334,24 +347,35 @@ describe("OpenRouter settings", () => {
         }}
       />,
     );
-    const section = screen.getByRole("region", { name: "OpenRouter settings" });
+    const section = screen.getByRole("region", {
+      name: englishCopy["aiOpenRouter.title"],
+    });
     expect(
-      screen.getByRole("button", { name: "Save connection" }),
+      screen.getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     ).toBeDisabled();
     await user.click(
       within(section).getByRole("checkbox", { name: /Zero data retention/ }),
     );
-    await user.click(screen.getByRole("button", { name: "Save connection" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
+    );
     await waitFor(() =>
       expect(puts).toEqual([
-        { base_url: "https://openrouter.ai/api", upstream: { zdr: true } },
+        {
+          base_url: englishCopy["aiRouting.baseUrl.placeholder"],
+          upstream: { zdr: true },
+        },
       ]),
     );
 
     await user.click(screen.getByRole("combobox", { name: "Service" }));
     await user.click(screen.getByRole("option", { name: "Mistral" }));
     expect(
-      screen.queryByRole("region", { name: "OpenRouter settings" }),
+      screen.queryByRole("region", { name: englishCopy["aiOpenRouter.title"] }),
     ).toBeNull();
     // The sheet's figures follow the host being chosen, not the stored one.
     expect(onHostChange).toHaveBeenLastCalledWith("https://api.mistral.ai");
@@ -370,7 +394,7 @@ describe("OpenRouter settings", () => {
       screen.getByRole("checkbox", { name: /Allow fallbacks/ }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("textbox", { name: "Use only these hosts" }),
+      screen.getByRole("textbox", { name: englishCopy["aiOpenRouter.only"] }),
     ).toBeDisabled();
   });
 });

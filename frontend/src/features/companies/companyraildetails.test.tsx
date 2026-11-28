@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type OpenSource, OpenSourceProvider } from "../../lib/opensource";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyRail } from "./companyrail";
@@ -192,7 +193,9 @@ describe("the legal identity a contact can state", () => {
     expect(screen.queryByText("VAT ID")).toBeNull();
     await user.click(screen.getByRole("button", { name: /Show \d+ empty/ }));
     expect(screen.getByText("VAT ID")).toBeVisible();
-    expect(screen.queryByText("Registered address")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["co.vat.registeredAddress"]),
+    ).toBeNull();
   });
 
   it("opens the VAT number's own editor from Registration's Edit", async () => {

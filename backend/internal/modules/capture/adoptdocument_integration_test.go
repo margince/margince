@@ -29,7 +29,7 @@ func TestAnAdoptedMessageCarryingADocumentDoesNotInheritAnOpeningVerdict(t *test
 		{"a cleared thread, a logo", VerdictCleared, "logo.png", "image/png", ""},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 				seat, mail, key := ids.NewV7(), ids.NewV7(), "adopt-"+ids.NewV7().String()
 				if _, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name, status)
 					VALUES ($1, $2, 'Seat', 'active')`, seat, seat.String()+"@seat.example"); err != nil {

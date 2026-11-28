@@ -176,7 +176,7 @@ func TestCaptureRecordsProvenanceWithoutTheMessageBody(t *testing.T) {
 		// the activity row and raw_capture under their own retention, off the
 		// append-only audit spine.
 		var hasBody, hasSubject, hasKind, hasSourceID bool
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `
 				SELECT after ? 'body', after ? 'subject', after ? 'kind', after ? 'source_id'
 				FROM audit_log
@@ -248,7 +248,7 @@ func TestCaptureRefusesToDeriveARecord(t *testing.T) {
 		}
 	})
 	t.Run("an erased address stays dead", func(t *testing.T) {
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(), `
 				INSERT INTO erasure_suppression (kind, value_hash)
 				VALUES ('email', $1)`, storekit.SuppressionHash("dave@dead.example"))

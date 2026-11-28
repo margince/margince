@@ -44,7 +44,7 @@ func (e *Engine) Execute(ctx context.Context) (Outcome, error) {
 	var outcome Outcome
 	err := storekit.RetryLockCycles(batchCtx, func() error {
 		picked, outcome = nil, Outcome{}
-		return database.WithWorkspaceTx(batchCtx, e.pool, func(tx pgx.Tx) error {
+		return database.WithTx(batchCtx, e.pool, func(tx pgx.Tx) error {
 			var err error
 			outcome, picked, err = e.executeTx(batchCtx, tx)
 			return err

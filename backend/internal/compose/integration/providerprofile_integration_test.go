@@ -74,7 +74,7 @@ func completeOneRun(t *testing.T, e *Env, contactID ids.UUID) string {
 
 	var runID string
 	admin := e.Admin()
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO provider_run
 			  (subject_kind, contact_id, provider, trigger, state, input_fingerprint,
@@ -120,7 +120,7 @@ func sectionFor(t *testing.T, page crmcontracts.Contact360, name string) crmcont
 // section reads.
 func connectProvider(t *testing.T, e *Env) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO provider_connection
 			       (id, provider, status, mode, preset, categories)
@@ -132,7 +132,7 @@ func connectProvider(t *testing.T, e *Env) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(), `DELETE FROM provider_connection WHERE provider = 'surfe'`)
 			return err
 		}); err != nil {
@@ -234,7 +234,7 @@ func TestDisconnectingLeavesThePurchasedDataVisibleAndCallsItStale(t *testing.T)
 	contactID := seedSubject(t, e)
 	completeOneRun(t, e, contactID)
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE provider_connection SET status = 'disconnected', credential_ref = NULL WHERE provider = 'surfe'`)
 		return err
@@ -291,7 +291,7 @@ func TestASecondPurchaseDoesNotDenyWhatAnEarlierRunAskedFor(t *testing.T) {
 // nothing back, the way a paid button press with no answer lands.
 func seedNarrowRun(t *testing.T, e *Env, contactID ids.UUID, category string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO provider_run
 			  (subject_kind, contact_id, provider, trigger, state, input_fingerprint,
@@ -343,7 +343,7 @@ func TestACategoryOnThePageIsNeverCalledUnrequested(t *testing.T) {
 // relink and a seeded installation both leave one.
 func seedOrphanClaim(t *testing.T, e *Env, contactID ids.UUID, key, value string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var runID string
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO provider_run
@@ -379,7 +379,7 @@ func TestASkippedRunShowsItsReasonOnTheContactPageAndTheRunEndpoint(t *testing.T
 		t.Fatal(err)
 	}
 	var runID string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO provider_run
 			  (subject_kind, contact_id, provider, trigger, state, skip_reason, input_fingerprint,

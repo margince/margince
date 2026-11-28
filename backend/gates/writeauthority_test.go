@@ -97,6 +97,10 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/chatlinks:MessengerOpenMembers":         "the CRM record supplies context only; the writer binds the caller's private provider conversation and changes no company, deal or project",
+	"internal/modules/chatlinks:deliverMessenger":             "the CRM record supplies context only; the writer records the caller's private send receipt and changes no company, deal or project",
+	"internal/modules/chatlinks:MessengerTeam":                "the record's readable assignments supply recipients; personal identity bindings change no company, deal or project",
+	"internal/modules/chatlinks:prepareAttempt":               "the CRM record supplies context only; the writer reserves a private send receipt and changes no company, deal or project",
 	"internal/modules/deals:readReadableBuyer":                "Reads the offer's buyer company names under the caller's company scope before a send freezes them or a render prints them. It decides whether the offer's own operation may proceed, and no company changes.",
 	"internal/modules/contacts:memberMayReadTx":               "Asks whether some member of a shared mailbox's reader team may see the contact or lead before the mail is filed under it. Filing shared mail where its readers can find it is a read decision about the mail, and the record itself does not change.",
 	"internal/modules/contacts:visibleCompanyDomainsTx":       "Asks whether the caller may see an employer before the import test run reads its domains for the duplicate check. It decides what the batch is told, and no company changes.",

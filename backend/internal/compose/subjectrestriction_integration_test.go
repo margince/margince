@@ -58,7 +58,7 @@ func restrictContact(t *testing.T, e *integration.Env) ids.UUID {
 func mailFromAddress(t *testing.T, e *integration.Env, subject, address string) ids.UUID {
 	t.Helper()
 	id := seedUnlabeledEmail(t, e, subject)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'from')`, id, address)
 		return err
@@ -70,7 +70,7 @@ func mailFromAddress(t *testing.T, e *integration.Env, subject, address string) 
 
 func liftRestrictionDirectly(t *testing.T, e *integration.Env, contact ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE communication_suppression SET revoked_at = now()
 			 WHERE contact_id = $1 AND kind = 'processing_restriction'`, contact)
@@ -151,7 +151,7 @@ func TestTheRouterCheckReachesARestrictedContactThroughTheirCompanyDealAndRoom(t
 	company := e.SeedCompany(t, "Brandt Automotive", nil)
 	deal := e.SeedWonDealLinkedTo(t)
 	room := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 			VALUES ('employment', $1, $2, 'manual', 'human:x')`, anna, company); err != nil {
@@ -197,7 +197,7 @@ func TestAnAgentReadsNoMailOfARestrictedContact(t *testing.T) {
 	agent := principal.WithActor(e.Admin(), actor)
 
 	var readable []ids.UUID
-	if err := database.WithWorkspaceTx(agent, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(agent, e.Pool, func(tx pgx.Tx) error {
 		args := []any{[]ids.UUID{restricted, ordinary}}
 		clause, err := auth.ActivityContentClause(agent, "a", func(v any) int { args = append(args, v); return len(args) })
 		if err != nil {

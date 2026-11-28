@@ -68,7 +68,7 @@ func (s *Store) KeptPromiseCandidatesTx(ctx context.Context, tx pgx.Tx) ([]ids.U
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT c.id FROM conversation_claim c
-		 WHERE c.kind = 'commitment_ours' AND NOT c.needs_review
+		 WHERE c.kind = 'commitment_ours' AND c.archived_at IS NULL
 		   AND c.body ~* '\yinvit'
 		   AND ((c.status = 'open' AND NOT `+reopenedByAHuman+`)
 		     OR (c.status = 'done' AND `+latestClaimImage+` ? '`+autoKeptKey+`' AND c.updated_at > $1))
@@ -91,7 +91,7 @@ type keptPromiseRow struct {
 // that is gone or is not a live promise to invite someone.
 func lockKeptPromise(ctx context.Context, tx pgx.Tx, claim ids.UUID) (keptPromiseRow, bool, error) {
 	var row keptPromiseRow
-	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claim, storekit.NoArchiveColumn); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claim, storekit.LiveOnly); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return row, false, nil
 		}
@@ -102,7 +102,7 @@ func lockKeptPromise(ctx context.Context, tx pgx.Tx, claim ids.UUID) (keptPromis
 		       coalesce(`+latestClaimImage+` ? '`+autoKeptKey+`', false), `+reopenedByAHuman+`
 		  FROM conversation_claim c
 		  LEFT JOIN activity t ON t.id = c.task_activity_id AND t.archived_at IS NULL
-		 WHERE c.id = $1 AND c.kind = 'commitment_ours' AND NOT c.needs_review
+		 WHERE c.id = $1 AND c.kind = 'commitment_ours' AND c.archived_at IS NULL
 		   AND c.body ~* '\yinvit'`, claim).Scan(&row.status, &row.contact, &row.source, &row.assignee, &row.taker, &row.auto, &row.reopened)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return row, false, nil

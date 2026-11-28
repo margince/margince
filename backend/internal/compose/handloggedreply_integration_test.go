@@ -61,7 +61,7 @@ func TestAHandLoggedReplyLeavesTheMoveWithUsWhereItLeavesTheMailOwed(t *testing.
 	o.logMail(t, contact, "outbound", "Re: Can we talk pricing?", fortnight.Add(time.Hour))
 
 	var badge crmcontracts.EmailSummaryMove
-	if err := database.WithWorkspaceTx(o.reader(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.reader(), o.e.Pool, func(tx pgx.Tx) error {
 		moves, err := activities.MailMovesFor(o.reader(), tx, []ids.UUID{theirs}, o.now)
 		badge = moves[theirs]
 		return err
@@ -132,7 +132,7 @@ func (o *owedEnv) threadOf(t *testing.T, activity ids.UUID) string {
 func (o *owedEnv) badgeOf(t *testing.T, activity ids.UUID) crmcontracts.EmailSummaryMove {
 	t.Helper()
 	var badge crmcontracts.EmailSummaryMove
-	if err := database.WithWorkspaceTx(o.reader(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.reader(), o.e.Pool, func(tx pgx.Tx) error {
 		moves, err := activities.MailMovesFor(o.reader(), tx, []ids.UUID{activity}, o.now)
 		badge = moves[activity]
 		return err
@@ -222,7 +222,7 @@ func TestAReplyIsRefusedForAMailItCannotJoin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET audience = 'participants' WHERE id = $1`, private)
 		return err
 	}); err != nil {
@@ -354,7 +354,7 @@ func TestAMailTheReaderCannotOpenDoesNotHideAnOwedOne(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET audience = 'participants' WHERE id = $1`, private)
 		return err
 	}); err != nil {

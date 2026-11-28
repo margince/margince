@@ -26,7 +26,7 @@ import (
 func auditRowOf(t *testing.T, e *integration.Env, auditID ids.UUID) AuditRow {
 	t.Helper()
 	var row AuditRow
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT id, entity_type, entity_id, action, before, after, evidence, occurred_at
 			  FROM audit_log WHERE id = $1`, auditID).
@@ -72,7 +72,7 @@ func TestAnArchivesCascadeNamesTheColleagueWorkItDropped(t *testing.T) {
 	}
 	dropped := func(contact ids.UUID) bool {
 		var out bool
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = contacts.ArchiveDroppedColleagueWork(context.Background(), tx, "contact", contact)
 			return err

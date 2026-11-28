@@ -118,7 +118,7 @@ func TestALinksDateGoesBackWhereItWas(t *testing.T) {
 	}
 
 	var back *time.Time
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT started_at FROM relationship WHERE id = $1`,
 			edge.ID).Scan(&back)
 	}); err != nil {

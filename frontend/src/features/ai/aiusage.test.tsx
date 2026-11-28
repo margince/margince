@@ -102,13 +102,13 @@ it("renders historical usage without inventing cost or duplicating the live allo
       },
     ],
   });
-  expect(await screen.findByText("Signature enrichment")).toBeTruthy();
+  expect(await screen.findByText(en["aiTask.name.enrich"])).toBeTruthy();
   expect(screen.queryByText("850 of 1,000 tokens · 85%")).toBeNull();
   // A month nothing priced says so in words: a zero would claim a figure.
   const totals = screen.getByTestId("aiusage-totals");
   expect(within(totals).getByText("Not priced")).toBeTruthy();
   expect(
-    screen.queryByRole("columnheader", { name: "Estimated cost" }),
+    screen.queryByRole("columnheader", { name: en["aiusage.col.cost"] }),
   ).toBeNull();
   expect(screen.queryByText(/Costs are estimates/)).toBeNull();
 });
@@ -132,13 +132,13 @@ it("shows estimated cost when present independently of the current allowance ban
       },
     ],
   });
-  expect(await screen.findByText("Signature enrichment")).toBeTruthy();
+  expect(await screen.findByText(en["aiTask.name.enrich"])).toBeTruthy();
   const totals = screen.getByTestId("aiusage-totals");
-  expect(within(totals).getByText("Estimated cost")).toBeTruthy();
+  expect(within(totals).getByText(en["aiusage.col.cost"])).toBeTruthy();
   expect(within(totals).getByText("€1.23")).toBeTruthy();
   // The caveat is its own line under the totals, never glued to the figure.
   const note = screen.getByTestId("aiusage-cost-note");
-  expect(note.textContent).toBe("Costs are estimates at configured rates.");
+  expect(note.textContent).toBe(en["aiusage.costNote"]);
   expect(totals.compareDocumentPosition(note)).toBe(
     Node.DOCUMENT_POSITION_FOLLOWING,
   );
@@ -210,14 +210,14 @@ it("groups the spend by task, with a line per tier only where a task ran on seve
   expect(within(total).getByText("20 / 2")).toBeTruthy();
   const cheap = screen.getByTestId("spend-triage-cheap_cloud");
   const premium = screen.getByTestId("spend-triage-premium");
-  expect(cheap.textContent).toContain("Everyday cloud");
+  expect(cheap.textContent).toContain(en["aiTier.cheap_cloud"]);
   expect(premium.textContent).toContain("Premium");
   expect(total.compareDocumentPosition(cheap)).toBe(
     Node.DOCUMENT_POSITION_FOLLOWING,
   );
   expect(screen.getAllByText("AI task")).toHaveLength(1);
   const single = screen.getByTestId("spend-enrich-premium");
-  expect(single.textContent).toContain("Signature enrichment");
+  expect(single.textContent).toContain(en["aiTask.name.enrich"]);
   expect(single.textContent).toContain("Premium");
 });
 
@@ -290,7 +290,7 @@ it("says nothing about unpriced calls when every call was priced", async () => {
 // the code it arrives with.
 it("distinguishes an empty window from a refused read", async () => {
   mount({ budget, days: [] });
-  expect(await screen.findByText("No AI calls this month.")).toBeTruthy();
+  expect(await screen.findByText(en["aiusage.empty"])).toBeTruthy();
   cleanup();
   mount(
     {
@@ -340,19 +340,25 @@ it("names each arrow and switches the one table between tasks and days", async (
     ],
   });
   expect(
-    await screen.findByRole("table", { name: "Spend by task" }),
+    await screen.findByRole("table", { name: en["aiusage.spendLabel"] }),
   ).toBeTruthy();
   // Each arrow keeps its own name: an icon announces as nothing.
-  expect(screen.getByRole("button", { name: "Previous month" })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: en["aiusage.prevMonth"] }),
+  ).toBeTruthy();
   expect(screen.getByRole("button", { name: "Next month" })).toBeTruthy();
-  expect(screen.queryByRole("table", { name: "Spend by day" })).toBeNull();
+  expect(
+    screen.queryByRole("table", { name: en["aiusage.days.label"] }),
+  ).toBeNull();
 
   const byDay = screen.getByRole("button", { name: "By day" });
   byDay.focus();
   await user.keyboard("{Enter}");
   expect(byDay.getAttribute("aria-pressed")).toBe("true");
-  const days = screen.getByRole("table", { name: "Spend by day" });
-  expect(screen.queryByRole("table", { name: "Spend by task" })).toBeNull();
+  const days = screen.getByRole("table", { name: en["aiusage.days.label"] });
+  expect(
+    screen.queryByRole("table", { name: en["aiusage.spendLabel"] }),
+  ).toBeNull();
   // One line per day, summed over its tasks, in the reader's words.
   const day = screen.getByTestId("spend-day-2026-07-20");
   expect(day.querySelector("time[datetime='2026-07-20']")?.textContent).toBe(
@@ -384,9 +390,11 @@ it("keeps the reader's view when they step to another month", async () => {
     ],
   });
   await user.click(await screen.findByRole("button", { name: "By day" }));
-  await user.click(screen.getByRole("button", { name: "Previous month" }));
+  await user.click(
+    screen.getByRole("button", { name: en["aiusage.prevMonth"] }),
+  );
   expect(
-    await screen.findByRole("table", { name: "Spend by day" }),
+    await screen.findByRole("table", { name: en["aiusage.days.label"] }),
   ).toBeTruthy();
   expect(
     screen.getByRole("button", { name: "By day" }).getAttribute("aria-pressed"),
@@ -397,19 +405,19 @@ it("points to the model prices only for a reader who may read them", async () =>
   const body = { budget, days: [] };
   mount(body, 200, { ...OPERATOR, ai_model_rate: ["read"] });
   expect(
-    await screen.findByRole("link", { name: "Prices are set on AI models" }),
+    await screen.findByRole("link", { name: en["aiusage.pricesLink"] }),
   ).toHaveProperty("hash", "#/settings/models/prices");
   cleanup();
   mount(body);
-  expect(await screen.findByText("No AI calls this month.")).toBeTruthy();
+  expect(await screen.findByText(en["aiusage.empty"])).toBeTruthy();
   expect(
-    screen.queryByRole("link", { name: "Prices are set on AI models" }),
+    screen.queryByRole("link", { name: en["aiusage.pricesLink"] }),
   ).toBeNull();
 });
 
 it("keeps historical usage usable when the live allowance band is unknown", async () => {
   mount({ budget: { ...budget, band: "future-band" }, days: [] });
-  expect(await screen.findByText("No AI calls this month.")).toBeTruthy();
+  expect(await screen.findByText(en["aiusage.empty"])).toBeTruthy();
 });
 
 it("withholds the spend from a principal without the diagnostics read, and asks the server for nothing", async () => {
@@ -463,7 +471,7 @@ it("opens on the READER's month and steps from it, not from UTC's", async () => 
       (await screen.findByLabelText("Next month")).hasAttribute("disabled"),
     ).toBe(true);
 
-    await user.click(screen.getByLabelText("Previous month"));
+    await user.click(screen.getByLabelText(en["aiusage.prevMonth"]));
     await waitFor(() =>
       expect(
         seen.some((url) => url.includes("from=2026-08-01&to=2026-08-31")),
@@ -489,7 +497,7 @@ it("names the month on screen beside the arrows that step it", async () => {
     mount({ budget, days: [] });
     expect(await screen.findByText("September 2026")).toBeTruthy();
 
-    await user.click(screen.getByLabelText("Previous month"));
+    await user.click(screen.getByLabelText(en["aiusage.prevMonth"]));
     expect(await screen.findByText("August 2026")).toBeTruthy();
   } finally {
     vi.useRealTimers();
@@ -521,7 +529,7 @@ it("labels decide as Decision model", async () => {
     ],
   });
 
-  expect(await screen.findByText("Decision model")).toBeTruthy();
+  expect(await screen.findByText(en["aiTier.decide"])).toBeTruthy();
   expect(screen.queryByText("decide")).toBeNull();
 });
 
@@ -560,7 +568,7 @@ const boundRouting = {
 it("shows the decision model's pass rate and a fallback rate that opens its reasons", async () => {
   const user = userEvent.setup();
   mount(decisionUsage, 200, DECIDING_OPERATOR, boundRouting);
-  const task = await screen.findByText("Website triage");
+  const task = await screen.findByText(en["aiTask.name.site_triage"]);
   const table = task.closest("table");
   if (!table) throw new Error("the decision summary is not a table");
   expect(within(table).getByText("25%")).toBeTruthy();
@@ -627,7 +635,9 @@ it("orders fallback reasons largest first and draws a rate of nothing as plain t
   );
   // A task that never fell back has nothing to explain: the figure is text,
   // not a control that opens an empty panel.
-  const quiet = screen.getByText("Message classification").closest("tr");
+  const quiet = screen
+    .getByText(en["aiTask.name.capture_classify"])
+    .closest("tr");
   if (!quiet) throw new Error("the quiet task has no row");
   expect(within(quiet).getByText("0%")).toBeTruthy();
   expect(
@@ -642,9 +652,9 @@ it("hides the decision model's rates when no decision model is bound", async () 
   await waitFor(() =>
     expect(seen.some((url) => url.endsWith("/v1/ai/routing"))).toBe(true),
   );
-  expect(await screen.findByText("No AI calls this month.")).toBeTruthy();
+  expect(await screen.findByText(en["aiusage.empty"])).toBeTruthy();
   expect(screen.queryByText("site_triage")).toBeNull();
-  expect(screen.queryByText("Decision model")).toBeNull();
+  expect(screen.queryByText(en["aiTier.decide"])).toBeNull();
 });
 
 // The decision table names its tasks the way the spend table does, so the

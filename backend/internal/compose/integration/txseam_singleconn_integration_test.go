@@ -178,7 +178,7 @@ func TestGetContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f.requireCatalogAnswers(t, "contact")
 
 	var got map[string]any
-	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		contact, err := f.contacts.GetContactTx(f.ctx, tx, ids.From[ids.ContactKind](ids.UUID(created.Id)), storekit.LiveOnly, active)
 		if err != nil {
 			return err
@@ -212,7 +212,7 @@ func TestGetCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f.requireCatalogAnswers(t, "company")
 
 	var got map[string]any
-	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		company, err := f.contacts.GetCompanyTx(f.ctx, tx, ids.From[ids.CompanyKind](ids.UUID(created.Id)), storekit.LiveOnly, active)
 		if err != nil {
 			return err
@@ -246,7 +246,7 @@ func TestUpdateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f.requireCatalogAnswers(t, "deal")
 
 	var got map[string]any
-	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		updated, err := f.deals.UpdateDealTx(f.ctx, tx, ids.From[ids.DealKind](ids.UUID(created.Id)), deals.UpdateDealInput{
 			CustomFields: map[string]any{col: "high"},
 		}, active)
@@ -278,7 +278,7 @@ func TestCreateContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f.requireCatalogAnswers(t, "contact")
 
 	var created crmcontracts.Contact
-	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
 		created, err = f.contacts.CreateContactTx(f.ctx, tx, contacts.CreateContactInput{
 			FullName: "Ada Lovelace", Source: "manual", CustomFields: map[string]any{col: "gold"},
@@ -302,7 +302,7 @@ func TestCreateCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f.requireCatalogAnswers(t, "company")
 
 	var created crmcontracts.Company
-	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
 		created, err = f.contacts.CreateCompanyTx(f.ctx, tx, contacts.CreateCompanyInput{
 			DisplayName: "Analytical Engines", Source: "manual", CustomFields: map[string]any{col: "enterprise"},
@@ -328,7 +328,7 @@ func TestCreateLeadTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	email := "jean@bartik.test"
 	var created crmcontracts.Lead
 	var fresh bool
-	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
 		created, fresh, err = f.contacts.CreateLeadTx(f.ctx, tx, contacts.CreateLeadInput{
 			FullName: new("Jean Bartik"), Email: &email, Status: "new", Source: "manual",
@@ -354,7 +354,7 @@ func TestCreateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f.requireCatalogAnswers(t, "deal")
 
 	var created crmcontracts.Deal
-	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
 		created, err = f.deals.CreateDealTx(f.ctx, tx, deals.CreateDealInput{
 			Name: "Difference Engine", PipelineID: pipeline, StageID: stage, Source: "manual",

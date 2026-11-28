@@ -32,7 +32,7 @@ func TestAConversationNarrowedAfterLoadingNeverReachesTheModel(t *testing.T) {
 	}
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	thread := settledThread{Key: "narrowed-after-loading", Newest: now, Count: 1}
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		thread.Messages, err = threadMessages(reader, tx, &thread)
 		return err

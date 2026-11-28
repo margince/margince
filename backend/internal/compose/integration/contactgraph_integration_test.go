@@ -103,7 +103,7 @@ func seedExchange(t *testing.T, e *Env, colleague, contact ids.UUID, subject str
 		t.Fatalf("seeding their side: %v", err)
 	}
 	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{id})
 	}); err != nil {
 		t.Fatalf("folding the edge: %v", err)
@@ -323,7 +323,7 @@ func TestContactGraphServiceReturnsNotFoundForAForeignContact(t *testing.T) {
 	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
 
-	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		_, err := search.EdgesForContact(rep, tx, theirs, 10)
 		return err
 	})

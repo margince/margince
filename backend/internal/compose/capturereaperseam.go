@@ -17,6 +17,7 @@ import (
 	"log/slog"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -32,10 +33,23 @@ import (
 // for capture's own sweep, which is the same place a failure here leaves it.
 func installCaptureCredentialReaper(s *Server, log *slog.Logger) {
 	registry := s.connectorHandlers.registry
-	if registry == nil {
+	participants := s.messengerOAuthHandlers.store
+	if participants != nil {
+		s.authHandlers = s.WithMemberGrantWithdrawal(chatlinks.WithdrawMemberGrantsTx)
+	}
+	if registry == nil && participants == nil {
 		return
 	}
-	s.authHandlers = s.WithCaptureCredentialReaper(reapWithdrawnCredentials(registry, log))
+	s.authHandlers = s.WithCaptureCredentialReaper(func(ctx context.Context, user ids.UserID) {
+		if registry != nil {
+			reapWithdrawnCredentials(registry, log)(ctx, user)
+		}
+		if participants != nil {
+			if err := participants.ReapWithdrawnMemberCredentials(ctx, user); err != nil {
+				log.ErrorContext(ctx, "messenger: withdrawn participant credentials need cleanup", "user_id", user, "error", err)
+			}
+		}
+	})
 }
 
 // reapWithdrawnCredentials adapts capture's reap onto identity's port.

@@ -338,7 +338,7 @@ it("names each deal a review-all left partly undone, linked to it", async () => 
     within(drawer).getByRole("button", { name: "Undo changes on 2 deals" }),
   );
   const list = await screen.findByRole("list", {
-    name: "Deals not fully undone",
+    name: en["changes.bulk.unfinished"],
   });
   const links = within(list).getAllByRole("link");
   expect(links.map((link) => link.textContent)).toEqual(["Deal 1"]);
@@ -382,11 +382,11 @@ it("starts with closed deal cards and opens only the selected deal", async () =>
   if (!first || !second) throw new Error("no deal heads");
   expect(first.getAttribute("aria-expanded")).toBe("false");
   expect(second.getAttribute("aria-expanded")).toBe("false");
-  expect(within(second).queryByText("Closed as lost")).toBeNull();
+  expect(within(second).queryByText(en["changes.kind.close_lost"])).toBeNull();
   await user.click(second);
   expect(second.getAttribute("aria-expanded")).toBe("true");
   expect(first.getAttribute("aria-expanded")).toBe("false");
-  expect(within(second).queryByText("Closed as lost")).toBeNull();
+  expect(within(second).queryByText(en["changes.kind.close_lost"])).toBeNull();
 });
 
 it("says what a change moved without naming the deal it sits under", async () => {
@@ -398,8 +398,8 @@ it("says what a change moved without naming the deal it sits under", async () =>
   if (!card) throw new Error("no card for deal 1");
   const head = card.querySelector("summary");
   if (!head) throw new Error("no deal preview");
-  expect(within(head).queryByText("Closed as lost")).toBeNull();
-  expect(within(card).getByText("Closed as lost")).toBeTruthy();
+  expect(within(head).queryByText(en["changes.kind.close_lost"])).toBeNull();
+  expect(within(card).getByText(en["changes.kind.close_lost"])).toBeTruthy();
   expect(within(card).queryByText(/"Deal 1"/)).toBeNull();
 });
 
@@ -550,7 +550,7 @@ it("still says what the last Undo of many did after a reload, until the reader c
   const drawer = await screen.findByRole("dialog");
   expect(within(drawer).getByText(/Undone on 1 deal\./)).toBeTruthy();
   const unfinished = within(drawer).getByRole("list", {
-    name: "Deals not fully undone",
+    name: en["changes.bulk.unfinished"],
   });
   expect(
     within(unfinished)
@@ -618,5 +618,5 @@ it("puts the small changes card straight under the heading, with no loose summar
   expect(card.previousElementSibling).toBe(
     container.querySelector(".brief-done-band"),
   );
-  expect(screen.queryByText("Created contact")).toBeNull();
+  expect(screen.queryByText(en["magic.action.create_contact"])).toBeNull();
 });

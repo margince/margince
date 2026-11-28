@@ -192,7 +192,7 @@ func (s *Store) EnsureCounterparty(ctx context.Context, in EnsureCounterpartyInp
 // rolled back, so neither can use the pool-owning form above.
 //
 // The caller is responsible for the workspace GUC; it is already set by the
-// WithWorkspaceTx that produced tx.
+// WithTx that produced tx.
 func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput) (EnsureCounterpartyResult, error) {
 	if in.HoldAuthority != nil {
 		if err := in.HoldAuthority(ctx, tx); err != nil {

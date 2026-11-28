@@ -81,7 +81,7 @@ type setupClaimRequest struct {
 func setupStatus(svc *identity.Service, limit *ratelimit.Limiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !limit.Allow(httpserver.ClientIP(r)) {
-			httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+			httperr.Write(w, r, ratelimit.Refused(limit))
 			return
 		}
 		outstanding, err := svc.SetupTokenOutstanding(r.Context())
@@ -101,7 +101,7 @@ func setupStatus(svc *identity.Service, limit *ratelimit.Limiter) http.HandlerFu
 func setupClaim(svc *identity.Service, pool *pgxpool.Pool, seeds deployconfig.Seeds, limit *ratelimit.Limiter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !limit.Allow(httpserver.ClientIP(r)) {
-			httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+			httperr.Write(w, r, ratelimit.Refused(limit))
 			return
 		}
 		// The house decoder, not a hand-rolled one: it caps the body, refuses an

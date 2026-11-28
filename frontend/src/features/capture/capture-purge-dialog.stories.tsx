@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -60,7 +61,9 @@ async function checkFirst({ canvasElement }: { canvasElement: HTMLElement }) {
   await userEvent.click(
     await body.findByRole("button", { name: "Check first" }),
   );
-  await body.findByRole("button", { name: "Delete permanently" });
+  await body.findByRole("button", {
+    name: englishCopy["capturePurge.confirm"],
+  });
 }
 
 export const Checked: Story = { render: story(), play: checkFirst };

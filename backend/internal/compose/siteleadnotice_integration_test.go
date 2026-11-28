@@ -598,5 +598,5 @@ func assertEveryHandoverRefused(t *testing.T, l *noticeLaneEnv, leadID, other id
 func databaseTx(t *testing.T, e *integration.Env, fn func(context.Context, pgx.Tx) error) error {
 	t.Helper()
 	ctx := e.Admin()
-	return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error { return fn(ctx, tx) })
+	return database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error { return fn(ctx, tx) })
 }

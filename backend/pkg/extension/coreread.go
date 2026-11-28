@@ -125,6 +125,14 @@ type CompanyRepo interface {
 	// list clears the unit's own. An undeclared name is ErrInvalid. A scheduled
 	// job gets ErrForbidden, as for any core write.
 	SetExtensionTypes(ctx context.Context, id string, types []string) (crm.Company, error)
+
+	// SetCustomFields writes custom field values the unit offers, keyed by `cf_`
+	// column name, under CompanyFields.CustomFields' rules and the caller's own
+	// grant and row scope. It returns the names a user last edited, which are
+	// kept as they are unless an admin let the unit overwrite. An unknown key,
+	// or a pick-list value that is not an option, is ErrInvalid. A scheduled
+	// job gets ErrForbidden, as for any core write.
+	SetCustomFields(ctx context.Context, id string, values map[string]any) (withheld []string, err error)
 }
 
 // SignalRepo reads signals and files the unit's own kinds.

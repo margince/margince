@@ -50,6 +50,9 @@ export function providerBrandName(providerKey: string): string | null {
   if (providerKey === "microsoft") {
     return "Microsoft";
   }
+  if (providerKey === "dispact") return "Dispact";
+  if (providerKey === "slack") return "Slack";
+  if (providerKey === "teams") return "Teams";
   if (providerKey === "surfe") {
     return "Surfe";
   }
@@ -170,6 +173,62 @@ const AI_MARKS: Readonly<
 export function ProviderMark({
   providerKey,
 }: Readonly<{ providerKey: string }>) {
+  if (providerKey === "dispact") {
+    return (
+      <svg
+        className="provider-mark"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <circle cx="12" cy="12" r="8" fill="#F97316" />
+      </svg>
+    );
+  }
+  if (providerKey === "slack") {
+    return (
+      <svg
+        className="provider-mark"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          fill="#36C5F0"
+          d="M5 10a2 2 0 1 1 2-2v2H5Zm5 0H8V3a2 2 0 1 1 4 0v5a2 2 0 0 1-2 2Z"
+        />
+        <path
+          fill="#2EB67D"
+          d="M14 5a2 2 0 1 1 2 2h-2V5Zm0 5V8h7a2 2 0 1 1 0 4h-5a2 2 0 0 1-2-2Z"
+        />
+        <path
+          fill="#ECB22E"
+          d="M19 14a2 2 0 1 1-2 2v-2h2Zm-5 0h2v7a2 2 0 1 1-4 0v-5a2 2 0 0 1 2-2Z"
+        />
+        <path
+          fill="#E01E5A"
+          d="M10 19a2 2 0 1 1-2-2h2v2Zm0-5v2H3a2 2 0 1 1 0-4h5a2 2 0 0 1 2 2Z"
+        />
+      </svg>
+    );
+  }
+  if (providerKey === "teams") {
+    return (
+      <svg
+        className="provider-mark"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <circle cx="17.5" cy="5" r="2.5" fill="#5059C9" />
+        <circle cx="11" cy="4" r="3" fill="#7B83EB" />
+        <path fill="#5059C9" d="M14 9h8v7a4 4 0 0 1-8 0Z" />
+        <path fill="#7B83EB" d="M6 8h11v10a5.5 5.5 0 0 1-11 0Z" />
+        <rect x="1" y="7" width="12" height="13" rx="1" fill="#4B53BC" />
+        <path fill="#FFF" d="M4 10h6v2H8v6H6v-6H4Z" />
+      </svg>
+    );
+  }
   if (providerKey === "google") {
     return (
       <svg

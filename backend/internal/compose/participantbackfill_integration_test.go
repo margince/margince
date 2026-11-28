@@ -41,7 +41,7 @@ import (
 func seedLegacyActivity(t *testing.T, e *integration.Env, sourceID, capturedBy, direction, counterparty string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO activity (kind, subject, direction, occurred_at, source_system, source_id, source, captured_by, counterparty_email)
 			VALUES (
@@ -59,7 +59,7 @@ func seedLegacyActivity(t *testing.T, e *integration.Env, sourceID, capturedBy, 
 // ONE provider, not one user on two.
 func seedConnection(t *testing.T, e *integration.Env, user ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref)
 			VALUES ($1, 'gmail', 'connected', 'vault:test')
@@ -75,7 +75,7 @@ func seedConnection(t *testing.T, e *integration.Env, user ids.UUID) {
 func participantUsers(t *testing.T, e *integration.Env, activityID ids.UUID) []ids.UUID {
 	t.Helper()
 	var out []ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT user_id FROM activity_participant
 			  WHERE activity_id = $1 AND user_id IS NOT NULL ORDER BY user_id`, activityID)
@@ -221,7 +221,7 @@ func TestTheBackfillDoesNotInventParticipantsForNotesAndTasks(t *testing.T) {
 		want int
 	}{{note, "note", 0}, {task, "task", 0}, {mail, "email", 2}} {
 		var got int
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
 				`SELECT count(*) FROM activity_participant WHERE activity_id = $1`, c.id).Scan(&got)
 		}); err != nil {
@@ -237,7 +237,7 @@ func TestTheBackfillDoesNotInventParticipantsForNotesAndTasks(t *testing.T) {
 func seedLegacyActivityOfKind(t *testing.T, e *integration.Env, sourceID, capturedBy, kind string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO activity (kind, subject, direction, occurred_at, source_system, source_id, source, captured_by, counterparty_email)
 			VALUES (
@@ -300,7 +300,7 @@ func TestTheBackfillLeavesAuthoredHistoryAlone(t *testing.T) {
 // setSourceAuthor puts an author on record for an activity, as an importer does.
 func setSourceAuthor(t *testing.T, e *integration.Env, activityID, author ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET source_author_id = $2 WHERE id = $1`, activityID, author)
 		return err
@@ -312,7 +312,7 @@ func setSourceAuthor(t *testing.T, e *integration.Env, activityID, author ids.UU
 // setSourceAuthorName records an author who holds no seat in this installation.
 func setSourceAuthorName(t *testing.T, e *integration.Env, activityID ids.UUID, name string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET source_author_name = $2 WHERE id = $1`, activityID, name)
 		return err
@@ -324,7 +324,7 @@ func setSourceAuthorName(t *testing.T, e *integration.Env, activityID ids.UUID, 
 // outsideParties returns the contacts and addresses recorded on one activity.
 func outsideParties(t *testing.T, e *integration.Env, activityID ids.UUID) (contactIDs []ids.UUID, addresses []string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT contact_id, coalesce(address, '') FROM activity_participant
 			 WHERE activity_id = $1 AND user_id IS NULL ORDER BY address`, activityID)

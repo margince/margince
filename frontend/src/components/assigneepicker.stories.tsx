@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -51,7 +52,7 @@ export const SearchByEmail: Story = {
     await user.click(trigger);
     const body = within(document.body);
     await user.type(
-      body.getByRole("combobox", { name: "Filter the list" }),
+      body.getByRole("combobox", { name: englishCopy["select.filter"] }),
       "member13@",
     );
     await user.click(body.getByRole("option", { name: "Member 13" }));

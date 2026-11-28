@@ -33,7 +33,7 @@ func withMailboxScope(t *testing.T, check func(mailboxScopeEnv)) {
 		Type: principal.PrincipalHuman, ID: by, UserID: f.seat,
 		Permissions: principal.Permissions{RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll},
 	})
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `INSERT INTO app_user (id,email,display_name)
  VALUES (@user,@email,'Mailbox owner')`, pgx.StrictNamedArgs{
 			"user": f.seat, "email": "mailbox-" + f.seat.String() + "@example.test",

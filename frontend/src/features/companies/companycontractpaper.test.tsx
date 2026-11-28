@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { CompanyContractsCard } from "./companycontracts";
 
 // The signed PDF belongs on the row for the agreement it covers.
@@ -215,7 +216,7 @@ describe("a contract's signed paper", () => {
     // complete, and a spurious notice would send a reader looking for paper
     // that does not exist.
     expect(screen.queryByText(/more not shown/)).toBeNull();
-    expect(screen.queryByText("Showing part of the list")).toBeNull();
+    expect(screen.queryByText(englishCopy["state.partial"])).toBeNull();
   });
 
   it("says nothing at all when an agreement has no paper on file", async () => {

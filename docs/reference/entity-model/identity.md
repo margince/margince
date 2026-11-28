@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-52 columns · primary key `(id)` · referenced by 153 foreign keys
+52 columns · primary key `(id)` · referenced by 155 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -87,6 +87,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `app_user_delivery_hour_check`: `CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))`
 - `app_user_does_not_merge_into_itself`: `CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))`
 - `app_user_email_is_canonical`: `CHECK ((email = lower(btrim(email))))`
+- `app_user_email_one_spelling`: `CHECK (is_identifier_text(email))`
 - `app_user_failed_login_count_check`: `CHECK ((failed_login_count >= 0))`
 - `app_user_forced_rotation_needs_a_password`: `CHECK ((NOT (must_change_password AND (password_hash IS NULL))))`
 - `app_user_greeting_name_length`: `CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 120))))`
@@ -651,7 +652,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `is_system` | `boolean`, default `false` | yes | True for a role the workspace bootstrap seeded and the RBAC migrations top up. |
+| `is_system` | `boolean`, default `false` | yes | True for a role your company bootstrap seeded and the RBAC migrations top up. |
 | `key` | `text` | yes | The stable key a role assignment and every refusal names (`admin`, `rep`, …). |
 | `name` | `text` | yes | The operator-facing label. |
 | `permissions` | `jsonb`, default `'{}'::jsonb` | yes |  |

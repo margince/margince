@@ -40,7 +40,7 @@ func TestInternalMailSourceEnrollmentRequiresHumanAdminAndAuditsAtomically(t *te
 	}
 	ctx = principal.WithActor(ctx, actor)
 	connection := ids.NewV7()
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `UPDATE app_user SET status = 'active' WHERE id = $1`, actor.UserID); err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func TestInternalMailSourceEnrollmentRequiresHumanAdminAndAuditsAtomically(t *te
 
 func assertInternalMailPolicyAudit(ctx context.Context, t *testing.T, pool *pgxpool.Pool, want int) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var audits, outbox int
 		var images string
 		if err := tx.QueryRow(ctx, `SELECT count(*), coalesce(string_agg(after::text, ''), '') FROM audit_log WHERE entity_type = 'capture_settings'`).Scan(&audits, &images); err != nil {
