@@ -278,3 +278,14 @@ function uploadNameOf(
   }
   return tail[0] || undefined;
 }
+
+/** Whether the server or the writing principal identifies an assistant. */
+export function activityRecordedByAgent(activity: {
+  readonly recorded_by_agent?: boolean;
+  readonly captured_by?: string;
+}): boolean {
+  return (
+    activity.recorded_by_agent === true ||
+    activity.captured_by?.startsWith("agent:") === true
+  );
+}

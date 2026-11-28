@@ -5,11 +5,9 @@
 
 package compose
 
-// A note a scheduled agent run writes moves no last-activity clock, so the
-// overnight sweep's risk note leaves the quiet deal it warns about quiet. A
-// note a user writes through their own assistant, with a passport and no
-// run, moves every clock like one typed in the app. Both go through the
-// activities provider, the seam every tool's create reaches.
+// Assistant-written notes leave last-activity dates at the last contact,
+// whether written during a scheduled run or through a user's passport.
+// Both paths reach the activities provider used by the create tools.
 
 import (
 	"context"
@@ -56,7 +54,7 @@ func TestANoteAScheduledRunWritesLeavesEveryClockQuiet(t *testing.T) {
 	f.assertClocks(t, f.mailed, "a scheduled run's note is the product's comment, not contact")
 }
 
-func TestANoteAUserWritesThroughTheirAssistantMovesEveryClock(t *testing.T) {
+func TestANoteAUserWritesThroughTheirAssistantLeavesEveryClockQuiet(t *testing.T) {
 	f := newTaskClockFixture(t)
 	assistant := f.e.AgentFor(t, f.e.AdminUser, nil, integration.AdminPerms)
 	at := f.now.Add(-time.Minute)
@@ -64,5 +62,5 @@ func TestANoteAUserWritesThroughTheirAssistantMovesEveryClock(t *testing.T) {
 	if origin := f.noteThroughTheTools(assistant, t, at); origin != activities.OriginHuman {
 		t.Fatalf("a note from a chat assistant was stored with origin %q, want %q", origin, activities.OriginHuman)
 	}
-	f.assertClocks(t, at, "a user's note counts, whichever door it came through")
+	f.assertClocks(t, f.mailed, "an assistant-written note does not count as contact")
 }

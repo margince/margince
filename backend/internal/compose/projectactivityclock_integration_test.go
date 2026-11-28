@@ -95,7 +95,7 @@ func TestTheClockRepairReadsBoundedPagesToAWrongRecordFarBehind(t *testing.T) {
 	wrong := f.e.SeedContact(t, "Wrong clock", nil)
 	f.e.WsExec(t, `UPDATE contact SET last_activity_at = now() - interval '1 day' WHERE id = $1`, wrong)
 
-	step := taskActivityClocksDataTask().Steps[0]
+	step := ActivityClocksTask().Steps[0]
 	ctx := datatask.Acting(principal.WithWorkspaceID(context.Background(), f.e.WS), "core/1792846717_task_activity_clocks")
 	in, batches, changed := datatask.BatchIn{Limit: 5}, 0, 0
 	for {
