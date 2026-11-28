@@ -173,14 +173,14 @@ BEGIN
   -- list, let alone see a record shared with them. Assign the 'rep' system role
   -- (seeded at workspace bootstrap): own-scoped read/write, so Rep One sees their
   -- own records plus whatever is explicitly shared. Idempotent via NOT EXISTS
-  -- (role_assignment's uniqueness is an expression index over COALESCE(team_id)).
+  -- (role_assignment is unique on its role and member).
   INSERT INTO role_assignment (role_id, user_id)
   SELECT r.id, rep_id
     FROM role r
     WHERE r.key = 'rep'
       AND NOT EXISTS (
         SELECT 1 FROM role_assignment ra
-        WHERE ra.user_id = rep_id AND ra.role_id = r.id AND ra.team_id IS NULL
+        WHERE ra.user_id = rep_id AND ra.role_id = r.id
       );
 
   -- An own-scoped counterpart to 'rep' with identical object reach, so a holder
@@ -212,7 +212,7 @@ BEGIN
     WHERE r.key = 'individual'
       AND NOT EXISTS (
         SELECT 1 FROM role_assignment ra
-        WHERE ra.user_id = rep2_id AND ra.role_id = r.id AND ra.team_id IS NULL
+        WHERE ra.user_id = rep2_id AND ra.role_id = r.id
       );
 
   -- ONE of Demo Admin's contacts, shared with Rep One at `write`.
