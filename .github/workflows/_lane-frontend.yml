@@ -81,6 +81,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # A pull request's merge commit and the base it merged onto.
+          fetch-depth: 2
+      - name: Choose the base to compare with
+        id: base
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base="$(bash scripts/ci-change-base.sh)"
+          echo "sha=$base" >> "$GITHUB_OUTPUT"
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
       # In the image corepack holds that pnpm and Node is installed, so only
@@ -121,6 +130,8 @@ jobs:
       # indexed as product code no test covers, which is under-measurement and
       # therefore reads as success.
       - run: make fe-quality FE_COVERAGE=1
+        env:
+          DS_SPACING_BASE: ${{ steps.base.outputs.sha }}
       - name: Upload the unit screens' coverage
         uses: ./.github/actions/upload-artifact-retried
         with:
