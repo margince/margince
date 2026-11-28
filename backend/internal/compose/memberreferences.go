@@ -96,7 +96,6 @@ var memberReferences = map[string]memberReference{
 	"contact.owner_id":                         {disposition: referenceHandover, live: memberLiveRows},
 	"contact.source_author_id":                 {disposition: referenceRetain},
 	"contact_moment_dismissal.user_id":         {disposition: referenceRetain},
-	"conversation_claim.corrected_by_user_id":  {disposition: referenceRetain},
 	"conversation_claim.taken_by_user_id":      {disposition: referenceRetain},
 	"custom_field.created_by":                  {disposition: referenceRetain},
 	"data_subject_request.assignee_id":         {disposition: referenceResolve, live: `status IN ('open','in_progress')`, remedy: "data_requests"},

@@ -428,7 +428,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 ## voice_profile
 
-17 columns · primary key `(id)` · referenced by 5 foreign keys
+16 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -441,7 +441,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `profile_version` | `integer`, default `0` | yes | Zero means no active artifact yet. |
 | `scope` | `text`, default `'user'::text` | yes | One of `user`, `team`, `workspace`. |
 | `status` | `text`, default `'collecting'::text` | yes | One of `collecting`, `ready`, `stale`. |
-| `team_id` | `uuid` |  | Points at `team.id`. |
 | `voice_profile_md` | `text`, default `''::text` | yes | Active derived Voice DNA artifact; empty while collecting. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -455,13 +454,12 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `owner_id` | `app_user` | the parent cannot be deleted while this row points at it |
-| `team_id` | `team` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
 - `voice_profile_derived_versioned`: `CHECK (((voice_profile_md = '') OR (profile_version >= 1)))`
 - `voice_profile_scope_check`: `CHECK ((scope = ANY (ARRAY['user', 'team', 'workspace'])))`
-- `voice_profile_scope_owner_check`: `CHECK ((((scope = 'user') AND (owner_id IS NOT NULL) AND (team_id IS NULL)) OR ((scope = 'team') AND (owner_id IS NULL) AND (team_id IS NOT NULL)) OR ((scope = 'workspace') AND (owner_id IS NULL) AND (team_id IS NULL))))`
+- `voice_profile_scope_owner_check`: `CHECK ((((scope = 'user') AND (owner_id IS NOT NULL)) OR ((scope = 'workspace') AND (owner_id IS NULL))))`
 - `voice_profile_status_check`: `CHECK ((status = ANY (ARRAY['collecting', 'ready', 'stale'])))`
 - `voice_profile_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `voice_profile_version_nonnegative`: `CHECK ((profile_version >= 0))`
@@ -471,7 +469,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `uq_voice_profile_user_live`: `unique, btree (owner_id) WHERE ((scope = 'user') AND (archived_at IS NULL))`
 - `voice_profile_owner_fk`: `btree (owner_id) WHERE (owner_id IS NOT NULL)`
 - `voice_profile_pkey`: `unique, btree (id)`
-- `voice_profile_team_fk`: `btree (team_id) WHERE (team_id IS NOT NULL)`
 
 **Triggers**
 
