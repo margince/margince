@@ -51,7 +51,7 @@ func (o *owedEnv) day(t *testing.T) dayReaders {
 
 func (o *owedEnv) seated(t *testing.T, user ids.UUID) context.Context {
 	t.Helper()
-	authority, _, err := identity.NewService(o.e.Pool).EffectiveAuthority(o.e.Admin(), o.e.WS, user)
+	authority, _, err := identity.NewService(o.e.Pool).EffectiveAuthority(o.e.Admin(), user)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -525,7 +525,7 @@ func TestRenewedEvidenceKeepsTheOnePromiseItRenews(t *testing.T) {
 // as the signal scan does, and requires the outcome that reading should have.
 func (o *owedEnv) dispatch(t *testing.T, c Commitment, want CommitmentOutcome) {
 	t.Helper()
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), o.e.WS), "human:"+o.e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+o.e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(o.e.Pool, approvals.NewService(o.e.DB()))
 	if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 		outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())

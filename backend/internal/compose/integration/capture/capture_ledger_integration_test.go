@@ -22,7 +22,6 @@ import (
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A workspace at its open-question ceiling stops queueing verdicts, and says so.
@@ -84,7 +83,7 @@ func TestCaptureLedgerRefusesAVerdictFromAnExpiredClaim(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	store := capturemod.NewPendingStore(e.DB())
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 
 	sync(t, email("contested@stranger.example", "Contested", captureOwner, "led3@stranger.example", ""))
 

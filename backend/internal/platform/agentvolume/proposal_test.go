@@ -179,7 +179,7 @@ func TestAProposalWithNoSubjectHasNoIdentity(t *testing.T) {
 // The distinction matters because the only thing cost does is warn, and a
 // warning raised whenever the ceiling is unknown is one nobody reads.
 func TestASoftCounterWithNoCeilingReportsNoCeilingRatherThanNoHeadroom(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 
 	reading := meter.Read(agentCtx(t), Cost)
 
@@ -203,7 +203,7 @@ func (c fixedCeiling) TokensPerPassport(context.Context, time.Duration) int { re
 // the ONE counter that does not fail closed, because failing closed on a
 // warning means warning on every call while Redis is down.
 func TestASoftCounterDoesNotFailClosed(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow).WithCostCeiling(fixedCeiling(40_000))
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany).WithCostCeiling(fixedCeiling(40_000))
 
 	reading := meter.Read(agentCtx(t), Cost)
 

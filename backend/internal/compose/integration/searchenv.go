@@ -172,7 +172,7 @@ func searchReadGrants() map[string]principal.ObjectGrant {
 // positive control — what a caller with nothing hidden from them sees — against
 // which AsTeamRep's narrower view is the assertion.
 func (e *SearchEnv) Admin() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{Objects: searchReadGrants(), RowScope: principal.RowScopeAll},
@@ -183,7 +183,7 @@ func (e *SearchEnv) Admin() context.Context {
 // row scope narrowed, so a suite comparing the two isolates row scope from object
 // RBAC rather than confounding them.
 func (e *SearchEnv) AsTeamRep(user, team ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		TeamIDs:     []ids.UUID{team},
@@ -214,7 +214,7 @@ func (e *SearchEnv) AsFullUser() context.Context {
 	for _, object := range searchObjects {
 		grants[object] = principal.ObjectGrant{Create: true, Read: true, Update: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,

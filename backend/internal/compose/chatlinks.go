@@ -73,8 +73,8 @@ func (ChatPullArgs) InsertOpts() river.InsertOpts {
 func chatLinks(pool *pgxpool.Pool, vault func() keyvault.Vault, in chatsync.TxInserter, delay time.Duration, private bool) (*chatlinks.Store, *chatsync.LiveChats) {
 	return chatsync.Wire(InstallationDB(pool), vault, chatsync.Enqueuer{
 		Inserter: in, Delay: delay, MaxAttempts: oneOffJobMaxAttempts, States: activeSweepStates,
-		Job:  func(ws, link ids.UUID) river.JobArgs { return ChatLinkFlushArgs{LinkID: link} },
-		Pull: func(ws, bot ids.UUID) river.JobArgs { return ChatPullArgs{ConnectionID: bot} },
+		Job:  func(link ids.UUID) river.JobArgs { return ChatLinkFlushArgs{LinkID: link} },
+		Pull: func(bot ids.UUID) river.JobArgs { return ChatPullArgs{ConnectionID: bot} },
 	}, private)
 }
 
@@ -124,12 +124,11 @@ func (s *Server) channelFilingAuthority(pool *pgxpool.Pool) func(context.Context
 	resolver := identity.NewService(pool)
 	return func(ctx context.Context) (context.Context, error) {
 		actor, ok := principal.Actor(ctx)
-		workspace, bound := principal.WorkspaceID(ctx)
-		if !ok || !bound {
+		if !ok {
 			return nil, apperrors.ErrPermissionDenied
 		}
 		if actor.Type == principal.PrincipalHuman {
-			rbac, seat, err := resolver.AdmittedAuthority(ctx, workspace, actor.UserID, ids.Nil)
+			rbac, seat, err := resolver.AdmittedAuthority(ctx, actor.UserID, ids.Nil)
 			if err != nil {
 				return nil, err
 			}
@@ -230,7 +229,7 @@ func WithChatEvents(replays chatsync.Replays, marks chatsync.Marks) Option {
 		receiver := &chatsync.Receiver{
 			Bots:  chatsync.LiveEventBots{DB: InstallationDB(pool), Vault: func() keyvault.Vault { return s.vault }},
 			Links: store, Roots: store, Replays: replays, Marks: marks, Now: time.Now, Log: s.log,
-			Pull: func(ctx context.Context, ws, connection ids.UUID) error {
+			Pull: func(ctx context.Context, connection ids.UUID) error {
 				if s.chatPulls == nil {
 					return errors.New("chat links: this role queues no chat_pull")
 				}

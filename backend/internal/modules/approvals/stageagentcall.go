@@ -26,6 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -70,9 +71,9 @@ func (s *Service) StageAgentCall(ctx context.Context, in StageInput) (ids.Approv
 		approved bool
 	)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		wsID, ok := principal.WorkspaceID(ctx)
-		if !ok {
-			return errors.New("crmapprovals: no workspace bound to context")
+		wsID, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("crmapprovals: staging needs a live company: %w", err)
 		}
 		// Before the probe, for the reason StageUnlessDeclined takes it before
 		// its own: an empty result is not "no offer can appear". Two attempts

@@ -136,7 +136,7 @@ func TestAnUntickedCalendarLandsDeclinedWithoutASecondConsent(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	h.chainAfterConnect(context.Background(), rec, httptest.NewRequest(http.MethodGet, "/", nil), connectState{
-		Workspace: chainWorkspace, User: chainUser, Provider: providerGmail, ReturnTo: returnToSettings,
+		User: chainUser, Provider: providerGmail, ReturnTo: returnToSettings,
 		Then: providerGcal, SharedConsent: true, WindowMonths: 6,
 	}, consent)
 

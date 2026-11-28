@@ -94,7 +94,7 @@ func TestASyncDisconnectedMidFlightCommitsNothing(t *testing.T) {
 		}
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	// Nothing failed — the work was superseded — so the caller is not told a
 	// sync went wrong. It simply did not count.
 	if err := registry.SyncOnce(wsCtx, connID); err != nil {
@@ -134,7 +134,7 @@ func TestABackfillPageDisconnectedMidFlightCommitsNothing(t *testing.T) {
 		}
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	done, completed, retryAfter, err := registry.RunBackfillStep(wsCtx, run.ID)
 	if err != nil {
 		t.Fatalf("RunBackfillStep over a disconnected connection: %v, want a clean return", err)

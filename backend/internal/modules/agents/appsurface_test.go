@@ -48,7 +48,7 @@ func appServer(t *testing.T, seated bool) (*httptest.Server, map[string]*fakeToo
 		registry.Register(tools[tool.name])
 	}
 	authenticate := func(*http.Request) (context.Context, error) {
-		ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+		ctx := context.Background()
 		surface := AppSurface{Tools: []string{"verb_a", "find", "unregistered"}}
 		if !seated {
 			surface.Seatless = testSeatless{}

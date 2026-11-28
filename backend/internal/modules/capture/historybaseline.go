@@ -79,7 +79,11 @@ func (r *Registry) SetHistoryBaseline(ctx context.Context, mb Mailbox, date *tim
 		}
 		// Audit-only, like the other per-mailbox settings: the public event
 		// catalog carries no type for a mailbox's own setting.
-		_, err = storekit.Audit(ctx, tx, "update", captureSettingsObject, storekit.MustWorkspace(ctx),
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
+		_, err = storekit.Audit(ctx, tx, "update", captureSettingsObject, installation,
 			historyBaselineImage(name, before.baseline()), historyBaselineImage(name, after))
 		return err
 	})

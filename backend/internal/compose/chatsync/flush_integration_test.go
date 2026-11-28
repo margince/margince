@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // postTexts are the texts the bot posted, oldest first.
@@ -139,7 +138,7 @@ func (e *flushEnv) handle(t *testing.T, eventType, entity string, id ids.UUID, p
 
 func (e *flushEnv) flush(t *testing.T) {
 	t.Helper()
-	if err := e.flusher.Flush(principal.WithWorkspaceID(context.Background(), e.ws), e.link); err != nil {
+	if err := e.flusher.Flush(context.Background(), e.link); err != nil {
 		t.Fatalf("flush: %v", err)
 	}
 }

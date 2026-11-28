@@ -16,7 +16,7 @@ func (s *InquiryService) existingTask(ctx context.Context, ex Executors, ev work
 	if s.routing == nil {
 		return crmcontracts.Activity{}, false, errors.New("automation: inquiry routing is not configured")
 	}
-	admit, err := ownerContext(ctx, ex.Authority, ev.WorkspaceID, ev.OwnerID)
+	admit, err := ownerContext(ctx, ex.Authority, ev.OwnerID)
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}

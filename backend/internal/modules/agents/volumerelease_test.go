@@ -51,7 +51,7 @@ func steppedUpRegistry(t *testing.T, quota crossedQuota, scope principal.Scope, 
 		spec.Name = "send_email"
 	}
 	r.Register(&servingTool{spec: spec, records: 1})
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(), Scopes: principal.NewScopeSet(scope),
@@ -211,7 +211,7 @@ func TestACallerWithNoPassportIsRefusedWithoutAskingAnyone(t *testing.T) {
 	staging := &recordingApprovals{}
 	r := NewRegistry(staging, auth.NewGate(fullSeatAuthority{}, auth.WithVolumeMeter(quota)))
 	r.Register(&servingTool{spec: writeToolSpec("update_record"), records: 1})
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:passportless", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeWrite),
@@ -234,7 +234,7 @@ func TestASurfaceWithNoInboxStillRefusesOnTheQuota(t *testing.T) {
 	quota := crossedQuota{counter: agentvolume.Writes, observed: 241, limit: 200, bucket: 42}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}, auth.WithVolumeMeter(quota)))
 	r.Register(&servingTool{spec: writeToolSpec("update_record"), records: 1})
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(), Scopes: principal.NewScopeSet(principal.ScopeWrite),
@@ -316,7 +316,7 @@ func TestASpentBudgetShareWarnsOnTheAnswerAndWithholdsNothing(t *testing.T) {
 	}}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), WithCostShare(share))
 	r.Register(&servingTool{spec: readToolSpec("search_records"), records: 1})
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(), Scopes: principal.NewScopeSet(principal.ScopeRead),
@@ -340,7 +340,7 @@ func TestAnAnswerUnderTheBudgetShareSaysNothingAboutIt(t *testing.T) {
 	share := &spentShare{reading: agentvolume.Reading{Counter: agentvolume.Cost, Observed: 10, Limit: 40_000}}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), WithCostShare(share))
 	r.Register(&servingTool{spec: readToolSpec("search_records"), records: 1})
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(), Scopes: principal.NewScopeSet(principal.ScopeRead),

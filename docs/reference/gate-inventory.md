@@ -443,6 +443,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `noticeassessmentsources_test.go` | H3 | _(no doc comment)_ |
 | `noticecasecolumns_test.go` | H2 | One SELECT list per whole-row read in the consent package. |
 | `noticedutycensus_test.go` | H3 | Every way a contact can arrive has a decided disclosure duty. |
+| `noworkspaceoncontext_test.go` | H2 | workspaceOnContextFindings judges one production file. |
 | `nullablebodyfields_test.go` | H2 | The handler of a PATCH or PUT with a nullable body field processes explicit nulls, by clearing or refusing the field. |
 | `nullsentinelindex_test.go` | H2 | A nullable column in a unique key is held by NULLS NOT DISTINCT rather than by a sentinel. |
 | `numberboundscontract_test.go` | H3 | untaggableBounds are the bounds no generated field carries: an array item, a map value, a oneOf branch, an inline response. |

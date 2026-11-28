@@ -309,7 +309,7 @@ func (e *dedupeEnv) asAgent() context.Context {
 
 // asAgentFor is a passport acting on behalf of one human.
 func (e *dedupeEnv) asAgentFor(onBehalfOf ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", UserID: e.rep, OnBehalfOf: onBehalfOf,
@@ -375,7 +375,7 @@ func TestAnAgentActingForAHumanDismissesAndReopensAPair(t *testing.T) {
 // the default visibility='workspace' it can read but, owning neither record,
 // still may not decide. Each test states which it is seeding.
 func (e *dedupeEnv) asOwnScoped(other ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + other.String(), UserID: other,

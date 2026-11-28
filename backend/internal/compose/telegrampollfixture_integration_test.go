@@ -166,7 +166,7 @@ func telegramHighestUpdateID(batch []json.RawMessage) int64 {
 // app_user in e.WS (integration.Setup seeds it), which the connected_by composite
 // FK requires.
 func telegramAdminContext(ws, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		SeatType: principal.SeatFull,
@@ -263,7 +263,7 @@ func telegramGroupUpdate(updateID, senderID int64) json.RawMessage {
 func telegramStoredPollOffset(t *testing.T, e *integration.Env, conn capture.ChannelConnection) int64 {
 	t.Helper()
 	var offset int64
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT poll_offset FROM channel_connection WHERE id = $1`, conn.ID).Scan(&offset)
 	}); err != nil {
@@ -277,7 +277,7 @@ func telegramStoredPollOffset(t *testing.T, e *integration.Env, conn capture.Cha
 func telegramConnectionVersion(t *testing.T, e *integration.Env, conn capture.ChannelConnection) int64 {
 	t.Helper()
 	var version int64
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT version FROM channel_connection WHERE id = $1`, conn.ID).Scan(&version)
 	}); err != nil {

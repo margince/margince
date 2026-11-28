@@ -127,7 +127,7 @@ func TestAnAgentIsRefusedTheAccessPackageWhateverItsPassportCarries(t *testing.T
 		Permissions: AdminPerms,
 	}
 	ctx := principal.WithActor(
-		principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7()),
+		principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		agent)
 	if _, err := privacy.AssembleSAR(ctx, e.DB(), ids.From[ids.ContactKind](contact)); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an agent carrying an admin's grants assembled a package: err=%v, want permission denied", err)

@@ -22,7 +22,7 @@ func TestARelistedMeetingDocumentIsAnnouncedAsRestoredNotCreated(t *testing.T) {
 	e := setupSend(t)
 	meeting := e.seedAnchor(t, "", "")
 	ctx := principal.WithCorrelationID(
-		principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws),
+		principal.WithActor(context.Background(),
 			principal.Principal{
 				Type: principal.PrincipalSystem, ID: "connector:gcal",
 				Permissions: principal.Permissions{

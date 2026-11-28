@@ -20,7 +20,7 @@ import (
 // the audit row the writers leave, with the evidence its writer states.
 func (e *configEnv) writeMarginceProbability(t *testing.T, deal ids.DealID, value int, evidence map[string]any) {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()), "system:test")
+	ctx := principal.SystemActing(principal.WithCorrelationID(context.Background(), ids.NewV7()), "system:test")
 	if err := e.store.Tx(ctx, func(tx pgx.Tx) error {
 		var held *int
 		var heldBy *string
@@ -41,7 +41,7 @@ func (e *configEnv) writeMarginceProbability(t *testing.T, deal ids.DealID, valu
 
 func (e *configEnv) retireHalved(t *testing.T) int {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()), "system:test")
+	ctx := principal.SystemActing(principal.WithCorrelationID(context.Background(), ids.NewV7()), "system:test")
 	cleared := 0
 	if err := e.store.Tx(ctx, func(tx pgx.Tx) error {
 		var err error

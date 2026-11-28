@@ -24,7 +24,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // KindVolumeRelease is the staged kind a step-up asks under. Exported because the
@@ -39,7 +38,7 @@ const KindVolumeRelease = "volume_release"
 // serves no agents composes none, and its releases are then a loud absence
 // rather than a silent no-op.
 type VolumeReleaser interface {
-	Release(ctx context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64, length time.Duration) (bool, error)
+	Release(ctx context.Context, passport ids.UUID, c agentvolume.Counter, bucket int64, length time.Duration) (bool, error)
 }
 
 // WithVolumeReleaser installs the meter an approved step-up widens.
@@ -74,10 +73,6 @@ func (s *Service) applyVolumeRelease(ctx context.Context, a row) error {
 		// so it would look like it worked.
 		return errors.New("crmapprovals: a staged step-up carries no passport, so there is no window to release")
 	}
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("crmapprovals: no workspace bound to context")
-	}
 	proposal, err := agentvolume.DecodeReleaseProposal(a.ProposedChange)
 	if err != nil {
 		return err
@@ -90,7 +85,7 @@ func (s *Service) applyVolumeRelease(ctx context.Context, a row) error {
 	if err != nil {
 		return err
 	}
-	if _, err := s.quota.Release(ctx, wsID, a.PassportID.UUID, proposal.Counter, bucket, length); err != nil {
+	if _, err := s.quota.Release(ctx, a.PassportID.UUID, proposal.Counter, bucket, length); err != nil {
 		return fmt.Errorf("crmapprovals: releasing the %s window: %w", proposal.Counter, err)
 	}
 	return nil

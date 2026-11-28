@@ -10,8 +10,6 @@ import (
 	"context"
 	"fmt"
 	"time"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Release grants one more allowance of counter c to subject (SubjectOf), in
@@ -39,15 +37,19 @@ import (
 //
 // A window counted under another length applies to nothing either: the length
 // changed at a reset, so that window has ended.
-func (m *Meter) Release(ctx context.Context, ws ids.UUID, subject string, c Counter, bucket int64, length time.Duration) (bool, error) {
+func (m *Meter) Release(ctx context.Context, subject string, c Counter, bucket int64, length time.Duration) (bool, error) {
 	// Every argument is judged BEFORE the meter's own reachability, so a caller
 	// defect reads the same whether or not Redis is up. The other order hides a
 	// wiring fault in exactly the deployment where one is most likely.
 	if !c.Releasable() {
 		return false, fmt.Errorf("agentvolume: %s is not a releasable counter", c)
 	}
-	if ws == (ids.UUID{}) || subject == "" {
-		return false, fmt.Errorf("agentvolume: releasing %s needs both a workspace and a passport or connection", c)
+	if subject == "" {
+		return false, fmt.Errorf("agentvolume: releasing %s needs a passport or connection", c)
+	}
+	ws, named := m.workspace(ctx)
+	if !named {
+		return false, fmt.Errorf("agentvolume: releasing %s needs a live company", c)
 	}
 	w := m.window(ctx)
 	if length != w.length {

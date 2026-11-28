@@ -37,7 +37,7 @@ func (m *Meter) Reserve(ctx context.Context, c Counter, n int) (Reading, bool, e
 	if n <= 0 || m.unbounded || !governed(ctx) {
 		return w.reading(c), true, nil
 	}
-	ws, agent, named := callerKey(ctx)
+	ws, agent, named := m.callerKey(ctx)
 	if !named || m.rdb == nil {
 		refused := w.reading(c)
 		refused.Exceeded, refused.Unanswered = true, true
@@ -66,7 +66,7 @@ func (m *Meter) Refund(ctx context.Context, c Counter, n int, bucket int64) erro
 	if n <= 0 || m.unbounded || !governed(ctx) {
 		return nil
 	}
-	ws, agent, named := callerKey(ctx)
+	ws, agent, named := m.callerKey(ctx)
 	if !named || m.rdb == nil {
 		return nil
 	}

@@ -91,7 +91,7 @@ func setupConfigEnv(t *testing.T) *configEnv {
 // as is the pipeline administrator: the config surface gates on
 // pipeline.create/read/update and nothing else.
 func (e *configEnv) as() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,

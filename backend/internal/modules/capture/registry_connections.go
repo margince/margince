@@ -255,10 +255,11 @@ func (r *Registry) Disconnect(ctx context.Context, mb Mailbox) error {
 // withdrawAndDestroy runs the three phases on the connection match names. Disconnect
 // is it for the caller's own mailbox, DisconnectShared for a shared one.
 func (r *Registry) withdrawAndDestroy(ctx context.Context, name string, match connectionMatch) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("capture: disconnect without a workspace in context")
+	company, err := r.db.Workspace(ctx)
+	if err != nil {
+		return err
 	}
+	ws := company.UUID
 
 	// Phase 1: stop capture.
 	ref, err := r.withdrawConnection(ctx, match, name)
@@ -448,10 +449,9 @@ func (r *Registry) collectDue(ctx context.Context, selector func(ctx context.Con
 		return nil, err
 	}
 	var due []DueConnection
-	wsCtx := principal.WithWorkspaceID(ctx, wsID)
 	ws := ids.From[ids.WorkspaceKind](wsID)
-	err = r.db.Tx(wsCtx, func(tx pgx.Tx) error {
-		selected, err := selector(wsCtx, tx)
+	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
+		selected, err := selector(ctx, tx)
 		if err != nil {
 			return err
 		}

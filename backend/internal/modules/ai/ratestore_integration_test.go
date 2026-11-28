@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type rateEnv struct {
@@ -85,7 +84,7 @@ func (e *rateEnv) seedWorkspace(ctx context.Context, t *testing.T) (ids.UUID, co
 		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatal(err)
 	}
-	return ws, principal.WithWorkspaceID(context.Background(), ws)
+	return ws, withTestCompany(context.Background())
 }
 
 // insertRate seeds one ai_model_rate row directly on the owner

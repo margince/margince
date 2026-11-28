@@ -10,9 +10,10 @@ import (
 	"github.com/riverqueue/river/rivertype"
 )
 
-// BindWorkspace binds the installation's workspace onto the context one job
-// runs under. It receives the job row so a kind that owes work to archived
-// workspaces, where no company is live, can opt out.
+// BindWorkspace admits one job: it refuses while the installation has no live
+// company, and may return a context for the job to run under. It receives the
+// job row so a kind that owes work to archived workspaces, where no company is
+// live, can opt out.
 type BindWorkspace func(ctx context.Context, job *rivertype.JobRow) (context.Context, error)
 
 // WorkerBindingPlugin is the River worker middleware that runs the binding.

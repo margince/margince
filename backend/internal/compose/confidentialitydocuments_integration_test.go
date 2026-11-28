@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -65,7 +64,7 @@ func TestAnInvoiceMailCarryingASalarySheetStaysWithItsParticipants(t *testing.T)
 
 	brain := &salaryReadingBrain{}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("confidentiality pass: %v", err)
 	}
 
@@ -103,7 +102,7 @@ func TestAnInvoiceMailWithoutTheSheetIsStillOpened(t *testing.T) {
 
 	brain := &salaryReadingBrain{}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("confidentiality pass: %v", err)
 	}
 	if got := threadStatus(t, e, thread); got != capture.VerdictCleared {
@@ -126,7 +125,7 @@ func TestASalarySheetUnderANeutralNameIsStillRead(t *testing.T) {
 	thread := seedThreadQuestion(t, e, "thread-neutral-name", mail)
 
 	engine := NewConfidentialityVerdictEngine(e.Pool, &salaryReadingBrain{}, slog.Default()).WithObjectStore(blob)
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("confidentiality pass: %v", err)
 	}
 	if got := threadStatus(t, e, thread); got != capture.VerdictHeld {
@@ -146,7 +145,7 @@ func TestAThreadWithDocumentsPastTheCapDoesNotOpen(t *testing.T) {
 
 	brain := &salaryReadingBrain{}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("confidentiality pass: %v", err)
 	}
 	if len(brain.prompts) != 1 || !strings.Contains(brain.prompts[0], "1 more attached documents were not read") {
@@ -258,7 +257,7 @@ func TestAStaffInvoiceAndCostPlusSheetStayPrivateWhateverTheModelSays(t *testing
 
 			brain := &alwaysOrdinaryBrain{}
 			engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
-			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+			if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 				t.Fatalf("confidentiality pass: %v", err)
 			}
 			if got := threadStatus(t, e, thread); got != capture.VerdictHeld {
@@ -285,7 +284,7 @@ func TestAScanUnderAPlainNameIsAskedButNeverOpened(t *testing.T) {
 
 	brain := &alwaysOrdinaryBrain{}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("confidentiality pass: %v", err)
 	}
 	if brain.asked != 1 {
@@ -310,7 +309,7 @@ func TestAnEarlierReplyCarryingASalarySheetIsNotOpenedWithItsThread(t *testing.T
 
 	brain := &salaryReadingBrain{}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
-	ws := principal.WithWorkspaceID(context.Background(), e.WS)
+	ws := context.Background()
 	if err := engine.RunWorkspace(ws, 0); err != nil {
 		t.Fatalf("first pass: %v", err)
 	}
@@ -356,7 +355,7 @@ func TestAnUnreadableImageCannotBeOpenedByAConfidentAnswer(t *testing.T) {
 			thread := seedThreadQuestion(t, e, "thread-unreadable-image", mail)
 			brain := &alwaysOrdinaryBrain{}
 			engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
-			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+			if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 				t.Fatal(err)
 			}
 			if brain.asked != 1 || threadStatus(t, e, thread) != capture.VerdictUnsure || activityAudience(t, e, mail) != "participants" {

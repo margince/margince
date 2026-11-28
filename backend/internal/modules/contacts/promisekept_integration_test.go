@@ -47,7 +47,7 @@ func (f looksKeptFixture) sweep(t *testing.T) {
 
 func (f looksKeptFixture) sweepWith(t *testing.T, seats KeptSeats) {
 	t.Helper()
-	writer := principal.SystemActing(principal.WithWorkspaceID(context.Background(), f.e.ws), PromiseKeptActor)
+	writer := principal.SystemActing(context.Background(), PromiseKeptActor)
 	var claims []ids.UUID
 	if err := f.e.store.tx(writer, func(tx pgx.Tx) error {
 		var err error

@@ -45,7 +45,7 @@ func (e *stagingEnv) agentCall(target ids.UUID) StageInput {
 // asPassport binds an agent principal presenting one passport, which is what a
 // governed MCP tool call arrives as.
 func (e *stagingEnv) asPassport(passport ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + passport.String(),
@@ -94,7 +94,7 @@ func (e *stagingEnv) approve(t *testing.T, id ids.ApprovalID) {
 
 // asDecider is the human who lent the passport, with sight of every target.
 func (e *stagingEnv) asDecider() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
@@ -176,7 +176,7 @@ func TestAnAgentCallIsOnlyOfferedApprovalsItsOwnCredentialHolds(t *testing.T) {
 // agentWithoutPassport is an agent with no passport, acting for no one. No
 // production path builds one. It is planted so the guard that refuses it runs.
 func (e *stagingEnv) agentWithoutPassport() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalAgent, ID: "agent:sessionbound"})
 }
@@ -184,7 +184,7 @@ func (e *stagingEnv) agentWithoutPassport() context.Context {
 // agentForRep is the product's own job acting for the rep: no passport, and the
 // rep named as the colleague it acts for.
 func (e *stagingEnv) agentForRep() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:job", UserID: e.rep, OnBehalfOf: e.rep, SeatType: principal.SeatFull,
@@ -349,7 +349,7 @@ func TestAnAgentWithNoPassportIsRefusedTheStaging(t *testing.T) {
 	e := setupStaging(t)
 	target := e.seedCompany(t)
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	// Each shape names nobody in particular. One acts for a colleague who is not
 	// its user. One holds a user and grants and acts for no one. One acts for

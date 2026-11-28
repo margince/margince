@@ -61,7 +61,7 @@ func (w postMeetingRecap) Match(ctx context.Context, ev workflow.Event) (bool, e
 	if w.ex.MeetingRecaps == nil {
 		return false, errors.New("automation: meeting recap reader is not configured")
 	}
-	owner, err := ownerContext(ctx, w.ex.Authority, ev.WorkspaceID, ev.OwnerID)
+	owner, err := ownerContext(ctx, w.ex.Authority, ev.OwnerID)
 	if err != nil {
 		return false, err
 	}

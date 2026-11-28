@@ -26,7 +26,7 @@ import (
 // it, so a capture never fails on text nobody can shorten.
 func TestACapturedLeadsTextPastItsLimitLandsCut(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:test", OnBehalfOf: e.AdminUser,
 		Permissions: principal.Permissions{

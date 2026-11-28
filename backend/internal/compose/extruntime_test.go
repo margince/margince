@@ -402,7 +402,7 @@ func composeNeeds(t *testing.T, deps extensionRuntimeBinding, needs ...extension
 	setComposedExtensions([]extension.Extension{{Name: "summaries", Version: "1.0.0", Needs: needs}})
 	t.Cleanup(func() { setComposedExtensions(nil) })
 	registerSummariesTasks(t)
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	deps.pool = &pgxpool.Pool{}
 	rt := runtimeFor(ctx, "summaries", "1.0.0", "tool/probe", deps)
 	t.Cleanup(rt.release)

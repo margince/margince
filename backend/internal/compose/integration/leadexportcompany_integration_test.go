@@ -104,7 +104,7 @@ func TestALeadExportWithholdsTheNameOfACompanyTheExporterCannotOpen(t *testing.T
 			RowScope: principal.RowScopeTeam,
 		},
 	}
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), reader)
+	ctx := principal.WithActor(context.Background(), reader)
 	engine, ok, err := compose.NewCollectionsStore(e.Pool).SegmentEngine(ctx, "lead")
 	if err != nil || !ok {
 		t.Fatalf("resolving the lead engine: ok=%v %v", ok, err)

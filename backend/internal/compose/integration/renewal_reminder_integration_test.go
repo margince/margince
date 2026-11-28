@@ -85,7 +85,7 @@ func TestRenewalReminderFiresWithinWindowButNotBeyondIt(t *testing.T) {
 
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	scanner := compose.NewTimeScannerWithClock(e.DB(), now, quiet)
-	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := scanner.ScanWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("scan: %v", err)
 	}
 
@@ -234,7 +234,7 @@ func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
 	// Year one: August 1st projects onto 2026, inside the 30-day horizon
 	// from July 20th.
 	scanNow = time.Date(2026, 7, 20, 9, 0, 0, 0, time.UTC)
-	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := scanner.ScanWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("year-one scan: %v", err)
 	}
 	if got := contactTaskCount(t, e, ids.UUID(celebrant.Id)); got != 1 {
@@ -246,7 +246,7 @@ func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
 	// the same anchor; the recurring projection re-derives August 1st 2027
 	// instead, a genuinely new anchor, so a second task lands.
 	scanNow = time.Date(2027, 7, 20, 9, 0, 0, 0, time.UTC)
-	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := scanner.ScanWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("year-two scan: %v", err)
 	}
 	if got := contactTaskCount(t, e, ids.UUID(celebrant.Id)); got != 2 {
@@ -294,7 +294,7 @@ func TestRenewalReminderMisconfiguredInstanceDoesNotAbortTheWorkspacePass(t *tes
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	scanner := compose.NewTimeScannerWithClock(e.DB(), now, quiet)
 
-	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := scanner.ScanWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("ScanWorkspace: %v, want nil — one misconfigured renewal_reminder instance must not fail the whole pass", err)
 	}
 	if got := reminderTaskCount(t, e, dealID); got != 1 {

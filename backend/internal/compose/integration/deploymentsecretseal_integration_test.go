@@ -128,7 +128,7 @@ func sealedBlobCount(t *testing.T, e *Env) int {
 // product surface returns either row — so it exists to assert the ref was
 // RECORDED, which a ref held in memory would not be.
 func readCtx(ws ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),

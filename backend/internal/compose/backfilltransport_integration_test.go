@@ -155,7 +155,7 @@ func (plainSyncConnector) HealthCheck(context.Context, connector.Auth) error { r
 // authority — the resolver-integration line itself is not under test here.
 type backfillAuthority struct{}
 
-func (backfillAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (backfillAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Create: true, Read: true},
@@ -166,7 +166,7 @@ func (backfillAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (aut
 	}}, nil
 }
 
-func (backfillAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (backfillAuthority) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -192,7 +192,7 @@ func setupBackfillWire(t *testing.T) *backfillWireEnv {
 	// which now answers `not_a_mailbox` before any connection is looked for.
 	registry.Register(plainSyncConnector{name: "imap"})
 
-	human := principal.WithWorkspaceID(context.Background(), e.WS)
+	human := context.Background()
 	human = principal.WithCorrelationID(human, ids.NewV7())
 	human = principal.WithActor(human, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
@@ -474,7 +474,7 @@ func assertUnwiredAndAnonymousOpsAreRefused(t *testing.T, b *backfillWireEnv) {
 	})
 
 	t.Run("every op is a signed-in human action", func(t *testing.T) {
-		anon := principal.WithWorkspaceID(context.Background(), b.env.WS)
+		anon := context.Background()
 		for name, invoke := range map[string]func(http.ResponseWriter, *http.Request){
 			"preview": b.previewBackfill(crmcontracts.CaptureProviderGmail), "start": b.startBackfill(crmcontracts.CaptureProviderGmail),
 			"status": b.backfillStatus(crmcontracts.CaptureProviderGmail), "cancel": b.cancelBackfill(crmcontracts.CaptureProviderGmail),
@@ -731,7 +731,7 @@ func assertAContinuedRunIsNotLeftWithoutAJob(t *testing.T, b *backfillWireEnv, w
 			t.Fatalf("status = %d %+v, want the failed run", code, out)
 		}
 		runID := ids.UUID(*out.BackfillId)
-		wsCtx := principal.WithWorkspaceID(context.Background(), b.env.WS)
+		wsCtx := context.Background()
 		if worker.resumedMeanwhile(wsCtx, runID) {
 			t.Fatal("a run that stays ended must end the job")
 		}
@@ -803,7 +803,7 @@ func assertAcceptedAnswersDeclareJSON(t *testing.T, b *backfillWireEnv) {
 func assertAStepOnAVanishedRunIsTerminal(t *testing.T, b *backfillWireEnv) {
 	t.Helper()
 	t.Run("a step on a vanished run is terminal, not a loop", func(t *testing.T) {
-		wsCtx := principal.WithWorkspaceID(context.Background(), b.env.WS)
+		wsCtx := context.Background()
 		done, completed, retryAfter, err := b.registry.RunBackfillStep(wsCtx, ids.NewV7())
 		if !done || completed || retryAfter != 0 || err == nil {
 			t.Fatalf("missing run step = done=%v completed=%v retryAfter=%v err=%v, want terminal-not-completed with the not-found error", done, completed, retryAfter, err)
@@ -813,8 +813,8 @@ func assertAStepOnAVanishedRunIsTerminal(t *testing.T, b *backfillWireEnv) {
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (r backfillAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r backfillAuthority) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }
 
 // The nightly reconcile puts a pager back behind a run that lost its own, and
@@ -835,7 +835,7 @@ func (r backfillAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ i
 // live with no pager, which is exactly the row a lost attempt leaves.
 func TestTheNightlyReconcileRestoresAPagerAndDoesNotDoubleOne(t *testing.T) {
 	b := setupBackfillWire(t)
-	ctx := principal.WithWorkspaceID(context.Background(), b.env.WS)
+	ctx := context.Background()
 	jobCtx := backfillWorkContext(ctx, t, b)
 
 	runID := strandedBackfill(t, b)

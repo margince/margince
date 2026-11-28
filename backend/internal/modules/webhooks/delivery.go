@@ -105,13 +105,12 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 	if err != nil {
 		return fmt.Errorf("webhooks: mapping envelope %s to the public wire shape: %w", env.EventID, err)
 	}
-	// The tenant is this deliverer's own: the fan-out builds one per workspace
-	// it sweeps, and the envelope carries none (ADR-0091 §6).
-	ws, err := d.store.db.Workspace(ctx)
-	if err != nil {
+	// The tenant is this deliverer's own, and the envelope carries none. The
+	// handle refuses while no company is live.
+	if _, err := d.store.db.Workspace(ctx); err != nil {
 		return err
 	}
-	wsCtx := d.systemContext(ctx, ws.UUID)
+	wsCtx := d.systemContext(ctx)
 	cands, err := d.store.matchingSubscriptions(wsCtx, env.Type)
 	if err != nil {
 		return fmt.Errorf("webhooks: matching subscriptions for %s: %w", env.Type, err)
@@ -242,11 +241,7 @@ func (d *Deliverer) canSee(ctx context.Context, eventType, entityType string, en
 	if d.resolver == nil {
 		return false, errors.New("webhooks: no principal resolver configured for owner-scoped fan-out")
 	}
-	ws, err := d.store.db.Workspace(ctx)
-	if err != nil {
-		return false, err
-	}
-	owner, err := authz.MemberPrincipal(ctx, d.resolver, ws.UUID, ownerID)
+	owner, err := authz.MemberPrincipal(ctx, d.resolver, ownerID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return false, nil
 	}
@@ -271,11 +266,10 @@ func (d *Deliverer) canSee(ctx context.Context, eventType, entityType string, en
 // and the next pass re-claims it, so one unloadable delivery must not fail
 // the tenant's whole sweep.
 func (d *Deliverer) SweepOnce(ctx context.Context) error {
-	ws, err := d.store.db.Workspace(ctx)
+	_, err := d.store.db.Workspace(ctx)
 	if err != nil {
 		return fmt.Errorf("webhooks: resolving the workspace to sweep: %w", err)
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	// One claim per send: a lease taken for the whole batch would run out
 	// before the later rows were sent.
 	for range sweepBatch {
@@ -468,10 +462,9 @@ func (d *Deliverer) post(ctx context.Context, t attemptTarget) outcome {
 	return outcome{statusCode: resp.StatusCode, failure: fmt.Sprintf("endpoint returned %d", resp.StatusCode)}
 }
 
-// systemContext binds the tenant and a system principal for a bus-driven
-// (non-request) write, mirroring the search embed generator: the delivery
-// worker acts as the system, not as any human, over the whole workspace.
-func (d *Deliverer) systemContext(ctx context.Context, workspaceID ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, workspaceID)
+// systemContext binds a system principal for a bus-driven (non-request) write,
+// as the search embed generator does. The delivery worker acts as the system and
+// not as any human.
+func (d *Deliverer) systemContext(ctx context.Context) context.Context {
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
 }

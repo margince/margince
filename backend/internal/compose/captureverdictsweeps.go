@@ -7,7 +7,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -278,21 +276,20 @@ func (e *CounterpartyVerdictEngine) redactOneNoiseMessage(
 // the coverage.
 const noiseSweepBatch = 500
 
-// inWorkspace runs fn under the provenance of the workspace already bound in
-// ctx. ALL SIX stages of the pass go through it — judging, ledger reconcile,
-// staging, age-out, hiding and redaction — so the actor and correlation id are
-// assembled once rather than six times, and so no stage can run against a
-// context whose workspace nobody bound: it refuses rather than proceeding.
+// inWorkspace runs fn under the provenance of the installation's live company.
+// All six stages of the pass go through it: judging, ledger reconcile, staging,
+// age-out, hiding and redaction. The actor and correlation id are assembled once.
+// No stage runs while no company is live.
 //
 // The refusal matters because these stages are exported and a caller other
-// than the worker could reach them; the worker's own binding guard is upstream
-// of it, not a substitute for it.
+// than the worker could reach them. The worker's own guard sits upstream and
+// does not replace it.
 func (e *CounterpartyVerdictEngine) inWorkspace(ctx context.Context, fn func(context.Context, ids.UUID) error) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("verdict: a sweep stage requires a workspace-bound context")
+	company, err := database.ProvenWorkspace(ctx, e.pool)
+	if err != nil {
+		return fmt.Errorf("verdict: a sweep stage requires a live company: %w", err)
 	}
-	return fn(e.workspaceCtx(ctx), ws)
+	return fn(e.workspaceCtx(ctx), company.UUID)
 }
 
 // backlogQuiet is how long a pending row must sit untouched before its seat is

@@ -199,6 +199,6 @@ func anonymizeWeeklyReportingSubject(t *testing.T, e *forecastEnv, contact ids.U
 		t.Fatal(err)
 	}
 	retention := NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.New(slog.DiscardHandler))
-	system := principal.SystemActing(principal.WithWorkspaceID(ctx, e.WS), "system:privacy-retention")
+	system := principal.SystemActing(ctx, "system:privacy-retention")
 	return retention.EvaluateInstallation(system)
 }

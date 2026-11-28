@@ -168,7 +168,7 @@ func (s *ConnectorAppStore) Credentials(ctx context.Context, p AppProvider) (Con
 	if s.vault == nil {
 		return ConnectorApp{}, false, ErrNoVault
 	}
-	ws, err := credentialWorkspace(ctx)
+	ws, err := s.credentialWorkspace(ctx)
 	if err != nil {
 		return ConnectorApp{}, false, err
 	}
@@ -219,7 +219,7 @@ func (s *ConnectorAppStore) SetWithSigningSecret(ctx context.Context, p AppProvi
 	if s.vault == nil {
 		return ErrNoVault
 	}
-	ws, err := credentialWorkspace(ctx)
+	ws, err := s.credentialWorkspace(ctx)
 	if err != nil {
 		return err
 	}
@@ -331,7 +331,7 @@ func (s *ConnectorAppStore) Remove(ctx context.Context, p AppProvider) error {
 	if err != nil {
 		return err
 	}
-	ws, err := credentialWorkspace(ctx)
+	ws, err := s.credentialWorkspace(ctx)
 	if err != nil {
 		return err
 	}
@@ -421,10 +421,10 @@ func (s *ConnectorAppStore) retire(ctx context.Context, ws ids.WorkspaceID, ref,
 // credentialWorkspace is the caller's tenant, or a refusal. A credential write
 // outside a workspace has no tenant to belong to, and the vault would refuse the
 // ref later anyway — so it is refused here, where the message can say why.
-func credentialWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
-	raw, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ids.WorkspaceID{}, errors.New("capture: an OAuth app write outside a workspace context")
+func (s *ConnectorAppStore) credentialWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
+	ws, err := settings.WorkspaceOf(ctx, s.settings)
+	if err != nil {
+		return ids.WorkspaceID{}, fmt.Errorf("capture: an OAuth app write needs a live company: %w", err)
 	}
-	return ids.From[ids.WorkspaceKind](raw), nil
+	return ws, nil
 }

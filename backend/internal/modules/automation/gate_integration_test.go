@@ -38,11 +38,11 @@ type fixtureResolver struct {
 	err  error
 }
 
-func (r fixtureResolver) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (r fixtureResolver) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return r.rbac, r.err
 }
 
-func (r fixtureResolver) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (r fixtureResolver) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -187,6 +187,6 @@ func TestMatchTimeGateSkipsASeededAutomationWithNoOwner(t *testing.T) {
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (r fixtureResolver) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r fixtureResolver) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }

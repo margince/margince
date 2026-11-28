@@ -208,11 +208,14 @@ func (s *OwnerIdentityStore) AddConfirmed(ctx context.Context, kind, raw string,
 		if err := s.addressClaimedTx(ctx, tx, out); err != nil {
 			return err
 		}
-		// Audit-only, like the exclusion list and the own-domain list beside
-		// it: this is capture configuration, and the closed event catalog
-		// (events.md) carries no type for it.
-		_, err := storekit.AuditEvent(ctx, tx, "update", captureSettingsObject,
-			storekit.MustWorkspace(ctx), ownerIdentityAuditImage(out))
+		// Audit-only, like the exclusion list and the own-domain list beside it:
+		// the closed event catalog (events.md) carries no type for it.
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
+		_, err = storekit.AuditEvent(ctx, tx, "update", captureSettingsObject,
+			installation, ownerIdentityAuditImage(out))
 		return err
 	})
 	return out, err
@@ -250,8 +253,12 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 		}
 		// "archive", not a delete verb: the audit vocabulary is closed and
 		// withdrawing a claim IS retiring it, as the exclusion list reads it.
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
 		auditID, err := storekit.Audit(ctx, tx, "archive", captureSettingsObject,
-			storekit.MustWorkspace(ctx), ownerIdentityAuditImage(withdrawn.OwnerIdentity), nil)
+			installation, ownerIdentityAuditImage(withdrawn.OwnerIdentity), nil)
 		if err != nil {
 			return err
 		}

@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // AgentTokenSpend adapts the volume meter to the AI runtime's token seam, so a
@@ -67,6 +66,8 @@ type passportShareCeiling struct {
 	pool   *pgxpool.Pool
 	budget ai.BudgetPolicy
 	now    func() time.Time
+	// company names the installation's company the cache is keyed by.
+	company func(context.Context) (ids.WorkspaceID, error)
 
 	mu     sync.Mutex
 	cached map[string]shareReading
@@ -83,7 +84,8 @@ type shareReading struct {
 func newPassportShareCeiling(pool *pgxpool.Pool) *passportShareCeiling {
 	return &passportShareCeiling{
 		pool: pool, budget: NewSeatBudget(pool), now: time.Now,
-		cached: map[string]shareReading{},
+		company: func(ctx context.Context) (ids.WorkspaceID, error) { return database.ProvenWorkspace(ctx, pool) },
+		cached:  map[string]shareReading{},
 	}
 }
 
@@ -93,16 +95,19 @@ func newPassportShareCeiling(pool *pgxpool.Pool) *passportShareCeiling {
 // closed would raise its warning on every call during an outage, which is the
 // fastest way to teach a reader to ignore it.
 func (c *passportShareCeiling) TokensPerPassport(ctx context.Context, window time.Duration) int {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
+	if c.company == nil {
 		return 0
 	}
-	key := wsID.String()
+	company, err := c.company(ctx)
+	if err != nil {
+		return 0
+	}
+	key := company.String()
 	c.mu.Lock()
 	cached, hit := c.cached[key]
 	c.mu.Unlock()
 	if !hit || c.now().Sub(cached.at) >= shareCacheTTL {
-		cached = c.compute(ctx, ids.From[ids.WorkspaceKind](wsID))
+		cached = c.compute(ctx)
 		c.mu.Lock()
 		c.cached[key] = cached
 		c.mu.Unlock()
@@ -113,7 +118,7 @@ func (c *passportShareCeiling) TokensPerPassport(ctx context.Context, window tim
 // compute reads the budget and the divisor. A workspace with no live passport
 // divides by one rather than by zero: the answer is then the whole window's
 // share, which is what the next credential to connect would get anyway.
-func (c *passportShareCeiling) compute(ctx context.Context, wsID ids.WorkspaceID) shareReading {
+func (c *passportShareCeiling) compute(ctx context.Context) shareReading {
 	at := c.now()
 	if c.budget == nil {
 		// No budget policy composed is no ceiling. Everything about this counter
@@ -121,7 +126,7 @@ func (c *passportShareCeiling) compute(ctx context.Context, wsID ids.WorkspaceID
 		// so the one thing it must never do is take a model call down with it.
 		return shareReading{at: at}
 	}
-	monthly, err := c.budget.MonthlyTokenBudget(ctx, wsID)
+	monthly, err := c.budget.MonthlyTokenBudget(ctx)
 	if err != nil || monthly <= 0 {
 		return shareReading{at: at}
 	}

@@ -57,11 +57,7 @@ func NewSendAttachmentAuthority(pool *pgxpool.Pool, blob blobstore.Store) comms.
 // sender may since have lost. So the grants are re-read now, and a sender who
 // no longer resolves has no authority at all rather than empty authority.
 func (a commsAttachments) senderCtx(ctx context.Context, userID ids.UserID) (context.Context, string, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, "", errors.New("comms: rechecking a delivery's attachments outside workspace context")
-	}
-	sender, err := authz.MemberPrincipal(ctx, a.authority, ws, userID.UUID)
+	sender, err := authz.MemberPrincipal(ctx, a.authority, userID.UUID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, "the sender's account is no longer active, so its right to send these files cannot be confirmed", nil
 	}

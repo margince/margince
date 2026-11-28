@@ -50,14 +50,14 @@ import (
 // its principal directly because that is how the real one arrives.
 type grantingSeat struct{ grant principal.ObjectGrant }
 
-func (s grantingSeat) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (s grantingSeat) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: principal.Permissions{
 		RoleKeys: []string{"test"},
 		Objects:  map[string]principal.ObjectGrant{noteObject: s.grant},
 	}}, nil
 }
 
-func (grantingSeat) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (grantingSeat) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -103,7 +103,7 @@ func gatedRegistry(t *testing.T, action extension.RbacAction, grant principal.Ob
 // extAgentCtx is a read-scoped agent principal — one the gate ADMITS, so anything
 // that refuses below refused on the object and not on scope, seat or tier.
 func extAgentCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
@@ -221,7 +221,7 @@ func TestAToolDeclaringNoObjectIsUnaffected(t *testing.T) {
 // the agent path's, and the two are worth not confusing.
 func TestTheObjectBindsAHumanPrincipalToo(t *testing.T) {
 	r, ran := gatedRegistry(t, extension.RbacRead, principal.ObjectGrant{})
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:t", UserID: ids.NewV7(),
 	})
@@ -236,6 +236,6 @@ func TestTheObjectBindsAHumanPrincipalToo(t *testing.T) {
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (s grantingSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, s.EffectiveRBAC, s.SeatType)
+func (s grantingSeat) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, s.EffectiveRBAC, s.SeatType)
 }

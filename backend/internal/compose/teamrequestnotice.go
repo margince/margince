@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -14,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -27,9 +28,9 @@ import (
 type teamRequestNotice struct{}
 
 func (teamRequestNotice) TeamRequestTx(ctx context.Context, tx pgx.Tx, request activities.TeamRequest) error {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("compose: a booking link named a colleague outside a bound workspace")
+	wsID, err := storekit.Workspace(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("compose: a booking link named a colleague with no live company: %w", err)
 	}
 	mail, err := callerTxJobs()
 	if err != nil {

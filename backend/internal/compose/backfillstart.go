@@ -27,27 +27,27 @@ var errBackfillEnqueue = errors.New("backfill: the paging job could not be sched
 // begin opens a past-email import and schedules its pager: the one engine
 // behind both the start endpoint and the import a connect asked for. The
 // estimate is the caller's count, stored as the run's progress denominator.
-func (h backfillHandlers) begin(ctx context.Context, ws ids.UUID, mailbox capture.Mailbox, userID ids.UserID, months int, estimate connector.BackfillEstimate, startOver bool) (capture.BackfillRun, error) {
+func (h backfillHandlers) begin(ctx context.Context, mailbox capture.Mailbox, userID ids.UserID, months int, estimate connector.BackfillEstimate, startOver bool) (capture.BackfillRun, error) {
 	// Continuing a run that stopped on an error is the default: starting over
 	// re-reads hours of provider pages for mail already captured.
 	start := h.registry.StartBackfill
 	if startOver {
 		start = h.registry.StartBackfillOver
 	}
-	return h.beginWith(ctx, ws, mailbox, userID, months, estimate, start)
+	return h.beginWith(ctx, mailbox, userID, months, estimate, start)
 }
 
 type backfillStarter func(context.Context, capture.Mailbox, ids.UserID, int, connector.BackfillEstimate, capture.EnqueueBackfill) (capture.BackfillRun, error)
 
-func (h backfillHandlers) beginInternalHistory(ctx context.Context, ws ids.UUID, mailbox capture.Mailbox, owner ids.UserID, months int, estimate connector.BackfillEstimate, token string) (capture.BackfillRun, error) {
+func (h backfillHandlers) beginInternalHistory(ctx context.Context, mailbox capture.Mailbox, owner ids.UserID, months int, estimate connector.BackfillEstimate, token string) (capture.BackfillRun, error) {
 	start := func(ctx context.Context, mailbox capture.Mailbox, owner ids.UserID, months int, estimate connector.BackfillEstimate, enqueue capture.EnqueueBackfill) (capture.BackfillRun, error) {
 		return h.registry.StartBackfillWithInternalHistory(ctx, mailbox, owner, months, estimate, token, enqueue)
 	}
-	return h.beginWith(ctx, ws, mailbox, owner, months, estimate, start)
+	return h.beginWith(ctx, mailbox, owner, months, estimate, start)
 }
 
-func (h backfillHandlers) beginWith(ctx context.Context, ws ids.UUID, mailbox capture.Mailbox, userID ids.UserID, months int, estimate connector.BackfillEstimate, start backfillStarter) (capture.BackfillRun, error) {
-	return h.scheduled(ctx, ws, func(ctx context.Context, enqueue capture.EnqueueBackfill) (capture.BackfillRun, error) {
+func (h backfillHandlers) beginWith(ctx context.Context, mailbox capture.Mailbox, userID ids.UserID, months int, estimate connector.BackfillEstimate, start backfillStarter) (capture.BackfillRun, error) {
+	return h.scheduled(ctx, func(ctx context.Context, enqueue capture.EnqueueBackfill) (capture.BackfillRun, error) {
 		return start(ctx, mailbox, userID, months, estimate, enqueue)
 	})
 }
@@ -55,7 +55,7 @@ func (h backfillHandlers) beginWith(ctx context.Context, ws ids.UUID, mailbox ca
 // scheduled runs one start with the enqueue that schedules its pager. A
 // refused queue keeps its own answer instead of the generic connector-fault
 // mapping.
-func (h backfillHandlers) scheduled(ctx context.Context, ws ids.UUID, start func(context.Context, capture.EnqueueBackfill) (capture.BackfillRun, error)) (capture.BackfillRun, error) {
+func (h backfillHandlers) scheduled(ctx context.Context, start func(context.Context, capture.EnqueueBackfill) (capture.BackfillRun, error)) (capture.BackfillRun, error) {
 	var enqueueErr error
 	run, err := start(ctx, func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
 		enqueueErr = h.inserter.EnqueueTx(ctx, tx, CaptureBackfillArgs{

@@ -14,7 +14,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A former teammate's survivor is the one spelled as the caller typed it.
@@ -77,7 +76,7 @@ func TestTheSurvivorSpelledAsTypedWinsAMergedLineage(t *testing.T) {
 	for address, want := range roots {
 		var got ids.UserID
 		var found bool
-		seat := principal.WithWorkspaceID(ctx, e.ws.UUID)
+		seat := ctx
 		if err := database.WithTx(seat, e.svc.db.Pool(), func(tx pgx.Tx) error {
 			var err error
 			got, found, err = mergedFormerSurvivor(seat, tx, address)

@@ -32,7 +32,7 @@ func captureSettingsStore(t *testing.T, pool *pgxpool.Pool, environ ...string) (
 
 // captureAdmin may read and change the capture settings of ws.
 func captureAdmin(ctx context.Context, ws ids.WorkspaceID) context.Context {
-	admin := principal.WithWorkspaceID(ctx, ws.UUID)
+	admin := ctx
 	admin = principal.WithCorrelationID(admin, ids.NewV7())
 	return principal.WithActor(admin, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),

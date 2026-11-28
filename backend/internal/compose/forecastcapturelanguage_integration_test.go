@@ -23,7 +23,7 @@ import (
 func TestForecastCaptureFailureKeepsItsWrittenLanguage(t *testing.T) {
 	e := setupForecast(t)
 	store := newForecastStoreFor(e.Pool)
-	writer := principal.WithCorrelationID(principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:capture-language"), ids.NewV7())
+	writer := principal.WithCorrelationID(principal.SystemActing(context.Background(), "system:capture-language"), ids.NewV7())
 	at := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	// Corrupt persisted configuration exercises the worker's failed-capture path.
 	if _, err := e.owner.Exec(t.Context(), `UPDATE setting SET value = '"Margince/Nowhere"'::jsonb WHERE key = 'installation.timezone'`); err != nil {

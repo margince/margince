@@ -74,7 +74,7 @@ func TestEverySchemaDescriptorCanBeRowScopedByTheReportPath(t *testing.T) {
 	if len(schemaObjects) == 0 {
 		t.Fatal("no schema descriptors — this gate walked nothing, so it proves nothing")
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	rep := ids.NewV7()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + rep.String(), UserID: rep,

@@ -31,7 +31,7 @@ import (
 // to take one from, and every row this writes is attributed to the release
 // rather than to a contact.
 func handbookBootCtx(ws ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, "system:handbook-corpus")
 }
 

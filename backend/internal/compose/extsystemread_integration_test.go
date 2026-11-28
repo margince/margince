@@ -31,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -132,7 +131,7 @@ func (s *systemReadEnv) seat(t *testing.T, email, status string, agent bool) ids
 
 func (s *systemReadEnv) read(t *testing.T, fn func(context.Context, pgx.Tx) error) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), s.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, s.Pool, func(tx pgx.Tx) error { return fn(ctx, tx) }); err != nil {
 		t.Fatalf("reading the fixture's tables: %v", err)
 	}
@@ -620,8 +619,7 @@ func TestAModelCallNamesTheUnitInTheAuditTrail(t *testing.T) {
 func TestARemovedUnitsObjectsAreSweptByALaterBootIfTheFirstHadNoStore(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	raw, _ := principal.WorkspaceID(ctx)
-	ws := ids.From[ids.WorkspaceKind](raw)
+	ws := ids.From[ids.WorkspaceKind](e.WS)
 	store := blobstore.NewMemory()
 	previous := boundExtensionRuntime().blob
 	t.Cleanup(func() { BindExtensionObjects(previous) })

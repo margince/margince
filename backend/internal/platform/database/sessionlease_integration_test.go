@@ -17,7 +17,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAnAdmittedTransactionKeepsItsSlotAfterTheLeaseBackendDies(t *testing.T) {
@@ -75,9 +74,9 @@ func TestAnAdmittedTransactionKeepsItsSlotAfterTheLeaseBackendDies(t *testing.T)
 
 func TestTransactionOwnershipIsCheckedOnSnapshotJoinsAndDetachedWrites(t *testing.T) {
 	ctx, pool := laneEnv(t)
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		t.Fatal("workspace not bound")
+	ws, err := database.InstallationWorkspace(ctx, pool)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
 	}
 	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))
 	lost := errors.New("execution no longer owns its slot")
@@ -98,7 +97,7 @@ func TestTransactionOwnershipIsCheckedOnSnapshotJoinsAndDetachedWrites(t *testin
 	if checks != 1 || called != 1 {
 		t.Fatalf("guard=%d work=%d", checks, called)
 	}
-	err := database.WithSnapshot(ctx, pool, func(snapshot context.Context) error {
+	err = database.WithSnapshot(ctx, pool, func(snapshot context.Context) error {
 		before := checks
 		if err := db.Tx(snapshot, write); err != nil {
 			return err

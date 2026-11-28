@@ -32,8 +32,8 @@ import (
 // outside one.
 type demotedInTx struct{ fixtureAuthority }
 
-func (a demotedInTx) AdmittedAuthority(ctx context.Context, ws, user, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	rbac, err := a.EffectiveRBAC(ctx, ws, user)
+func (a demotedInTx) AdmittedAuthority(ctx context.Context, user, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	rbac, err := a.EffectiveRBAC(ctx, user)
 	return rbac, principal.SeatFull, err
 }
 
@@ -106,7 +106,7 @@ func TestASyncWhoseRoleIsTakenAwayMidRunWritesNoMessage(t *testing.T) {
 	reg := capture.NewRegistry(db, capture.NewSink(db).WithPartyAuthority(demotedInTx{}), fixtureAuthority{}, vault)
 	reg.Register(upsertingConnector{})
 
-	err = reg.SyncOnce(principal.WithWorkspaceID(context.Background(), ws.UUID), id)
+	err = reg.SyncOnce(context.Background(), id)
 
 	if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); !refused {
 		t.Fatalf("SyncOnce = %v, want the role refusal from the write", err)
@@ -185,7 +185,7 @@ func TestARunWhoseRoleIsTakenAwayCancelsMovesAndRemovesNothing(t *testing.T) {
 			reg := capture.NewRegistry(db, sink, fixtureAuthority{}, vault)
 			reg.Register(verbConnector{act: act})
 
-			err = reg.SyncOnce(principal.WithWorkspaceID(context.Background(), ws.UUID), id)
+			err = reg.SyncOnce(context.Background(), id)
 
 			if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); !refused {
 				t.Fatalf("SyncOnce = %v, want the role refusal", err)
@@ -216,7 +216,7 @@ func TestAReboundMailboxCannotWriteFromTheOldSync(t *testing.T) {
 		_, err := sink.Upsert(runCtx, rec)
 		return err
 	}})
-	if err := reg.SyncOnce(principal.WithWorkspaceID(context.Background(), ws.UUID), id); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if err := reg.SyncOnce(context.Background(), id); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("old generation admitted: %v", err)
 	}
 	var count int

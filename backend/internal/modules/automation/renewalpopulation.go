@@ -24,7 +24,7 @@ func (s *TimeScanner) scanDateInstance(ctx context.Context, handler workflow.Han
 	reader := ctx
 	if params.Recipient != "" {
 		var err error
-		reader, err = ownerContext(ctx, s.engine.resolver, workspace, instance.owner)
+		reader, err = ownerContext(ctx, s.engine.resolver, instance.owner)
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil
 		}

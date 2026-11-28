@@ -99,11 +99,10 @@ func (s *Sink) admitPartiesAs(ctx context.Context, activity ids.ActivityID, sour
 	if source.Blocked {
 		return ctx, true, nil
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
+	if _, err := s.db.Workspace(ctx); err != nil {
 		return ctx, false, apperrors.ErrPermissionDenied
 	}
-	member, err := authz.MemberPrincipal(ctx, s.partyAuthority, ws, source.User)
+	member, err := authz.MemberPrincipal(ctx, s.partyAuthority, source.User)
 	if err != nil {
 		return ctx, false, err
 	}

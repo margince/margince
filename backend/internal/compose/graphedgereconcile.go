@@ -68,7 +68,7 @@ func (w *graphEdgeReconcileWorker) Work(ctx context.Context, job *river.Job[Grap
 }
 
 func (w *graphEdgeReconcileWorker) reconcileWorkspace(ctx context.Context, ws ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, ws)
+	wsCtx := ctx
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:graph_edge_reconcile",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},

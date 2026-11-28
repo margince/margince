@@ -28,7 +28,7 @@ import (
 type reportingAuthority struct{ users *identity.Service }
 
 func accountableHuman(ctx context.Context, users *identity.Service, workspace, user ids.UUID) (context.Context, error) {
-	member, err := authz.MemberPrincipal(ctx, users, workspace, user)
+	member, err := authz.MemberPrincipal(ctx, users, user)
 	if err != nil {
 		return nil, err
 	}

@@ -29,7 +29,7 @@ var salesWorkOnly = principal.WorkAreas{Limited: true, Chosen: []string{"busines
 
 func limitSeededPassport(t *testing.T, e *integration.Env, areas principal.WorkAreas) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	owner := identity.Identity{UserID: ids.From[ids.UserKind](e.Rep1), WorkspaceID: ids.From[ids.WorkspaceKind](e.WS)}
 	human := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1})
 	if err := identity.NewService(e.Pool).SetPassportAreas(human, owner, ids.From[ids.PassportKind](e.AgentPassport), areas); err != nil {
@@ -40,7 +40,7 @@ func limitSeededPassport(t *testing.T, e *integration.Env, areas principal.WorkA
 func TestQueuedWorkActsUnderThePassportsAreas(t *testing.T) {
 	e := integration.Setup(t)
 	limitSeededPassport(t, e, salesWorkOnly)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	stored := migration.StoredActor{Type: principal.PrincipalAgent, ID: "agent:queued", UserID: e.Rep1, PassportID: e.AgentPassport}
 
 	actor, err := storedActor{authority: identity.NewService(e.Pool)}.rebuild(ctx, stored, principal.ScopeWrite)
@@ -54,7 +54,7 @@ func TestQueuedWorkActsUnderThePassportsAreas(t *testing.T) {
 
 func TestARunningSessionIsHeldToAreasNarrowedAfterItAuthenticated(t *testing.T) {
 	e := integration.Setup(t)
-	stamped := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	stamped := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:run", SeatType: principal.SeatFull,
 		PassportID: e.AgentPassport, OnBehalfOf: e.Rep1, Scopes: principal.NewScopeSet(principal.ScopeRead),
 	})
@@ -74,7 +74,7 @@ func TestARunningSessionIsHeldToAreasNarrowedAfterItAuthenticated(t *testing.T) 
 
 func TestWorkDoneForAMemberReadsInTheirLanguage(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	human := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1})
 	if _, err := identity.NewService(e.Pool).SaveMyLocale(principal.WithCorrelationID(human, ids.NewV7()), "vi"); err != nil {
 		t.Fatalf("saving the member's language: %v", err)

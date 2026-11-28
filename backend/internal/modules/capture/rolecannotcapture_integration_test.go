@@ -32,15 +32,15 @@ type demotableAuthority struct {
 	demoted *bool
 }
 
-func (a demotableAuthority) SeatType(ctx context.Context, ws, user ids.UUID) (principal.SeatType, error) {
+func (a demotableAuthority) SeatType(ctx context.Context, user ids.UUID) (principal.SeatType, error) {
 	if *a.demoted {
 		return principal.SeatRead, nil
 	}
-	return a.fixtureAuthority.SeatType(ctx, ws, user)
+	return a.fixtureAuthority.SeatType(ctx, user)
 }
 
-func (a demotableAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, a.EffectiveRBAC, a.SeatType)
+func (a demotableAuthority) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, a.EffectiveRBAC, a.SeatType)
 }
 
 // unsealCounter counts unseals, so a test can prove none happened.
@@ -123,7 +123,7 @@ func TestARefusedMembersImportPreviewUnsealsNothingAndAsksNoProvider(t *testing.
 func TestARefusedMembersWatchRenewalUnsealsNothingAndAsksNoProvider(t *testing.T) {
 	f := connectThenDemote(t)
 
-	err := f.reg.RenewWatch(principal.WithWorkspaceID(context.Background(), mustWorkspace(t, f.ctx)), f.conn, "topic")
+	err := f.reg.RenewWatch(context.Background(), f.conn, "topic")
 
 	if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); !refused {
 		t.Fatalf("RenewWatch = %v, want the role refusal", err)
@@ -131,13 +131,4 @@ func TestARefusedMembersWatchRenewalUnsealsNothingAndAsksNoProvider(t *testing.T
 	if f.gets != 0 || f.calls != 0 {
 		t.Fatalf("the refused renewal unsealed %d credentials and made %d provider calls, want none", f.gets, f.calls)
 	}
-}
-
-func mustWorkspace(t *testing.T, ctx context.Context) ids.UUID {
-	t.Helper()
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		t.Fatal("the fixture context carries no workspace")
-	}
-	return ws
 }

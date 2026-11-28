@@ -36,7 +36,7 @@ func postCardPhoto(t *testing.T, size int) (*httptest.ResponseRecorder, int) {
 		t.Fatal(err)
 	}
 	member := ids.NewV7()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + member.String(), UserID: member,
 		Permissions: principal.Permissions{
@@ -84,7 +84,7 @@ func TestAVCardOverTheCeilingNamesTheLimit(t *testing.T) {
 	post := func(t *testing.T, body io.Reader, contentType string) *httptest.ResponseRecorder {
 		t.Helper()
 		member := ids.NewV7()
-		ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+		ctx := principal.WithActor(context.Background(), principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + member.String(), UserID: member,
 			Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{entityContact: {Create: true, Update: true}}},
 		})

@@ -101,7 +101,7 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 // suite that bound its own scope would be proving a path the product does not
 // run.
 func (e *closeDateEnv) sweep() error {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.SystemActing(ctx, closeDateSweepActor)
 	return e.corrector.SweepWorkspace(ctx)
 }

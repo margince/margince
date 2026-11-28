@@ -270,7 +270,7 @@ func certifyWithPrivacy(t *testing.T, parallel int) Record {
 	corpus := mixedCorpus()
 	corpus[0].Expect.Privacy = true
 	candidate, judge := mixedClients()
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, corpus, testCensus(t),
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, corpus, testCensus(t),
 		ai.ProviderConfig{Provider: providerClaudeCLI, Model: "candidate"},
 		ai.ProviderConfig{Provider: providerClaudeCLI, Model: "judge"}, ai.ProfileCloudFrontier, testRepeats, quietLogger(),
 		&certifyHooks{

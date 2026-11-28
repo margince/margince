@@ -16,14 +16,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestWorkLeaseProofNamesOnlyItsLiveOwner(t *testing.T) {
 	ctx, pool := laneEnv(t)
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		t.Fatal("workspace missing")
+	ws, err := database.InstallationWorkspace(ctx, pool)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
 	}
 	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))
 	id := ids.NewV7()
@@ -78,9 +77,9 @@ func TestWorkLeaseProofNamesOnlyItsLiveOwner(t *testing.T) {
 
 func TestWorkLeaseLossCannotOvertakeAClaimOrItsAdmittedWrite(t *testing.T) {
 	ctx, pool := laneEnv(t)
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		t.Fatal("workspace missing")
+	ws, err := database.InstallationWorkspace(ctx, pool)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
 	}
 	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))
 	id := ids.NewV7()

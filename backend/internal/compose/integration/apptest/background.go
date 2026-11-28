@@ -22,14 +22,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AdminContext binds the installation's workspace and a seat holding perms, for
+// AdminContext binds a seat holding perms, for
 // the product writers a background job calls and no route does. The caller
 // passes the admin grants, which live in package integration.
 func AdminContext(t *testing.T, e *AppEnv, perms principal.Permissions) context.Context {
 	t.Helper()
-	wsID := InstallationWorkspaceUUID(context.Background(), t, e.Pool)
 	user := ids.NewV7()
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), wsID), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, Permissions: perms,
 	})

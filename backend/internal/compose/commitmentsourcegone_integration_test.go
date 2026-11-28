@@ -28,7 +28,7 @@ func TestCommitmentWhoseSourceIsArchivedDuringReadingCreatesNothing(t *testing.T
 			t.Fatal(err)
 		}
 	}}
-	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), signalScanActor)
+	pass := principal.SystemActing(context.Background(), signalScanActor)
 	if _, err := NewSignalExtractor(e.Pool, brain, func() time.Time { return now }, slog.Default()).RunWorkspace(pass, ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 		t.Fatal(err)
 	}

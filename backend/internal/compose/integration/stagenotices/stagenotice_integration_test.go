@@ -50,7 +50,7 @@ func newStageNoticeFixture(t *testing.T, fromName, toName, dealName string) stag
 		}
 	})
 	ws, actor, pool := e.WS, ids.From[ids.UserKind](e.Rep1), e.Pool
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))

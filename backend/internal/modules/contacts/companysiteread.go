@@ -206,7 +206,11 @@ func (s *Store) applySiteReadConfirmation(
 	}
 	companyID := target.id
 	siteFields, humanFields := splitConfirmedProfile(read.ProfileFields, read.LegalEntities, in)
-	appliedSite, err := applyEvidenceFieldsWithOverwrite(ctx, tx, workspaceID(ctx), companyID,
+	wsID, err := workspaceID(ctx, tx)
+	if err != nil {
+		return siteReadConfirmation{}, err
+	}
+	appliedSite, err := applyEvidenceFieldsWithOverwrite(ctx, tx, wsID, companyID,
 		companySourceSiteRead, companySiteReadCapturedBy, siteFields, in.overwriteProfileFields)
 	if err != nil {
 		return siteReadConfirmation{}, err

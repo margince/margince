@@ -67,7 +67,7 @@ func (w *briefGenerateWorker) assembleOneWorkspace(ctx context.Context, workspac
 	if clock == nil {
 		clock = time.Now
 	}
-	return w.assembleWorkspace(principal.WithWorkspaceID(ctx, workspace), workspace, clock().UTC())
+	return w.assembleWorkspace(ctx, workspace, clock().UTC())
 }
 
 // assembleWorkspace snapshots a run for every rep in this workspace whose
@@ -161,7 +161,7 @@ func (w *briefGenerateWorker) mailTheMorning(
 func (w *briefGenerateWorker) repContext(
 	ctx context.Context, wsID, userID ids.UUID,
 ) (context.Context, bool, error) {
-	return seatContext(ctx, w.users, wsID, userID)
+	return seatContext(ctx, w.users, userID)
 }
 
 // assembleFor snapshots one rep's run under that rep's OWN authority.

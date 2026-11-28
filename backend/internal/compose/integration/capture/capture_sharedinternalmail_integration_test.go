@@ -48,7 +48,7 @@ func opsDesk(t *testing.T, env captureEnv, team ids.UUID) (ids.UUID, *mailBatchC
 	id := integration.ConnectSharedMailbox(t, registry, env.e.WS, integration.SharedMailbox{
 		Provider: opsDeskProvider, Address: opsDeskAddress, ReaderTeam: team, ConnectedBy: env.e.Rep1, Posture: capturemod.PostureHeld,
 	})
-	wsCtx := principal.WithWorkspaceID(context.Background(), env.e.WS)
+	wsCtx := context.Background()
 	return id, conn, func(t *testing.T, raws ...[]byte) {
 		t.Helper()
 		conn.raws = raws
@@ -68,7 +68,7 @@ func colleague(t *testing.T, e *integration.SearchEnv, address string) ids.UUID 
 // internalMailAdmin is an admin seat that may change the internal-mail policy
 // and read every activity a row scope allows.
 func internalMailAdmin(e *integration.SearchEnv, user ids.UUID) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{

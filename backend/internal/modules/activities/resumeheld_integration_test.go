@@ -85,7 +85,7 @@ func TestOnlyTheAuthorResumesAHeldMessage(t *testing.T) {
 	other := author
 	other.UserID = ids.NewV7()
 	other.ID = "human:" + other.UserID.String()
-	colleague := principal.WithWorkspaceID(context.Background(), e.ws)
+	colleague := context.Background()
 	colleague = principal.WithActor(principal.WithCorrelationID(colleague, ids.NewV7()), other)
 
 	stager := &recordingStager{}

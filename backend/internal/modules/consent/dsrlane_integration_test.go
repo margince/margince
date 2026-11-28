@@ -71,7 +71,7 @@ func TestOpenDSRsComeBackSoonestDeadlineFirst(t *testing.T) {
 // as far as the queue's own admin gate and no further.
 func TestTheLaneReadIsRefusedForANonAdmin(t *testing.T) {
 	e := setupDSR(t)
-	rep := principal.WithWorkspaceID(context.Background(), e.ws)
+	rep := context.Background()
 	rep = principal.WithCorrelationID(rep, ids.NewV7())
 	rep = principal.WithActor(rep, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),

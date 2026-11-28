@@ -132,7 +132,7 @@ func registeredRbacDefaults() []RbacDefault {
 // FillRbacDefaults writes each registered default into the system role that has
 // no entry for the object. Each write gets one audit row, and the count of
 // writes is returned. A second boot finds every entry present and writes
-// nothing. The caller binds the workspace and a system actor.
+// nothing. The caller binds a system actor.
 //
 // It takes the lock every authorization write takes, so it cannot interleave
 // with an admin editing the document, and two booting processes cannot both write.

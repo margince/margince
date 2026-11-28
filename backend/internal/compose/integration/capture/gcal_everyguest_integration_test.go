@@ -119,7 +119,7 @@ func connectFeedWith(
 	}
 	return func() {
 		t.Helper()
-		if err := env.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), env.e.WS), connID); err != nil {
+		if err := env.registry.SyncOnce(context.Background(), connID); err != nil {
 			t.Fatalf("SyncOnce: %v", err)
 		}
 	}
@@ -496,7 +496,7 @@ func importerCtx(e *integration.SearchEnv) context.Context {
 }
 
 func importerCtxFor(e *integration.SearchEnv, seat ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, OnBehalfOf: seat, SeatType: principal.SeatFull,
@@ -530,7 +530,7 @@ func guestReaderCtx(e *integration.SearchEnv, seat ids.UUID, readsContacts bool)
 	if readsContacts {
 		objects["contact"] = principal.ObjectGrant{Read: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, OnBehalfOf: seat,

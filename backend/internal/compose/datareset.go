@@ -99,10 +99,11 @@ const resetFinishTimeout = 2 * time.Minute
 // confirmation, then hand the rest to runQuiesced, which does the work with the
 // job fleet held down.
 func (h dataResetHandlers) run(ctx context.Context, confirmation string) (resetCounts, error) {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return resetCounts{}, database.ErrNoWorkspace
+	company, err := database.ProvenWorkspace(ctx, h.pool)
+	if err != nil {
+		return resetCounts{}, err
 	}
+	wsID := company.UUID
 	// Read BEFORE anything is paused or purged: a typo must cost the
 	// installation nothing, and quiescing the job fleet is not nothing. The
 	// sweep re-checks inside its own transaction — one row read that closes
@@ -297,7 +298,7 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// Re-seed under a system principal + a fresh correlation id, exactly as
 		// bootstrap does (identity/installation.go), so the seeders' own
 		// audit+outbox writes trace to one originating operation.
-		seedCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, wsID), "system")
+		seedCtx := principal.SystemActing(ctx, "system")
 		// The reset's own discard list, reported here rather than dropped. It
 		// is not empty on this path. ai.Routing survives a data reset, so
 		// ResetConfig spares its row, and ON CONFLICT refuses the re-seed. That

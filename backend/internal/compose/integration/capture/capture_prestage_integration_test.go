@@ -139,7 +139,7 @@ func TestFilesStoredForACaptureItsAuthorityRefusesAreDeleted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, _, err := registry.RunBackfillStep(principal.WithWorkspaceID(context.Background(), e.WS), run.ID); err == nil {
+	if _, _, _, err := registry.RunBackfillStep(context.Background(), run.ID); err == nil {
 		t.Fatal("the page captured under a role that may not capture")
 	}
 	if n := countRows(t, e, `SELECT count(*) FROM activity WHERE source_id = '`+second+`'`); n != 0 {

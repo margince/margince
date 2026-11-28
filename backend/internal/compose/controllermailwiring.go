@@ -17,17 +17,17 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ControllerRelayFor adapts an operator relay to the dispatcher's controller
@@ -131,15 +131,18 @@ func (r mailerRelay) SendControllerMail(ctx context.Context, msg comms.Controlle
 // vault entry is workspace-scoped and the store that writes one runs inside a
 // request whose workspace is already established. A call with none is a
 // programming fault, not a tenancy question, so it fails rather than guessing.
-type confirmLinkVault struct{ v keyvault.Vault }
+type confirmLinkVault struct {
+	v    keyvault.Vault
+	pool *pgxpool.Pool
+}
 
 // Put seals the plaintext link and returns the reference the delivery carries.
 func (c confirmLinkVault) Put(ctx context.Context, secret string) (string, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return "", errNoWorkspaceForConfirmLink
+	company, err := database.ProvenWorkspace(ctx, c.pool)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", errNoWorkspaceForConfirmLink, err)
 	}
-	ref, err := c.v.Put(ctx, ids.From[ids.WorkspaceKind](ws), []byte(secret))
+	ref, err := c.v.Put(ctx, company, []byte(secret))
 	if err != nil {
 		return "", err
 	}
@@ -152,15 +155,18 @@ func (c confirmLinkVault) Put(ctx context.Context, secret string) (string, error
 // inside a job whose workspace is already bound, and a vault entry is scoped to
 // it. Taking one at construction would let a worker built for one installation
 // read another's material, which is the one mistake this type must not make.
-type controllerPayloads struct{ v keyvault.Vault }
+type controllerPayloads struct {
+	v    keyvault.Vault
+	pool *pgxpool.Pool
+}
 
 // Get returns the plaintext link for one delivery.
 func (c controllerPayloads) Get(ctx context.Context, ref string) (string, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return "", errNoWorkspaceForConfirmLink
+	company, err := database.ProvenWorkspace(ctx, c.pool)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", errNoWorkspaceForConfirmLink, err)
 	}
-	secret, err := c.v.Get(ctx, ids.From[ids.WorkspaceKind](ws), keyvault.Ref(ref))
+	secret, err := c.v.Get(ctx, company, keyvault.Ref(ref))
 	if err != nil {
 		return "", err
 	}
@@ -169,11 +175,11 @@ func (c controllerPayloads) Get(ctx context.Context, ref string) (string, error)
 
 // Delete destroys the material once the message can no longer be sent.
 func (c controllerPayloads) Delete(ctx context.Context, ref string) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errNoWorkspaceForConfirmLink
+	company, err := database.ProvenWorkspace(ctx, c.pool)
+	if err != nil {
+		return fmt.Errorf("%w: %w", errNoWorkspaceForConfirmLink, err)
 	}
-	return c.v.Delete(ctx, ids.From[ids.WorkspaceKind](ws), keyvault.Ref(ref))
+	return c.v.Delete(ctx, company, keyvault.Ref(ref))
 }
 
 // rewireConfirmationLane rebuilds the lane from whatever parts have arrived.
@@ -187,7 +193,7 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 		return
 	}
 	queue := NewControllerMailQueue(pool, s.confirmRunner, s.controllerRelay.SenderAddress())
-	s.consentHandlers = s.WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase)
+	s.consentHandlers = s.WithConfirmationLane(queue, confirmLinkVault{v: s.vault, pool: pool}, s.confirmLinkBase)
 	// The session probe answers whether a caller may ask for a confirmation,
 	// and it is this branch that decides whether the lane exists at all. The
 	// early return above leaves the capability false, which is the answer an
@@ -196,7 +202,7 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 	laneStore := consent.NewStore(InstallationDB(pool)).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
 		WithInstallationZone(identity.ZoneAppliedTx).
-		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase).
+		WithConfirmationLane(queue, confirmLinkVault{v: s.vault, pool: pool}, s.confirmLinkBase).
 		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)})
 	s.siteLeadNotices.store.Store(laneStore)
 	// The booking form's marketing tick mails its confirmation link through

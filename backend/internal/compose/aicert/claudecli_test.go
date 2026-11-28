@@ -234,7 +234,7 @@ func TestTheJudgeRouterTracesTheCLIsServedModel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("a claude_cli judge router could not be built: %v", err)
 	}
-	if _, _, err := router.Complete(wsContext(t), ai.TaskCertJudge, judgeRequest()); err != nil {
+	if _, _, err := router.Complete(t.Context(), ai.TaskCertJudge, judgeRequest()); err != nil {
 		t.Fatal(err)
 	}
 	term, ok := rec.lastTerminal()
@@ -253,14 +253,14 @@ func TestThePreflightProbesTheCLIJudge(t *testing.T) {
 	}
 	withCredential(t)
 	record := stubClaude(t, printing(cliSuccess, "0"))
-	if _, err := preflight(wsContext(t), cfg, []ai.Task{ai.TaskSummarize}, nil, quietLogger()); err != nil {
+	if _, err := preflight(t.Context(), cfg, []ai.Task{ai.TaskSummarize}, nil, quietLogger()); err != nil {
 		t.Fatalf("a servable CLI judge failed its pre-flight: %v", err)
 	}
 	if !strings.Contains(recorded(t, record, "stdin"), preflightPrompt) {
 		t.Error("the pre-flight never reached the CLI")
 	}
 	t.Setenv("CLAUDE_CODE_OAUTH_TOKEN", "")
-	_, err := preflight(wsContext(t), cfg, []ai.Task{ai.TaskSummarize}, nil, quietLogger())
+	_, err := preflight(t.Context(), cfg, []ai.Task{ai.TaskSummarize}, nil, quietLogger())
 	if err == nil || !strings.Contains(err.Error(), "judge") || !strings.Contains(err.Error(), "CLAUDE_CODE_OAUTH_TOKEN") {
 		t.Fatalf("err = %v, want the judge's pre-flight to name the missing credential", err)
 	}
@@ -337,7 +337,7 @@ func TestARecordNamesTheJudgesTransport(t *testing.T) {
 	withCredential(t)
 	stubClaude(t, printing(cliSuccess, "0"))
 	candidateFake := ai.NewFakeClient().Script("the widget is blue", "the widget is blue", "the widget is blue")
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		ai.ProviderConfig{Provider: providerClaudeCLI, Model: "sonnet"}, ai.ProfileCloudFrontier, 3, quietLogger(),
 		&certifyHooks{candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)}})

@@ -26,7 +26,7 @@ func (e *dedupeEnv) asNonHuman(kind principal.PrincipalType) context.Context {
 	if !ok {
 		panic("the rep context carries no actor")
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: kind, ID: string(kind) + ":" + e.rep.String(), Permissions: human.Permissions,

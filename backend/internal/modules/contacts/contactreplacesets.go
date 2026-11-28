@@ -93,15 +93,19 @@ func replaceContactSets(ctx context.Context, tx pgx.Tx, id ids.ContactID, in Upd
 	if err != nil {
 		return err
 	}
+	wsID, err := workspaceID(ctx, tx)
+	if err != nil {
+		return err
+	}
 	if in.Social != nil {
-		if err := writeContactSocial(ctx, tx, workspaceID(ctx), id, in.Social, in.converting); err != nil {
+		if err := writeContactSocial(ctx, tx, wsID, id, in.Social, in.converting); err != nil {
 			return err
 		}
 	}
 	if in.Emails == nil && in.Phones == nil {
 		return nil
 	}
-	if err := replaceContactEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails, in.converting); err != nil {
+	if err := replaceContactEmails(ctx, tx, wsID, id, in.Source, by, in.Emails, in.converting); err != nil {
 		return err
 	}
 	return replaceContactPhones(ctx, tx, id, in.Source, by, in.Phones)

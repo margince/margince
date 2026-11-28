@@ -32,19 +32,18 @@ type stubAuthority struct {
 	reads     int
 }
 
-func (s *stubAuthority) EffectiveRBAC(ctx context.Context, ws, human ids.UUID) (authz.RBAC, error) {
+func (s *stubAuthority) EffectiveRBAC(ctx context.Context, human ids.UUID) (authz.RBAC, error) {
 	s.reads++
 	return s.rbac, s.err
 }
 
-func (s *stubAuthority) SeatType(ctx context.Context, ws, human ids.UUID) (principal.SeatType, error) {
+func (s *stubAuthority) SeatType(ctx context.Context, human ids.UUID) (principal.SeatType, error) {
 	s.reads++
 	return s.seat, s.err
 }
 
 var (
-	testWorkspace = ids.NewV7()
-	testHuman     = ids.NewV7()
+	testHuman = ids.NewV7()
 )
 
 func fullSeatGate() *Gate { return NewGate(&stubAuthority{seat: principal.SeatFull}) }
@@ -58,7 +57,7 @@ func agentCtx(scopes ...principal.Scope) context.Context {
 // and the two are different subjects, so a case about revocation has to say
 // which one it is driving.
 func agentCtxWithPassport(passport ids.UUID, scopes ...principal.Scope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test",
 		OnBehalfOf: testHuman, PassportID: passport,
@@ -186,7 +185,7 @@ func TestSeatIsReDerivedLiveAtAdmission(t *testing.T) {
 	// sentinel BEFORE the tier is consulted and never staged (no
 	// approval lifts a licensing ceiling, A62/ADR-0047).
 	gate := NewGate(&stubAuthority{seat: principal.SeatRead})
-	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test",
 		OnBehalfOf: testHuman, SeatType: principal.SeatFull,
@@ -261,7 +260,7 @@ func TestUncomposedGateFailsClosedForAgents(t *testing.T) {
 func TestAgentWithoutGrantingHumanIsDenied(t *testing.T) {
 	// OnBehalfOf is the authority key; an agent principal without one (or
 	// outside any workspace) has no derivable authority.
-	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test",
 		Scopes: principal.NewScopeSet(principal.ScopeWrite),
@@ -282,7 +281,7 @@ func TestNoPrincipalIsRefused(t *testing.T) {
 // AdmittedAuthority is the one read the gate makes. passportGone is what a
 // revoked, expired or re-granted credential answers with — the seam's own
 // contract — so the gate's behaviour on it can be driven without a database.
-func (s *stubAuthority) AdmittedAuthority(_ context.Context, _, _, passport ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func (s *stubAuthority) AdmittedAuthority(_ context.Context, _, passport ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	s.reads++
 	s.passports = append(s.passports, passport)
 	if s.passportGone {

@@ -87,7 +87,7 @@ func (e *recencyEnv) exec(t *testing.T, sql string, args ...any) {
 }
 
 func (e *recencyEnv) as() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

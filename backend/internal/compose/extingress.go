@@ -204,10 +204,6 @@ func (r *callRuntime) ingressAuthority(ctx context.Context, on extension.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("%w: the member id is not a canonical UUID", extension.ErrInvalid)
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errExtensionRuntimeUnwired
-	}
 	consented, err := extensionMemberConsented(ctx, r.deps.pool, r.unit, member)
 	if err != nil {
 		return nil, r.ingressRefusal(ctx, err)
@@ -218,7 +214,7 @@ func (r *callRuntime) ingressAuthority(ctx context.Context, on extension.UserID)
 		// unit to act for them.
 		return nil, fmt.Errorf("%w: that member has deposited no credential with this unit", extension.ErrForbidden)
 	}
-	acting, err := liveMemberPrincipal(ctx, r.deps.pool, ws, member)
+	acting, err := liveMemberPrincipal(ctx, r.deps.pool, member)
 	if err != nil {
 		return nil, r.ingressRefusal(ctx, err)
 	}

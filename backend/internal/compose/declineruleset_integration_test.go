@@ -33,12 +33,12 @@ const retiredPrompt = "prompts-retired"
 // classifyPassFor is the classify sweep and the context it runs under.
 func classifyPassFor(e *integration.Env, brain completer) (*CaptureClassifier, context.Context) {
 	return NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler)),
-		principal.WithWorkspaceID(context.Background(), e.WS)
+		context.Background()
 }
 
 // owedSweepContext is the principal judgeWorkspace hands the owed pass.
 func owedSweepContext(e *integration.Env) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: activities.OwedVerdictCapturedBy,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},

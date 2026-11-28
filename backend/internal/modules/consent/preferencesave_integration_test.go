@@ -35,7 +35,7 @@ func preferenceSave(t *testing.T, e *channelConsentEnv, token, body string) *htt
 	// this edge, so there is no user behind it. Built here rather than by
 	// calling the middleware, which lives in compose and cannot be imported by
 	// a module test.
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem,

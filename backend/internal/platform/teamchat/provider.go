@@ -11,8 +11,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The team services share one selection across personal and bot credentials.
@@ -112,8 +112,8 @@ func Providers(ctx context.Context, tx pgx.Tx) ([]string, error) {
 
 // Lock coordinates administrative selection with both credential writers.
 func Lock(ctx context.Context, tx pgx.Tx) error {
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
+	workspace, err := database.WorkspaceTx(ctx, tx)
+	if err != nil {
 		return apperrors.ErrPermissionDenied
 	}
 	if _, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock(hashtextextended(@key,0))", pgx.StrictNamedArgs{"key": "team-chat-provider:" + workspace.String()}); err != nil {

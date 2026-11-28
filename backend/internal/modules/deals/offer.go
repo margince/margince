@@ -108,8 +108,10 @@ func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOff
 // the offer and its lines, derives the totals, and runs the write shape. All
 // of it runs inside the caller's transaction, for the issuing entity and its tax basis.
 func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput, entity ids.LegalEntityID, basis lazyTaxBasis, by string) (crmcontracts.Offer, error) {
-	wsID := storekit.MustWorkspace(ctx)
-	var err error
+	wsID, err := storekit.Workspace(ctx, tx)
+	if err != nil {
+		return crmcontracts.Offer{}, err
+	}
 	in, err = admitOfferCreation(ctx, tx, dealID, in)
 	if err != nil {
 		return crmcontracts.Offer{}, err

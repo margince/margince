@@ -64,7 +64,7 @@ func (m mailbox) capture(t *testing.T, raw []byte) ids.UUID {
 	if err != nil {
 		t.Fatalf("parsing the mail: %v", err)
 	}
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), m.e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: m.owner, OnBehalfOf: m.owner,
 		Permissions: principal.Permissions{

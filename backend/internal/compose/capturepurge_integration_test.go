@@ -144,7 +144,7 @@ func TestAPurgeSkipsARestrictedMessageAndSaysSo(t *testing.T) {
 // purgeCtx is a seat asking for its own purge: a human principal, which is the
 // authority the whole path turns on.
 func purgeCtx(e *integration.Env, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

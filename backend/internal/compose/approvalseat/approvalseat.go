@@ -24,7 +24,7 @@ import (
 // Context binds one seat's current stored authority. live is false for a seat
 // that is gone, which is a race and not a fault.
 func Context(ctx context.Context, ident *identity.Service, wsID, seat ids.UUID) (context.Context, bool, error) {
-	member, err := authz.MemberPrincipal(ctx, ident, wsID, seat)
+	member, err := authz.MemberPrincipal(ctx, ident, seat)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, nil
 	}

@@ -24,8 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/webread"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -118,11 +116,6 @@ func RunSiteReadDebug(ctx context.Context, opts SiteReadDebugOptions) (SiteReadD
 func siteReadDebugRun(ctx context.Context, opts SiteReadDebugOptions, crawler *siteCrawler, pageFetch PageFetcher, logoFetch assetFetcher) (SiteReadDebugReport, error) {
 	if opts.Brain == nil {
 		return SiteReadDebugReport{}, errors.New("siteread debug: no brain configured")
-	}
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		// The router meters per workspace; a DB-less run has none, so it
-		// gets a synthetic one for the life of the process.
-		ctx = principal.WithWorkspaceID(ctx, ids.NewV7())
 	}
 	caps := opts.Caps.withDefaults()
 	log := &callLog{}

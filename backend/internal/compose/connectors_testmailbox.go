@@ -59,8 +59,7 @@ func (h connectorHandlers) dispatchTestMailboxConnect(w http.ResponseWriter, r *
 // re-connect lifecycle already handles generically.
 func (h connectorHandlers) connectTestMailbox(w http.ResponseWriter, r *http.Request) {
 	actor, ok := principal.Actor(r.Context())
-	_, hasWS := principal.WorkspaceID(r.Context())
-	if !ok || actor.Type != principal.PrincipalHuman || !hasWS {
+	if !ok || actor.Type != principal.PrincipalHuman {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnauthorized,
 			Code:   codeUnauthorized,

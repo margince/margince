@@ -27,7 +27,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -130,7 +129,7 @@ func TestCheckInCadenceFiresOncePerQuietSpell(t *testing.T) {
 	h := checkInCadence{ex: Executors{Provider: provider, Claims: NewEffectClaims(db)}}
 	instanceID := fx.seedAutomation(t, checkInCadenceName)
 	entity := datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()}
-	runCtx := principal.WithWorkspaceID(context.Background(), fx.ws)
+	runCtx := context.Background()
 	now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
 
 	anchor := now.AddDate(0, 0, -defaultCheckInDays-1) // stale under the default cadence
@@ -203,7 +202,7 @@ func TestRenewalReminderScanIsANoOpWhenUnconfigured(t *testing.T) {
 	dateScan := &fakeDateFieldScan{}
 	scanner := NewTimeScannerWithClock(engine, &fakeActivityScan{}, dateScan, func() time.Time { return now }, log)
 
-	ctx := principal.WithWorkspaceID(context.Background(), fx.ws)
+	ctx := context.Background()
 	if err := scanner.ScanWorkspace(ctx, fx.ws); err != nil {
 		t.Fatalf("ScanWorkspace: %v", err)
 	}

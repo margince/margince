@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // replaceTestTelegramBot runs the REAL ReplaceToken (a supported admin operation)
@@ -51,7 +50,7 @@ func replaceTestTelegramBot(t *testing.T, e *integration.Env, vault keyvault.Vau
 // resolution would rewrite.
 func telegramActivityKeys(t *testing.T, e *integration.Env) (sourceID, threadKey string) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT source_id, thread_key FROM activity WHERE source_system = 'telegram'`).Scan(&sourceID, &threadKey)

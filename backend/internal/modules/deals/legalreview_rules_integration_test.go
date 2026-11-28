@@ -160,7 +160,7 @@ func TestSwitchingLegalReviewOffAndOnAgain(t *testing.T) {
 func TestOnlyAnAdminSwitchesLegalReview(t *testing.T) {
 	e := setupReviewEnv(t)
 	store := configtest.StoredOver(t, e.pool, ConfigSettings())
-	ops := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
+	ops := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"ops"}, RowScope: principal.RowScopeAll,
@@ -316,7 +316,7 @@ func TestThePackShowsAReviewerOnlyWhatTheyMayRead(t *testing.T) {
 			got.Packet.Deal.CompanyName, got.Packet.Deal.AmountMinor, err)
 	}
 
-	narrow := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
+	narrow := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.reviewer.String(), UserID: e.reviewer,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"legal"}, RowScope: principal.RowScopeOwn,
@@ -358,7 +358,7 @@ func TestThePackShowsTheOfferOnlyToAnOfferReaderAndItsMoneyUnderTheMask(t *testi
 	if err != nil || got.Packet.Offer != nil {
 		t.Fatalf("a reviewer without offer.read saw offer %v (%v)", got.Packet.Offer, err)
 	}
-	masked := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
+	masked := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.reviewer.String(), UserID: e.reviewer,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"legal"}, RowScope: principal.RowScopeOwn,
@@ -399,7 +399,7 @@ func TestALostDealReopenedPastTheGateNeedsLegal(t *testing.T) {
 func TestTheSystemPrincipalIsHeldByTheGate(t *testing.T) {
 	e := setupReviewEnv(t)
 	dealID, _, toID := gatedDeal(t, e)
-	system := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws),
+	system := principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:legal-review-test"})
 	_, err := e.store.AdvanceDeal(system, dealID, AdvanceDealInput{ToStageID: toID})
 	refusedFor(t, err, "")
@@ -428,7 +428,7 @@ func TestTheQueueDoesNotSortOrPageByAMaskedValue(t *testing.T) {
 	e.request(t, queueDeal(t, e, stageID, "big later"+tag, new(int64(900_00)), &later), nil)
 	e.request(t, queueDeal(t, e, stageID, "small soon"+tag, new(int64(100_00)), &soon), nil)
 
-	masked := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
+	masked := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.reviewer.String(), UserID: e.reviewer,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"legal"}, RowScope: principal.RowScopeOwn,

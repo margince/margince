@@ -31,7 +31,7 @@ import (
 
 // replayCtx binds the workspace and the system principal the pass runs under.
 func replayCtx(e *integration.Env) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:participant_backfill",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},

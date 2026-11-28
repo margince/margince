@@ -23,7 +23,7 @@ func TestMemberSearchTreatsUnderscoreAsTypedText(t *testing.T) {
 		if err != nil {
 			t.Fatalf("inviting %s: %v", in.Email, err)
 		}
-		reset := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws.UUID), ids.NewV7())
+		reset := principal.WithCorrelationID(context.Background(), ids.NewV7())
 		if err := e.svc.RedeemPasswordReset(reset, rawToken, "a rep password!"); err != nil {
 			t.Fatalf("redeeming the invite for %s: %v", in.Email, err)
 		}
@@ -51,7 +51,7 @@ func TestMemberSearchFoldsDiacriticsAndOffersInvitedSeatsWhenAsked(t *testing.T)
 	if err != nil {
 		t.Fatalf("inviting %s: %v", active.Email, err)
 	}
-	reset := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws.UUID), ids.NewV7())
+	reset := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	if err := e.svc.RedeemPasswordReset(reset, rawToken, "a rep password!"); err != nil {
 		t.Fatalf("redeeming the invite for %s: %v", active.Email, err)
 	}

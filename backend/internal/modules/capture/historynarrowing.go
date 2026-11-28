@@ -76,7 +76,11 @@ func narrowingTrailTx(ctx context.Context, tx pgx.Tx, connection ids.UUID, share
 	if err != nil {
 		return fmt.Errorf("capture: auditing the history narrowing of %s: %w", connection, err)
 	}
-	return storekit.EmitEvent(ctx, tx, auditID, storekit.MustWorkspace(ctx),
+	installation, err := storekit.Workspace(ctx, tx)
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, installation,
 		crmcontracts.InternalEventCaptureSettingsUpdated{ChangedKeys: []string{historyNarrowingKey}})
 }
 

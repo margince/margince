@@ -163,7 +163,7 @@ func TestCapturedPartiesRecoveryRechecksTheCapturingSeatsCurrentAuthority(t *tes
 	activatePartySeat(t, e, e.AdminUser)
 	capturePartiesMailUsing(t, e, newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil), partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <bob@buyer.test>", "", "Could we discuss the product requirements?")
 	e.GrantRole(t, e.Rep1, "admin")
-	rbac, seat, err := service.EffectiveAuthority(e.Admin(), e.WS, e.Rep1)
+	rbac, seat, err := service.EffectiveAuthority(e.Admin(), e.Rep1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,11 +293,11 @@ func TestCapturedPartiesCannotUseAnArchivedSendAsAdmissionProof(t *testing.T) {
 func partyOwnerContext(t *testing.T, e *integration.Env) context.Context {
 	t.Helper()
 	authority := identity.NewService(e.Pool)
-	rbac, err := authority.EffectiveRBAC(e.Admin(), e.WS, e.AdminUser)
+	rbac, err := authority.EffectiveRBAC(e.Admin(), e.AdminUser)
 	if err != nil {
 		t.Fatal(err)
 	}
-	seat, err := authority.SeatType(e.Admin(), e.WS, e.AdminUser)
+	seat, err := authority.SeatType(e.Admin(), e.AdminUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,7 +311,7 @@ func activatePartySeat(t *testing.T, e *integration.Env, user ids.UUID) {
 		if err := tx.QueryRow(e.Admin(), `SELECT email FROM app_user WHERE id=$1`, user).Scan(&email); err != nil {
 			return err
 		}
-		return identity.OperatorResetPassword(e.Admin(), tx, ids.From[ids.WorkspaceKind](e.WS), email, "temporary test phrase")
+		return identity.OperatorResetPassword(e.Admin(), tx, email, "temporary test phrase")
 	}); err != nil {
 		t.Fatal(err)
 	}

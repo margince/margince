@@ -162,7 +162,7 @@ func (a approvalNotifyEnv) grantRole(t *testing.T, user ids.UUID) {
 // the seat the row is staged FOR, which is what the self-only narrowing reads;
 // the zero value stages a proposal that belongs to the shared inbox.
 func (a approvalNotifyEnv) proposerCtx(onBehalfOf ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), a.e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:test-proposer", OnBehalfOf: onBehalfOf,
@@ -220,7 +220,7 @@ func (a approvalNotifyEnv) deliver(t *testing.T, env kevents.Envelope) {
 // read runs one workspace-bound read over the fixture's own tables.
 func (a approvalNotifyEnv) read(t *testing.T, fn func(context.Context, pgx.Tx) error) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), a.e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, a.e.Pool, func(tx pgx.Tx) error {
 		return fn(ctx, tx)
 	}); err != nil {

@@ -295,7 +295,7 @@ func TestTheHookLeavesAContactAColleagueOwns(t *testing.T) {
 		t.Fatalf("seeding the colleague's contact: %v", err)
 	}
 	hook := ownaddress.Retire(contacts.NewStore(e.DB()), slog.Default())
-	system := principal.SystemActing(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7()), "system:test")
+	system := principal.SystemActing(principal.WithCorrelationID(context.Background(), ids.NewV7()), "system:test")
 	run := func(address string) {
 		err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 			return hook(system, tx, capturemod.ClaimedAddress{ID: ids.NewV7(), User: e.Rep1, Address: address, Proven: true})

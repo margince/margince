@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -110,10 +109,11 @@ func (r *Registry) ConnectShared(ctx context.Context, in SharedConnect) (ids.UUI
 // vaultWorkspace is the workspace a credential is sealed under, once a vault
 // is configured to seal it.
 func (r *Registry) vaultWorkspace(ctx context.Context) (ids.UUID, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ids.Nil, errors.New("capture: a shared mailbox connect outside workspace context")
+	company, err := r.db.Workspace(ctx)
+	if err != nil {
+		return ids.Nil, err
 	}
+	ws := company.UUID
 	if r.vault == nil {
 		return ids.Nil, errors.New("capture: no keyvault configured, so a mailbox credential cannot be sealed")
 	}

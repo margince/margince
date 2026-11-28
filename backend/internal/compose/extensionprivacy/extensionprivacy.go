@@ -122,7 +122,7 @@ func record(ctx context.Context, tx pgx.Tx, installation string, e extension.Ext
 type Ledger struct {
 	Scope        func(context.Context) (context.Context, bool, error)
 	Lock         string
-	Installation func(context.Context) string
+	Installation func(context.Context, pgx.Tx) (string, error)
 }
 
 // Verify checks each unit's declaration against its migrated schema, then
@@ -140,6 +140,10 @@ func Verify(ctx context.Context, pool *pgxpool.Pool, exts []extension.Extension,
 		if _, err := tx.Exec(ctx, ledger.Lock, "extension-privacy"); err != nil {
 			return fmt.Errorf("compose: serializing the privacy observation: %w", err)
 		}
-		return recordAll(ctx, tx, ledger.Installation(ctx), exts)
+		installation, err := ledger.Installation(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return recordAll(ctx, tx, installation, exts)
 	})
 }

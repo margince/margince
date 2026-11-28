@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -19,7 +18,7 @@ import (
 // no user gets the answer.
 func TestTheMailReadNeedsItsDeclarationAndAnUnattendedCall(t *testing.T) {
 	deal := ids.NewV7().String()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	binding := extensionRuntimeBinding{pool: &pgxpool.Pool{}}
 
 	composeReader(t, extension.SystemReadDeals)

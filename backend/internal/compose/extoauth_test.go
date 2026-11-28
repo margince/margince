@@ -425,9 +425,8 @@ func TestACallbackThatFailsBeforeTheExchangeLandsOnTheUnitsScreen(t *testing.T) 
 func TestACaptureStateDoesNotCompleteAUnitAppsFlow(t *testing.T) {
 	f := newExtFlow(t, &vendor{exchange: `{"refresh_token":"r1"}`}, nil)
 	state := f.h.signer.sign(connectState{
-		Workspace: ids.MustParse("11111111-1111-1111-1111-111111111111"),
-		User:      ids.MustParse("22222222-2222-2222-2222-222222222222"),
-		Provider:  "books", Nonce: "n", Version: stateVersionNamespacedCSRF,
+		User:     ids.MustParse("22222222-2222-2222-2222-222222222222"),
+		Provider: "books", Nonce: "n", Version: stateVersionNamespacedCSRF,
 	}, clocktest.Now(t).Add(connectStateTTL))
 	cookie := &http.Cookie{Name: csrfCookieName("books"), Value: "n"}
 	if got := f.callback(t, url.Values{"code": {"c"}, "state": {state}}, cookie); got != landing(outcomeError) {

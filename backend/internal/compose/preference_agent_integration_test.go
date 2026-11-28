@@ -72,7 +72,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 	// app_user identity cannot stage at all, because sending is a human act).
 	// A seatless agent could never have staged in production; it only reached
 	// delivery here while a double stood in for the machinery that asks.
-	agentCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	agentCtx := context.Background()
 	agentCtx = principal.WithCorrelationID(agentCtx, ids.NewV7())
 	agentCtx = principal.WithActor(agentCtx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:optout-probe", UserID: e.Rep1,
@@ -100,7 +100,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 
 	// The buyer one-click unsubscribes through the PUBLIC preference surface,
 	// exactly as the anonymous middleware binds it (system principal).
-	publicCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	publicCtx := context.Background()
 	publicCtx = principal.WithCorrelationID(publicCtx, ids.NewV7())
 	publicCtx = principal.WithActor(publicCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:public_preferences",

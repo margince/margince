@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -68,7 +67,7 @@ func TestAnUnreadMedicalDocumentKeepsItsPersonalClassification(t *testing.T) {
 			}
 			brain := &medicalDocumentBrain{kind: kind}
 			engine := compose.NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
-			if err := engine.RunWorkspace(principal.WithWorkspaceID(t.Context(), e.WS), 0); err != nil {
+			if err := engine.RunWorkspace(t.Context(), 0); err != nil {
 				t.Fatal(err)
 			}
 			var status, storedKind string

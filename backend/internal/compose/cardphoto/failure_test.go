@@ -46,7 +46,7 @@ func importCardPhotoThrough(t *testing.T, lane ai.ImageLane) *httptest.ResponseR
 		t.Fatal(err)
 	}
 	member := ids.NewV7()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + member.String(), UserID: member,
 		Permissions: principal.Permissions{

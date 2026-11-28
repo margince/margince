@@ -53,7 +53,6 @@ type env struct {
 }
 
 func human(ctx context.Context, ws, user ids.UUID, grant principal.ObjectGrant) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
@@ -124,7 +123,7 @@ func setup(t *testing.T) *env {
 	})
 	e.admin = human(ctx, e.ws, adminID, principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true})
 	e.rep = human(ctx, e.ws, repID, principal.ObjectGrant{Read: true})
-	e.anon = principal.WithWorkspaceID(ctx, e.ws)
+	e.anon = ctx
 	return e
 }
 

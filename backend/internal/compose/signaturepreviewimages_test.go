@@ -147,24 +147,23 @@ func TestTheEmbeddedLogoAndMarkupWithoutImagesPassUnchanged(t *testing.T) {
 	}
 }
 
-// previewReaderIn is a context for one reader of one workspace.
-func previewReaderIn(workspace, reader ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), workspace)
+// previewReaderIn is a context for one reader.
+func previewReaderIn(reader ids.UUID) context.Context {
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, UserID: reader})
 }
 
-func TestACopyServesOnlyTheReaderAndWorkspaceThatFetchedIt(t *testing.T) {
+func TestACopyServesOnlyTheReaderThatFetchedIt(t *testing.T) {
 	t.Parallel()
 	assets := newFakeAssets(t)
 	images := newSignaturePreviewImages(assets, previewClock(t))
 	markup := `<img src="https://cdn.example/logo.png">`
-	workspace, other := ids.NewV7(), ids.NewV7()
 	reader, colleague := ids.NewV7(), ids.NewV7()
-	for _, ctx := range []context.Context{previewReaderIn(workspace, reader), previewReaderIn(workspace, colleague), previewReaderIn(other, reader), previewReaderIn(workspace, reader)} {
+	for _, ctx := range []context.Context{previewReaderIn(reader), previewReaderIn(colleague), previewReaderIn(reader)} {
 		images.Inline(ctx, markup)
 	}
-	if n := assets.fetches["https://cdn.example/logo.png"]; n != 3 {
-		t.Fatalf("fetched %d times, want one per reader and workspace", n)
+	if n := assets.fetches["https://cdn.example/logo.png"]; n != 2 {
+		t.Fatalf("fetched %d times, want one per reader", n)
 	}
 }
 

@@ -290,7 +290,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			gcalAPI:       gcal.NewAPI(nil, ""),
 			gdocsOAuth:    gdocsOAuth,
 			gdocsOwner:    gdocs.NewOwner(nil, ""),
-			signer:        newStateSigner([]byte(c.StateKey)),
+			signer:        newStateSigner([]byte(c.StateKey)).forInstallation(pool),
 			publicBaseURL: c.PublicBaseURL,
 			apiBaseURL:    c.APIBaseURL,
 			publicOrigin:  s.originStatus,

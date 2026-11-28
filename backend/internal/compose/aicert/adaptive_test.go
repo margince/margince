@@ -142,10 +142,10 @@ func TestAResumedRunReplaysTheSameExtensions(t *testing.T) {
 		return taskJournal{j: j, task: "summarize", candidate: "c", judge: "j"}
 	}
 	stamps := map[string]string{sc.Name: stamp}
-	if journalOf(defaultRepeats).replaysRounds(wsContext(t), testCensus(t), []Scenario{sc}, stamps, defaultRepeats) {
+	if journalOf(defaultRepeats).replaysRounds(t.Context(), testCensus(t), []Scenario{sc}, stamps, defaultRepeats) {
 		t.Fatal("a journal holding only the first round replayed a task whose first round asked for an extension")
 	}
-	if !journalOf(adaptiveMaxRuns).replaysRounds(wsContext(t), testCensus(t), []Scenario{sc}, stamps, defaultRepeats) {
+	if !journalOf(adaptiveMaxRuns).replaysRounds(t.Context(), testCensus(t), []Scenario{sc}, stamps, defaultRepeats) {
 		t.Fatal("a journal holding every extension did not replay them")
 	}
 }

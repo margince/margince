@@ -25,7 +25,7 @@ func TestAnExclusionKeepsAMessageOutBeforeAnythingIsStored(t *testing.T) {
 	e, sync := env.e, env.sync
 	store := capture.NewExclusionStore(e.DB())
 	owner := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead, principal.ScopeWrite})
-	admin := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	admin := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep3.String(), UserID: e.Rep3,
 		Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"capture_settings": {Read: true, Update: true}},
@@ -173,7 +173,7 @@ func TestAContainerRuleIsTheMailboxOwnersAlone(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	store := capture.NewExclusionStore(e.DB())
-	admin := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	admin := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep3.String(), UserID: e.Rep3,
 		Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"capture_settings": {Read: true, Update: true}},

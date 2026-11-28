@@ -19,7 +19,7 @@ const testAppIssuer = "https://chat.example.test"
 
 // appCtx is what the edge hands identity: the workspace and nobody acting yet.
 func (e *revocationEnv) appCtx() context.Context {
-	return principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws.UUID), ids.NewV7())
+	return principal.WithCorrelationID(context.Background(), ids.NewV7())
 }
 
 func (e *revocationEnv) appCaller(subject, email string) AppCaller {

@@ -33,7 +33,7 @@ func TestDurableHistoryWorkRecoversWithoutRetainingItsRiverJobs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
+	system := principal.SystemActing(context.Background(), "agent:enrich")
 	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error {
 		return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{ids.From[ids.ContactKind](ids.UUID(contact.Id))}, &run)
 	}); err != nil {
@@ -119,7 +119,7 @@ func TestTerminalReleaseAndPendingReadsStayBoundedAndSkipBusyContacts(t *testing
 		}
 		contactsIDs = append(contactsIDs, ids.From[ids.ContactKind](ids.UUID(contact.Id)))
 	}
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
+	system := principal.SystemActing(context.Background(), "agent:enrich")
 	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, contactsIDs, &run) }); err != nil {
 		t.Fatal(err)
 	}

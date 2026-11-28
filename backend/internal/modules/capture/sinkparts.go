@@ -30,7 +30,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -188,16 +187,13 @@ func (s *Sink) stageParts(ctx context.Context, rec connector.NormalizedRecord) (
 		return nil, nil
 	}
 	files := capturedFilesOf(rec.Parts)
-	// Proven, never assumed. Nothing downstream will fail on an unbound
-	// context: ADR-0091 §8 phase D took the tenant column off every core table,
-	// so no write here can bounce off a NOT NULL, and an object store never had
-	// such a column to fail on. An unbound context would put real attachment
-	// bytes under the zero workspace — outside any reader's reach and outside
-	// erasure's — and nothing but this check would say so.
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok || workspace == (ids.UUID{}) {
+	// Proven, never assumed. Nothing downstream fails while no company is live,
+	// because no core table carries a tenant column and an object store never had
+	// one. Attachment bytes would be stored under a company that does not exist,
+	// outside any reader's reach and erasure's. Only this check says so.
+	if _, err := s.db.Workspace(ctx); err != nil {
 		return nil, fmt.Errorf(
-			"a message's files cannot be stored without a bound workspace: %w",
+			"a message's files cannot be stored while the installation has no live company: %w",
 			apperrors.ErrPermissionDenied,
 		)
 	}

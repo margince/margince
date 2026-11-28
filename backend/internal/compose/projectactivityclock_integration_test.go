@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // logMeetingOnAll logs one meeting with status on the contact, deal and project.
@@ -96,7 +95,7 @@ func TestTheClockRepairReadsBoundedPagesToAWrongRecordFarBehind(t *testing.T) {
 	f.e.WsExec(t, `UPDATE contact SET last_activity_at = now() - interval '1 day' WHERE id = $1`, wrong)
 
 	step := ActivityClocksTask().Steps[0]
-	ctx := datatask.Acting(principal.WithWorkspaceID(context.Background(), f.e.WS), "core/1792846717_task_activity_clocks")
+	ctx := datatask.Acting(context.Background(), "core/1792846717_task_activity_clocks")
 	in, batches, changed := datatask.BatchIn{Limit: 5}, 0, 0
 	for {
 		var out datatask.BatchOut
@@ -123,7 +122,7 @@ func TestTheClockRepairReadsBoundedPagesToAWrongRecordFarBehind(t *testing.T) {
 		t.Errorf("the wrong clock reads %v (%v) after the repair, want none: the contact has no activity", stored, err)
 	}
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), f.e.WS)
+	wsCtx := context.Background()
 	var count int64
 	if err := database.WithTx(wsCtx, f.e.Pool, func(tx pgx.Tx) (err error) {
 		count, err = storekit.CountClockRecords(wsCtx, tx, storekit.ClockContacts, 3)

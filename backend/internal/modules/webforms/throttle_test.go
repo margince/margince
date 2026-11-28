@@ -12,9 +12,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type throttleClock struct{ t time.Time }
@@ -113,7 +110,7 @@ func TestOneSenderFloodingAFormIsBlockedItselfWhileAnotherSendersPostLands(t *te
 	if v := f.post(throttleWorkspace, throttleForm, address(2)); v.Refused {
 		t.Fatalf("another sender's post to the same form is refused: %+v", v)
 	}
-	if state := f.IntakeState(context.Background(), throttleForm); state.State != IntakeThrottled {
+	if state := f.IntakeState(throttleWorkspace, throttleForm); state.State != IntakeThrottled {
 		t.Fatalf("the form shows %+v, want throttled while one sender is refused", state)
 	}
 	f.clock.wait(14 * time.Minute)
@@ -159,8 +156,7 @@ func TestOneSenderNeverBlocksTheWorkspaceOrTheInstallation(t *testing.T) {
 	if _, blocked := f.workspace.BlockedUntil(throttleWorkspace); blocked {
 		t.Fatal("one sender blocked the workspace")
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
-	if state := f.IntakeState(ctx, formKey(0)); state.State == IntakePausedAll {
+	if state := f.IntakeState(throttleWorkspace, formKey(0)); state.State == IntakePausedAll {
 		t.Fatalf("one sender paused every form: %+v", state)
 	}
 	if v := f.post("ws-2", formKey(0), address(2)); v.Refused {
@@ -207,7 +203,7 @@ func TestManySendersTogetherBlockTheWorkspaceThenTheInstallation(t *testing.T) {
 			f.clock.minute()
 		}
 	}
-	state := f.IntakeState(principal.WithWorkspaceID(context.Background(), ids.NewV7()), "form-key-untouched01")
+	state := f.IntakeState(throttleWorkspace, "form-key-untouched01")
 	if state.State != IntakePausedAll || state.Until == nil || !state.Until.Equal(f.clock.t.Add(limits.Cooldown)) {
 		t.Fatalf("an untouched form shows %+v, want paused for all forms", state)
 	}
@@ -246,7 +242,7 @@ func TestPostsToAKeyThatNamesNoFormCountTowardNoFormWorkspaceOrInstallation(t *t
 func TestAQuietFormShowsNoIntakeState(t *testing.T) {
 	f := newThrottleFixture(t, DefaultThrottleLimits())
 	f.post(throttleWorkspace, throttleForm, address(1))
-	if state := f.IntakeState(context.Background(), throttleForm); state.State != "" {
+	if state := f.IntakeState(throttleWorkspace, throttleForm); state.State != "" {
 		t.Fatalf("a form under every limit shows %+v", state)
 	}
 }

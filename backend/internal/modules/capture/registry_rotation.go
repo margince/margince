@@ -15,7 +15,6 @@ package capture
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -24,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -63,10 +61,11 @@ func (s *rotationSink) Rotated(ctx context.Context, auth connector.Auth) error {
 		// vault-less deployment's every sync into a failure.
 		return nil
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("capture: rotating a credential outside workspace context")
+	company, err := s.registry.db.Workspace(ctx)
+	if err != nil {
+		return err
 	}
+	ws := company.UUID
 	wsID := ids.From[ids.WorkspaceKind](ws)
 
 	ref, err := s.registry.vault.Put(ctx, wsID, []byte(auth))

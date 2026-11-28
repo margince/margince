@@ -137,7 +137,7 @@ type commsSendWorker struct {
 // the product does not ship — which is exactly how a binding this path depends
 // on goes missing without any test noticing.
 func SendWorkerContext(ctx context.Context, workspaceID ids.UUID) context.Context {
-	return sendWorkerScope(principal.WithWorkspaceID(ctx, workspaceID))
+	return sendWorkerScope(ctx)
 }
 
 // sendWorkerScope is SendWorkerContext's provenance half, over a context whose
@@ -154,9 +154,7 @@ func (w *commsSendWorker) Work(ctx context.Context, job *river.Job[SendEmailArgs
 		return jobs.FaultContext(ctx, fmt.Errorf("comms_send_email: delivery id: %w", err))
 	}
 
-	wsCtx := ctx
-
-	outcome, wait, err := w.dispatcher.DispatchWithWait(sendWorkerScope(wsCtx), deliveryID)
+	outcome, wait, err := w.dispatcher.DispatchWithWait(sendWorkerScope(ctx), deliveryID)
 	switch outcome {
 	case comms.OutcomePostponed:
 		// A SNOOZE, never a returned error. River restores the attempt on a
@@ -279,7 +277,7 @@ func (r commsResolver) RecheckReply(ctx context.Context, userID ids.UserID, conn
 // to the one question comms asks. *identity.Service is the only implementation
 // the product ships.
 type seatResolver interface {
-	SeatType(ctx context.Context, workspaceID, humanID ids.UUID) (principal.SeatType, error)
+	SeatType(ctx context.Context, humanID ids.UUID) (principal.SeatType, error)
 }
 
 var _ seatResolver = (*identity.Service)(nil)
@@ -314,11 +312,7 @@ func NewSendSeatAuthority(pool *pgxpool.Pool) comms.SeatAuthority {
 }
 
 func (s commsSeats) ActiveSeat(ctx context.Context, userID ids.UserID) (bool, string, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return false, "", errors.New("comms: resolving a delivery's sender outside workspace context")
-	}
-	seat, err := s.authority.SeatType(ctx, ws, userID.UUID)
+	seat, err := s.authority.SeatType(ctx, userID.UUID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return false, "the sender's account is no longer active; a deactivated user's mailbox may not transmit staged messages", nil
 	}
@@ -357,7 +351,7 @@ func newSendDispatcher(pool *pgxpool.Pool, registry *capture.Registry, pace send
 	if registry != nil {
 		admitParties = registry.AdmitActivityParties
 	}
-	return controllerLaneOn(comms.NewDispatcher(
+	return controllerLaneOn(pool, comms.NewDispatcher(
 		NewMailDeliveryStore(pool, admitParties),
 		commsResolver{registry: registry, channels: registry},
 		NewSendSeatAuthority(pool),
@@ -388,11 +382,11 @@ func newSendDispatcher(pool *pgxpool.Pool, registry *capture.Registry, pace send
 // it picks up parks with a reason naming the missing relay. That is the honest
 // outcome: an unconfigured relay is a deployment fact, and retrying it forever
 // would leave a contact's confirmation link expiring in a queue nobody watches.
-func controllerLaneOn(d *comms.Dispatcher, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
+func controllerLaneOn(pool *pgxpool.Pool, d *comms.Dispatcher, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
 	if relay == nil || vault == nil {
 		return d
 	}
-	return d.WithControllerRelay(relay, controllerPayloads{v: vault})
+	return d.WithControllerRelay(relay, controllerPayloads{v: vault, pool: pool})
 }
 
 // commsFiles carries the send's attachment snapshot across the module boundary.

@@ -73,7 +73,7 @@ func TestCertifyTaskCertifiesWhenEveryRunPassesAndScoresHigh(t *testing.T) {
 	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, adaptiveMaxRuns)...)
 
 	sc := testScenario("basic", wideBands)
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 	})
@@ -107,7 +107,7 @@ func TestCertifyTaskSupportedDegradedOnPartialReliability(t *testing.T) {
 	judgeFake := ai.NewFakeClient().Script(slices.Repeat([]string{scoreJSON(70)}, 3*2)...)
 
 	sc := testScenario("basic", wideBands)
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		maxRuns:       3,
@@ -128,7 +128,7 @@ func TestCertifyTaskNotSupportedOnLowScores(t *testing.T) {
 	judgeFake := ai.NewFakeClient().Script(opinionsOf(10, 3)...)
 
 	sc := testScenario("basic", wideBands)
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		maxRuns:       3,
@@ -151,7 +151,7 @@ func TestCertifyTaskNotSupportedOnLowScores(t *testing.T) {
 // genuine soft-degrade, never a hard failure.
 func TestCertifyTaskDegradedCandidateAttemptYieldsNoRecord(t *testing.T) {
 	sc := testScenario("basic", wideBands)
-	_, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+	_, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithMonthlyBudget(1)},
 	})
 	if err == nil {
@@ -202,7 +202,7 @@ func TestCertifyTaskDegradedJudgeAttemptYieldsNoRecord(t *testing.T) {
 	candidateFake := ai.NewFakeClient().Script(candidateOutput)
 	judgeFake := ai.NewFakeClient().Script(scoreJSON(72), scoreJSON(60), scoreJSON(65))
 
-	_, err = certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
+	_, err = certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake), ai.WithMonthlyBudget(budget)},
 	})
@@ -222,7 +222,7 @@ func TestCertifyTaskJudgeRetriesOnceOnAParseFailureThenScores(t *testing.T) {
 	judgeFake := ai.NewFakeClient().Script("not valid json at all", scoreJSON(80), scoreJSON(80), scoreJSON(80))
 
 	sc := testScenario("basic", wideBands)
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		maxRuns:       1,
@@ -248,7 +248,7 @@ func TestCertifyTaskLeavesARunUngradedWhenEveryJudgeAttemptFailsToParse(t *testi
 		slices.Repeat([]string{"still not json"}, 3*maxJudgeOpinions), opinionsOf(90, adaptiveMaxRuns-2))...)
 
 	sc := testScenario("basic", wideBands)
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 	})
@@ -285,7 +285,7 @@ func TestCertifyTaskPassesTheRunsAScenarioSaysShouldAbstain(t *testing.T) {
 			sc := testScenario("abstains", wideBands)
 			sc.Expect.Outcome = tc.expectedOutcome
 
-			rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
+			rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
 				ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 					candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 					judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
@@ -316,7 +316,7 @@ func TestCertifyTaskIsNotSupportedWhenOneScenarioGradesBelowItsBands(t *testing.
 		testScenario("good", wideBands),
 		testScenario("bad", wideBands),
 	}
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, scenarios, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, scenarios, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		maxRuns:       3,
@@ -354,7 +354,7 @@ func TestCertifyTaskCertifiesAPoolWithTwoScatteredMisses(t *testing.T) {
 	// The extension round: cases 0 and 1, three more runs each, all passing.
 	answers = append(answers, slices.Repeat([]string{"the widget is blue"}, 2*adaptiveRound)...)
 	scores = append(scores, opinionsOf(90, scenarioCount*3+2*adaptiveRound)...)
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, scenarios, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, scenarios, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(answers...))},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(scores...))},
 	})
@@ -396,7 +396,7 @@ func TestCertifyTaskVoidsARecordWhenALaterRunIsServedByADifferentModel(t *testin
 	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 2)...)
 
 	sc := testScenario("basic", wideBands)
-	_, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 2, quietLogger(), &certifyHooks{
+	_, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 2, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 	})
@@ -422,7 +422,7 @@ func TestCertifyTaskRecordsTheOutcomeEachRunProduced(t *testing.T) {
 	)
 	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 3)...)
 
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)},
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)},
 		testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},

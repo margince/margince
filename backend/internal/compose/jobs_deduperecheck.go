@@ -40,7 +40,7 @@ func (w *dedupeRecheckWorker) Work(ctx context.Context, _ *river.Job[DedupeReche
 func (w *dedupeRecheckWorker) recheckWorkspace(ctx context.Context, workspace ids.UUID) error {
 	store := contacts.NewStore(database.ForInstallation(w.pool)).
 		WithConsumerMail(capture.MatcherTx)
-	actor := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "dedupe_recheck")
+	actor := principal.SystemActing(ctx, "dedupe_recheck")
 	if err := w.retractUnsupportedPhones(actor); err != nil {
 		return err
 	}

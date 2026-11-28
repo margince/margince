@@ -24,7 +24,7 @@ import (
 // and returns the relink envelope that write put in the outbox.
 func (e *flushEnv) fileOnDeal(t *testing.T, activity ids.UUID) events.Envelope {
 	t.Helper()
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:test",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},

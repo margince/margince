@@ -133,7 +133,7 @@ func (e *promiseEnv) asWithout(object string) context.Context {
 		"company": {Read: true}, "lead": {Read: true},
 	}
 	delete(grants, object)
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

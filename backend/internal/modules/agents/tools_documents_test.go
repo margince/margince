@@ -348,7 +348,7 @@ func TestARetriedAttachReplaysTheFirstReceipt(t *testing.T) {
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}),
 		WithIdempotency(claims), WithReplayReader(reader), WithVolumeCharger(newCountingCharger()))
 	registerDocumentsWithDownload(r, docs)
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:docs", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeWrite),
 	})

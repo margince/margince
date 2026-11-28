@@ -162,6 +162,6 @@ func publicEventSchema(t *testing.T, name string) *openapi3.Schema {
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (f failingResolver) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, f.EffectiveRBAC, f.SeatType)
+func (f failingResolver) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, f.EffectiveRBAC, f.SeatType)
 }

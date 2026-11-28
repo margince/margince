@@ -76,7 +76,7 @@ func (w *assuranceSweepWorker) Work(ctx context.Context, _ *river.Job[AssuranceS
 const assuranceActor = "system:assurance"
 
 func (w *assuranceSweepWorker) assureWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	wsCtx = principal.SystemActing(wsCtx, assuranceActor)
 	started, err := assurance.NewStore(InstallationDB(w.pool)).EverRun(wsCtx)
 	if err != nil {

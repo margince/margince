@@ -32,7 +32,7 @@ func readAcceptedInquiry(ctx context.Context, ex Executors, ev workflow.Event, p
 	if ex.Provider == nil {
 		return inquiryReceipt{}, errors.New("automation: inquiry record reader is not configured")
 	}
-	admit, err := ownerContext(ctx, ex.Authority, ev.WorkspaceID, ev.OwnerID)
+	admit, err := ownerContext(ctx, ex.Authority, ev.OwnerID)
 	if err != nil {
 		return inquiryReceipt{}, err
 	}

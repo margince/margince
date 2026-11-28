@@ -35,7 +35,7 @@ func markBodyRead(t *testing.T, e *loadEnv, mail ids.UUID, completeness string) 
 	if err := e.owner.QueryRow(t.Context(), `SELECT body FROM activity WHERE id = $1`, mail).Scan(&body); err != nil {
 		t.Fatal(err)
 	}
-	system := principal.WithActor(principal.WithWorkspaceID(t.Context(), e.ws),
+	system := principal.WithActor(t.Context(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:mail_body_completeness"})
 	err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 		changed, err := AssessMailBodiesTx(system, tx, []MailBodyAssessment{{Activity: mail, Completeness: completeness, Body: body}})

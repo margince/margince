@@ -311,46 +311,6 @@ func TestChildrenUseByArgsUniqueness(t *testing.T) {
 	}
 }
 
-// TestHandlerSeesAPinnedWorkspace: the runner binds the installation's
-// workspace before the handler is entered, so a unit's tick can never see a
-// global scope. A tool call arrives on a request whose tenant authentication
-// already resolved. A tick has no caller at all.
-func TestHandlerSeesAPinnedWorkspace(t *testing.T) {
-	e := integration.Setup(t)
-	integration.ApplyRiverSchema(t)
-
-	decl := testJobDecl()
-	var mu sync.Mutex
-	pinned := map[ids.UUID]bool{}
-	unpinned := 0
-	composeJob(t, decl, func(ctx context.Context, _ extension.Runtime) error {
-		ws, ok := principal.WorkspaceID(ctx)
-		mu.Lock()
-		defer mu.Unlock()
-		if !ok || ws == (ids.UUID{}) {
-			unpinned++
-			return nil
-		}
-		pinned[ws] = true
-		return nil
-	})
-	_, sub := startRunner(t, e.Pool)
-	awaitKindCompleted(t, sub, decl.ChildKind())
-	waitUntil(t, func() bool {
-		mu.Lock()
-		defer mu.Unlock()
-		return len(pinned) == 1
-	}, "the tick to run under the installation's workspace")
-	mu.Lock()
-	defer mu.Unlock()
-	if unpinned != 0 {
-		t.Fatalf("%d tick(s) ran with no workspace bound — a handler must never see a global scope", unpinned)
-	}
-	if !pinned[e.WS] {
-		t.Fatalf("the tick ran under %v, want the installation's %s", pinned, e.WS)
-	}
-}
-
 // TestAJobWithNoLiveWorkspaceFailsAndDoesNotRun: the binding is the worker
 // middleware, and a job it cannot bind fails with the handler never entered.
 func TestAJobWithNoLiveWorkspaceFailsAndDoesNotRun(t *testing.T) {

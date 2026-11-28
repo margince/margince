@@ -206,7 +206,7 @@ func TestEveryClassifiedApprovalTargetRidesTheObjectReadFloor(t *testing.T) {
 						"answer above every arm, so a new arm inherits it", reached)
 				}
 			}()
-			ctx := principal.WithWorkspaceID(writerWithoutReadOn(targetType), target)
+			ctx := writerWithoutReadOn(targetType)
 			ok, err := s.approvalTargetVisible(ctx, targetType, target)
 			if err != nil {
 				t.Fatalf("approvalTargetVisible: %v — a missing read grant is an ANSWER, not an error", err)
@@ -254,13 +254,13 @@ func TestTheOwnerOnlyArmIsReachedWhenTheReadFloorAdmits(t *testing.T) {
 // The read half this arm also owes is derived for every classified type by the
 // floor gate above; the nil pool proves this arm reaches no table at all.
 func TestARateSheetApprovalIsAnnouncedOnlyForThisWorkspace(t *testing.T) {
-	s := NewStore(nil, nil)
 	here := ids.NewV7()
 	elsewhere := ids.NewV7()
+	s := NewStore(database.BindTo(nil, ids.From[ids.WorkspaceKind](here)), nil)
 
 	for _, targetType := range []string{"fx_rate", "ai_model_rate"} {
 		t.Run(targetType, func(t *testing.T) {
-			admin := principal.WithWorkspaceID(readerOf(targetType, principal.ObjectGrant{Read: true}), here)
+			admin := readerOf(targetType, principal.ObjectGrant{Read: true})
 			if ok, err := s.approvalTargetVisible(admin, targetType, here); !ok || err != nil {
 				t.Errorf("proposal against this workspace, owner holding %s.read = (%v, %v), want (true, nil)",
 					targetType, ok, err)
@@ -270,11 +270,11 @@ func TestARateSheetApprovalIsAnnouncedOnlyForThisWorkspace(t *testing.T) {
 					"writes to the acting workspace's sheet, not the claimed one", ok, err)
 			}
 
-			// No workspace bound is not "any workspace": it fails closed rather
+			// No live company is not "any workspace": it fails closed rather
 			// than comparing the target against the nil UUID.
-			unbound := readerOf(targetType, principal.ObjectGrant{Read: true})
-			if ok, err := s.approvalTargetVisible(unbound, targetType, here); ok || err != nil {
-				t.Errorf("proposal with no workspace bound = (%v, %v), want (false, nil)", ok, err)
+			noCompany := NewStore(nil, nil)
+			if ok, err := noCompany.approvalTargetVisible(admin, targetType, here); ok || err == nil {
+				t.Errorf("proposal with no live company = (%v, %v), want (false, an error)", ok, err)
 			}
 		})
 	}

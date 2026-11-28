@@ -76,7 +76,7 @@ func nativeRecord(rec datasource.Record) datasource.Record {
 // agentCtx is automatic work: an agent with no passport, which a confirm-first
 // call still stages for.
 func agentCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull,
 		Scopes: principal.NewScopeSet(principal.ScopeWrite), Permissions: everyRecordedGrant(),

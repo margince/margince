@@ -43,7 +43,7 @@ func seatFor(ws, user ids.UUID, objects ...string) context.Context {
 	for _, object := range objects {
 		grants[object] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

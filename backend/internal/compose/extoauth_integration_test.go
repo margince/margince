@@ -136,7 +136,7 @@ var settingsReader = principal.Permissions{
 
 // humanCtx is the workspace admin, signed in as a human and holding perms.
 func (e *extRuntimeEnv) humanCtx(perms principal.Permissions) context.Context {
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	return principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.AdminUser.String(), UserID: e.AdminUser,
 		Permissions: perms,
 	})

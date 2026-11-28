@@ -244,7 +244,7 @@ func TestAddingToAShortlistActsOnlyForTheRuleOwner(t *testing.T) {
 		t.Fatal("a Shortlist was changed with no lists seam")
 	}
 	ex := Executors{Lists: lists, Authority: &fakeAuthzResolver{}}
-	engineCtx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), ids.NewV7()), systemActor)
+	engineCtx := principal.SystemActing(context.Background(), systemActor)
 	if _, err := applyAddListMember(engineCtx, ex, action); err == nil || len(added) != 0 {
 		t.Fatalf("a Shortlist was changed with no owner to act for (%v, %v)", err, added)
 	}

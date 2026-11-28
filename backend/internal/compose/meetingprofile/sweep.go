@@ -31,7 +31,7 @@ type Sweep struct {
 // it removes, so the pass repeats until a batch comes back short. A field
 // another writer holds is left to the next pass.
 func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "system:meeting-profile")
+	ctx = principal.SystemActing(ctx, "system:meeting-profile")
 	for {
 		var removed int
 		if err := database.WithTx(ctx, s.Pool, func(tx pgx.Tx) error {

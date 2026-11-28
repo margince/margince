@@ -54,7 +54,7 @@ func (e *loadEnv) owedAt(t *testing.T, messages []ids.UUID, instants []time.Time
 
 func (e *loadEnv) stampSettled(t *testing.T) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:reply-settled",
 		Permissions: principal.Permissions{

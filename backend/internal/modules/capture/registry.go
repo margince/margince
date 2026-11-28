@@ -446,10 +446,11 @@ func (r *Registry) resolveCredential(ctx context.Context, credentialRef *string,
 		if r.vault == nil {
 			return nil, errors.New("capture: connection carries a credential ref but no keyvault is configured to resolve it")
 		}
-		ws, ok := principal.WorkspaceID(ctx)
-		if !ok {
-			return nil, errors.New("capture: credential resolution outside workspace context")
+		company, err := r.db.Workspace(ctx)
+		if err != nil {
+			return nil, err
 		}
+		ws := company.UUID
 		secret, err := r.vault.Get(ctx, ids.From[ids.WorkspaceKind](ws), keyvault.Ref(*credentialRef))
 		if err != nil {
 			return nil, fmt.Errorf("capture: resolving connector credential: %w", err)

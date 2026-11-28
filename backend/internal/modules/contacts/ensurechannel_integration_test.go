@@ -38,7 +38,7 @@ const channelCapturedBy = "connector:telegram"
 // identity satellite stamps its provenance from the acting actor, and a human
 // stand-in would prove something the ingress never does.
 func (e *dedupeEnv) asChannelConnector() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector,

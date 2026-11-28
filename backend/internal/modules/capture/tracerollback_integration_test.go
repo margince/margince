@@ -29,7 +29,11 @@ import (
 func TestAnInvisibleIncumbentIsTracedOnItsOwnTransaction(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t)
 	sink := capture.NewSink(db)
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 
 	// First landing: an ordinary capture, which creates the incumbent.
 	rec := mailRecord("m-incumbent", "dana@client.io", "dana@client.io", "rep@acme.com")
@@ -44,7 +48,7 @@ func TestAnInvisibleIncumbentIsTracedOnItsOwnTransaction(t *testing.T) {
 	// Replayed by a connector acting for a member whose row scope is their OWN
 	// records. The first capture ran unbounded, which is how the incumbent came
 	// to exist at all; what this asserts is the reader that cannot see it.
-	_, err := sink.Upsert(ownScopedSinkContext(ctx, ws), rec)
+	_, err = sink.Upsert(ownScopedSinkContext(ctx, ws), rec)
 	if !errors.Is(err, connector.ErrSkip) {
 		t.Fatalf("replay error = %v, want a skip", err)
 	}
@@ -98,7 +102,6 @@ func hideIncumbent(ctx context.Context, t *testing.T, db *database.DB, sourceID 
 // incumbent linked to somebody else's capture-private contact is out of reach.
 func ownScopedSinkContext(ctx context.Context, ws ids.UUID) context.Context {
 	member := ids.NewV7()
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type:       principal.PrincipalConnector,
 		ID:         "connector:imap",

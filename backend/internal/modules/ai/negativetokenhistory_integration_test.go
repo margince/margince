@@ -34,7 +34,7 @@ func storedTokens(t *testing.T, e *rateEnv, call ids.UUID) []int64 {
 // and answers how many calls it changed.
 func zeroNegativeTokens(t *testing.T, e *rateEnv, ws ids.UUID) int {
 	t.Helper()
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), ws), "system:negative-counts")
+	system := principal.SystemActing(context.Background(), "system:negative-counts")
 	in, changed := datatask.BatchIn{Limit: 1}, 0
 	for {
 		var out datatask.BatchOut

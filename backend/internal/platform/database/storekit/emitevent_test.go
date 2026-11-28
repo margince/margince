@@ -92,7 +92,6 @@ func (f *fakeTx) Conn() *pgx.Conn { panic("fakeTx: Conn not implemented") }
 func emitTestContext() context.Context {
 	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String()})
-	ctx = principal.WithWorkspaceID(ctx, ids.NewV7())
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return ctx
 }

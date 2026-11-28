@@ -86,7 +86,7 @@ func TestAHistoryMintedContactDoesNotTurnItsLiveMailIntoHistory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
+	system := principal.SystemActing(context.Background(), "agent:enrich")
 	if err := NewConfidentialityVerdictEngine(b.env.Pool, &answerEveryThreadBrain{}, b.handlers.log).RunWorkspace(system, 10); err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestAContactRelinkDoesNotReopenAnotherSendersSignature(t *testing.T) {
 	if err := trigger.HandleEvent(context.Background(), event); err != nil {
 		t.Fatal(err)
 	}
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), h.e.WS), "agent:enrich")
+	system := principal.SystemActing(context.Background(), "agent:enrich")
 	work, err := newContactsStore(InstallationDB(h.e.Pool)).PendingSignatureWork(system, 100)
 	if err != nil || len(work) != 0 {
 		t.Fatalf("relink requested unrelated signatures: %+v %v", work, err)

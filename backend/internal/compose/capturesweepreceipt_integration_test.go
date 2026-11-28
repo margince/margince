@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type storedReceipt struct {
@@ -315,7 +314,7 @@ func TestAReceiptThatCannotBeWrittenIsReportedAndTheNextPassRuns(t *testing.T) {
 func TestPruningKeepsTheLastSuccessThroughAnyRunOfFailures(t *testing.T) {
 	e := integration.Setup(t)
 	ledger := capture.NewSweepLedger(InstallationDB(e.Pool))
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	start := time.Now().Add(-time.Hour)
 	record := func(i int, outcome capture.SweepOutcome, class string) {
 		at := start.Add(time.Duration(i) * time.Second)
@@ -360,7 +359,7 @@ func TestPruningKeepsTheLastSuccessThroughAnyRunOfFailures(t *testing.T) {
 func TestEverySweepAndOutcomeIsAcceptedByTheTable(t *testing.T) {
 	e := integration.Setup(t)
 	ledger := capture.NewSweepLedger(InstallationDB(e.Pool))
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	now := time.Now()
 	for _, sweep := range capture.Sweeps() {
 		for _, receipt := range []capture.SweepReceipt{
@@ -387,7 +386,7 @@ func TestEverySweepAndOutcomeIsAcceptedByTheTable(t *testing.T) {
 func TestAPanickingPassLeavesAFailedReceiptAndStillPanics(t *testing.T) {
 	e := integration.Setup(t)
 	recorder := newSweepRecorder(e.Pool)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 
 	func() {
 		defer func() {

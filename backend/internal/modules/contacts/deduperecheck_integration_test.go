@@ -24,7 +24,7 @@ import (
 
 // asRecheck is the context the nightly job runs the pass under.
 func (e *dedupeEnv) asRecheck() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.SystemActing(ctx, "dedupe_recheck")
 }

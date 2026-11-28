@@ -187,7 +187,7 @@ func (e *resolveEnv) isDone(t *testing.T, id ids.UUID) bool {
 
 // systemCtx is the principal the workflow engine runs handlers under.
 func (e *resolveEnv) systemCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
 }

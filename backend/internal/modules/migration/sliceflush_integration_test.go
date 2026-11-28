@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // runRowWrite matches a statement that updates import_run itself, not a
@@ -68,9 +67,9 @@ func countedDB(ctx context.Context, t *testing.T, writes *runWriteCounter) *data
 		t.Fatalf("opening the counted pool: %v", err)
 	}
 	t.Cleanup(pool.Close)
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		t.Fatal("the test context binds no workspace")
+	ws, err := database.InstallationWorkspace(ctx, pool)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
 	}
 	return database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))
 }

@@ -60,10 +60,11 @@ func (s *ChannelStore) connectChatAccount(ctx context.Context, a chatAccount, lo
 	if s.vault == nil {
 		return fmt.Errorf("configure a credential store for this installation, so the secrets can be sealed: %w", ErrChannelWiringIncomplete)
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return fmt.Errorf("capture: %s connect called outside a workspace context", a.Provider)
+	company, err := s.db.Workspace(ctx)
+	if err != nil {
+		return fmt.Errorf("capture: %s connect needs a live company: %w", a.Provider, err)
 	}
+	ws := company.UUID
 	connectedBy, err := channelActor(ctx)
 	if err != nil {
 		return err
@@ -163,12 +164,13 @@ func (s *ChannelStore) disconnectChatAccount(ctx context.Context, provider strin
 	if s.vault == nil {
 		return fmt.Errorf("configure a credential store for this installation, so the sealed secrets can be destroyed: %w", ErrChannelWiringIncomplete)
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return fmt.Errorf("capture: %s disconnect called outside a workspace context", provider)
+	company, err := s.db.Workspace(ctx)
+	if err != nil {
+		return fmt.Errorf("capture: %s disconnect needs a live company: %w", provider, err)
 	}
+	ws := company.UUID
 	var refs connectionRefs
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var seat *ids.UUID
 		var tokenRef, eventsRef string
 		err := tx.QueryRow(ctx, `
@@ -265,16 +267,17 @@ type liveChatEndpoint[S any] struct {
 func liveChatEndpoints[S any](ctx context.Context, db *database.DB, vault func() keyvault.Vault, log *slog.Logger, provider string,
 ) ([]liveChatEndpoint[S], error) {
 	v := vault()
-	ws, ok := principal.WorkspaceID(ctx)
-	if v == nil || !ok {
+	company, err := db.Workspace(ctx)
+	if v == nil || err != nil {
 		return nil, ErrChannelWiringIncomplete
 	}
+	ws := company.UUID
 	type row struct {
 		id                  ids.UUID
 		account, channel, s string
 	}
 	var rows []row
-	err := db.Tx(ctx, func(tx pgx.Tx) error {
+	err = db.Tx(ctx, func(tx pgx.Tx) error {
 		res, err := tx.Query(ctx, `SELECT id, account_id, channel_id, events_credential_ref FROM channel_connection
 			 WHERE archived_at IS NULL AND status IN ($2, $3) AND events_credential_ref IS NOT NULL AND `+chatAccountRow+`
 			 ORDER BY created_at, id`, provider, channelStatusConnected, channelStatusReauthRequired)

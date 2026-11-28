@@ -30,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/googlejwt"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -214,7 +213,7 @@ func TestARefusedSubscriptionLeavesTheSharedMailboxOnThePoll(t *testing.T) {
 	ms := &microsoftTenant{refuseSubscriptions: true}
 	s, _ := newProviderSuite(t, ms)
 	box := s.connectAs(t, graphBody(s.e.Team1, "authz.test", "app-secret"))
-	ctx := principal.WithWorkspaceID(context.Background(), s.e.WS)
+	ctx := context.Background()
 	if err := s.registry.RenewWatch(ctx, box, notification); err == nil {
 		t.Fatal("Graph refused the subscription, and the renewal reported success")
 	}

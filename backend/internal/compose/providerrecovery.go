@@ -95,7 +95,7 @@ func (r *ProviderRecovery) eachWorkspace(
 	}
 	var total ParkedWork
 	err := runInstallationPass(ctx, r.pool, func(ctx context.Context, ws ids.UUID) error {
-		wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, ws), "system:provider_recovery")
+		wsCtx := principal.SystemActing(ctx, "system:provider_recovery")
 		got, err := stage(wsCtx)
 		total.Counterparties += got.Counterparties
 		total.Enrichments += got.Enrichments

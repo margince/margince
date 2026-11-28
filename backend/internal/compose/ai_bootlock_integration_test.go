@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // bindForTest binds the api's configuration loaded from environ until the
@@ -102,7 +101,7 @@ func TestTheSpendMeterReadsABootSetAllowance(t *testing.T) {
 	}
 	bindForTest(t, `MARGINCE_AI_BUDGET={"tokens_per_full_user":5,"company_monthly_tokens":777}`)
 
-	monthly, err := NewSeatBudget(e.Pool).MonthlyTokenBudget(context.Background(), ids.From[ids.WorkspaceKind](e.WS))
+	monthly, err := NewSeatBudget(e.Pool).MonthlyTokenBudget(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

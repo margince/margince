@@ -95,7 +95,7 @@ func setupLeadLinkedIn(t *testing.T) *linkedinEnv {
 
 // as binds a lead-granted principal at the given row scope.
 func (e *linkedinEnv) as(user ids.UUID, scope principal.RowScope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

@@ -62,7 +62,7 @@ func postIMAPConnect(ctx context.Context, t *testing.T, h connectorHandlers, bod
 
 func imapConnectCtx(t *testing.T, scopes ...principal.Scope) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type:   principal.PrincipalHuman,
 		UserID: ids.NewV7(),

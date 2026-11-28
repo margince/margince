@@ -31,7 +31,7 @@ import (
 // asSeat is asUser holding, or not holding, the team_lead grant the coaching
 // gate reads.
 func (e *noticeEnv) asSeat(u ids.UserID, leadsTeams bool) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + u.String(), UserID: u.UUID,
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{

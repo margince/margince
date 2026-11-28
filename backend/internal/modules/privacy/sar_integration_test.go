@@ -159,7 +159,7 @@ func seedIdentifierPairs(ctx context.Context, t *testing.T, owner *pgx.Conn, con
 // contact.delete grant AND an unbounded row scope, since the assembly crosses
 // every rep's slice on purpose.
 func exportContext(ws, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

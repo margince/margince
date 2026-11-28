@@ -211,7 +211,7 @@ func (r recoveryEnv) recoverWindow(t *testing.T) capturemod.BackfillRun {
 	if err != nil {
 		t.Fatalf("starting the history import: %v", err)
 	}
-	ws := principal.WithWorkspaceID(context.Background(), r.e.WS)
+	ws := context.Background()
 	for page := 0; ; page++ {
 		done, _, _, err := r.registry.RunBackfillStep(ws, run.ID)
 		if err != nil {
@@ -337,7 +337,7 @@ func ownerReader(e *integration.SearchEnv) context.Context {
 	for _, object := range []string{"activity", "contact", "deal", "company", "lead", "relationship"} {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		TeamIDs: []ids.UUID{e.Team1}, SeatType: principal.SeatFull,

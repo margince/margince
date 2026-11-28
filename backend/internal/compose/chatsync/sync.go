@@ -107,7 +107,6 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 // systemContext runs the consumer as its own system actor in the
 // installation's workspace, traced to the event that caused it.
 func systemContext(ctx context.Context, ws ids.UUID, env events.Envelope) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	ctx = principal.WithCausationEvent(ctx, env.EventID)
 	return principal.WithActor(ctx, chatLinksPrincipal)

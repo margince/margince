@@ -40,7 +40,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // touchIconURL is the icon acme.example declares on its landing page, and
@@ -98,7 +97,7 @@ func readTheOnboardingSiteDeclaring(t *testing.T, e *integration.Env, w *siteDee
 		t.Fatal("a fresh onboarding read joined an existing dossier")
 	}
 	args := SiteDeepReadArgs{SiteReadID: read.ID, RequestedBy: read.RequestedBy}
-	workerCtx := deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args)
+	workerCtx := deepReadWorkerCtx(context.Background(), args)
 	claim, err := e.Contacts.BeginSiteRead(workerCtx, read.ID, 10*time.Minute)
 	if err != nil {
 		t.Fatalf("claim the onboarding read: %v", err)
@@ -115,7 +114,7 @@ func readyDossier(t *testing.T, e *integration.Env, args SiteDeepReadArgs) conta
 	if err != nil {
 		t.Fatalf("hashing the empty draft: %v", err)
 	}
-	if err := e.Contacts.FinishSiteRead(deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args), args.SiteReadID,
+	if err := e.Contacts.FinishSiteRead(deepReadWorkerCtx(context.Background(), args), args.SiteReadID,
 		contacts.FinishSiteReadInput{
 			Status:       "done",
 			Pages:        []contacts.SiteReadPage{{URL: seedURL, Kind: "home"}},
@@ -444,7 +443,7 @@ func TestAReadThatFailsGivesBackTheLogoItParked(t *testing.T) {
 		t.Fatal("the read parked no mark; this case has nothing to reclaim")
 	}
 	cause := errors.New("every extraction lane died")
-	if err := w.fail(deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args), args.SiteReadID, cause); !errors.Is(err, cause) {
+	if err := w.fail(deepReadWorkerCtx(context.Background(), args), args.SiteReadID, cause); !errors.Is(err, cause) {
 		t.Fatalf("failing the read answered %v, want the cause it was given", err)
 	}
 
@@ -480,7 +479,7 @@ func TestAFailedReadKeepsTheBytesACompanyIsAlreadyWearing(t *testing.T) {
 		t.Fatalf("give the company the resolved mark: %v", err)
 	}
 
-	if err := w.fail(deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args), args.SiteReadID,
+	if err := w.fail(deepReadWorkerCtx(context.Background(), args), args.SiteReadID,
 		errors.New("every extraction lane died")); err == nil {
 		t.Fatal("failing the read answered no cause")
 	}
@@ -563,7 +562,7 @@ func claimedOnboardingRead(t *testing.T, e *integration.Env) (SiteDeepReadArgs, 
 		t.Fatalf("start the onboarding read: %v", err)
 	}
 	args := SiteDeepReadArgs{SiteReadID: read.ID, RequestedBy: read.RequestedBy}
-	claim, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args), read.ID, 10*time.Minute)
+	claim, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(context.Background(), args), read.ID, 10*time.Minute)
 	if err != nil {
 		t.Fatalf("claim the onboarding read: %v", err)
 	}
@@ -583,7 +582,7 @@ func endedOnboardingRead(t *testing.T, e *integration.Env, status string) (SiteD
 		outcome.StatusCode = "unreadable"
 		outcome.StatusDetail = "The site could not be read."
 	}
-	if err := e.Contacts.FinishSiteRead(deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args),
+	if err := e.Contacts.FinishSiteRead(deepReadWorkerCtx(context.Background(), args),
 		args.SiteReadID, outcome); err != nil {
 		t.Fatalf("end the onboarding read as %s: %v", status, err)
 	}
@@ -601,7 +600,7 @@ func TestADossierThatEndedRefusesALateParkedMark(t *testing.T) {
 		t.Run(status, func(t *testing.T) {
 			e := integration.Setup(t)
 			args, claim := endedOnboardingRead(t, e, status)
-			workerCtx := deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args)
+			workerCtx := deepReadWorkerCtx(context.Background(), args)
 			late := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), contacts.LogoKeyKind, "site-read/"+args.SiteReadID.String()+"/"+ids.NewV7().String())
 			recorded, superseded, err := e.Contacts.RecordSiteReadLogo(workerCtx, args.SiteReadID, claim.ClaimedAt, contacts.LogoWide, late, touchIconURL)
 			if err != nil {
@@ -633,7 +632,7 @@ func TestAResolveThatLandsAfterTheReadEndedCollectsItsOwnBytes(t *testing.T) {
 
 	// The claim a stalled attempt still holds: unbound, seeded from the page it
 	// crawled before the dossier was closed under it.
-	w.resolveLogo(deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args), args, claim, declaringCrawl())
+	w.resolveLogo(deepReadWorkerCtx(context.Background(), args), args, claim, declaringCrawl())
 
 	stored, outstanding := blob.account()
 	if len(stored) == 0 {
@@ -653,7 +652,7 @@ func TestAResolveThatLandsAfterTheReadEndedCollectsItsOwnBytes(t *testing.T) {
 // minutes-long grace has run out, with none of the waiting.
 func reclaimTheRead(t *testing.T, e *integration.Env, args SiteDeepReadArgs) contacts.SiteReadClaim {
 	t.Helper()
-	claim, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args),
+	claim, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(context.Background(), args),
 		args.SiteReadID, time.Microsecond)
 	if err != nil {
 		t.Fatalf("reclaim the stalled read: %v", err)
@@ -669,7 +668,7 @@ func TestOnlyTheAttemptHoldingTheReadParksItsMark(t *testing.T) {
 	// own object — which its caller then deletes.
 	e := integration.Setup(t)
 	args, stalled := claimedOnboardingRead(t, e)
-	workerCtx := deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args)
+	workerCtx := deepReadWorkerCtx(context.Background(), args)
 	current := reclaimTheRead(t, e, args)
 
 	held := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), contacts.LogoKeyKind, "site-read/"+args.SiteReadID.String()+"/"+ids.NewV7().String())
@@ -711,7 +710,7 @@ func TestAResolveThatLandsAfterAnotherAttemptTookTheReadKeepsThatAttemptsBytes(t
 	blob := newRecordingBlobstore()
 	w := onboardingLogoWorker(e, site, blob)
 	args, stalled := claimedOnboardingRead(t, e)
-	workerCtx := deepReadWorkerCtx(principal.WithWorkspaceID(context.Background(), e.WS), args)
+	workerCtx := deepReadWorkerCtx(context.Background(), args)
 
 	w.resolveLogo(workerCtx, args, reclaimTheRead(t, e, args), declaringCrawl())
 	held, _ := parkedLogo(t, e, args.SiteReadID)

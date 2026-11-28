@@ -245,11 +245,7 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 		}
 		return nil, fmt.Errorf("compose: resolving the mailbox behind a captured card: %w", err)
 	}
-	ws, err := boundWorkspace(ctx)
-	if err != nil {
-		return nil, err
-	}
-	actor, err := authz.MemberPrincipal(ctx, w.users, ws, grantedBy)
+	actor, err := authz.MemberPrincipal(ctx, w.users, grantedBy)
 	if err != nil {
 		return nil, fmt.Errorf("compose: the mailbox's granting human no longer resolves: %w", err)
 	}

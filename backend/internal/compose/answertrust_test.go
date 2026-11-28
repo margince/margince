@@ -17,7 +17,7 @@ import (
 
 // passportHoldingEveryScope is a user's own assistant that may call any verb.
 func passportHoldingEveryScope() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:own", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
 		SeatType: principal.SeatFull, Scopes: principal.NewScopeSet(mcpInfoScopes()...),

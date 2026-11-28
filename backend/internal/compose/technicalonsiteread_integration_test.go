@@ -30,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // workClient is the insert-only client a working job carries, built here
@@ -136,7 +135,7 @@ func technicalLedger(t *testing.T, e *integration.Env, company ids.UUID) []conta
 	t.Helper()
 	store := contacts.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)))
 	lanes, err := store.TechnicalLaneState(
-		technicalActor(principal.WithWorkspaceID(context.Background(), e.WS)),
+		technicalActor(context.Background()),
 		ids.From[ids.CompanyKind](company))
 	if err != nil {
 		t.Fatalf("reading the technical ledger: %v", err)

@@ -33,7 +33,7 @@ func TestAKeyTestNeedsTheRoutingReadGrant(t *testing.T) {
 	h := aiRoutingHandlers{store: &ai.RoutingStore{}}
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/ai/provider-keys/anthropic/test", nil)
-	ctx := principal.WithWorkspaceID(req.Context(), ids.NewV7())
+	ctx := req.Context()
 	req = req.WithContext(principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{

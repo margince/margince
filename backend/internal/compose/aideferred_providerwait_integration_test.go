@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -99,7 +98,7 @@ func TestWebsiteReadsSplitTheBudgetWaitFromTheProviderWait(t *testing.T) {
 		company := insertCompany(t, e, e.Rep1, name+".example", "")
 		read, args := startDeepRead(t, e, company)
 		worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), budgetDeferringBrain{err: cause})
-		if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err == nil {
+		if err := worker.run(context.Background(), args); err == nil {
 			t.Fatalf("%s: expected a deferral", name)
 		}
 		if err := inserter.Enqueue(e.Admin(), args, &river.InsertOpts{ScheduledAt: farFuture, MaxAttempts: 3}); err != nil {

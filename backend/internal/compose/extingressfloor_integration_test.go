@@ -102,7 +102,7 @@ func registerFloorTransports(t *testing.T, e *ingressEnv) {
 // a row this test wrote by hand.
 func setFloor(t *testing.T, e *ingressEnv, sharing bool) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
@@ -248,7 +248,7 @@ func TestASeatsCounterpartyHoldReachesTheirOwnChat(t *testing.T) {
 // hold the seat's own click produces.
 func holdCounterparty(t *testing.T, e *ingressEnv, address string) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.member.String(), UserID: e.member,
@@ -447,7 +447,7 @@ func audienceNaming(user ids.UUID) activities.SetAudienceInput {
 // measures.
 func (e *ingressEnv) audienceWriterCtx(t *testing.T) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.member.String(), UserID: e.member,
 		SeatType: principal.SeatFull,

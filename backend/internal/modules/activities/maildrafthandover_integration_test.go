@@ -23,7 +23,7 @@ import (
 
 // asAdminWith is the other seat as an admin holding grants on activities.
 func asAdminWith(e *sendEnv, activity principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.other.String(), UserID: e.other,

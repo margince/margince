@@ -87,7 +87,7 @@ func TestTheClassifierSkipsMailOfARestrictedContactUntilTheLift(t *testing.T) {
 	ordinary := mailFromAddress(t, e, "please send the offer", "bob@elsewhere.example")
 	brain := &scriptedClassifyBrain{}
 	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
-	pass := principal.WithWorkspaceID(context.Background(), e.WS)
+	pass := context.Background()
 
 	if err := classifier.RunWorkspace(pass, 0); err != nil {
 		t.Fatalf("a pass beside a restricted mail must not fail: %v", err)

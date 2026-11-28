@@ -78,7 +78,7 @@ func driveScheduledSendAttempt(ctx context.Context, pool *pgxpool.Pool, workspac
 // what it saw. The lane needs it to prove a STALE observation declines.
 func HoldScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspace, id ids.UUID, reason string, observed int64, origin SendOrigin) error {
 	store := sendStore(pool, origin.sendPath())
-	return store.HoldScheduledSend(sendWorkerScope(principal.WithWorkspaceID(ctx, workspace)), id, reason, observed)
+	return store.HoldScheduledSend(sendWorkerScope(ctx), id, reason, observed)
 }
 
 // ScheduleAsAgentForTest schedules a message with an AGENT as the actor, through
@@ -105,7 +105,7 @@ func ScheduleAsAgentForTest(
 	}
 	store := sendStore(pool, origin.sendPath())
 	agentCtx := principal.WithCorrelationID(
-		principal.WithActor(principal.WithWorkspaceID(ctx, workspace), actor), ids.NewV7())
+		principal.WithActor(ctx, actor), ids.NewV7())
 	return store.SendOrSchedule(agentCtx, activities.FromActivity(anchor), in,
 		&activities.SendSchedule{At: at, TZ: "Europe/Berlin"},
 		consentGateFor(pool),

@@ -126,7 +126,7 @@ func promoteByVerdict(t *testing.T, e *integration.SearchEnv, email string, acti
 	store := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx)
 	// The grants the verdict engine runs with: it mints and links records, and
 	// the promotion rides the same ensure.
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,

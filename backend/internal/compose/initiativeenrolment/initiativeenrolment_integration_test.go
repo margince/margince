@@ -93,7 +93,7 @@ func (w manufacturingDeals) launch(t *testing.T) ids.UUID {
 // open maps each record with an open dated row to its reason.
 func (w manufacturingDeals) open(t *testing.T, initiative ids.UUID) map[ids.UUID]string {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), w.e.WS)
+	ctx := context.Background()
 	open := map[ids.UUID]string{}
 	if err := database.WithTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT record_id, reason FROM sales_initiative_enrolment WHERE initiative_id = $1 AND left_at IS NULL`, initiative)
@@ -243,7 +243,7 @@ func TestTheEnrolmentTaskDatesAnInitiativeLaunchedBeforeTheRows(t *testing.T) {
 	w.e.WsExec(t, `DELETE FROM sales_initiative_enrolment WHERE initiative_id = $1`, id)
 	w.backdate(t, id)
 	task := initiativeenrolment.Task(w.store)
-	ctx := datatask.Acting(principal.WithWorkspaceID(context.Background(), w.e.WS), task.ID)
+	ctx := datatask.Acting(context.Background(), task.ID)
 	batch := func() datatask.BatchOut {
 		t.Helper()
 		var out datatask.BatchOut

@@ -190,7 +190,7 @@ func WithGraphCapture(c GraphConfig) Option {
 		// consent URL that cannot come back — for the one installation shape
 		// this whole seam exists to serve.
 		if !s.signer.usable() {
-			s.signer = newStateSigner([]byte(c.StateKey))
+			s.signer = newStateSigner([]byte(c.StateKey)).forInstallation(pool)
 		}
 		if s.publicBaseURL == "" {
 			s.publicBaseURL = c.PublicBaseURL

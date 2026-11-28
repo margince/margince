@@ -34,7 +34,7 @@ func claimOverHTTP(ctx context.Context, t *testing.T, store *Store, task ids.Act
 
 // asMember is one member reading activities, as a browser tab of theirs does.
 func asMember(e *sendEnv, member ids.UUID) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + member.String(), UserID: member,
 		Permissions: principal.Permissions{

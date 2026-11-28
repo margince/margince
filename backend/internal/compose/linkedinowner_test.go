@@ -17,19 +17,19 @@ import (
 // the case where a missing seat would let a standing write share act for them.
 type readSeatOwner struct{}
 
-func (readSeatOwner) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (readSeatOwner) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: principal.Permissions{
 		Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
 		RowScope: principal.RowScopeOwn,
 	}}, nil
 }
 
-func (readSeatOwner) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (readSeatOwner) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatRead, nil
 }
 
-func (r readSeatOwner) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r readSeatOwner) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }
 
 func TestTheGhostOwnerPassRunsUnderTheOwnersSeat(t *testing.T) {
@@ -53,7 +53,7 @@ func TestTheGhostOwnerPassRunsUnderTheOwnersSeat(t *testing.T) {
 
 func TestOwnersAgentKeepsAReadSeatOwnersSeatAndNamesThem(t *testing.T) {
 	owner := ids.NewV7()
-	viaService, _ := authz.MemberPrincipal(context.Background(), readSeatOwner{}, ids.NewV7(), owner)
+	viaService, _ := authz.MemberPrincipal(context.Background(), readSeatOwner{}, owner)
 	for name, member := range map[string]principal.Principal{"service": viaService, "transaction": authz.HumanPrincipal(owner, authz.RBAC{}, principal.SeatRead)} {
 		agent, err := agentPrincipalFor(member, marginceActorID)
 		if err != nil {

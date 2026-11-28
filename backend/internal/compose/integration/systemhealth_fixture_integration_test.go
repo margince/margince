@@ -25,8 +25,7 @@ func TestSystemHealthFixtureOverviewAgreesWithDiagnostics(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
 		t.Fatalf("me status %d", status)
 	}
-	workspace := apptest.InstallationWorkspaceUUID(t.Context(), t, e.Pool)
-	ctx := principal.SystemActing(principal.WithWorkspaceID(t.Context(), workspace), "system:health_fixture")
+	ctx := principal.SystemActing(t.Context(), "system:health_fixture")
 	if err := compose.SeedSystemHealthFixture(ctx, e.Pool, ids.UUID(me.User.Id), string(me.User.Email), 3, clocktest.Now(t)); err != nil {
 		t.Fatal(err)
 	}
@@ -96,8 +95,7 @@ func assertFixtureHealthSummary(t *testing.T, overview crmcontracts.SystemHealth
 func TestSystemHealthFixtureRejectsAnEmptyBenchmark(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	workspace := apptest.InstallationWorkspaceUUID(t.Context(), t, e.Pool)
-	ctx := principal.SystemActing(principal.WithWorkspaceID(t.Context(), workspace), "system:health_fixture")
+	ctx := principal.SystemActing(t.Context(), "system:health_fixture")
 	err := compose.SeedSystemHealthFixture(ctx, e.Pool, ids.UUID{}, "ada@example.com", 0, clocktest.Now(t))
 	if err == nil || !strings.Contains(err.Error(), "no classifier backlog") {
 		t.Fatalf("empty benchmark was accepted: %v", err)

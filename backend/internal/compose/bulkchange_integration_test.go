@@ -36,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func bulkEngineFor(e *integration.Env) *bulkEngine {
@@ -446,7 +445,7 @@ func TestAnExecutionNeverChangesARecordItsPreviewExcluded(t *testing.T) {
 // ends at the limit rather than past it.
 func TestTwoConcurrentChangesCannotBothSpendTheSameRemainder(t *testing.T) {
 	e := integration.Setup(t)
-	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Writes: 30}, agentvolume.DefaultWindow)
+	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Writes: 30}, agentvolume.DefaultWindow).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))
 	engine := newBulkEngine(e.DB(), auth.NewGate(nil, auth.WithVolumeMeter(meter)))
 	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	if err := meter.Consume(agent, agentvolume.Writes, 20); err != nil {
@@ -498,7 +497,7 @@ func TestTheRetentionPassDeletesLapsedConfirmationsAndKeepsLiveOnes(t *testing.T
 		WHERE token_hash = (SELECT token_hash FROM bulk_confirmation ORDER BY created_at LIMIT 1)`)
 
 	sweeper := NewIdempotencyRetentionSweeper(e.Pool, slog.New(slog.DiscardHandler))
-	if err := sweeper.SweepWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if err := sweeper.SweepWorkspace(context.Background()); err != nil {
 		t.Fatalf("SweepWorkspace: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM bulk_confirmation WHERE expires_at <= now()`); n != 0 {
@@ -513,7 +512,7 @@ func TestTheRetentionPassDeletesLapsedConfirmationsAndKeepsLiveOnes(t *testing.T
 // agent is not charged for records that never changed.
 func TestAChangeThatDoesNotCommitGivesItsReservationBack(t *testing.T) {
 	e := integration.Setup(t)
-	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Writes: 30}, agentvolume.DefaultWindow)
+	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Writes: 30}, agentvolume.DefaultWindow).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))
 	engine := newBulkEngine(e.DB(), auth.NewGate(nil, auth.WithVolumeMeter(meter)))
 	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	items := seedBulkContacts(t, e, e.Rep1, 3)

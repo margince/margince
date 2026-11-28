@@ -20,7 +20,7 @@ import (
 func sessionSeat(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
 	user := ids.MustParse(apptest.SessionUserID(t, e))
-	ctx := principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool))
+	ctx := context.Background()
 	return principal.WithActor(principal.WithCorrelationID(ctx, ids.NewV7()), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		SeatType: principal.SeatFull, Permissions: AdminPerms,

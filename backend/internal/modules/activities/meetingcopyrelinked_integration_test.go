@@ -41,7 +41,7 @@ func TestAFoldedCopyCarriesAGuestsRelinkMark(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	system := principal.SystemActing(principal.WithWorkspaceID(ctx, e.ws), "system:meeting-fold")
+	system := principal.SystemActing(ctx, "system:meeting-fold")
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	if err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 		return store.RetireMeetingCopyTx(system, tx, ids.From[ids.ActivityKind](duplicate), ids.From[ids.ActivityKind](survivor))
@@ -90,7 +90,7 @@ func TestAFoldedCopyCarriesItsCalendarToTheSurvivorsGuests(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	system := principal.SystemActing(principal.WithWorkspaceID(ctx, e.ws), "system:meeting-fold")
+	system := principal.SystemActing(ctx, "system:meeting-fold")
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	if err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 		return store.RetireMeetingCopyTx(system, tx, ids.From[ids.ActivityKind](duplicate), ids.From[ids.ActivityKind](survivor))
@@ -130,7 +130,7 @@ func TestAFoldedCopyCarriesAnOlderGuestInLowercase(t *testing.T) {
 		return err
 	})
 
-	system := principal.SystemActing(principal.WithWorkspaceID(ctx, e.ws), "system:meeting-fold")
+	system := principal.SystemActing(ctx, "system:meeting-fold")
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	if err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 		return store.RetireMeetingCopyTx(system, tx, ids.From[ids.ActivityKind](duplicate), ids.From[ids.ActivityKind](survivor))
@@ -151,7 +151,7 @@ func TestAFoldedCopyCarriesAnOlderGuestInLowercase(t *testing.T) {
 // guest is copied.
 func TestACopyCarryReportsAFoldItCouldNotRun(t *testing.T) {
 	e := setupSend(t)
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:meeting-fold")
+	ctx := principal.SystemActing(context.Background(), "system:meeting-fold")
 	stopped, stop := context.WithCancel(ctx)
 	stop()
 	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {

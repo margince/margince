@@ -28,7 +28,7 @@ import (
 // well, and the test would pass without ever proving per-Passport isolation.
 func meteredCall(t *testing.T, ws ids.UUID, passport ids.UUID) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(t.Context(), ws)
+	ctx := t.Context()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:reader", PassportID: passport,
 	})
@@ -51,7 +51,7 @@ func aPassport() ids.UUID { return ids.New[ids.PassportKind]().UUID }
 // of 30 trip a limit of 100 that no one of them approaches.
 func TestChargesAccumulateAcrossCallsUntilTheThresholdIsCrossed(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at)).WithCompany(testCompany)
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 
 	for range 3 {
@@ -80,7 +80,7 @@ func TestChargesAccumulateAcrossCallsUntilTheThresholdIsCrossed(t *testing.T) {
 // §2.2 names by hand: "a single search_records returning 5,000 rows trips it".
 func TestOneOversizedCallTripsTheThresholdByItself(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at)).WithCompany(testCompany)
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 
 	if err := meter.Consume(ctx, Writes, 5000); err != nil {
@@ -96,7 +96,7 @@ func TestOneOversizedCallTripsTheThresholdByItself(t *testing.T) {
 // otherwise one busy agent would step-up every other agent the workspace runs.
 func TestOnePassportsReadingDoesNotRefuseAnother(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at)).WithCompany(testCompany)
 	// ONE workspace, two Passports — the whole point of the test.
 	ws := aWorkspace()
 	busy := meteredCall(t, ws, aPassport())
@@ -119,7 +119,7 @@ func TestOnePassportsReadingDoesNotRefuseAnother(t *testing.T) {
 // rather than by waiting for one.
 func TestTheWindowRollsOverAndReleasesTheThreshold(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at)).WithCompany(testCompany)
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 	if err := meter.Consume(ctx, Writes, 200); err != nil {
 		t.Fatal(err)
@@ -144,7 +144,7 @@ func TestTheWindowRollsOverAndReleasesTheThreshold(t *testing.T) {
 // writes again. This proves BYO-STEP-2 end to end, not by arithmetic.
 func TestAReleaseLetsARefusedAgentWriteAgainInTheSameWindow(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at)).WithCompany(testCompany)
 	ws, passport := aWorkspace(), aPassport()
 	ctx := meteredCall(t, ws, passport)
 	if err := meter.Consume(ctx, Writes, 120); err != nil {
@@ -155,7 +155,7 @@ func TestAReleaseLetsARefusedAgentWriteAgainInTheSameWindow(t *testing.T) {
 		t.Fatal("120 records did not cross a threshold of 100")
 	}
 
-	applied, err := releaseIn(t, meter, ws, passport, Writes, refused.Bucket)
+	applied, err := releaseIn(t, meter, passport, Writes, refused.Bucket)
 	if err != nil || !applied {
 		t.Fatalf("releasing the window the agent was refused in: applied=%v err=%v", applied, err)
 	}
@@ -177,13 +177,13 @@ func TestAReleaseLetsARefusedAgentWriteAgainInTheSameWindow(t *testing.T) {
 // the ladder has, so it must actually hold.
 func TestASecondCrossingAfterAReleaseNeedsASecondDecision(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at)).WithCompany(testCompany)
 	ws, passport := aWorkspace(), aPassport()
 	ctx := meteredCall(t, ws, passport)
 	if err := meter.Consume(ctx, Writes, 120); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := releaseIn(t, meter, ws, passport, Writes, meter.Bucket(t.Context())); err != nil {
+	if _, err := releaseIn(t, meter, passport, Writes, meter.Bucket(t.Context())); err != nil {
 		t.Fatal(err)
 	}
 
@@ -201,7 +201,7 @@ func TestASecondCrossingAfterAReleaseNeedsASecondDecision(t *testing.T) {
 // surface, and nothing may release it.
 func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Writes: 10, Egress: 10}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 10, Egress: 10}, time.Hour, frozen(&at)).WithCompany(testCompany)
 	ws, passport := aWorkspace(), aPassport()
 	ctx := meteredCall(t, ws, passport)
 	for _, c := range []Counter{Writes, Egress} {
@@ -210,7 +210,7 @@ func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 		}
 	}
 
-	if _, err := releaseIn(t, meter, ws, passport, Writes, meter.Bucket(t.Context())); err != nil {
+	if _, err := releaseIn(t, meter, passport, Writes, meter.Bucket(t.Context())); err != nil {
 		t.Fatal(err)
 	}
 
@@ -228,7 +228,8 @@ func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 func TestEachCounterIsItsOwnWindowForOnePassport(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t),
-		Limits{Writes: 10, Egress: 2, Calls: 500}, time.Hour, frozen(&at))
+		Limits{Writes: 10, Egress: 2, Calls: 500}, time.Hour, frozen(&at)).WithCompany(testCompany)
+
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 
 	if err := meter.Consume(ctx, Egress, 3); err != nil {
@@ -254,7 +255,7 @@ func TestEachCounterIsItsOwnWindowForOnePassport(t *testing.T) {
 // nothing is exactly what the unit lane refuses.
 func TestTheAgentBoundReportsWhetherItCanReachItsStore(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at)).WithCompany(testCompany)
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 
 	// A read against the live store, which is what sets the signal: before any
@@ -291,10 +292,10 @@ func TestTheAgentBoundReportsWhetherItCanReachItsStore(t *testing.T) {
 // grant. Both passports draw on one allowance, so a renewal never resets it.
 func TestAConnectionsRenewedPassportKeepsItsCount(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Writes: 10}, time.Hour, frozen(&at))
-	ws, connection := aWorkspace(), ids.NewV7()
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 10}, time.Hour, frozen(&at)).WithCompany(testCompany)
+	connection := ids.NewV7()
 	call := func(passport ids.UUID) context.Context {
-		ctx := principal.WithWorkspaceID(t.Context(), ws)
+		ctx := t.Context()
 		return principal.WithActor(ctx, principal.Principal{
 			Type: principal.PrincipalAgent, ID: "agent:connector", PassportID: passport, ConnectionID: connection,
 		})
@@ -314,7 +315,7 @@ func TestAConnectionsRenewedPassportKeepsItsCount(t *testing.T) {
 func TestALoweredAllowanceRefusesTheNextCall(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	src := &scriptedSource{policy: Policy{Limits: Limits{Writes: 200}, Window: WindowPlan{Length: time.Hour}}}
-	meter := NewWithClock(redistest.Client(t), Limits{}, time.Hour, frozen(&at)).WithPolicySource(src)
+	meter := NewWithClock(redistest.Client(t), Limits{}, time.Hour, frozen(&at)).WithCompany(testCompany).WithPolicySource(src)
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 	for range 15 {
 		if _, ok, err := meter.Reserve(ctx, Writes, 1); err != nil || !ok {
@@ -335,7 +336,7 @@ func TestTheCountKeepsRunningUntilTheResetThenTheNewLengthBinds(t *testing.T) {
 	at := time.Date(2026, 8, 8, 10, 0, 0, 0, time.UTC)
 	plan := WindowPlan{Length: 24 * time.Hour}.Reschedule(at, 12*time.Hour)
 	src := &scriptedSource{policy: Policy{Limits: Limits{Writes: 10}, Window: plan}}
-	meter := NewWithClock(redistest.Client(t), Limits{}, 24*time.Hour, frozen(&at)).WithPolicySource(src)
+	meter := NewWithClock(redistest.Client(t), Limits{}, 24*time.Hour, frozen(&at)).WithCompany(testCompany).WithPolicySource(src)
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 	if err := meter.Consume(ctx, Writes, 10); err != nil {
 		t.Fatal(err)
@@ -355,16 +356,16 @@ func TestTheCountKeepsRunningUntilTheResetThenTheNewLengthBinds(t *testing.T) {
 // One usage read answers every subject's counts and releases at once.
 func TestUsageReadsEverySubjectInOneRoundTrip(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 30, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100, Egress: 10}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100, Egress: 10}, time.Hour, frozen(&at)).WithCompany(testCompany)
 	ws, busy, idle := aWorkspace(), aPassport(), aPassport()
 	if err := meter.Consume(meteredCall(t, ws, busy), Writes, 120); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := releaseIn(t, meter, ws, busy, Writes, meter.Bucket(t.Context())); err != nil {
+	if _, err := releaseIn(t, meter, busy, Writes, meter.Bucket(t.Context())); err != nil {
 		t.Fatal(err)
 	}
 
-	usage, err := meter.Usage(t.Context(), ws, []Holder{{Subject: busy.String()}, {Subject: idle.String()}})
+	usage, err := meter.Usage(t.Context(), []Holder{{Subject: busy.String()}, {Subject: idle.String()}})
 	if err != nil {
 		t.Fatal(err)
 	}

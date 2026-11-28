@@ -129,7 +129,7 @@ func TestAConnectorWithoutUpdateCannotTakeOverItsOwnImport(t *testing.T) {
 		messageID, "Angebot", "the import's own rendering"))
 
 	// The same seat's mailbox, on a passport that may ingest but not update.
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",
@@ -494,7 +494,7 @@ func importThrough(
 // makes the imported row an ASSERTION rather than an observation.
 func seatCtx(t *testing.T, e *integration.Env, seat ids.UUID) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + seat.String(),

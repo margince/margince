@@ -112,7 +112,7 @@ func setupBounce(t *testing.T, address string) *bounceEnv {
 		t.Fatalf("recording the send: %v", err)
 	}
 
-	reporter := principal.WithWorkspaceID(context.Background(), e.WS)
+	reporter := context.Background()
 	reporter = principal.WithActor(reporter, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",
 		UserID: e.Rep1, OnBehalfOf: e.Rep1,
@@ -555,7 +555,7 @@ func TestAControllerMailBounceIsMatched(t *testing.T) {
 		t.Fatalf("staging the controller disclosure: %v", err)
 	}
 
-	reporter := principal.WithWorkspaceID(context.Background(), e.WS)
+	reporter := context.Background()
 	reporter = principal.WithActor(reporter, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",
 		UserID: e.Rep1, OnBehalfOf: e.Rep1,

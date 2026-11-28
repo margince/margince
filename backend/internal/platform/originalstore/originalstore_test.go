@@ -5,15 +5,9 @@ package originalstore
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestInlineOriginalsCannotSupplyObjectReferences(t *testing.T) {
@@ -43,46 +37,5 @@ func TestTheInlineBoundaryRequiresDurableStorageBeyondIt(t *testing.T) {
 	}
 	if _, _, err := Prepare(t.Context(), []byte(strings.Repeat("x", InlineLimit+1))); err == nil {
 		t.Fatal("offloading made malformed JSON admissible")
-	}
-}
-
-func TestStoredOriginalsRequireTheirWorkspaceAndExactBytes(t *testing.T) {
-	ws := ids.NewV7()
-	ctx := principal.WithWorkspaceID(t.Context(), ws)
-	blob := blobstore.NewMemory()
-	ctx = Bind(ctx, nil, blob)
-	svc, err := serviceOf(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prefix, err := svc.prefix(ctx, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	payload := []byte(`{"message":"verbatim"}`)
-	sum := sha256.Sum256(payload)
-	ref := Reference{Key: prefix + "original", SHA256: hex.EncodeToString(sum[:]), Bytes: int64(len(payload))}
-	put := func(content []byte) {
-		t.Helper()
-		if err := blob.Put(ctx, ref.Key, bytes.NewReader(content), int64(len(content)), "application/json"); err != nil {
-			t.Fatal(err)
-		}
-	}
-	put(payload)
-	got, err := Read(ctx, ref)
-	if err != nil || !bytes.Equal(got, payload) {
-		t.Fatalf("stored original changed: %q, %v", got, err)
-	}
-	other := principal.WithWorkspaceID(ctx, ids.NewV7())
-	if _, err := Read(other, ref); err == nil {
-		t.Fatal("a different workspace read the stored original")
-	}
-	put([]byte(`{"message":"modified"}`))
-	if _, err := Read(ctx, ref); err == nil {
-		t.Fatal("same-sized modified bytes passed the integrity check")
-	}
-	put(payload[:len(payload)-1])
-	if _, err := Read(ctx, ref); err == nil {
-		t.Fatal("truncated bytes passed the integrity check")
 	}
 }

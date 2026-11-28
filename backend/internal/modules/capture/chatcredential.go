@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ChatCredentials reads the access token a connected chat account was sealed
@@ -27,12 +26,13 @@ type ChatCredentials struct {
 // WhatsAppAccessToken unseals the access token of one connected number. The
 // context carries the workspace the job runs for.
 func (r ChatCredentials) WhatsAppAccessToken(ctx context.Context, connection ids.UUID) (string, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if r.Vault == nil || !ok {
+	company, err := database.ProvenWorkspace(ctx, r.Pool)
+	if r.Vault == nil || err != nil {
 		return "", ErrChannelWiringIncomplete
 	}
+	ws := company.UUID
 	var token string
-	err := database.WithTx(ctx, r.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, r.Pool, func(tx pgx.Tx) error {
 		var ref string
 		if err := tx.QueryRow(ctx, `SELECT credential_ref FROM channel_connection
 			 WHERE id = $1 AND archived_at IS NULL AND `+whatsappRow, connection).Scan(&ref); err != nil {

@@ -67,7 +67,9 @@ func (s *Service) ChangePassword(ctx context.Context, current, next string) (str
 	if err := passwordRuleError("new_password", next); err != nil {
 		return "", err
 	}
-	if _, ok := workspaceFrom(ctx); !ok {
+	if _, live, err := s.liveCompany(ctx); err != nil {
+		return "", err
+	} else if !live {
 		return "", apperrors.ErrNotFound
 	}
 	// Minted before the transaction, the way Login mints it: the raw value

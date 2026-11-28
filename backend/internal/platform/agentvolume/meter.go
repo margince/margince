@@ -57,6 +57,37 @@ type Meter struct {
 	// the one fact an operator needs about a control that fails closed. See
 	// answerable.go.
 	reachable *atomic.Bool
+	// company names the installation's company, which every counter key carries.
+	// A meter with none cannot name a counter, so it refuses every agent call.
+	company Company
+}
+
+// Company answers the installation's one live company, or an error while none
+// is live. It is a function and not an id read off a request, so a meter
+// follows the installation through an archive and a replacement.
+type Company func(ctx context.Context) (ids.UUID, error)
+
+// FixedCompany is a Company that always names company, for a composition whose
+// company is known up front.
+func FixedCompany(company ids.UUID) Company {
+	return func(context.Context) (ids.UUID, error) { return company, nil }
+}
+
+// WithCompany says how the meter names the installation in its counter keys.
+// Set at assembly, before any request is served, like WithCostCeiling.
+func (m *Meter) WithCompany(c Company) *Meter {
+	m.company = c
+	return m
+}
+
+// workspace names the company a counter key carries, and is false when none
+// can be named.
+func (m *Meter) workspace(ctx context.Context) (ids.UUID, bool) {
+	if m.company == nil {
+		return ids.UUID{}, false
+	}
+	ws, err := m.company(ctx)
+	return ws, err == nil
 }
 
 // New constructs a Meter over rdb using the real wall clock. A nil rdb is
@@ -119,6 +150,7 @@ func (m *Meter) RebindFrom(src *Meter) {
 	m.rdb, m.fallback, m.source, m.cache = src.rdb, src.fallback, src.source, src.cache
 	m.now, m.unbounded, m.cost = src.now, src.unbounded, src.cost
 	m.reachable = src.reachable
+	m.company = src.company
 }
 
 // Reading is what the meter knows about one Passport's window for one counter.
@@ -200,16 +232,16 @@ func governed(ctx context.Context) bool {
 // The two "no" answers this package gives are DIFFERENT and must not be folded
 // together. `governed` says the caller is outside the control — admit. This says
 // the caller is inside it and the meter cannot identify them — refuse. An agent
-// with no workspace bound to its context is the second: it is a caller these
-// bounds govern whose counter cannot be built, and admitting it would be a free
-// pass handed out by a wiring fault.
+// while no company can be named is the second. These bounds govern it and its
+// counter cannot be built. Admitting it would hand out a free pass for a wiring
+// fault.
 //
 // The key is SubjectOf the passport and its connection, falling back to the
 // principal's own id. Every agent principal this product mints carries a
 // Passport (identity.AgentIdentity.Principal), so the fallback is not a live
 // path. Keying on something always present stops a future agent principal
 // without one from being silently exempt.
-func callerKey(ctx context.Context) (ws ids.UUID, agent string, named bool) {
+func (m *Meter) callerKey(ctx context.Context) (ws ids.UUID, agent string, named bool) {
 	actor, present := principal.Actor(ctx)
 	if !present {
 		return ws, "", false
@@ -218,7 +250,7 @@ func callerKey(ctx context.Context) (ws ids.UUID, agent string, named bool) {
 	if agent == "" {
 		agent = actor.ID
 	}
-	ws, bound := principal.WorkspaceID(ctx)
+	ws, bound := m.workspace(ctx)
 	return ws, agent, bound && agent != ""
 }
 
@@ -227,7 +259,7 @@ func (m *Meter) usable(ctx context.Context) (ws ids.UUID, agent string, ok bool)
 	if !governed(ctx) || m.rdb == nil {
 		return ws, "", false
 	}
-	ws, agent, named := callerKey(ctx)
+	ws, agent, named := m.callerKey(ctx)
 	return ws, agent, named
 }
 
@@ -298,7 +330,7 @@ func (m *Meter) Read(ctx context.Context, c Counter) Reading {
 	}
 	refused := w.reading(c)
 	refused.Exceeded, refused.Unanswered = true, true
-	ws, agent, named := callerKey(ctx)
+	ws, agent, named := m.callerKey(ctx)
 	if !named || m.rdb == nil {
 		// Governed, and unidentifiable or uncountable. Both are the fail-closed
 		// branch: this caller is inside the control and the meter cannot answer
@@ -335,7 +367,7 @@ func (m *Meter) readCost(ctx context.Context, w window) Reading {
 		return out
 	}
 	out.Limit = m.cost.TokensPerPassport(ctx, w.length)
-	ws, agent, named := callerKey(ctx)
+	ws, agent, named := m.callerKey(ctx)
 	if out.Limit <= 0 || !named || m.rdb == nil {
 		return out
 	}

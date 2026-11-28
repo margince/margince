@@ -30,7 +30,7 @@ import (
 // other than liveness.
 type liveAuthority struct{}
 
-func (liveAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (liveAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: capturingPermissions()}, nil
 }
 
@@ -44,7 +44,7 @@ func capturingPermissions() principal.Permissions {
 	}}
 }
 
-func (liveAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (liveAuthority) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -54,15 +54,15 @@ type grantedAuthority struct {
 	seat principal.SeatType
 }
 
-func (g grantedAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (g grantedAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return g.rbac, nil
 }
 
-func (g grantedAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (g grantedAuthority) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return g.seat, nil
 }
 
-func (g grantedAuthority) AdmittedAuthority(context.Context, ids.UUID, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func (g grantedAuthority) AdmittedAuthority(context.Context, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return g.rbac, g.seat, nil
 }
 
@@ -70,11 +70,11 @@ func (g grantedAuthority) AdmittedAuthority(context.Context, ids.UUID, ids.UUID,
 // resolves — deactivated, suspended, or gone.
 type deadAuthority struct{}
 
-func (deadAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (deadAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{}, apperrors.ErrNotFound
 }
 
-func (deadAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (deadAuthority) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return "", apperrors.ErrNotFound
 }
 
@@ -91,11 +91,10 @@ func TestCallbackRefusesADeadGrantorBeforeExchangingTheCode(t *testing.T) {
 	}
 	const nonce = "csrf-nonce-value"
 	state := h.signer.sign(connectState{
-		Workspace: ids.MustParse("11111111-1111-1111-1111-111111111111"),
-		User:      ids.MustParse("22222222-2222-2222-2222-222222222222"),
-		Provider:  providerGmail,
-		Nonce:     nonce,
-		Version:   stateVersionNamespacedCSRF,
+		User:     ids.MustParse("22222222-2222-2222-2222-222222222222"),
+		Provider: providerGmail,
+		Nonce:    nonce,
+		Version:  stateVersionNamespacedCSRF,
 	}, time.Now().Add(connectStateTTL))
 
 	code := "the-code"
@@ -117,10 +116,10 @@ func TestCallbackRefusesADeadGrantorBeforeExchangingTheCode(t *testing.T) {
 	}
 }
 
-func (r liveAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r liveAuthority) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }
 
-func (r deadAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r deadAuthority) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }

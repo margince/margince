@@ -157,13 +157,9 @@ func inquiryVersion(t *testing.T, policy crmcontracts.Automation) map[string]str
 
 func inquirySeatContext(t *testing.T, e *apptest.AppEnv, user ids.UUID) context.Context {
 	t.Helper()
-	workspace, err := e.DB().Workspace(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	scoped := principal.WithWorkspaceID(t.Context(), workspace.UUID)
+	scoped := t.Context()
 	scoped = principal.WithCorrelationID(scoped, ids.NewV7())
-	live, err := identity.NewService(e.Pool).EffectiveRBAC(scoped, workspace.UUID, user)
+	live, err := identity.NewService(e.Pool).EffectiveRBAC(scoped, user)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,7 +14,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -130,17 +129,17 @@ func faultFor(ctx context.Context, kind string, err error) error {
 			// promises is reachable somewhere, just not in a fleet-visible
 			// column. Returning here without logging would trade a vague screen
 			// for a silent log, which is the same operator stuck one step later.
-			slog.ErrorContext(ctx, "jobs: a worker failed", faultLogAttrs(ctx, kind, registered.Class, err)...)
+			slog.ErrorContext(ctx, "jobs: a worker failed", faultLogAttrs(kind, registered.Class, err)...)
 			return &fault{sentence: registered.Sentence, cause: err}
 		}
 		slog.ErrorContext(ctx, "jobs: a worker returned a failure class this installation did not declare for this kind, so its sentence is not published",
-			faultLogAttrs(ctx, kind, class.Class, err)...)
+			faultLogAttrs(kind, class.Class, err)...)
 	}
 	if known, ok := sentinelFaultFor(err); ok {
 		// The stored sentence is fixed and names neither the read nor the record
 		// nor the step, so the cause is logged here exactly as it is for the
 		// classes above and below.
-		slog.ErrorContext(ctx, "jobs: a worker failed", faultLogAttrs(ctx, kind, "", err)...)
+		slog.ErrorContext(ctx, "jobs: a worker failed", faultLogAttrs(kind, "", err)...)
 		return &fault{sentence: known.sentence, cause: err}
 	}
 	// AFTER the sentinels, because a cause carrying one has already been named
@@ -154,14 +153,14 @@ func faultFor(ctx context.Context, kind string, err error) error {
 	// because a host did not resolve now reads that, instead of being sent to
 	// a log to find out.
 	if technical, ok := technicalFaultFor(err); ok {
-		slog.ErrorContext(ctx, "jobs: a worker failed", faultLogAttrs(ctx, kind, technical.class, err)...)
+		slog.ErrorContext(ctx, "jobs: a worker failed", faultLogAttrs(kind, technical.class, err)...)
 		return &fault{sentence: technical.sentence, cause: err}
 	}
 	// The SAME attributes as the two classified lines above. This is the branch
 	// whose sentence tells an operator the diagnosis is in the process log, so it
 	// is the one line that must be findable — and it was the one carrying neither
 	// the kind nor anything else identifying the tick.
-	slog.ErrorContext(ctx, "jobs: a worker failed with an unclassified cause", faultLogAttrs(ctx, kind, "", err)...)
+	slog.ErrorContext(ctx, "jobs: a worker failed with an unclassified cause", faultLogAttrs(kind, "", err)...)
 	return &fault{sentence: unrecognised, cause: err}
 }
 
@@ -238,7 +237,7 @@ const (
 // snooze, so this line and the unit's own row are the whole trail.
 func rescheduleFor(ctx context.Context, kind, class string, in time.Duration, err error) error {
 	delay := min(max(in, minRescheduleDelay), maxRescheduleDelay)
-	attrs := append(faultLogAttrs(ctx, kind, class, err), "retry_in", delay.String())
+	attrs := append(faultLogAttrs(kind, class, err), "retry_in", delay.String())
 	// A CLAMPED REQUEST SAYS SO. The bounds exist to catch a unit that computed a
 	// delay wrong, and a clamp that logged only its own result made that mistake
 	// invisible: a unit asking for 72 hours and a unit asking for fifteen minutes
@@ -256,30 +255,21 @@ func rescheduleFor(ctx context.Context, kind, class string, in time.Duration, er
 // faultLogAttrs is what every fault log line carries, spelled once so the three
 // branches cannot describe the same failure three different ways.
 //
-// THE CORRELATION ID IS THE HANDLER'S, and it is not attached here. Every
-// serving role installs a correlation-aware default
-// (httpserver.InstallProcessLogger), so attaching it by hand would have both
-// halves stamp the same key and a JSON line carry correlation_id twice. One
-// thing stamps it, for every package-level call in the tree.
+// The correlation id is the handler's and is not attached here. Every serving
+// role installs a correlation-aware default (httpserver.InstallProcessLogger).
+// Attaching it by hand would stamp the key twice. The handler stamps it once
+// for every package-level call in the tree.
 //
-// THE WORKSPACE STILL IS attached here, because nothing else knows it. The
-// handler reads the correlation id off the context and only that; a job's
-// workspace is this seam's to say.
-//
-// An absent value is OMITTED rather than logged empty. A dispatcher has no
-// workspace and the two kindless entry points have no kind; an empty attr would
-// assert a value the failure does not have, and a reader filtering on it would
-// match every one of them.
-func faultLogAttrs(ctx context.Context, kind, class string, err error) []any {
+// An absent value is omitted rather than logged empty. The two kindless entry
+// points have no kind. An empty attr would assert a value the failure does not
+// have, and a reader filtering on it would match every one of them.
+func faultLogAttrs(kind, class string, err error) []any {
 	attrs := make([]any, 0, 6)
 	if kind != "" {
 		attrs = append(attrs, "kind", kind)
 	}
 	if class != "" {
 		attrs = append(attrs, "class", class)
-	}
-	if ws, ok := principal.WorkspaceID(ctx); ok {
-		attrs = append(attrs, "workspace_id", ws.String())
 	}
 	return append(attrs, errorAttr(err))
 }

@@ -61,10 +61,11 @@ func (s *ChannelStore) ReplaceToken(ctx context.Context, id ids.UUID, token, eve
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("capture: channel token replacement called outside a workspace context")
+	company, err := s.db.Workspace(ctx)
+	if err != nil {
+		return err
 	}
+	ws := company.UUID
 	current, err := s.readChannelRow(ctx, id)
 	if err != nil {
 		return err
@@ -185,10 +186,11 @@ func (s *ChannelStore) disconnectForSelection(ctx context.Context, id ids.UUID, 
 		return fmt.Errorf("configure a credential store for this installation, so the bot's sealed credentials can be destroyed: %w",
 			ErrChannelWiringIncomplete)
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("capture: channel disconnect called outside a workspace context")
+	company, err := s.db.Workspace(ctx)
+	if err != nil {
+		return err
 	}
+	ws := company.UUID
 
 	current, err := s.readChannelRow(ctx, id)
 	if err != nil {

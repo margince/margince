@@ -44,7 +44,7 @@ func setPosture(t *testing.T, env captureEnv, user ids.UUID, posture string) {
 // allowSharedPosture is the admin turning on the workspace opt-in.
 func allowSharedPosture(t *testing.T, e *integration.SearchEnv) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,

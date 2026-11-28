@@ -50,7 +50,7 @@ func (f restoreFixture) otherTenant(t *testing.T) (context.Context, *collections
 	if _, err := OwnerConn(t).Exec(context.Background(), `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seeding the second workspace: %v", err)
 	}
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, Permissions: AdminPerms,
 	})

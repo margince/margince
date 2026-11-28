@@ -29,7 +29,7 @@ func ownedRecord(entity datasource.EntityType, owner ids.UUID) datasource.Record
 }
 
 func humanCtx(seat ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat,
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
@@ -234,7 +234,7 @@ func TestAnAgentReadsAsTheHumanItActsFor(t *testing.T) {
 	me := ids.NewV7()
 	rows := rowsFor(ownedRecord(datasource.EntityCompany, me))
 
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:probe", OnBehalfOf: me,
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
@@ -258,7 +258,7 @@ func TestAnAgentStillSeesAColleaguesRecordAsTheirs(t *testing.T) {
 	me, sofia := ids.NewV7(), ids.NewV7()
 	rows := rowsFor(ownedRecord(datasource.EntityCompany, sofia))
 
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:probe", OnBehalfOf: me,
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
@@ -278,7 +278,7 @@ func TestASystemPrincipalOwnsNothing(t *testing.T) {
 	owner := ids.NewV7()
 	rows := rowsFor(ownedRecord(datasource.EntityCompany, owner))
 
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:sweep",
 		Scopes: principal.NewScopeSet(principal.ScopeRead),

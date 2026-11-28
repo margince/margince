@@ -208,7 +208,7 @@ func reportingRetentionLifecycle(human context.Context, t *testing.T, e *forecas
 	e.ownerExec(t, `UPDATE report_edition SET captured_at=now()-interval '3 days' WHERE id=$1`, editionID)
 	e.ownerExec(t, `UPDATE deal SET legal_hold=true WHERE id IN(SELECT source_id FROM report_edition_contribution WHERE edition_id=$1 AND source_type='deal')`, editionID)
 	retention := NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.New(slog.DiscardHandler))
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:privacy-retention")
+	system := principal.SystemActing(context.Background(), "system:privacy-retention")
 	if err := retention.EvaluateInstallation(system); err != nil {
 		t.Fatal(err)
 	}

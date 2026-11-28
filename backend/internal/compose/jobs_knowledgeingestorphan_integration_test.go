@@ -137,7 +137,7 @@ func (o *orphanIngest) boot(t *testing.T, queue knowledge.QueueIngest) (queued [
 	if queue == nil {
 		queue = func(_ context.Context, _ pgx.Tx, id ids.UUID) error { queued = append(queued, id); return nil }
 	}
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), o.e.WS), "system:handbook-corpus")
+	ctx := principal.SystemActing(context.Background(), "system:handbook-corpus")
 	if _, err := o.worker.store.ReconcileHandbook(ctx, func(context.Context, pgx.Tx) error { return nil }, queue); err != nil {
 		t.Fatalf("reconcile the handbook: %v", err)
 	}

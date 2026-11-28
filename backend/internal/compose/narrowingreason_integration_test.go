@@ -338,7 +338,7 @@ func TestOneFailingContactDoesNotStopTheVerdictPass(t *testing.T) {
 	refuseUpdates(t, "contact", fmt.Sprintf("OLD.id = '%s'", contactIDFor(t, e, stuck)))
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err == nil {
+	if err := engine.PublishAnsweredContactsWorkspace(context.Background()); err == nil {
 		t.Error("the pass swallowed the failed publication")
 	}
 
@@ -367,7 +367,7 @@ func TestFailingContactsDoNotStarveTheContactsBehindThem(t *testing.T) {
 
 	// Two pages hold a failure each; the third holds only a contact that lands.
 	for pass, wantFailure := range []bool{true, true, false} {
-		err := engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+		err := engine.PublishAnsweredContactsWorkspace(context.Background())
 		if (err != nil) != wantFailure {
 			t.Errorf("pass %d answered %v, want a reported failure: %v", pass+1, err, wantFailure)
 		}
@@ -393,7 +393,7 @@ func TestThePassStartsOverAndRetriesASkippedContact(t *testing.T) {
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	engine.answeredPage = 2
 	pass := func() error {
-		return engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+		return engine.PublishAnsweredContactsWorkspace(context.Background())
 	}
 	if err := pass(); err == nil {
 		t.Fatal("the first pass reported no failure for the refused contact")
@@ -504,7 +504,7 @@ func connectSeatMailbox(t *testing.T, e *integration.Env, seat ids.UUID, address
 func publishAnswered(t *testing.T, e *integration.Env) {
 	t.Helper()
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if err := engine.PublishAnsweredContactsWorkspace(context.Background()); err != nil {
 		t.Fatalf("publishing answered contacts: %v", err)
 	}
 }

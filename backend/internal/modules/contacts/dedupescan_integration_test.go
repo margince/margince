@@ -29,7 +29,7 @@ type preRuleDuplicates struct {
 }
 
 func (e *dedupeEnv) asScan() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.SystemActing(ctx, "dedupe_scan")
 }

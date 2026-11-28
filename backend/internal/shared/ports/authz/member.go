@@ -20,8 +20,8 @@ import (
 // records another form, or acts on somebody's behalf, sets that on the result;
 // a member who is gone answers ErrNotFound, and what that means is the
 // caller's to decide.
-func MemberPrincipal(ctx context.Context, r Resolver, workspaceID, userID ids.UUID) (principal.Principal, error) {
-	rbac, seat, err := r.AdmittedAuthority(ctx, workspaceID, userID, ids.Nil)
+func MemberPrincipal(ctx context.Context, r Resolver, userID ids.UUID) (principal.Principal, error) {
+	rbac, seat, err := r.AdmittedAuthority(ctx, userID, ids.Nil)
 	if err != nil {
 		return principal.Principal{}, err
 	}

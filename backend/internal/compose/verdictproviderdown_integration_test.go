@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -48,7 +47,7 @@ func TestAProviderOutageRefundsTheSendersAndSchedulesAtTheProbe(t *testing.T) {
 
 	brain := &brokeBrain{err: down}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), senders); err != nil {
+	if err := engine.RunWorkspace(context.Background(), senders); err != nil {
 		t.Fatalf("an outage failed the pass: %v", err)
 	}
 	if brain.calls != 1 {
@@ -70,7 +69,7 @@ func TestAPlainProviderErrorStillChargesTheSender(t *testing.T) {
 
 	brain := &brokeBrain{err: errors.New("provider said: internal error")}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 1); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 1); err != nil {
 		t.Fatalf("a message-level failure failed the pass: %v", err)
 	}
 	if attempts, _ := dispositionAttemptsAndClaim(t, e, id); attempts != 1 {
@@ -90,7 +89,7 @@ func TestAProviderOutageRefundsTheThreadsAndSchedulesAtTheProbe(t *testing.T) {
 
 	brain := &brokeBrain{err: down}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("an outage failed the pass: %v", err)
 	}
 	if brain.calls != 1 {
@@ -112,7 +111,7 @@ func TestAPlainProviderErrorStillChargesTheThread(t *testing.T) {
 
 	brain := &brokeBrain{err: errors.New("provider said: internal error")}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 1); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 1); err != nil {
 		t.Fatalf("a message-level failure failed the pass: %v", err)
 	}
 	if attempts, _ := threadAttemptsAndClaim(t, e, id); attempts != 1 {

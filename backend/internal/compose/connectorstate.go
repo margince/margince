@@ -14,6 +14,7 @@ package compose
 // the TTL is bounded by the provider's own single-use authorization code.
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -24,7 +25,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -33,10 +37,11 @@ import (
 // callback receives, proving the initiator and the completer are the same
 // browser (the signed state alone only proves the initiator).
 type connectState struct {
+	// Workspace is written for older replicas and never read back.
+	Workspace          ids.UUID
 	SlackHistory       *chatwire.HistoryProfile
 	MessagingWorkspace string
 	MessengerRecord    *messengerReturnRecord
-	Workspace          ids.UUID
 	User               ids.UUID
 	Provider           string
 	Nonce              string
@@ -69,20 +74,45 @@ type wireState struct {
 	SlackHistory       *chatwire.HistoryProfile `json:"slack_history,omitempty"`
 	MessagingWorkspace string                   `json:"messaging_workspace,omitempty"`
 	MessengerRecord    *messengerReturnRecord   `json:"messenger_record,omitempty"`
-	Workspace          string                   `json:"ws"`
-	User               string                   `json:"u"`
-	Provider           string                   `json:"p"`
-	Nonce              string                   `json:"n"`
-	ReturnTo           string                   `json:"rt,omitempty"`
-	Then               string                   `json:"th,omitempty"`
-	Shared             bool                     `json:"sh,omitempty"`
-	WindowMonths       int                      `json:"iw,omitempty"`
-	Version            int                      `json:"v,omitempty"`
-	Exp                int64                    `json:"exp"` // unix seconds
+	// Workspace is read by no replica of this release. It is written so that a
+	// replica one release older, which requires it, can still verify a state.
+	Workspace    string `json:"ws"`
+	User         string `json:"u"`
+	Provider     string `json:"p"`
+	Nonce        string `json:"n"`
+	ReturnTo     string `json:"rt,omitempty"`
+	Then         string `json:"th,omitempty"`
+	Shared       bool   `json:"sh,omitempty"`
+	WindowMonths int    `json:"iw,omitempty"`
+	Version      int    `json:"v,omitempty"`
+	Exp          int64  `json:"exp"` // unix seconds
 }
 
 // stateSigner mints and verifies signed state tokens with an HMAC key.
-type stateSigner struct{ key []byte }
+type stateSigner struct {
+	key []byte
+	// pool names the installation's company in the compatibility field of the
+	// wire form. Nil writes the zero id.
+	pool *pgxpool.Pool
+}
+
+// forInstallation is s naming pool's live company in the states it signs.
+func (s stateSigner) forInstallation(pool *pgxpool.Pool) stateSigner {
+	s.pool = pool
+	return s
+}
+
+// signFor signs st with the live company of the request ctx, which the wire
+// form carries for older replicas. A failed lookup writes the zero id: nothing
+// reads the field.
+func (s stateSigner) signFor(ctx context.Context, st connectState, exp time.Time) string {
+	if s.pool != nil {
+		if company, err := database.ProvenWorkspace(ctx, s.pool); err == nil {
+			st.Workspace = company.UUID
+		}
+	}
+	return s.sign(st, exp)
+}
 
 // newStateSigner refuses a key below the floor rather than trusting whoever
 // built it to have checked.
@@ -106,8 +136,8 @@ func (s stateSigner) usable() bool { return len(s.key) >= minStateKeyLen }
 // tuple until exp.
 func (s stateSigner) sign(st connectState, exp time.Time) string {
 	payload, _ := json.Marshal(wireState{ //nolint:errchkjson // string/int-only struct never errors
-		SlackHistory: st.SlackHistory, MessagingWorkspace: st.MessagingWorkspace, MessengerRecord: st.MessengerRecord,
 		Workspace:    st.Workspace.String(),
+		SlackHistory: st.SlackHistory, MessagingWorkspace: st.MessagingWorkspace, MessengerRecord: st.MessengerRecord,
 		User:         st.User.String(),
 		Provider:     st.Provider,
 		Nonce:        st.Nonce,
@@ -147,17 +177,13 @@ func (s stateSigner) verify(token string, now time.Time) (connectState, error) {
 	if now.Unix() > w.Exp {
 		return connectState{}, errors.New("connector state: expired")
 	}
-	ws, err := ids.Parse(w.Workspace)
-	if err != nil {
-		return connectState{}, fmt.Errorf("connector state: bad workspace id: %w", err)
-	}
 	user, err := ids.Parse(w.User)
 	if err != nil {
 		return connectState{}, fmt.Errorf("connector state: bad user id: %w", err)
 	}
 	return connectState{
 		SlackHistory: w.SlackHistory, MessagingWorkspace: w.MessagingWorkspace, MessengerRecord: w.MessengerRecord,
-		Workspace: ws, User: user, Provider: w.Provider,
+		User: user, Provider: w.Provider,
 		Nonce: w.Nonce, ReturnTo: w.ReturnTo, Version: w.Version,
 		Then: w.Then, SharedConsent: w.Shared, WindowMonths: w.WindowMonths,
 	}, nil

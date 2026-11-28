@@ -26,7 +26,7 @@ import (
 // captureMailFile records one file on a mail through RecordCapturedFiles.
 func captureMailFile(t *testing.T, e *Env, mail ids.UUID, name, contentType string, body []byte) ids.UUID {
 	t.Helper()
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:imap",
 		Permissions: principal.Permissions{
@@ -63,7 +63,7 @@ func captureMailFile(t *testing.T, e *Env, mail ids.UUID, name, contentType stri
 // real withheld-file writer.
 func withholdMailFile(t *testing.T, e *Env, mail ids.UUID, name string) ids.UUID {
 	t.Helper()
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:imap",
 		Permissions: principal.Permissions{

@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -68,15 +67,14 @@ func (e *WorkflowEngine) HandleApprovalDecided(ctx context.Context, env kevents.
 	}
 	approvalID := ids.From[ids.ApprovalKind](env.Entity.ID)
 	// This consumer's workspace is its handle's; the envelope carries none.
-	ws, err := e.db.Workspace(ctx)
+	_, err := e.db.Workspace(ctx)
 	if err != nil {
 		return err
 	}
-	wsCtx := principal.WithWorkspaceID(ctx, ws.UUID)
 	if completes {
-		return CompleteApprovedRun(wsCtx, e.db, approvalID)
+		return CompleteApprovedRun(ctx, e.db, approvalID)
 	}
-	return e.MarkRunBlocked(wsCtx, approvalID, "approval "+approvalID.String()+" "+reason)
+	return e.MarkRunBlocked(ctx, approvalID, "approval "+approvalID.String()+" "+reason)
 }
 
 // CompleteApprovedRun lands the terminal 'applied' outcome on a parked run in a

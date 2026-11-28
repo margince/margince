@@ -21,8 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -293,10 +291,7 @@ func runProbe(ctx context.Context, stdout io.Writer, census *aitasks.Registry, c
 	}
 
 	recorder := &recordingCompleter{inner: complete}
-	// The router refuses a call outside a workspace context. This lane has no
-	// database to resolve a real one from, so it mints a fixed DB-less id — the
-	// same thing the certification runner and the siteread debug lane do.
-	trace, runErr := prepared.Run(principal.WithWorkspaceID(ctx, ids.NewV7()), recorder)
+	trace, runErr := prepared.Run(ctx, recorder)
 	res.Calls = recorder.calls
 	// The final output is written to --json like everything else, so it passes
 	// the same credential gate the per-call replies do.

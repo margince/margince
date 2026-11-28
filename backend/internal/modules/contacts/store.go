@@ -292,10 +292,11 @@ func uuidPtr(id *ids.UUID) *openapi_types.UUID {
 	return &converted
 }
 
-// workspaceID types the tx-bound workspace GUC (storekit hands it out
-// untyped) for the helpers that carry it as an entity parameter.
-func workspaceID(ctx context.Context) ids.WorkspaceID {
-	return ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx))
+// workspaceID is the installation's company as tx proves it, for the helpers
+// that carry it as an entity parameter.
+func workspaceID(ctx context.Context, tx pgx.Tx) (ids.WorkspaceID, error) {
+	ws, err := storekit.Workspace(ctx, tx)
+	return ids.From[ids.WorkspaceKind](ws), err
 }
 
 // SetClock keeps event timestamps reproducible for reporting attribution.

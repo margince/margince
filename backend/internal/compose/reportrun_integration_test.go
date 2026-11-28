@@ -210,7 +210,7 @@ func TestASavedRunIsRefusedToAReaderWhoMayNotReadThePopulation(t *testing.T) {
 	runID := e.saveRun(e.askerCtx(), t, countAllDeals())
 
 	// A seat holding the forecast transaction but NOT the deal population.
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:outsider", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
@@ -407,7 +407,7 @@ func TestACitedCellIsRefusedToAReaderWhoMayNotReadThePopulation(t *testing.T) {
 	}
 	runID := e.saveRun(e.askerCtx(), t, countAllDeals())
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:outsider", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
@@ -518,7 +518,7 @@ func TestAReportCitingAnUnreadableRunIsRefused(t *testing.T) {
 	}
 	runID := e.saveRun(e.askerCtx(), t, countAllDeals())
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:outsider", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{

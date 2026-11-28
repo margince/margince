@@ -145,15 +145,15 @@ func TestCounterpartyStagingKeepsEachImportOwnersDecision(t *testing.T) {
 // responsibility must still narrow which one receives the persisted proposal.
 type agendaWebhookAuthority struct{}
 
-func (agendaWebhookAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (agendaWebhookAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: integration.AdminPerms}, nil
 }
 
-func (agendaWebhookAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (agendaWebhookAuthority) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
 // AdmittedAuthority is the read the delivery boundary makes for each owner.
-func (agendaWebhookAuthority) AdmittedAuthority(context.Context, ids.UUID, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func (agendaWebhookAuthority) AdmittedAuthority(context.Context, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authz.RBAC{Permissions: integration.AdminPerms}, principal.SeatFull, nil
 }

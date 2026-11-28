@@ -157,7 +157,7 @@ func TestARemovalLeavesARefSealedWhileItWasDeciding(t *testing.T) {
 		t.Fatalf("sealing the newer password: %v", err)
 	}
 
-	sysCtx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "test-concurrent-seal")
+	sysCtx := principal.SystemActing(context.Background(), "test-concurrent-seal")
 	store := compose.NewSettingsStore(e.Pool)
 	removed := removedMailConfig(t, true)
 	removal := make(chan error, 1)

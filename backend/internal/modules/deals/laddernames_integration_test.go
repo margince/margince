@@ -105,7 +105,7 @@ var errSeedRolledBack = errors.New("the seeded ladder was read")
 // the pair the seed appends takes the next free name.
 func TestASeededLadderBesideAnOpenStageNamedWonNumbersTheClosingStage(t *testing.T) {
 	e := setupConfigEnv(t)
-	ctx := principal.SystemActing(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()), "system:test")
+	ctx := principal.SystemActing(principal.WithCorrelationID(context.Background(), ids.NewV7()), "system:test")
 	var names []string
 	err := e.store.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `UPDATE pipeline SET is_default = false WHERE is_default`); err != nil {

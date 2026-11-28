@@ -21,7 +21,7 @@ import (
 
 func TestTroubledRunsRefusesAReaderWithoutTheAutomationGrant(t *testing.T) {
 	store := NewAutomationStore(nil)
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
 	})

@@ -86,7 +86,6 @@ func newExtensionSignalFixture(t *testing.T) extensionSignalFixture {
 		},
 	}})
 	actorID := "human:" + admin.String()
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: actorID, UserID: admin,

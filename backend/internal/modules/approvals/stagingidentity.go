@@ -434,9 +434,9 @@ func (s *Service) stageUnlessDeclinedInTx(ctx context.Context, tx pgx.Tx, in Sta
 	var id ids.ApprovalID
 	staged := false
 	err := func() error {
-		wsID, ok := principal.WorkspaceID(ctx)
-		if !ok {
-			return errors.New("crmapprovals: no workspace bound to context")
+		wsID, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("crmapprovals: staging needs a live company: %w", err)
 		}
 		// The identity lock FIRST, before the read below — this is the ordering
 		// that a row lock alone cannot give.

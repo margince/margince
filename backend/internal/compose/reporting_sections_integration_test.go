@@ -24,7 +24,7 @@ import (
 // sectionsReader reads the lead and partner sections under one row scope. It
 // holds the read grants those metrics need, less any named in without.
 func sectionsReader(e *forecastEnv, user ids.UUID, teams []ids.UUID, scope principal.RowScope, without ...string) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	grants := map[string]principal.ObjectGrant{}
 	for _, object := range []string{"report_definition", "installation_settings", "deal", "pipeline", "lead", "company", "partner", "commission", "activity", "product"} {
 		if !slices.Contains(without, object) {
@@ -35,7 +35,7 @@ func sectionsReader(e *forecastEnv, user ids.UUID, teams []ids.UUID, scope princ
 }
 
 func sectionsWriter(e *forecastEnv) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.SystemActing(ctx, "system:sections-fixture")
 }
 

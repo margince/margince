@@ -30,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/testsmtp"
 )
@@ -120,7 +119,7 @@ func TestARestrictionEndsOnceItsLiftNoticeIsSentAndHeldMailIsReadThen(t *testing
 	}
 	held := mailFromAddress(t, l.e, "sent while restricted", "subject@example.test")
 	classifier := NewCaptureClassifier(l.e.Pool, &scriptedClassifyBrain{}, slog.New(slog.DiscardHandler))
-	pass := principal.WithWorkspaceID(context.Background(), l.e.WS)
+	pass := context.Background()
 	if err := classifier.RunWorkspace(pass, 0); err != nil {
 		t.Fatal(err)
 	}

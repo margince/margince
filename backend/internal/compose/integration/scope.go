@@ -32,6 +32,6 @@ import (
 // non-test file here is an import cycle — which is why the shape moved down to
 // the kernel rather than the fixture moving up.
 func RetentionPassCtx(ws ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, "system")
 }

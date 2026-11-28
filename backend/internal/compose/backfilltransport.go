@@ -318,23 +318,12 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 	if err == nil {
 		estimate = previewed.BackfillEstimate
 	}
-	ws, ok := principal.WorkspaceID(r.Context())
-	if !ok {
-		// Every authenticated request carries its workspace, so its absence is a
-		// wiring defect — surfaced before anything is written, since the job the
-		// run needs cannot be addressed without it.
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusInternalServerError, Code: "workspace_missing",
-			Detail: "The request carries no workspace context; nothing was started. Try again.",
-		})
-		return
-	}
 	startOver := req.StartOver != nil && *req.StartOver
 	var run capture.BackfillRun
 	if req.InternalMailPreviewToken != nil {
-		run, err = h.beginInternalHistory(r.Context(), ws, capture.MailboxNamed(string(provider), params.ConnectionId), userID, months, estimate, *req.InternalMailPreviewToken)
+		run, err = h.beginInternalHistory(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), userID, months, estimate, *req.InternalMailPreviewToken)
 	} else {
-		run, err = h.begin(r.Context(), ws, capture.MailboxNamed(string(provider), params.ConnectionId), userID, months, estimate, startOver)
+		run, err = h.begin(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), userID, months, estimate, startOver)
 	}
 	if errors.Is(err, errBackfillEnqueue) {
 		h.log.ErrorContext(r.Context(), "backfill: enqueue", "err", err)

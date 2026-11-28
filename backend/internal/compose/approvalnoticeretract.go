@@ -70,11 +70,10 @@ func (r *ApprovalNoticeRetract) HandleEvent(ctx context.Context, env events.Enve
 	}
 	// The envelope carries no tenant, and the subscriber binds none: without
 	// this the workspace resolves to zero and every write is refused.
-	ws, err := r.identity.InstallationWorkspace(ctx)
+	_, err := r.identity.InstallationWorkspace(ctx)
 	if err != nil {
 		return err
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	ctx = principal.WithCorrelationID(ctx, env.EventID)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: approvalNoticeRetractActor,

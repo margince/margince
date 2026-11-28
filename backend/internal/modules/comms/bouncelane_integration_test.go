@@ -126,7 +126,7 @@ func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 // permission every seat that sees the Worklist carries. Contact read is what
 // lets the lane name the contact a send is filed under.
 func readerCtx(ws ids.UUID, user ids.UserID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user.UUID,
 		Permissions: principal.Permissions{

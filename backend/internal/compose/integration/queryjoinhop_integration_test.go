@@ -224,7 +224,7 @@ func TestARoleRefusedTheEdgeObjectCannotTraverseTheEmploymentEdge(t *testing.T) 
 		}
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), q.WS), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},
 	})

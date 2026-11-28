@@ -58,11 +58,11 @@ func (s *ScheduledSendStop) HandleEvent(ctx context.Context, env events.Envelope
 	if err != nil || !stop {
 		return err
 	}
-	ws, err := s.identity.InstallationWorkspace(ctx)
+	_, err = s.identity.InstallationWorkspace(ctx)
 	if err != nil {
 		return err
 	}
-	wsCtx := principal.WithCausationEvent(principal.WithWorkspaceID(ctx, ws.UUID), env.EventID)
+	wsCtx := principal.WithCausationEvent(ctx, env.EventID)
 	pending, err := s.store.PendingMarketingToContact(onStopTrace(sendWorkerScope(wsCtx), env), ids.From[ids.ContactKind](env.Entity.ID), purpose)
 	if err != nil {
 		return fmt.Errorf("scheduled send stop: %w", err)

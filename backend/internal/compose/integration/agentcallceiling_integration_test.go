@@ -27,7 +27,7 @@ import (
 // a test can put the window into the state it is about.
 func boundedApp(t *testing.T, slug string, limit int) (*apptest.AppEnv, *agentvolume.Meter) {
 	t.Helper()
-	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Calls: limit}, time.Hour)
+	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Calls: limit}, time.Hour).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))
 	e := apptest.SetupAppWithOptions(t, compose.WithAgentVolume(meter))
 	apptest.BootstrapWorkspaceSession(t, e, "Call Ceiling", slug+"@fable.test", "Admin")
 	return e, meter
@@ -41,7 +41,7 @@ func asPassport(t *testing.T, e *apptest.AppEnv, passport ids.UUID) context.Cont
 	if err := e.Owner.QueryRow(t.Context(), `SELECT id FROM workspace LIMIT 1`).Scan(&ws); err != nil {
 		t.Fatalf("reading the workspace id: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(t.Context(), ws)
+	ctx := t.Context()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + passport.String(), PassportID: passport,
 	})

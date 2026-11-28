@@ -226,7 +226,7 @@ func TestErasureRemovesPIIEverywhereAndSticksViaSuppression(t *testing.T) {
 
 	// Re-capture of the erased address is skipped, not resurrected.
 	sink := capture.NewSink(e.DB())
-	connCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	connCtx := context.Background()
 	connCtx = principal.WithCorrelationID(connCtx, ids.NewV7())
 	connCtx = principal.WithActor(connCtx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:test",

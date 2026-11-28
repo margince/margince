@@ -72,7 +72,7 @@ func seedEvidenceFixture(t *testing.T, e *SearchEnv) evidenceFixture {
 func (e *SearchEnv) evidenceReader() context.Context {
 	grants := searchReadGrants()
 	grants["forecast"] = principal.ObjectGrant{Read: true}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
@@ -391,7 +391,7 @@ func TestTheWholeRunKeepsTheNarrowingItsGroupingBrought(t *testing.T) {
 	for _, object := range []string{"project", "forecast"} {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeOwn},
 	})

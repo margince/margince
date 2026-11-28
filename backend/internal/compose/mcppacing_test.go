@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -31,7 +32,7 @@ func (installationPolicy) Policy(context.Context) (agentvolume.Policy, error) {
 func TestOnlyAnAdminsPassportGoesUnpacedOnMCP(t *testing.T) {
 	roles := map[string][]string{"admin": {"admin"}, "rep": {"rep"}, "demoted": {"admin"}}
 	lim, lookups := newMCPLimitersWithClock(newStepClock().now), 0
-	meter := agentvolume.New(nil, agentvolume.Limits{}, agentvolume.DefaultWindow).WithPolicySource(installationPolicy{})
+	meter := agentvolume.New(nil, agentvolume.Limits{}, agentvolume.DefaultWindow).WithCompany(agentvolume.FixedCompany(ids.UUID{1})).WithPolicySource(installationPolicy{})
 	authenticate := func(r *http.Request) (context.Context, error) {
 		lookups++
 		held, known := roles[strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")]
@@ -39,7 +40,7 @@ func TestOnlyAnAdminsPassportGoesUnpacedOnMCP(t *testing.T) {
 			return nil, apperrors.ErrNotFound
 		}
 		agent := principal.Principal{Type: principal.PrincipalAgent, Permissions: principal.Permissions{RoleKeys: held}}
-		return principal.WithActor(principal.WithWorkspaceID(r.Context(), [16]byte{1}), agent), nil
+		return principal.WithActor(r.Context(), agent), nil
 	}
 	edge := mcpEdge(agents.NewHTTPHandler(NewRegistry(nil, SendPath{}), mcpPaceAfterAuth(authenticate, lim.perPassport, meter),
 		func(*http.Request) string { return "Bearer" }, "margince-crm", "paced", slog.New(slog.NewTextHandler(io.Discard, nil))),

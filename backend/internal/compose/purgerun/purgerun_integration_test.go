@@ -31,7 +31,7 @@ import (
 const address = "gegner@example.test"
 
 func ctxFor(e *integration.Env, user ids.UUID) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{

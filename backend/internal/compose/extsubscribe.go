@@ -135,11 +135,10 @@ func (c ComposedSubscription) handlerOver(db *database.DB, log *slog.Logger) fun
 		}
 		// The envelope carries no tenant (ADR-0091 §6); the installation's
 		// handle names it, exactly as every other consumer resolves it.
-		ws, err := db.Workspace(ctx)
+		_, err = db.Workspace(ctx)
 		if err != nil {
 			return err
 		}
-		ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 		ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
 		ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 		ctx = principal.WithCausationEvent(ctx, env.EventID)

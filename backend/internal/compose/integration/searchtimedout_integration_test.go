@@ -155,7 +155,7 @@ func TestAnAllDeniedGroupedSearchAnswersAtOnceAndReadsNothing(t *testing.T) {
 	e := SetupSearch(t)
 	seedOneWordEverywhere(t, e)
 	lockTable(t, e.Owner, "contact")
-	ctx, report := auth.WithWithheldReport(principal.WithWorkspaceID(context.Background(), e.WS))
+	ctx, report := auth.WithWithheldReport(context.Background())
 	companyOnly := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{

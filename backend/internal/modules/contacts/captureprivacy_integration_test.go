@@ -125,7 +125,7 @@ func setupCapturePrivacy(t *testing.T) *privacyEnv {
 // as binds one user at one row scope. The teammate carries the shared team
 // so their team predicate really does reach the owner's rows.
 func (e *privacyEnv) as(user ids.UUID, scope principal.RowScope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	var teams []ids.UUID
 	if user == e.owner || user == e.teammate {

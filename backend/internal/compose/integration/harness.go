@@ -222,7 +222,7 @@ func SchemaPool(t *testing.T) *pgxpool.Pool {
 
 // As binds a full operation context for one human principal.
 func (e *Env) As(user ids.UUID, teams []ids.UUID, perms principal.Permissions) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(),
@@ -277,7 +277,7 @@ func (e *Env) PartnerSeat() context.Context {
 // writes, and it would be decidable by nobody — so a suite using it would prove
 // the release path works against a card no one can press.
 func (e *Env) AutomationCtx(owner ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system", OnBehalfOf: owner,
@@ -291,7 +291,7 @@ func (e *Env) AutomationCtx(owner ids.UUID) context.Context {
 // none writes a NULL passport_id, which is what a SERVER proposal looks like,
 // and the credential may then release its own proposal.
 func (e *Env) AgentCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
@@ -338,7 +338,7 @@ func (e *Env) AgentOnPassport(t *testing.T, human ids.UUID, teams []ids.UUID, pe
 		Teams:       teamIDs,
 		Permissions: perms,
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, agent.Principal())
 }
@@ -349,7 +349,7 @@ func (e *Env) AgentOnPassport(t *testing.T, human ids.UUID, teams []ids.UUID, pe
 // agent asserting one, not by a server-side proposal flow. Pass an id from
 // SeedPassport: rows that record it are foreign-keyed to the real table.
 func (e *Env) AgentCtxWithPassport(passportID ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
@@ -371,7 +371,7 @@ func AgentWithCompanyRead(e *Env) context.Context {
 	perms.Objects = make(map[string]principal.ObjectGrant, len(AccountRepPerms.Objects))
 	maps.Copy(perms.Objects, AccountRepPerms.Objects)
 	perms.RowScope = principal.RowScopeAll
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,

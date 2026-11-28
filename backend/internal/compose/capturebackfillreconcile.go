@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // CaptureBackfillReconcileArgs restores queued imports and lost page executions.
@@ -39,10 +38,9 @@ func (w *captureBackfillReconcileWorker) Work(ctx context.Context, _ *river.Job[
 }
 
 func (w *captureBackfillReconcileWorker) reconcileWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	var dispatchErr error
 	if w.registry != nil {
-		dispatchErr = w.registry.DispatchBackfills(wsCtx, backfillScheduler(), true)
+		dispatchErr = w.registry.DispatchBackfills(ctx, backfillScheduler(), true)
 	}
-	return errors.Join(dispatchErr, w.reconcileDerivedWork(wsCtx))
+	return errors.Join(dispatchErr, w.reconcileDerivedWork(ctx))
 }

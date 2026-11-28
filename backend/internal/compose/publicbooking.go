@@ -128,12 +128,12 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 			// asking it directly is both the only answer and the safer shape.
 			// A failure here is a deployment fault, not a bad slug, so it must
 			// not read as one.
-			wsID, err := svc.InstallationWorkspace(r.Context())
+			_, err := svc.InstallationWorkspace(r.Context())
 			if err != nil {
 				httperr.Write(w, r, fmt.Errorf("public booking: resolving the installation: %w", err))
 				return
 			}
-			ctx := principal.WithWorkspaceID(r.Context(), wsID.UUID)
+			ctx := r.Context()
 			ctx = systemtext.WithLocale(ctx, readerlocale.Anonymous(r))
 			ctx = principal.WithActor(ctx, principal.Principal{
 				Type: principal.PrincipalSystem,

@@ -77,7 +77,7 @@ func TestTheShippedRolesThatCannotCaptureAreReadOnlyAlone(t *testing.T) {
 	var refused []string
 	for _, key := range keys {
 		holdOnlyRole(t, e, e.Rep1, key)
-		rbac, err := authority.EffectiveRBAC(e.Admin(), e.WS, e.Rep1)
+		rbac, err := authority.EffectiveRBAC(e.Admin(), e.Rep1)
 		if err != nil {
 			t.Fatalf("%s: %v", key, err)
 		}
@@ -147,7 +147,7 @@ func TestAMemberMovedToReadOnlyStopsWithoutAProviderCallAndResumesWhenRestored(t
 	if err != nil {
 		t.Fatalf("Connect as rep: %v", err)
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if err := registry.SyncOnce(wsCtx, connID); err != nil {
 		t.Fatalf("first sync as rep: %v", err)
 	}

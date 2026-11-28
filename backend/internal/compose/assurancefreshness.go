@@ -77,11 +77,10 @@ func (f *AssuranceFreshness) HandleBatch(ctx context.Context, envs []events.Enve
 		return err
 	}
 	// The envelope carries no tenant, and the subscriber binds none.
-	ws, err := f.identity.InstallationWorkspace(ctx)
+	_, err = f.identity.InstallationWorkspace(ctx)
 	if err != nil {
 		return err
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: assuranceFreshnessActor})
 	return f.db.Tx(ctx, func(tx pgx.Tx) error {
 		subjects, err := changes.resolve(ctx, tx)

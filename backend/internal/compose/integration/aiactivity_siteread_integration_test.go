@@ -67,7 +67,7 @@ func newWebsiteReadFixture(t *testing.T) *websiteReadFixture {
 	// actor on behalf of the human the dossier names, under the read's own
 	// correlation. The projection attributes from the envelope, so this is
 	// what makes the worker's transitions land in the rep's feed.
-	worker := principal.WithWorkspaceID(context.Background(), e.WS)
+	worker := context.Background()
 	worker = principal.WithCorrelationID(worker, read.ID)
 	worker = principal.WithActor(worker, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:deep_read",

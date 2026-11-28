@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAuditAttributionsMatchTheRecordHistoryForEveryActorShape(t *testing.T) {
@@ -39,7 +38,7 @@ func TestAuditAttributionsMatchTheRecordHistoryForEveryActorShape(t *testing.T) 
 		auditIDs = append(auditIDs, entry.ID)
 	}
 	var got map[ids.UUID]auditattribution.Attribution
-	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
+	ctx := t.Context()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		got, err = privacy.AuditAttributionsTx(ctx, tx, "contact", contact, auditIDs)

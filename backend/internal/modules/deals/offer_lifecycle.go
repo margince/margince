@@ -322,7 +322,10 @@ func (s *Store) RegenerateOffer(ctx context.Context, id ids.OfferID) (crmcontrac
 
 	var out crmcontracts.Offer
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		wsID := storekit.MustWorkspace(ctx)
+		wsID, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
 		current, lock, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err

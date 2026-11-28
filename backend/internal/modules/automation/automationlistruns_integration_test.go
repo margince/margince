@@ -165,7 +165,7 @@ func TestTheListWithItsRunSummaryNeedsAutomationRead(t *testing.T) {
 	fx := setupAutomationDB(t)
 	summarizedRuns(t, fx)
 	store := NewAutomationStore(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)))
-	ctx := principal.WithWorkspaceID(context.Background(), fx.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + fx.rep2.String(), UserID: fx.rep2,
 		Permissions: principal.Permissions{

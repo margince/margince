@@ -22,7 +22,7 @@ import (
 
 // laneWriterCtx is a human holding the sheet's write grants in one workspace.
 func laneWriterCtx(ws ids.UUID) context.Context {
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), ws), principal.Principal{
+	return principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:lane-test",
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"fixture"},

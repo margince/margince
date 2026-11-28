@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A rep promised a partner "this week" on a Monday; the partner only said
@@ -104,7 +103,7 @@ func promiseForThisWeek(t *testing.T, workdays []int, away bool, lastDay int) {
 		Meaning: &commitmentMeaning{State: commitmentStateOpen, DeadlinePrecision: commitmentPrecisionRange, DeadlineQuote: "this week"},
 		Locator: commitmentLocator(sourceID, claimKindOurs, e.Rep1.String(), "I will send it to you this week to sign."),
 	}
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		got, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
@@ -167,7 +166,7 @@ func TestARenewedPromiseForThisWeekIsDatedInTheRenewalsWeek(t *testing.T) {
 		Meaning: &commitmentMeaning{State: commitmentStateOpen, DeadlinePrecision: commitmentPrecisionRange, DeadlineQuote: "this week"},
 		Seat:    &e.Rep1,
 	}
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7())
 	var dated Commitment
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error

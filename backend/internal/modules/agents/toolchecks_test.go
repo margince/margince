@@ -49,7 +49,7 @@ func everyRecordedGrant() principal.Permissions {
 
 // grantedCtx is an agent on a full seat whose user holds only deal.read.
 func grantedCtx(seat principal.SeatType) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:granted", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
 		SeatType: seat, Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),

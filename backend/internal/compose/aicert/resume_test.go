@@ -80,7 +80,7 @@ func certifyOnce(t *testing.T, dir string, sc Scenario, candidate, judge *ai.Fak
 	var rec Record
 	var err error
 	withJournal(t, dir, fixedResumeNow, func(j *runJournal) {
-		rec, err = certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
+		rec, err = certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
 			testCandidateBinding, testJudgeBinding, ai.ProfileEUHosted, testRepeats, quietLogger(), &certifyHooks{
 				candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 				judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
@@ -592,7 +592,7 @@ func rewriteEveryJournaledRun(t *testing.T, dir string, edit func(*journaledRun)
 // certifyTask files a journal line under.
 func stampFor(t *testing.T, sc Scenario) string {
 	t.Helper()
-	stamps, err := ScenarioStamps(wsContext(t), []Scenario{sc}, testCensus(t))
+	stamps, err := ScenarioStamps(t.Context(), []Scenario{sc}, testCensus(t))
 	if err != nil {
 		t.Fatalf("ScenarioStamps: %v", err)
 	}

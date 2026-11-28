@@ -80,7 +80,7 @@ func TestInternalMailUsesTheSameSourceDecisionInPreflightAndStorage(t *testing.T
 	}})
 	run := func() {
 		t.Helper()
-		if err := reg.SyncOnce(principal.WithWorkspaceID(context.Background(), ws.UUID), connection); err != nil {
+		if err := reg.SyncOnce(context.Background(), connection); err != nil {
 			t.Fatal(err)
 		}
 	}

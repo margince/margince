@@ -37,7 +37,7 @@ type Sweep struct {
 // is decided in its own transaction under its owner's authority in that
 // transaction, so a meeting the owner cannot open never closes it.
 func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
-	writer := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), contacts.PromiseKeptActor)
+	writer := principal.SystemActing(ctx, contacts.PromiseKeptActor)
 	var claims []ids.UUID
 	if err := database.WithTx(writer, s.Pool, func(tx pgx.Tx) error {
 		var err error

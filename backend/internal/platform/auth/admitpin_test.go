@@ -98,7 +98,7 @@ func TestAdmitPinsNothingItDidNotAdmitAtTheAutoExecuteTier(t *testing.T) {
 			resolvesTo(mcp.TierResolverInput{ObservedVersion: new(int64(4))}),
 		},
 		"a human does not ride the gate's tier model at all": {
-			principal.WithActor(principal.WithWorkspaceID(context.Background(), testWorkspace),
+			principal.WithActor(context.Background(),
 				principal.Principal{Type: principal.PrincipalHuman, ID: "user:test"}),
 			dynamicSpec(mcp.TierAutoExecute),
 			resolvesTo(mcp.TierResolverInput{ObservedVersion: new(int64(4))}),

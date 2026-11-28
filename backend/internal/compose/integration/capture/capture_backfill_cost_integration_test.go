@@ -50,7 +50,7 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, meter := database.WithStatementMeter(principal.WithWorkspaceID(context.Background(), e.WS))
+	ctx, meter := database.WithStatementMeter(context.Background())
 	segmentSize, captured := max(1, min(1000, count/10)), 0
 	previous := meter.Cost()
 	page.afterMessage = func() {
@@ -131,7 +131,7 @@ func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, meter := database.WithStatementMeter(principal.WithWorkspaceID(context.Background(), e.WS))
+	ctx, meter := database.WithStatementMeter(context.Background())
 	if done, completed, _, err := registry.RunBackfillStep(ctx, run.ID); err != nil || done || completed {
 		t.Fatalf("import: done=%v completed=%v error=%v", done, completed, err)
 	}

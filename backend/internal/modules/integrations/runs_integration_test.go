@@ -213,7 +213,7 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 		})
 	}
 	e.store = store
-	e.ctx = principal.WithActor(principal.WithWorkspaceID(ctx, e.ws), principal.Principal{
+	e.ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + actor.String(), UserID: actor,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{

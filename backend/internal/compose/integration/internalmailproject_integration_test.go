@@ -27,14 +27,14 @@ import (
 // project, so only the internal-mail rule keeps the ladder away.
 type projectFilingAuthority struct{ internalMailAuthority }
 
-func (projectFilingAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (projectFilingAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{
 		"activity": {Create: true, Read: true, Update: true}, "contact": {Create: true}, "lead": {Create: true}, "project": {Read: true},
 	}}}, nil
 }
 
-func (r projectFilingAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r projectFilingAuthority) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }
 
 // everyKeyMatcher answers one live project for any bracketed key.
@@ -102,7 +102,7 @@ func TestAdmittedInternalMailIsFiledUnderNoProject(t *testing.T) {
 		captured = ref.ID
 		return err
 	}})
-	if err := reg.SyncOnce(principal.WithWorkspaceID(context.Background(), ws.UUID), connection); err != nil {
+	if err := reg.SyncOnce(context.Background(), connection); err != nil {
 		t.Fatal(err)
 	}
 

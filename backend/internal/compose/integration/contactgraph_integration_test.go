@@ -102,7 +102,7 @@ func seedExchange(t *testing.T, e *Env, colleague, contact ids.UUID, subject str
 		VALUES ($1, $2, 'to')`, id, contact); err != nil {
 		t.Fatalf("seeding their side: %v", err)
 	}
-	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
+	wsCtx := ctx
 	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{id})
 	}); err != nil {

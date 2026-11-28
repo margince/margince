@@ -27,8 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // corpusVersionV1 is this generation's fixed corpus-format stamp: the
@@ -197,7 +195,6 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		return nil, fmt.Errorf("aicert: runner: %w", err)
 	}
 
-	ctx = ensureWorkspace(ctx)
 	if cfg.StaleOnly {
 		if cfg.current, err = currentBindings(ctx, cfg, byTask, log); err != nil {
 			return nil, fmt.Errorf("aicert: runner: %w", err)
@@ -473,17 +470,6 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 		acc.passed++
 	}
 	return nil
-}
-
-// ensureWorkspace mints a fixed, DB-less workspace principal when ctx
-// carries none — the router's own precondition for tracing a call
-// (Router.serveAttempt refuses outside a workspace context), mirrored
-// from compose/sitereaddebug.go's identical DB-less debug-lane pattern.
-func ensureWorkspace(ctx context.Context) context.Context {
-	if _, ok := principal.WorkspaceID(ctx); ok {
-		return ctx
-	}
-	return principal.WithWorkspaceID(ctx, ids.NewV7())
 }
 
 // buildRecord, seedRateFor, and percentile live in record.go alongside the

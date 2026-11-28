@@ -36,7 +36,7 @@ func registerRolesitDefaults(t *testing.T) {
 // bootCtx is the context the boot binds for the fill: the workspace and a
 // system actor, as compose's bootLedgerScope produces.
 func (e *revocationEnv) bootCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws.UUID)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, "system:rbac-defaults")
 }
 

@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -559,7 +558,7 @@ func TestAnAliasClaimSettlesARowRetiringToUnsure(t *testing.T) {
 	}
 	retired, retireDone := make(chan error, 1), make(chan struct{})
 	go func() {
-		retired <- capture.NewPendingStore(InstallationDB(e.Pool)).Retire(principal.WithWorkspaceID(ctx, e.WS),
+		retired <- capture.NewPendingStore(InstallationDB(e.Pool)).Retire(ctx,
 			capture.PendingCounterparty{ID: row, Email: alias, Claim: lease}, "never cleared the floor", capture.VerdictMeasurement{})
 		close(retireDone)
 	}()

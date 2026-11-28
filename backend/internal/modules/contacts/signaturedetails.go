@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -279,16 +278,16 @@ func freeSignatureEmail(ctx context.Context, tx pgx.Tx, address string) (bool, e
 // identifies the contact and proves no correspondence, so the mail ladder
 // does not read it as a settled verdict about the address.
 func addSignatureEmail(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, address string) error {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("contacts: a signature's email outside a workspace")
+	wsID, err := workspaceID(ctx, tx)
+	if err != nil {
+		return err
 	}
 	var next int
 	if err := tx.QueryRow(ctx, `SELECT coalesce(max(position) + 1, 0) FROM contact_email
 		 WHERE contact_id = $1 AND archived_at IS NULL`, contactID).Scan(&next); err != nil {
 		return fmt.Errorf("contacts: placing a signature's email: %w", err)
 	}
-	if err := insertContactEmails(ctx, tx, ids.From[ids.WorkspaceKind](wsID), contactID, enrichSource, enrichCapturedBy,
+	if err := insertContactEmails(ctx, tx, wsID, contactID, enrichSource, enrichCapturedBy,
 		[]ContactEmailInput{{Email: address, EmailType: emailTypeWork, Position: next, VouchedNotCorresponded: true}},
 		storekit.RefuseErased, nil); err != nil {
 		return err

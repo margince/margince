@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -28,6 +27,16 @@ func (m *memMeter) Record(_ context.Context, u Usage) error {
 	return nil
 }
 func (m *memMeter) MonthTokens(context.Context) (int64, error) { return m.spent, nil }
+
+// testCompany is the one company every router unit test serves.
+var testCompany = ids.New[ids.WorkspaceKind]()
+
+func (m *memMeter) Workspace(ctx context.Context) (ids.WorkspaceID, error) {
+	if company, ok := testCompanyOf(ctx); ok {
+		return company, nil
+	}
+	return ids.WorkspaceID{}, errors.New("no company on the test context")
+}
 
 // failingClient errors every call — the fallback trigger.
 type failingClient struct{ model.Client }
@@ -58,7 +67,29 @@ func (fixedResponseClient) Caps() model.Capabilities { return model.Capabilities
 
 func wsContext(t *testing.T) context.Context {
 	t.Helper()
-	return principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	return withTestCompany(context.Background())
+}
+
+// testCompanyKey carries the company a test call is served for. The router asks
+// its meter which company it serves. These meters answer from the context, so
+// one router can serve two companies.
+type testCompanyKey struct{}
+
+func withTestCompany(ctx context.Context) context.Context {
+	return context.WithValue(ctx, testCompanyKey{}, ids.New[ids.WorkspaceKind]())
+}
+
+func testCompanyOf(ctx context.Context) (ids.WorkspaceID, bool) {
+	company, ok := ctx.Value(testCompanyKey{}).(ids.WorkspaceID)
+	return company, ok
+}
+
+// lenientCompany answers the call's own company, or the shared one.
+func lenientCompany(ctx context.Context) (ids.WorkspaceID, error) {
+	if company, ok := testCompanyOf(ctx); ok {
+		return company, nil
+	}
+	return testCompany, nil
 }
 
 func testRouter(clients map[Tier]model.Client, meter usageStore, spentBudget BudgetPolicy, profile Profile) *Router {
@@ -401,7 +432,7 @@ func TestRouterEmbedStripsSecretsAndMeters(t *testing.T) {
 func TestRouterRequiresWorkspaceContext(t *testing.T) {
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 	_, _, err := r.Complete(context.Background(), TaskSummarize, model.Request{})
-	if err == nil || !strings.Contains(err.Error(), "workspace context") {
+	if err == nil || !strings.Contains(err.Error(), "live company") {
 		t.Fatalf("workspace-less call must fail, got %v", err)
 	}
 }

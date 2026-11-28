@@ -61,6 +61,9 @@ func runDealKeyNames(ctx context.Context, pool *pgxpool.Pool, args []string, std
 	if err != nil {
 		return fmt.Errorf("deal-key-names: --workspace is not an id: %w", err)
 	}
+	if err := requireInstallationWorkspace(ctx, pool, "deal-key-names", wsID); err != nil {
+		return err
+	}
 	file, err := os.Open(*export)
 	if err != nil {
 		return fmt.Errorf("deal-key-names: opening the export: %w", err)
@@ -73,7 +76,6 @@ func runDealKeyNames(ctx context.Context, pool *pgxpool.Pool, args []string, std
 		return readErr
 	}
 
-	ctx = principal.WithWorkspaceID(ctx, wsID)
 	ctx = principal.SystemActing(ctx, "system:deal_key_names")
 	store := deals.NewStore(database.ForInstallation(pool), compose.DealsInstallation())
 	results, err := store.RenameKeyNamedDeals(ctx, entries, *apply)

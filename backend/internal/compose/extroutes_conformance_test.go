@@ -89,7 +89,7 @@ func mountedRouteResponse(t *testing.T, verb extension.Verb, payload string) *ht
 		map[string]bool{verbKey(verb.Unit, verb.Tool): true}, registry.Invoke); err != nil {
 		t.Fatal(err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeRead),

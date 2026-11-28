@@ -37,7 +37,7 @@ func journaledAnswer(t *testing.T, sc Scenario, answer string, score int) journa
 		t.Fatalf("preparing the case: %v", err)
 	}
 	recorder := &recordingCompleter{next: fixedAnswer(answer)}
-	caseTrace, err := bound.prepared.Run(wsContext(t), recorder)
+	caseTrace, err := bound.prepared.Run(t.Context(), recorder)
 	if err != nil {
 		t.Fatalf("running the case: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestAReplayIsGradedByTheValidatorThatRunsNow(t *testing.T) {
 	refusingCandidate, refusingJudge := refusingFakes(t)
 	var replayed Record
 	withJournal(t, dir, fixedResumeNow, func(j *runJournal) {
-		replayed, err = certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, strict,
+		replayed, err = certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, strict,
 			testCandidateBinding, testJudgeBinding, ai.ProfileEUHosted, testRepeats, quietLogger(), &certifyHooks{
 				candidateOpts: []ai.LocalOption{ai.WithFakeClient(refusingCandidate)},
 				judgeOpts:     []ai.LocalOption{ai.WithFakeClient(refusingJudge)},
@@ -119,7 +119,7 @@ func TestAReplayIsGradedByTheValidatorThatRunsNow(t *testing.T) {
 // stampsUnder is sc's stamp with its site bound to census's case.
 func stampsUnder(t *testing.T, sc Scenario, census *aitasks.Registry) string {
 	t.Helper()
-	stamps, err := ScenarioStamps(wsContext(t), []Scenario{sc}, census)
+	stamps, err := ScenarioStamps(t.Context(), []Scenario{sc}, census)
 	if err != nil {
 		t.Fatalf("ScenarioStamps: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestAWithheldRunReplaysOnlyUnderItsOwnRouting(t *testing.T) {
 		"another routing":    {&replayEvidence{Routing: "replay-routing-0"}, false},
 		"this build's route": {&replayEvidence{Routing: replayRouting}, true},
 	} {
-		got, err := reevaluate(wsContext(t), testCensus(t), ai.TaskSummarize, sc, journaledRun{Outcome: withheld, Evidence: tc.evidence}, quietLogger())
+		got, err := reevaluate(t.Context(), testCensus(t), ai.TaskSummarize, sc, journaledRun{Outcome: withheld, Evidence: tc.evidence}, quietLogger())
 		if replayed := err == nil; replayed != tc.replays {
 			t.Errorf("%s: replayed = %v (err %v), want %v", name, replayed, err, tc.replays)
 		}

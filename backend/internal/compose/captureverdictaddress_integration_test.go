@@ -21,7 +21,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The addresses themselves. Each one reached a model in the real import, and a
@@ -67,7 +66,7 @@ func TestAnAddressNobodyAnswersNeverBecomesAContact(t *testing.T) {
 			// ANDRESEN". If the gate works, it is never consulted.
 			brain := &scriptedVerdictBrain{}
 			engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+			if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 				t.Fatalf("verdict pass: %v", err)
 			}
 
@@ -104,7 +103,7 @@ func TestANamedHumanIsStillAContactWhereverTheyWork(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -144,7 +143,7 @@ func TestAStrayCreatingAnswerAgainstASettledHistoryAsksAHuman(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -172,7 +171,7 @@ func TestAFirstCreatingAnswerStillCreates(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 

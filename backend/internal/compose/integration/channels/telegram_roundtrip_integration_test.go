@@ -298,7 +298,7 @@ func TestAnArchivedOutboundIsNotAConversationToReplyInto(t *testing.T) {
 // medium without standing up a second harness.
 func (c *telegramEnv) mailConnectorCtx(t *testing.T) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), c.workspaceID(t))
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",
 		Permissions: principal.Permissions{

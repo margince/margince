@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/oidctoken"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // signInFields are the parts of a sign-in configuration that are the SAME
@@ -122,11 +121,11 @@ func installationSignInApp(pool *pgxpool.Pool, stored appResolver) appResolver {
 	}
 	svc := identity.NewService(pool)
 	return func(ctx context.Context) (capture.ConnectorApp, bool, error) {
-		ws, err := svc.InstallationWorkspace(ctx)
+		_, err := svc.InstallationWorkspace(ctx)
 		if err != nil {
 			return capture.ConnectorApp{}, false, fmt.Errorf("resolving the installation for the sign-in client: %w", err)
 		}
-		return stored(principal.WithWorkspaceID(ctx, ws.UUID))
+		return stored(ctx)
 	}
 }
 

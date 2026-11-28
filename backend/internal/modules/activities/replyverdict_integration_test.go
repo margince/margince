@@ -188,7 +188,7 @@ func TestAHumanMayCorrectAVerdictBackToUnjudged(t *testing.T) {
 // asReplyClassifier is the context the classify pass runs under: a system
 // principal, the way every background job in compose builds one.
 func asReplyClassifier(e *loadEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:capture_classify",
@@ -202,7 +202,7 @@ func asReplyClassifier(e *loadEnv) context.Context {
 // asHumanCorrector is a contact disagreeing with the classifier — the correction
 // path's real caller, and the reason the history records WHO decided.
 func asHumanCorrector(e *loadEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

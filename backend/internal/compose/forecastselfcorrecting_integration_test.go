@@ -40,7 +40,7 @@ import (
 // forecastReader may read every deal, the forecast and the settings it is cut by.
 func (f *stageCohortFixture) forecastReader() context.Context {
 	read := principal.ObjectGrant{Read: true}
-	ctx := principal.WithWorkspaceID(context.Background(), f.env.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + f.env.Rep1.String(), UserID: f.env.Rep1, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{

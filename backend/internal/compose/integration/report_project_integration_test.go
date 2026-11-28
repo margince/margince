@@ -56,7 +56,7 @@ func (e *SearchEnv) companyReader(user *ids.UUID, team *ids.UUID, scope principa
 
 // edgeReader reads projects, companies and the edges between them.
 func (e *SearchEnv) edgeReader(scope principal.RowScope) context.Context {
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	return principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
 			"project": {Read: true}, "company": {Read: true}, "relationship": {Read: true}, objInstallSettings: {Read: true},
@@ -87,7 +87,7 @@ func (e *SearchEnv) scopedReaderOf(object string, user *ids.UUID, team *ids.UUID
 	if team != nil {
 		actor.TeamIDs = []ids.UUID{*team}
 	}
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), actor)
+	return principal.WithActor(context.Background(), actor)
 }
 
 func TestListFieldsServesTheProjectDescriptor(t *testing.T) {

@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -119,7 +118,7 @@ func runConfidentiality(t *testing.T, e *integration.Env, threadID ids.UUID, kin
 	t.Helper()
 	brain := &scriptedConfidentialityBrain{kind: kind, confidence: confidence, id: threadID}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("confidentiality pass: %v", err)
 	}
 }
@@ -330,7 +329,7 @@ func TestAHeldMailboxIsNeverAskedAndNeverOpened(t *testing.T) {
 	engine := NewConfidentialityVerdictEngine(e.Pool, &scriptedConfidentialityBrain{
 		kind: confidentialityOrdinary, confidence: 0.99,
 	}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("confidentiality pass: %v", err)
 	}
 
@@ -734,7 +733,7 @@ func TestALegacyClearedThreadFinishesTheMessagesItLeftBehind(t *testing.T) {
 
 	engine := NewConfidentialityVerdictEngine(e.Pool, nil, slog.Default())
 	if _, err := engine.FinishSettledThreads(
-		principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		context.Background()); err != nil {
 		t.Fatalf("finishing settled threads: %v", err)
 	}
 
@@ -771,7 +770,7 @@ func TestFinishingSettledThreadsIsIdempotent(t *testing.T) {
 	}
 
 	engine := NewConfidentialityVerdictEngine(e.Pool, nil, slog.Default())
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	first, err := engine.FinishSettledThreads(wsCtx)
 	if err != nil {
 		t.Fatalf("first pass: %v", err)
@@ -850,7 +849,7 @@ func TestArchivedMessagesDoNotStarveTheSweep(t *testing.T) {
 
 	engine := NewConfidentialityVerdictEngine(e.Pool, nil, slog.Default())
 	if _, err := engine.FinishSettledThreads(
-		principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		context.Background()); err != nil {
 		t.Fatalf("finishing: %v", err)
 	}
 	if got := activityAudience(t, e, repairSibling); got != "workspace" {
@@ -888,7 +887,7 @@ func TestAnOwnersSharedThreadIsNotReopenedByTheRepair(t *testing.T) {
 
 	engine := NewConfidentialityVerdictEngine(e.Pool, nil, slog.Default())
 	if _, err := engine.FinishSettledThreads(
-		principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		context.Background()); err != nil {
 		t.Fatalf("finishing: %v", err)
 	}
 

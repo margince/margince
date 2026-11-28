@@ -78,7 +78,7 @@ func (w *signalScanWorker) Timeout(*river.Job[SignalScanArgs]) time.Duration {
 }
 
 func (w *signalScanWorker) scanWorkspaceSignals(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	// The producer is the acting principal: every signal it writes carries
 	// agent: provenance, and a reader can tell it from a human's own note.
 	wsCtx = principal.SystemActing(wsCtx, signalScanActor)

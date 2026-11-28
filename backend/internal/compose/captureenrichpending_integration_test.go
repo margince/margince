@@ -25,7 +25,7 @@ import (
 
 func (h *historyEnv) queueSignature(t *testing.T, contact ids.UUID) {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), h.e.WS), "agent:enrich")
+	ctx := principal.SystemActing(context.Background(), "agent:enrich")
 	if err := database.WithTx(ctx, h.e.Pool, func(tx pgx.Tx) error {
 		return contacts.QueueSignatureWorkTx(ctx, tx, []ids.ContactID{ids.From[ids.ContactKind](contact)}, nil)
 	}); err != nil {
@@ -41,7 +41,7 @@ func TestPendingSignaturePassReadsOnlyItsRequestedContacts(t *testing.T) {
 	h.capture(t, owedMail{from: "other@customer.example", to: h.seat, subject: "Another order", body: signed("Director"), at: h.day, messageID: ids.NewV7().String() + "@customer.example"})
 	h.queueSignature(t, h.contact)
 	reader := NewCaptureEnricher(h.e.Pool, h.brain, slog.New(slog.DiscardHandler))
-	ctx := principal.WithWorkspaceID(context.Background(), h.e.WS)
+	ctx := context.Background()
 	if _, err := reader.RunPendingWorkspace(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestPendingSignaturePassKeepsARequestArrivingDuringTheModelRead(t *testing.
 	h.brain.answers[first] = statesTitle("Head of Procurement")
 	h.queueSignature(t, h.contact)
 	h.brain.onAsk = func(ids.UUID) {
-		system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), h.e.WS), "agent:enrich")
+		system := principal.SystemActing(context.Background(), "agent:enrich")
 		if err := database.WithTx(system, h.e.Pool, func(tx pgx.Tx) error {
 			_, err := contacts.QueueSignatureEventTx(system, tx, []ids.ContactID{ids.From[ids.ContactKind](h.contact)}, contacts.SignatureRequest{Reopen: true, Live: true})
 			return err
@@ -80,7 +80,7 @@ func TestPendingSignaturePassKeepsARequestArrivingDuringTheModelRead(t *testing.
 		}
 	}
 	reader := NewCaptureEnricher(h.e.Pool, h.brain, slog.New(slog.DiscardHandler))
-	ctx := principal.WithWorkspaceID(context.Background(), h.e.WS)
+	ctx := context.Background()
 	if _, err := reader.RunPendingWorkspace(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestDeletingAnUnreadSignatureSourceKeepsTheContactPending(t *testing.T) {
 	older := h.writes(t, 0, signed("Director"))
 	newest := h.writes(t, 1, signed("Head of Procurement"))
 	h.queueSignature(t, h.contact)
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), h.e.WS), "agent:enrich")
+	ctx := principal.SystemActing(context.Background(), "agent:enrich")
 	store := newContactsStore(InstallationDB(h.e.Pool))
 	work, err := store.PendingSignatureWork(ctx, 100)
 	if err != nil || len(work) != 1 {

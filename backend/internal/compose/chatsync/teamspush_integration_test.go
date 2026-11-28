@@ -119,9 +119,9 @@ func assertTeamsRemoval(t *testing.T, deleted bool) {
 	verifier := oidctoken.NewBotFramework().WithHTTPClient(&http.Client{Transport: botTransport{boundary}}).SetClock(func() time.Time { return rig.Base })
 	registry := capture.NewRegistry(e.db(), nil, nil, nil)
 	pulls := 0
-	parent := &Receiver{Links: e.store, Replays: fakeReplays{}, Marks: fakeMarks{}, Now: func() time.Time { return rig.Base }, Log: e.flusher.Log, Pull: func(_ context.Context, ws, conn ids.UUID) error {
-		if ws != e.ws || conn != connection {
-			t.Error("notice queued a different installation")
+	parent := &Receiver{Links: e.store, Replays: fakeReplays{}, Marks: fakeMarks{}, Now: func() time.Time { return rig.Base }, Log: e.flusher.Log, Pull: func(_ context.Context, conn ids.UUID) error {
+		if conn != connection {
+			t.Error("notice queued a different connection")
 		}
 		pulls++
 		return nil
@@ -139,7 +139,7 @@ func assertTeamsRemoval(t *testing.T, deleted bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	got, err := receiver.Receive(ctx, delivery)
 	if err != nil || statusOf(got) != "pull_queued" || pulls != 1 {
 		t.Fatalf("signed native activity failed: %+v %v pulls=%d", got, err, pulls)

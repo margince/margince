@@ -129,7 +129,7 @@ func captureMailsOnDeal(t *testing.T, e *apptest.AppEnv, member, deal string, na
 	}
 	registry := compose.NewCaptureRegistry(e.Pool, e.Vault, compose.CaptureConfig{})
 	registry.Register(mailbox)
-	grant := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), ws), ids.NewV7()),
+	grant := principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + member, UserID: user, SeatType: principal.SeatFull,
 			Scopes: principal.NewScopeSet(principal.ScopeRead),
@@ -138,7 +138,7 @@ func captureMailsOnDeal(t *testing.T, e *apptest.AppEnv, member, deal string, na
 	if err != nil {
 		t.Fatalf("connecting the mailbox: %v", err)
 	}
-	if err := registry.SyncOnce(principal.WithWorkspaceID(context.Background(), ws), connection); err != nil {
+	if err := registry.SyncOnce(context.Background(), connection); err != nil {
 		t.Fatalf("capturing the mail: %v", err)
 	}
 	out := make([]string, 0, len(names))

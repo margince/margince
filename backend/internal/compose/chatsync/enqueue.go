@@ -5,7 +5,6 @@ package chatsync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TxInserter is the slice of River that schedules a flush.
@@ -30,19 +28,15 @@ type TxInserter interface {
 type Enqueuer struct {
 	Inserter    TxInserter
 	Delay       time.Duration
-	Job         func(workspace, linkID ids.UUID) river.JobArgs
-	Pull        func(workspace, connectionID ids.UUID) river.JobArgs
+	Job         func(linkID ids.UUID) river.JobArgs
+	Pull        func(connectionID ids.UUID) river.JobArgs
 	MaxAttempts int
 	States      []rivertype.JobState
 }
 
 // EnqueueFlushTx implements chatlinks.Scheduler.
 func (e Enqueuer) EnqueueFlushTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("chat links: scheduling a flush outside a workspace context")
-	}
-	return e.Inserter.EnqueueTx(ctx, tx, e.Job(ws, linkID), &river.InsertOpts{
+	return e.Inserter.EnqueueTx(ctx, tx, e.Job(linkID), &river.InsertOpts{
 		MaxAttempts: e.MaxAttempts,
 		ScheduledAt: time.Now().Add(e.Delay),
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: e.States},
@@ -51,11 +45,7 @@ func (e Enqueuer) EnqueueFlushTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID
 
 // EnqueuePullTx implements chatlinks.Scheduler.
 func (e Enqueuer) EnqueuePullTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("chat links: scheduling a pull outside a workspace context")
-	}
-	args := e.Pull(ws, connectionID)
+	args := e.Pull(connectionID)
 	return e.Inserter.EnqueueTx(ctx, tx, args, jobs.QueuedAsArgs(args, nil))
 }
 

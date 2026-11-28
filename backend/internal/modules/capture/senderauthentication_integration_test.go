@@ -11,13 +11,16 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func TestCapturedInboundKeepsReceivingServerAuthentication(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
 	for _, test := range []struct {
 		name, provider, server, domain string

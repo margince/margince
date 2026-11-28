@@ -36,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // telegramProvider is the only provider the 0152 CHECK admits today.
@@ -66,7 +65,7 @@ func liveIdentities(t *testing.T, e *integration.Env, contact ids.UUID) int {
 // erased subject's?
 func suppressed(t *testing.T, e *integration.Env, channelUserID string) bool {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	var answer bool
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error

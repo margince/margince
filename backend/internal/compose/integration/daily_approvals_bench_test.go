@@ -63,7 +63,7 @@ func seedDailyApprovals(t *testing.T, e *apptest.AppEnv, seats Seats, scale floa
 	ctx := context.Background()
 	ws := apptest.InstallationWorkspaceUUID(ctx, t, e.Pool)
 	svc, users := compose.NewApprovalsService(e.DB()), identity.NewServiceFor(e.DB())
-	sweep := principal.SystemActing(principal.WithWorkspaceID(ctx, ws), dailyStagingActor)
+	sweep := principal.SystemActing(ctx, dailyStagingActor)
 	perRep := func(n int) int { return max(2, int(float64(n)*scale)) }
 	pending, applied, expired := perRep(dailyPendingPerRep), perRep(dailyAppliedPerRep), perRep(dailyExpiredPerRep)
 	var made DailyApprovals
@@ -109,8 +109,8 @@ func applyDailyApprovals(t *testing.T, e *apptest.AppEnv, made DailyApprovals) D
 // grants, seat and teams, carried under an agent that may write.
 func dailyRepAgent(t *testing.T, users *identity.Service, ws, rep ids.UUID) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
-	rbac, seat, err := users.EffectiveAuthority(ctx, ws, rep)
+	ctx := context.Background()
+	rbac, seat, err := users.EffectiveAuthority(ctx, rep)
 	if err != nil {
 		t.Fatalf("reading the authority of rep %s: %v", rep, err)
 	}

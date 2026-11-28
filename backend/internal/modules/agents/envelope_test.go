@@ -71,7 +71,7 @@ func invokeSealed(ctx context.Context, t *testing.T, authority authz.Resolver, t
 // therefore the one whose empty answer really does mean "nothing exists".
 type unboundedAuthority struct{ fullSeatAuthority }
 
-func (unboundedAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (unboundedAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}, nil
 }
 
@@ -569,6 +569,6 @@ func readingAgent() context.Context { return scopedAgentCtx(principal.ScopeRead)
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (r unboundedAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r unboundedAuthority) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }

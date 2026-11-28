@@ -77,7 +77,7 @@ func requirePublished(t *testing.T, e *integration.Env, email string) {
 func reconcileHeldContacts(t *testing.T, e *integration.Env) {
 	t.Helper()
 	engine := NewConfidentialityVerdictEngine(e.Pool, nil, slog.Default())
-	if _, err := engine.FinishSettledThreads(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if _, err := engine.FinishSettledThreads(context.Background()); err != nil {
 		t.Fatalf("the confidentiality reconciling pass: %v", err)
 	}
 }
@@ -338,7 +338,7 @@ func TestASecondAddressWithAnyOtherAnswerKeepsTheContactHeld(t *testing.T) {
 // releaseUnder runs one release with a short lock wait, as the reconciling pass
 // would, and returns its error.
 func releaseUnder(e *integration.Env, email string, id ids.ContactID) error {
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), confidentialityActor)
+	ctx := principal.SystemActing(context.Background(), confidentialityActor)
 	return database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SET LOCAL lock_timeout = '300ms'`); err != nil {
 			return err
@@ -385,7 +385,7 @@ func TestNewMailFromTheAddressWaitsForARunningRelease(t *testing.T) {
 	judge(t, e, email, capture.KindContact, held.activity)
 	clearedWithoutRelease(t, e, email, held)
 	id := ids.From[ids.ContactKind](heldContactID(t, e, email))
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), confidentialityActor)
+	ctx := principal.SystemActing(context.Background(), confidentialityActor)
 
 	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := releaseHeldContactTx(ctx, tx, newCounterpartyStore(e.Pool), id); err != nil {

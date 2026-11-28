@@ -20,7 +20,7 @@ import (
 // asEditor holds edit rights on deals and no delete, over userID's own deals
 // or over every deal.
 func (e *configEnv) asEditor(userID ids.UUID, scope principal.RowScope) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + userID.String(), UserID: userID,
 		Permissions: principal.Permissions{

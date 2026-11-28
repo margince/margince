@@ -149,7 +149,10 @@ func (s *OwnerIdentityStore) setAddressRefusal(ctx context.Context, raw string, 
 		if tag.RowsAffected() == 0 {
 			return nil
 		}
-		workspace := storekit.MustWorkspace(ctx)
+		workspace, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
 		auditID, err := storekit.Audit(ctx, tx, "update", captureSettingsObject, workspace,
 			map[string]any{auditKeyKind: IdentityKindAddress, "refused": !refused},
 			map[string]any{auditKeyKind: IdentityKindAddress, "refused": refused})

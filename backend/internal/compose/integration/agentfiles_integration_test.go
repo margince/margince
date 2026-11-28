@@ -181,7 +181,7 @@ func capturedPrivately(t *testing.T, e *apptest.AppEnv, owner, address string) s
 	t.Helper()
 	mail := createdID(t, e, "/v1/activities", AnyMap{"kind": "note", "body": "Mail from " + address})
 	ws := apptest.InstallationWorkspaceUUID(t.Context(), t, e.Owner)
-	capture := principal.SystemActing(principal.WithWorkspaceID(t.Context(), ws), "capture")
+	capture := principal.SystemActing(t.Context(), "capture")
 	store := contacts.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](ws))).WithSenderStamp(activities.StampProvenSendersTx)
 	captured, err := store.EnsureCounterparty(capture, contacts.EnsureCounterpartyInput{
 		Email: address, OwnerID: ids.MustParse(owner), ActivityID: ids.From[ids.ActivityKind](ids.MustParse(mail)),

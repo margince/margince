@@ -389,7 +389,7 @@ func toolsListDescriptions(t *testing.T, registry *agents.Registry) map[string]s
 	// Every scope, a full seat and every measured grant: tools/list is filtered
 	// by all three. A caller holding less is served a shorter listing, and the
 	// comparison would silently skip whatever it could not see.
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:descriptions", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeDraft,

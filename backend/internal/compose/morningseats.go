@@ -87,9 +87,9 @@ func seatsWithAMorning(ctx context.Context, tx pgx.Tx) (map[ids.UUID]string, err
 // no morning to be served, and calling it a failure charges a departure to the
 // pass — and, for the digest, to the column an operator reads for relay causes.
 func seatContext(
-	ctx context.Context, users *identity.Service, wsID, userID ids.UUID,
+	ctx context.Context, users *identity.Service, userID ids.UUID,
 ) (context.Context, bool, error) {
-	member, err := authz.MemberPrincipal(ctx, users, wsID, userID)
+	member, err := authz.MemberPrincipal(ctx, users, userID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, nil
 	}

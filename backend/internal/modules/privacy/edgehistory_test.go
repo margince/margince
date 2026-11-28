@@ -38,7 +38,7 @@ func edgeReaderContext(edgeGrant bool) context.Context {
 	if edgeGrant {
 		objects["relationship"] = principal.ObjectGrant{Read: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{

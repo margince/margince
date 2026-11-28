@@ -161,7 +161,7 @@ func newRetryFixture(t *testing.T) *retryFixture {
 	f.registry = NewRegistry(nil, auth.NewGate(fullSeatAuthority{}),
 		WithIdempotency(f.claims), WithReplayReader(f.reader), WithVolumeCharger(f.charger))
 	f.registry.Register(f.tool)
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	f.ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(),
@@ -628,7 +628,7 @@ func TestAKeyIsRefusedOnASurfaceThatCannotClaimIt(t *testing.T) {
 // occupy a key — theirs, or anyone else's under the same passport.
 func TestARefusedCallerNeverOccupiesAKey(t *testing.T) {
 	f := newRetryFixture(t)
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(),
@@ -701,7 +701,7 @@ func approvedRetryFixture(t *testing.T) (*retryFixture, *consumingApprovals) {
 	f.registry = NewRegistry(approvals, auth.NewGate(fullSeatAuthority{}),
 		WithIdempotency(f.claims), WithReplayReader(f.reader), WithVolumeCharger(f.charger))
 	f.registry.Register(f.tool)
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	f.ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(),
@@ -831,7 +831,7 @@ func TestAReadOnlyToolRefusesTheRetryKeyItNeverAdvertised(t *testing.T) {
 	f := newRetryFixture(t)
 	read := &writingTool{spec: readToolSpec("search_records")}
 	f.registry.Register(read)
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(),

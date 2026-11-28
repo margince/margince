@@ -38,11 +38,10 @@ func (g *VoiceCopyRecheckGen) HandleEvent(ctx context.Context, env events.Envelo
 	if !events.ActivityNarrowingTypes.Has(env.Type) || !events.NarrowsActivity(env) {
 		return nil
 	}
-	ws, err := g.db.Workspace(ctx)
+	_, err := g.db.Workspace(ctx)
 	if err != nil {
 		return err
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:voice_copy_recheck",

@@ -99,7 +99,7 @@ func chatSourceUnavailable(err error) bool {
 
 // DraftMessengerOutcome requires an attended selection before private content reaches the summary lane.
 func (s Server) DraftMessengerOutcome(w http.ResponseWriter, r *http.Request, provider crmcontracts.MessengerProvider, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
-	if _, _, ok := signedInHuman(w, r); !ok {
+	if _, ok := signedInHuman(w, r); !ok {
 		return
 	}
 	if !auth.SeatAdmitsWrites(r.Context()) {

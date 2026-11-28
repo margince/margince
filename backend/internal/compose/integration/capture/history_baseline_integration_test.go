@@ -100,7 +100,7 @@ func TestOnlyAHumanSetsAHistoryBaseline(t *testing.T) {
 	registry, _ := connectedMailbox(t, e)
 	date := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 	for _, kind := range []principal.PrincipalType{principal.PrincipalAgent, principal.PrincipalConnector, principal.PrincipalSystem} {
-		ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		ctx := principal.WithActor(context.Background(), principal.Principal{
 			Type: kind, ID: string(kind) + ":caller", UserID: e.Rep1, OnBehalfOf: e.Rep1,
 		})
 		if _, err := registry.SetHistoryBaseline(ctx, capturemod.ProviderMailbox("graph"), &date, "Europe/Berlin"); !errors.Is(err, apperrors.ErrPermissionDenied) {

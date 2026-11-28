@@ -312,27 +312,12 @@ func (p Permissions) Within(other Permissions) Permissions {
 type contextKey int
 
 const (
-	workspaceKey contextKey = iota
-	actorKey
+	actorKey contextKey = iota
 	correlationKey
 	causationKey
 	agentRunKey
 	sendingHumanKey
 )
-
-// WithWorkspaceID binds the workspace a request resolved. No statement narrows
-// by it, because an installation holds one workspace. Code that names the
-// workspace in an id, a storage key or a job envelope reads it back.
-func WithWorkspaceID(ctx context.Context, id ids.UUID) context.Context {
-	return context.WithValue(ctx, workspaceKey, id)
-}
-
-// WorkspaceID returns the bound tenant key; ok is false when the call is
-// outside any workspace (e.g. the unauthenticated bootstrap paths).
-func WorkspaceID(ctx context.Context) (ids.UUID, bool) {
-	id, ok := ctx.Value(workspaceKey).(ids.UUID)
-	return id, ok
-}
 
 // WithActor binds the acting Principal.
 func WithActor(ctx context.Context, p Principal) context.Context {

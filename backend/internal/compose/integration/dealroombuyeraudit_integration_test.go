@@ -35,8 +35,7 @@ import (
 // demands and nothing more.
 func auditReaderContext(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
-	wsID := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
-	ctx := principal.WithWorkspaceID(context.Background(), wsID)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	user := ids.NewV7()
 	return principal.WithActor(ctx, principal.Principal{

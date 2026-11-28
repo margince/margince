@@ -54,7 +54,7 @@ type scoutWorker struct {
 // scoutWorkspace runs w's pass as actor, the scout's own system principal, so
 // every suggestion reads as the scout's claim rather than a colleague's.
 func scoutWorkspace(ctx context.Context, w *scoutWorker, actor string, workspace ids.UUID) error {
-	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), actor)
+	wsCtx := principal.SystemActing(ctx, actor)
 	if err := w.report(ctx, wsCtx, func() (scoutTally, error) {
 		var pass scoutTally
 		err := database.WithTx(wsCtx, w.pool, func(tx pgx.Tx) error {

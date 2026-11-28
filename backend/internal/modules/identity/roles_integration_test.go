@@ -51,7 +51,7 @@ func TestGrantingAnExtensionObjectReachesTheMemberEffectivePermissions(t *testin
 	if err := e.svc.ChangeUserRole(ctx, e.admin, e.member.UserID, "rep"); err != nil {
 		t.Fatalf("assigning rep: %v", err)
 	}
-	before, err := e.svc.EffectiveRBAC(ctx, e.admin.WorkspaceID.UUID, e.member.UserID.UUID)
+	before, err := e.svc.EffectiveRBAC(ctx, e.member.UserID.UUID)
 	if err != nil {
 		t.Fatalf("effective rbac before: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestGrantingAnExtensionObjectReachesTheMemberEffectivePermissions(t *testin
 		t.Errorf("the returned role reports %+v, want read+create only", got)
 	}
 
-	after, err := e.svc.EffectiveRBAC(ctx, e.admin.WorkspaceID.UUID, e.member.UserID.UUID)
+	after, err := e.svc.EffectiveRBAC(ctx, e.member.UserID.UUID)
 	if err != nil {
 		t.Fatalf("effective rbac after: %v", err)
 	}

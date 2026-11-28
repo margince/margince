@@ -11,7 +11,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The arithmetic MCP-SESS-COST turns on. The budget is monthly and the window
@@ -55,7 +54,8 @@ func TestTheShareIsCachedPerWorkspaceForTheCacheWindow(t *testing.T) {
 		cached: map[string]shareReading{},
 	}
 	ws := ids.New[ids.WorkspaceKind]().UUID
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	c.company = func(context.Context) (ids.WorkspaceID, error) { return ids.From[ids.WorkspaceKind](ws), nil }
+	ctx := context.Background()
 	c.cached[ws.String()] = shareReading{monthly: 30_000_000, live: 2, at: now}
 
 	if got := c.TokensPerPassport(ctx, 24*time.Hour); got != 500_000 {
@@ -83,7 +83,7 @@ func TestTheShareIsCachedPerWorkspaceForTheCacheWindow(t *testing.T) {
 // never do is take a model call down with it.
 func TestAShareWithNoBudgetPolicyIsNoCeilingRatherThanACrash(t *testing.T) {
 	c := &passportShareCeiling{now: time.Now, cached: map[string]shareReading{}}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.New[ids.WorkspaceKind]().UUID)
+	ctx := context.Background()
 
 	if got := c.TokensPerPassport(ctx, 24*time.Hour); got != 0 {
 		t.Errorf("a ceiling with no budget answered %d", got)

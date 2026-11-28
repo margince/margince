@@ -68,7 +68,7 @@ func (p *preflightEnv) bounceHard(t *testing.T) {
 		t.Fatal(err)
 	}
 	reporter := principal.WithCorrelationID(principal.WithActor(
-		principal.WithWorkspaceID(context.Background(), p.workspaceID(t)),
+		context.Background(),
 		principal.Principal{Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: user, OnBehalfOf: user},
 	), ids.NewV7())
 	db := compose.InstallationDB(p.Pool)

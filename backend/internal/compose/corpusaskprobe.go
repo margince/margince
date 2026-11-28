@@ -27,8 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/knowledge/handbook"
 	"github.com/margince/margince/backend/internal/platform/vectorkit"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -91,11 +89,6 @@ func ProbeCorpusRetrieval(ctx context.Context, probe CorpusProbe) (CorpusProbeRe
 	if err != nil {
 		return CorpusProbeResult{}, err
 	}
-	// The embed lane meters every call against a workspace and refuses one
-	// raised outside a workspace context. This probe belongs to none, so it
-	// mints an id per invocation rather than borrowing a real one: an id that
-	// matched a customer's would file this run's spend under their budget.
-	ctx = principal.WithWorkspaceID(ctx, ids.NewV7())
 	identity, dims := embedder.EmbedIdentity()
 	corpus, err := handbookChunks(probe.Page)
 	if err != nil {

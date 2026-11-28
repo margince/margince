@@ -50,7 +50,7 @@ func judged(t *testing.T, fake *ai.FakeClient, extra ...ai.LocalOption) judgemen
 func judgedAgainst(t *testing.T, bands Bands, fake *ai.FakeClient, extra ...ai.LocalOption) judgement {
 	t.Helper()
 	router, rec := judgeOver(t, fake, extra...)
-	got, err := judgeScore(wsContext(t), router, rec, testScenario("basic", bands), widgetAskTrace(), gradedOutput, quietLogger())
+	got, err := judgeScore(t.Context(), router, rec, testScenario("basic", bands), widgetAskTrace(), gradedOutput, quietLogger())
 	if err != nil {
 		t.Fatalf("judgeScore: %v", err)
 	}
@@ -242,7 +242,7 @@ func TestAWithheldJudgementLeavesTheRunUngraded(t *testing.T) {
 	// run with none is asked all three times.
 	judge := ai.NewFakeClient().ScriptSteps(slices.Repeat([]ai.FakeStep{withheld}, ladderRungs(t)*maxJudgeOpinions)...).Script(opinionsOf(90, 2)...)
 
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
 		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
@@ -270,7 +270,7 @@ func TestAJudgelessCaseCertifiesWithoutAskingTheJudge(t *testing.T) {
 	sc.Expect.Rubric, sc.Expect.Judge, sc.Expect.JudgeNoneReason = "", judgeNone, "the check reads the whole answer"
 	candidate := ai.NewFakeClient().Script(slices.Repeat([]string{containsWidget}, adaptiveMaxRuns)...)
 	judge := ai.NewFakeClient()
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
 		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},

@@ -65,7 +65,7 @@ func connectorCtx(e *integration.SearchEnv, binding connector.ChatBinding) conte
 }
 
 func humanCtx(e *integration.SearchEnv, member ids.UUID) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + member.String(), UserID: member})
 }
 

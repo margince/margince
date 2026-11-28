@@ -152,7 +152,7 @@ func fencedSpans(system, prompt string) []fencedSpan {
 // suggest runs one model pass as the scout's own principal.
 func (e *tagScoutEnv) suggest(t *testing.T, brain completer) (scoutTally, error) {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), tagScoutActor)
+	ctx := principal.SystemActing(context.Background(), tagScoutActor)
 	return NewTagSuggester(e.Pool, brain, slog.New(slog.DiscardHandler)).RunWorkspace(ctx, clocktest.Now(t))
 }
 

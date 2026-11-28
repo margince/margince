@@ -54,7 +54,7 @@ func TestAPaidLookupIsRefusedOnAContactTheCallerCannotOpen(t *testing.T) {
 	spend := &countingRunService{}
 	handlers := integrationsHandlers{pool: e.Pool, runs: spend}
 	rep := principal.WithActor(
-		principal.WithWorkspaceID(context.Background(), e.WS),
+		context.Background(),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:rep", UserID: e.Rep1,
 			Permissions: principal.Permissions{

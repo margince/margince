@@ -53,7 +53,7 @@ func failMailboxSync(t *testing.T, e *integration.Env) {
 	t.Helper()
 	registry := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), backfillAuthority{}, keyvault.NewMemory())
 	registry.Register(unreachableMailbox{plainSyncConnector{name: "gmail"}})
-	human := principal.WithWorkspaceID(context.Background(), e.WS)
+	human := context.Background()
 	human = principal.WithCorrelationID(human, ids.NewV7())
 	human = principal.WithActor(human, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,

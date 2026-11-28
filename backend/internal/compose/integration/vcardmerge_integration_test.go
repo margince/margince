@@ -261,7 +261,7 @@ func TestAnExpiredVCardReviewNoLongerHoldsTheCard(t *testing.T) {
 		t.Fatal("the staged review does not hold the card, so this test would prove nothing")
 	}
 	r.e.WsExec(t, `UPDATE approval SET expires_at = now() - interval '1 minute' WHERE id = $1`, r.approval)
-	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), r.e.WS), approvals.ExpiryActor)
+	sweep := principal.SystemActing(context.Background(), approvals.ExpiryActor)
 	if _, err := compose.NewApprovalsService(r.e.DB()).ExpireDue(sweep); err != nil {
 		t.Fatalf("sweeping: %v", err)
 	}
@@ -319,7 +319,7 @@ func TestASupersededVCardReviewNoLongerHoldsTheCard(t *testing.T) {
 func TestAnExpiredVCardReviewIsStagedAnewNotRemembered(t *testing.T) {
 	r := stagedMergeReview(t)
 	r.e.WsExec(t, `UPDATE approval SET expires_at = now() - interval '1 minute' WHERE id = $1`, r.approval)
-	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), r.e.WS), approvals.ExpiryActor)
+	sweep := principal.SystemActing(context.Background(), approvals.ExpiryActor)
 	if _, err := compose.NewApprovalsService(r.e.DB()).ExpireDue(sweep); err != nil {
 		t.Fatalf("sweeping: %v", err)
 	}
@@ -373,7 +373,7 @@ func TestAVCardReviewNeverPutsTheCardInItsEventOrItsNotice(t *testing.T) {
 		t.Fatal("the review raised no notice, so this test would prove nothing")
 	}
 	r.e.WsExec(t, `UPDATE approval SET expires_at = now() - interval '1 minute' WHERE id = $1`, r.approval)
-	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), r.e.WS), approvals.ExpiryActor)
+	sweep := principal.SystemActing(context.Background(), approvals.ExpiryActor)
 	if _, err := compose.NewApprovalsService(r.e.DB()).ExpireDue(sweep); err != nil {
 		t.Fatalf("sweeping: %v", err)
 	}

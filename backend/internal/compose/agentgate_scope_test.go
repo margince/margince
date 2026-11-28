@@ -88,7 +88,7 @@ func TestAWriteOnlyPassportIsRefusedTheChannelReply(t *testing.T) {
 		t.Fatal("the gate cannot resolve a spec for the channel reply")
 	}
 
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(),

@@ -112,7 +112,7 @@ func reviewStageNotifier(t *testing.T, f stageNoticeFixture, handler string) ids
 	}
 	// The reviewer becomes the rule's owner, whose live authority each firing re-checks.
 	f.env.GrantRole(t, f.env.AdminUser, "admin")
-	authority, err := identity.NewService(f.env.Pool).EffectiveRBAC(f.ctx, f.env.WS, f.env.AdminUser)
+	authority, err := identity.NewService(f.env.Pool).EffectiveRBAC(f.ctx, f.env.AdminUser)
 	if err != nil {
 		t.Fatal(err)
 	}

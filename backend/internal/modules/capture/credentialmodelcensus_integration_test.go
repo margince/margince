@@ -89,7 +89,7 @@ func TestEveryCredentialModelIsBornWithAReader(t *testing.T) {
 		id := captureCensusMessage(ctx, t, sink, ws, fixture)
 		var reachable bool
 		if err := database.WithTx(
-			principal.WithWorkspaceID(ctx, ws), pool, func(tx pgx.Tx) error {
+			ctx, pool, func(tx pgx.Tx) error {
 				var err error
 				reachable, err = auth.ActivityHasAReaderTx(ctx, tx, id)
 				return err
@@ -138,7 +138,7 @@ func registerCensusTransport(t *testing.T, owner *pgx.Conn, provider, model stri
 func lowerTheFloor(ctx context.Context, t *testing.T, pool *pgxpool.Pool, ws, member ids.UUID) {
 	t.Helper()
 	off := false
-	writer := principal.WithWorkspaceID(ctx, ws)
+	writer := ctx
 	writer = principal.WithCorrelationID(writer, ids.NewV7())
 	writer = principal.WithActor(writer, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + member.String(), UserID: member,

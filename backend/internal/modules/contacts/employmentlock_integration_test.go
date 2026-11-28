@@ -149,7 +149,7 @@ func mustFinishCleanly(t *testing.T, who string, done <-chan error) {
 // and read only, and widening it there would quietly hand every other case in
 // this package an authority it was written without.
 func (e *dedupeEnv) asEditor() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

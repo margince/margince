@@ -322,7 +322,7 @@ func TestASubmittedDocumentWithNoTiersIsUnconfigured(t *testing.T) {
 // caller rather than a signed-in human.
 func agentReq(body string) *http.Request {
 	req := httptest.NewRequest(http.MethodPut, "/v1/ai/routing", strings.NewReader(body))
-	ctx := principal.WithWorkspaceID(req.Context(), ids.NewV7())
+	ctx := req.Context()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(),
 		Permissions: principal.Permissions{
@@ -368,7 +368,7 @@ func TestAMalformedBindingDocumentIsRefused(t *testing.T) {
 	h := aiRoutingHandlers{store: &ai.RoutingStore{}}
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/v1/ai/routing", strings.NewReader("{not json"))
-	ctx := principal.WithWorkspaceID(req.Context(), ids.NewV7())
+	ctx := req.Context()
 	req = req.WithContext(principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
@@ -448,7 +448,7 @@ func TestAVendorWithNoLocationsSaysSo(t *testing.T) {
 }
 
 func routingSeat(grant principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{

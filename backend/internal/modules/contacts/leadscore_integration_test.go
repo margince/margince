@@ -43,7 +43,7 @@ func newLeadScoreEnvWithBase(t *testing.T) (context.Context, *Store, *privacyEnv
 	t.Helper()
 	base := setupCapturePrivacy(t)
 	ctx := principal.WithCorrelationID(
-		principal.WithWorkspaceID(context.Background(), base.ws), ids.NewV7())
+		context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + base.admin.String(), UserID: base.admin,
 		Permissions: principal.Permissions{
@@ -428,7 +428,7 @@ func TestARepCannotScoreALeadTheyDoNotOwn(t *testing.T) {
 	// object permission, which is the case the probe exists for.
 	notTheLeadsOwner := base.owner
 	stranger := principal.WithCorrelationID(
-		principal.WithWorkspaceID(context.Background(), base.ws), ids.NewV7())
+		context.Background(), ids.NewV7())
 	stranger = principal.WithActor(stranger, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + notTheLeadsOwner.String(), UserID: notTheLeadsOwner,
 		Permissions: principal.Permissions{

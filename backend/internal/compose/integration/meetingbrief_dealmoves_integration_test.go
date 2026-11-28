@@ -33,7 +33,7 @@ import (
 func TestTheDealMoveReadsRunAgainstTheRealSchema(t *testing.T) {
 	e := Setup(t)
 	dealID := e.SeedWonDealLinkedTo(t)
-	ctx := principal.WithWorkspaceID(e.As(e.AdminUser, nil, roomErasureAdmin), e.WS)
+	ctx := e.As(e.AdminUser, nil, roomErasureAdmin)
 
 	var moves []meetingbrief.DealMoveIn
 	var hidden bool
@@ -65,7 +65,7 @@ func TestAReaderWithoutTheRoomGrantIsToldTheRoomWasLeftOut(t *testing.T) {
 		"deal":     {Read: true},
 		"activity": {Read: true},
 	}
-	ctx := principal.WithWorkspaceID(e.As(e.AdminUser, nil, noRooms), e.WS)
+	ctx := e.As(e.AdminUser, nil, noRooms)
 
 	var hidden bool
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -94,7 +94,7 @@ func TestAReaderWithoutDealAccessIsToldNothingAboutTheDeal(t *testing.T) {
 		"activity":  {Read: true},
 		"deal_room": {Read: true},
 	}
-	ctx := principal.WithWorkspaceID(e.As(e.AdminUser, nil, noDeals), e.WS)
+	ctx := e.As(e.AdminUser, nil, noDeals)
 
 	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, _, err := meetingbrief.ReadDealMovesForTest(ctx, tx, dealID,

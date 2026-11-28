@@ -148,7 +148,7 @@ func TestTerminalsSinceReturnsEveryCallARunMade(t *testing.T) {
 	rec := newTraceRecorder()
 	record := func(model string) {
 		t.Helper()
-		if err := rec.Record(wsContext(t), []ai.Call{
+		if err := rec.Record(t.Context(), []ai.Call{
 			{ServedModel: model + "-attempt"},
 			{ServedModel: model, IsTerminal: true},
 		}); err != nil {
@@ -177,7 +177,7 @@ func TestTerminalsSinceReturnsEveryCallARunMade(t *testing.T) {
 // is reported rather than skipped.
 func TestTerminalsSinceRefusesACallItCannotAccount(t *testing.T) {
 	rec := newTraceRecorder()
-	if err := rec.Record(wsContext(t), []ai.Call{{ServedModel: "attempted, never served"}}); err != nil {
+	if err := rec.Record(t.Context(), []ai.Call{{ServedModel: "attempted, never served"}}); err != nil {
 		t.Fatalf("Record: %v", err)
 	}
 	if _, err := rec.terminalsSince(0); err == nil {
@@ -201,7 +201,7 @@ func TestCertifyTaskVoidsARecordWhenOneRunWasAnsweredByTwoModels(t *testing.T) {
 	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
 
 	sc := testScenarioOnSite("basic", retryVariant, wideBands)
-	_, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, retryCensus(t),
+	_, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, retryCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
@@ -239,7 +239,7 @@ func certifiedTokens(t *testing.T, census *aitasks.Registry, sc Scenario, calls 
 	for i := range replies {
 		replies[i] = "the widget is blue and durable"
 	}
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, census,
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, census,
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(replies...))},

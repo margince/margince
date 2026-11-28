@@ -166,7 +166,7 @@ func TestTheAccountCoverageReadWithoutActivityJudgesNothing(t *testing.T) {
 	e := setupForecast(t)
 	now := clocktest.Now(t).UTC().Truncate(time.Second)
 	seedCoverageAccounts(t, e, now)
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	grants := map[string]principal.ObjectGrant{}
 	for _, object := range []string{"deal", "company", "contact", "relationship", "installation_settings"} {
 		grants[object] = principal.ObjectGrant{Read: true}

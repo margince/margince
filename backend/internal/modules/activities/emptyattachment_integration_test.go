@@ -32,7 +32,7 @@ import (
 func (e *sendEnv) captureAFile(t *testing.T, anchor ids.ActivityID, filename string, body []byte) ids.UUID {
 	t.Helper()
 	ctx := principal.WithCorrelationID(
-		principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws),
+		principal.WithActor(context.Background(),
 			principal.Principal{
 				Type: principal.PrincipalSystem, ID: "connector:imap",
 				Permissions: principal.Permissions{
@@ -120,7 +120,7 @@ func TestAWithheldFileCannotBeSentBackOut(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	ctx := principal.WithCorrelationID(
-		principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws),
+		principal.WithActor(context.Background(),
 			principal.Principal{
 				Type: principal.PrincipalSystem, ID: "connector:imap",
 				Permissions: principal.Permissions{

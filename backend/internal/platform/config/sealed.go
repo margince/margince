@@ -11,17 +11,22 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Sealer keeps a secret setting's value out of its row. Compose builds one over
 // the key vault; this package cannot import the vault, which reads its own root
 // key through a Config.
+//
+// Each function takes the installation's company, which the vault binds every
+// blob to. The Config names it through its settings store, so no caller passes
+// one.
 type Sealer struct {
-	Seal    func(ctx context.Context, plaintext string) (ref string, err error)
-	Resolve func(ctx context.Context, ref string) (plaintext string, err error)
+	Seal    func(ctx context.Context, company ids.WorkspaceID, plaintext string) (ref string, err error)
+	Resolve func(ctx context.Context, company ids.WorkspaceID, ref string) (plaintext string, err error)
 	// Retire deletes a sealed value no row names any more. It runs after the
 	// write commits, so it reports to a log and never to the caller.
-	Retire func(ctx context.Context, ref string)
+	Retire func(ctx context.Context, company ids.WorkspaceID, ref string)
 }
 
 // WithSealer returns a copy that seals and opens SecretReference settings
@@ -69,7 +74,15 @@ func openSealed[T any](ctx context.Context, c *Config, s *Setting[T], ref string
 	if err != nil {
 		return zero, err
 	}
-	text, err := sealer.Resolve(ctx, ref)
+	db, err := c.database(s.Key())
+	if err != nil {
+		return zero, err
+	}
+	company, err := settings.WorkspaceOf(ctx, db)
+	if err != nil {
+		return zero, fmt.Errorf("config: opening the sealed %s: %w", s.Key(), err)
+	}
+	text, err := sealer.Resolve(ctx, company, ref)
 	if err != nil {
 		return zero, fmt.Errorf("config: opening the sealed %s: %w", s.Key(), err)
 	}
@@ -105,7 +118,11 @@ func saveSealed[T any](ctx context.Context, c *Config, s *Setting[T], v T) error
 	if err != nil {
 		return err
 	}
-	ref, err := sealer.Seal(ctx, s.spec.Type.Format(v))
+	company, err := settings.WorkspaceOf(ctx, db)
+	if err != nil {
+		return fmt.Errorf("config: sealing %s: %w", s.Key(), err)
+	}
+	ref, err := sealer.Seal(ctx, company, s.spec.Type.Format(v))
 	if err != nil {
 		return fmt.Errorf("config: sealing %s: %w", s.Key(), err)
 	}
@@ -143,6 +160,10 @@ func RemoveSecret[T any](ctx context.Context, c *Config, s *Setting[T]) error {
 // landed. The new blob is then kept: an orphan is inert, while a row naming a
 // deleted blob cannot be repaired by saving again.
 func swapSealed(ctx context.Context, db *settings.Store, sealer *Sealer, row *settings.Entry[string], next string) error {
+	company, err := settings.WorkspaceOf(ctx, db)
+	if err != nil {
+		return fmt.Errorf("config: replacing the sealed %s: %w", row.Key(), err)
+	}
 	var previous string
 	var bodyErr error
 	entered := false
@@ -151,7 +172,7 @@ func swapSealed(ctx context.Context, db *settings.Store, sealer *Sealer, row *se
 		previous, bodyErr = swapSealedTx(ctx, db, tx, row, next)
 		return bodyErr
 	})
-	return settleSwap(ctx, sealer, row.Key(), swapOutcome{
+	return settleSwap(ctx, company, sealer, row.Key(), swapOutcome{
 		previous: previous, next: next, committed: txErr == nil, bodyDone: entered && bodyErr == nil, err: txErr,
 	})
 }
@@ -165,18 +186,18 @@ type swapOutcome struct {
 }
 
 // settleSwap retires the blob no row names after the swap ended as o did.
-func settleSwap(ctx context.Context, sealer *Sealer, key string, o swapOutcome) error {
+func settleSwap(ctx context.Context, company ids.WorkspaceID, sealer *Sealer, key string, o swapOutcome) error {
 	if !o.committed {
 		if o.bodyDone && o.next != "" {
 			return fmt.Errorf("config: %s was sealed but its write did not report a clean commit, so the sealed copy is kept: %w", key, o.err)
 		}
 		if o.next != "" {
-			sealer.Retire(ctx, o.next)
+			sealer.Retire(ctx, company, o.next)
 		}
 		return o.err
 	}
 	if o.previous != "" && o.previous != o.next {
-		sealer.Retire(ctx, o.previous)
+		sealer.Retire(ctx, company, o.previous)
 	}
 	return nil
 }

@@ -146,13 +146,12 @@ func (g *ContactDataEnrich) swallowConfiguration(err error) error {
 	}
 }
 
-// systemContext binds the workspace and the system principal this pass runs
+// systemContext binds the system principal this pass runs
 // under. Queueing a run is gated on seeing the subject, and this pass acts for
 // the installation rather than for a contact, so it carries the system
 // principal's full row scope; the correlation id carries through, so a
 // purchase traces back to the event that caused it.
 func (g *ContactDataEnrich) systemContext(ctx context.Context, env events.Envelope, ws ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: contactDataEnrichActor,

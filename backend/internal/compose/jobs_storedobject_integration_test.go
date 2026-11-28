@@ -352,7 +352,7 @@ func TestEveryReferenceCheckRefusesASeatAndAnswersNothingForNoKeys(t *testing.T)
 		t.Fatal("no owners are registered, so this test asserts nothing about any of them")
 	}
 	seat := e.As(e.Rep1, nil, integration.AdminPerms)
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS),
+	system := principal.SystemActing(context.Background(),
 		"stored_object_reap_worker")
 
 	for kind, check := range owners {
@@ -451,7 +451,7 @@ func TestAReferenceCheckThatCannotReachTheDatabaseSaysSoWithoutTheStatement(t *t
 	// Nothing about the ledger is mocked: the failure is the real one a lost database
 	// produces.
 	stopped, cancel := context.WithCancel(principal.SystemActing(
-		principal.WithWorkspaceID(context.Background(), e.WS), "stored_object_reap_worker"))
+		context.Background(), "stored_object_reap_worker"))
 	cancel()
 
 	for kind, check := range owners {

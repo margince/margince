@@ -55,8 +55,7 @@ func seedDailySystemHealth(t *testing.T, e *apptest.AppEnv, scale float64, owner
 	if actual != count {
 		t.Fatalf("health fixture census %d, want %d", actual, count)
 	}
-	ws := apptest.InstallationWorkspaceUUID(t.Context(), t, e.Pool)
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), ws), "system:health_benchmark")
+	ctx := principal.SystemActing(context.Background(), "system:health_benchmark")
 	captured := max(10, int(1000*scale))
 	if err := compose.SeedSystemHealthFixture(ctx, e.Pool, ids.MustParse(owner.UserID), owner.Email, captured, clocktest.Now(t)); err != nil {
 		t.Fatal(err)

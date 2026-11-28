@@ -42,11 +42,11 @@ func RBACObjectGrantable(object string) bool {
 }
 
 // EffectiveRBAC reads the human's CURRENT role grants + teams. A user who
-// is archived, suspended, or outside the context workspace resolves to
+// is archived or suspended resolves to
 // ErrNotFound — absence of authority is denial, not empty permission.
-func (s *Service) EffectiveRBAC(ctx context.Context, workspaceID, humanID ids.UUID) (authz.RBAC, error) {
+func (s *Service) EffectiveRBAC(ctx context.Context, humanID ids.UUID) (authz.RBAC, error) {
 	var out authz.RBAC
-	err := s.liveUserTx(ctx, workspaceID, humanID, func(tx pgx.Tx, _ string) error {
+	err := s.liveUserTx(ctx, humanID, func(tx pgx.Tx, _ string) error {
 		_, teams, perms, err := loadGrants(ctx, tx, ids.From[ids.UserKind](humanID))
 		if err != nil {
 			return err
@@ -69,12 +69,12 @@ func (s *Service) EffectiveRBAC(ctx context.Context, workspaceID, humanID ids.UU
 // A caller that legitimately needs only one may still use EffectiveRBAC or
 // SeatType; what must not happen is one caller reading both, separately, and
 // treating the pair as a fact about one instant.
-func (s *Service) EffectiveAuthority(ctx context.Context, workspaceID, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func (s *Service) EffectiveAuthority(ctx context.Context, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	var (
 		rbac authz.RBAC
 		seat principal.SeatType
 	)
-	err := s.liveUserTx(ctx, workspaceID, humanID, func(tx pgx.Tx, seatType string) error {
+	err := s.liveUserTx(ctx, humanID, func(tx pgx.Tx, seatType string) error {
 		var err error
 		rbac, seat, err = authorityIn(ctx, tx, humanID, seatType)
 		return err
@@ -135,12 +135,12 @@ func authorityIn(ctx context.Context, tx pgx.Tx, humanID ids.UUID, seatType stri
 // It reuses passportStillLiveQuery rather than restating the rule, so a
 // condition added to authentication reaches admission without anybody
 // remembering to come here.
-func (s *Service) AdmittedAuthority(ctx context.Context, workspaceID, humanID, passportID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func (s *Service) AdmittedAuthority(ctx context.Context, humanID, passportID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	var (
 		rbac authz.RBAC
 		seat principal.SeatType
 	)
-	err := s.liveUserTx(ctx, workspaceID, humanID, func(tx pgx.Tx, seatType string) error {
+	err := s.liveUserTx(ctx, humanID, func(tx pgx.Tx, seatType string) error {
 		// A ZERO passport is a principal holding no credential — the product
 		// acting under a policy, derived from a live human at construction
 		// rather than from a token somebody can revoke. There is nothing to
@@ -169,25 +169,19 @@ func (s *Service) AdmittedAuthority(ctx context.Context, workspaceID, humanID, p
 
 // SeatType reads the human's current seat — the A62/ADR-0047 licensing
 // ceiling the gate checks before any tier reasoning.
-func (s *Service) SeatType(ctx context.Context, workspaceID, humanID ids.UUID) (principal.SeatType, error) {
+func (s *Service) SeatType(ctx context.Context, humanID ids.UUID) (principal.SeatType, error) {
 	var seat principal.SeatType
-	err := s.liveUserTx(ctx, workspaceID, humanID, func(_ pgx.Tx, seatType string) error {
+	err := s.liveUserTx(ctx, humanID, func(_ pgx.Tx, seatType string) error {
 		seat = principal.SeatType(seatType)
 		return nil
 	})
 	return seat, err
 }
 
-// liveUserTx runs fn inside the workspace transaction after proving the
-// user is live in exactly the requested workspace. The GUC contract binds
-// the tenant from the context; a caller asking about a different
-// workspace is a programming error, refused rather than answered from
-// the wrong tenant.
-func (s *Service) liveUserTx(ctx context.Context, workspaceID, humanID ids.UUID, fn func(tx pgx.Tx, seatType string) error) error {
-	ctxWs, ok := principal.WorkspaceID(ctx)
-	if !ok || ctxWs != workspaceID {
-		return errors.New("crmauth: authority resolution outside the bound workspace")
-	}
+// liveUserTx runs fn inside the installation's transaction after proving the
+// user is live. The handle refuses before the body runs when the installation
+// has no live company, so an authority is never answered outside it.
+func (s *Service) liveUserTx(ctx context.Context, humanID ids.UUID, fn func(tx pgx.Tx, seatType string) error) error {
 	// ONE SNAPSHOT, and it has to be asked for. The pool begins at READ
 	// COMMITTED, where every statement sees its own committed view — so a seat
 	// read, a passport read and a grant read in one transaction can return

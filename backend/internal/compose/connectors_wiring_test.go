@@ -110,11 +110,10 @@ func TestCallbackRequiresMatchingCSRFCookie(t *testing.T) {
 	}
 	const nonce = "csrf-nonce-value"
 	state := signer.sign(connectState{
-		Workspace: ids.MustParse("11111111-1111-1111-1111-111111111111"),
-		User:      ids.MustParse("22222222-2222-2222-2222-222222222222"),
-		Provider:  "gmail",
-		Nonce:     nonce,
-		Version:   stateVersionNamespacedCSRF,
+		User:     ids.MustParse("22222222-2222-2222-2222-222222222222"),
+		Provider: "gmail",
+		Nonce:    nonce,
+		Version:  stateVersionNamespacedCSRF,
 	}, time.Now().Add(time.Hour))
 	code := "the-code"
 	params := crmcontracts.ConnectorOAuthCallbackParams{Code: &code, State: state}

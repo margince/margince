@@ -114,7 +114,7 @@ func newRelistEnv(t *testing.T) relistEnv {
 }
 
 func (r relistEnv) sync() error {
-	return r.env.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), r.env.e.WS), r.conn)
+	return r.env.registry.SyncOnce(context.Background(), r.conn)
 }
 
 // relist leaves only the kept event on the calendar and expires the sync

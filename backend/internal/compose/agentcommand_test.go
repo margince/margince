@@ -273,7 +273,7 @@ func TestTheToolDoorRefusesAnExternallyHeldRecordItCanRead(t *testing.T) {
 // asking only that Guards' own answer came back, would have been satisfied by a
 // door that never reached the resolver at all.
 func anArchivingAgent() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:archive", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),

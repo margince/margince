@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestTheMachineNeverOverwritesAContactsDecision(t *testing.T) {
@@ -39,7 +38,7 @@ func TestTheMachineNeverOverwritesAContactsDecision(t *testing.T) {
 	// A brain that would answer `spam` — and must never be asked.
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -63,7 +62,7 @@ func TestKeepingASenderOutSurvivesTheClassifier(t *testing.T) {
 	// A brain that would call them a contact. The owner disagrees.
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 

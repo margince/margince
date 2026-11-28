@@ -162,7 +162,7 @@ func TestAMeetingReplayWaitsForAColleaguesImportBeforeItSharesTheRow(t *testing.
 	synced, returned := make(chan error, 1), make(chan struct{})
 	go func() {
 		defer close(returned)
-		synced <- p.env.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), e.WS), p.conns["b"])
+		synced <- p.env.registry.SyncOnce(context.Background(), p.conns["b"])
 	}()
 	testdb.AwaitQueuedBehind(t, e.Owner, colleague.pid, 1, returned, "the guest's replay")
 	colleague.recompute()

@@ -127,7 +127,7 @@ func (w *geocodeBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UU
 	// behalf — it is the installation asking which of its own companies it
 	// never located — so it names itself rather than borrowing a principal,
 	// and company:read is gated like any other read.
-	wsCtx := geocodeBackfillActor(principal.WithWorkspaceID(ctx, ws))
+	wsCtx := geocodeBackfillActor(ctx)
 	store := contacts.NewStore(database.ForInstallation(w.pool))
 	due, err := store.ListGeocodeOrphans(wsCtx, contacts.GeocodeBackfillBatch)
 	if err != nil {

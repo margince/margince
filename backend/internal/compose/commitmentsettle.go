@@ -162,16 +162,15 @@ func (t *CommitmentSettleTrigger) applyClaimSettlement(ctx context.Context, by e
 // with the authority they hold now, or the product when nobody is behind it.
 // It answers false for an agent or connector acting for nobody.
 func (t *CommitmentSettleTrigger) actingAs(ctx context.Context, by events.Actor) (context.Context, bool, error) {
-	ws, err := t.identity.InstallationWorkspace(ctx)
+	_, err := t.identity.InstallationWorkspace(ctx)
 	if err != nil {
 		return nil, false, err
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	seat, ok := originSeat(by)
 	if !ok {
 		return ctx, by.Type == string(principal.PrincipalSystem), nil
 	}
-	member, err := authz.MemberPrincipal(ctx, t.identity, ws.UUID, seat)
+	member, err := authz.MemberPrincipal(ctx, t.identity, seat)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, nil
 	}

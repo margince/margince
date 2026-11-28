@@ -47,7 +47,7 @@ func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, n
 // retires them, exactly as a provider that never answered does.
 func parkThroughAnOutage(t *testing.T, e *integration.SearchEnv, store *capturemod.PendingStore) {
 	t.Helper()
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	for range capturemod.PendingMaxAttempts {
 		claimed, err := store.ClaimDue(wsCtx, 100)
 		if err != nil {
@@ -114,7 +114,7 @@ func seedParkedSenders(t *testing.T, env captureEnv) {
 	for _, sender := range []string{"plain", "old", "decided", "judged", "offered"} {
 		env.sync(t, email(sender+"@stranger.example", sender, captureOwner, "rec"+sender+"@stranger.example", ""))
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 
 	// The model-judged row leaves the queue through Retire, not exhaustion.
 	claimed, err := store.ClaimDue(wsCtx, 100)
@@ -328,7 +328,7 @@ func TestReopenParkedRefusesAWindowThatEndsBeforeItStarts(t *testing.T) {
 
 func TestReopenParkedReopensExhaustedEnrichmentInTheWindowOnly(t *testing.T) {
 	e := integration.SetupSearch(t)
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	store := capturemod.NewAutoEnrichStore(e.DB())
 
 	seedCompany := func(name string) ids.CompanyID {

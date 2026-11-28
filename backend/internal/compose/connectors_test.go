@@ -76,7 +76,7 @@ func gmailAuthCodeURLForTest(t *testing.T) string {
 }
 
 func humanCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.MustParse("11111111-1111-1111-1111-111111111111"))
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type:   principal.PrincipalHuman,
 		ID:     "human:22222222-2222-2222-2222-222222222222",
@@ -344,11 +344,10 @@ func TestCallbackDenialReturnsToTheSurfaceItStartedFrom(t *testing.T) {
 	h := wiredHandlers()
 	denied := "access_denied"
 	state := h.signer.sign(connectState{
-		Workspace: ids.MustParse("11111111-1111-1111-1111-111111111111"),
-		User:      ids.MustParse("22222222-2222-2222-2222-222222222222"),
-		Provider:  "gmail",
-		Nonce:     "a-nonce",
-		ReturnTo:  returnToSettings,
+		User:     ids.MustParse("22222222-2222-2222-2222-222222222222"),
+		Provider: "gmail",
+		Nonce:    "a-nonce",
+		ReturnTo: returnToSettings,
 	}, time.Now().Add(time.Minute))
 
 	rec := httptest.NewRecorder()

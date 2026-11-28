@@ -31,7 +31,7 @@ import (
 // commit then deletes the bytes just written.
 func TestARetryRestartsTheGracePeriod(t *testing.T) {
 	ctx, pool := ledgerEnv(t)
-	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx)))
+	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx, pool)))
 	const key = "ws/attachment/retried"
 
 	if err := ledger.Record(ctx, storedobjects.KindAttachment, key); err != nil {
@@ -61,7 +61,7 @@ func TestARetryRestartsTheGracePeriod(t *testing.T) {
 // so a typo in a single writer would strand every other writer's orphans.
 func TestAnUndeclaredKindIsRefused(t *testing.T) {
 	ctx, pool := ledgerEnv(t)
-	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx)))
+	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx, pool)))
 
 	err := ledger.Record(ctx, storedobjects.Kind("knowledge-typo"), "ws/knowledge-typo/x")
 	if err == nil {
@@ -74,7 +74,7 @@ func TestAnUndeclaredKindIsRefused(t *testing.T) {
 
 func TestAnAdoptedScanCannotRetireANewerIntent(t *testing.T) {
 	ctx, pool := ledgerEnv(t)
-	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx)))
+	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx, pool)))
 	key := "ws/attachment/" + ids.NewV7().String()
 	if err := ledger.Record(ctx, storedobjects.KindAttachment, key); err != nil {
 		t.Fatal(err)
@@ -103,7 +103,7 @@ func TestAnAdoptedScanCannotRetireANewerIntent(t *testing.T) {
 // takes it away.
 func TestADeclarationSurvivesUntilItIsCleared(t *testing.T) {
 	ctx, pool := ledgerEnv(t)
-	db := database.BindTo(pool, workspaceOf(ctx))
+	db := database.BindTo(pool, workspaceOf(ctx, pool))
 	ledger := storedobjects.NewLedger(db)
 	const key = "ws/knowledge/declared"
 
@@ -148,7 +148,7 @@ func TestADeclarationSurvivesUntilItIsCleared(t *testing.T) {
 // retiring one is the reaper's act — neither is a seat's to take.
 func TestTheSweepsReadsRefuseASeat(t *testing.T) {
 	ctx, pool := ledgerEnv(t)
-	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx)))
+	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx, pool)))
 
 	if _, err := ledger.ListProvisional(ctx, time.Now().UTC(), 10); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("ListProvisional as a seat = %v, want permission denied", err)
@@ -169,7 +169,7 @@ func ledgerEnv(t *testing.T) (context.Context, *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:ledger-test",
 	}), pool
@@ -180,10 +180,11 @@ func systemCtx(ctx context.Context) context.Context {
 	return principal.SystemActing(ctx, "stored_object_reap_worker")
 }
 
-func workspaceOf(ctx context.Context) ids.WorkspaceID {
-	ws, _ := principal.WorkspaceID(ctx)
-	return ids.From[ids.WorkspaceKind](ws)
-}
+// theWorkspace is the one workspace this suite's handles are pinned to. The
+// ledger names no row of it, so none is seeded.
+var theWorkspace = ids.New[ids.WorkspaceKind]()
+
+func workspaceOf(context.Context, *pgxpool.Pool) ids.WorkspaceID { return theWorkspace }
 
 // age backdates one declaration, so a test can reach the far side of the grace
 // without waiting a day for it.

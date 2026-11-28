@@ -58,7 +58,7 @@ func (r *ZaloRenewer) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
 // expires within ZaloRenewWithin. One connection's failure does not stop the
 // others; the failures are returned joined so the job is retried.
 func (r *ZaloRenewer) RenewWorkspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.WithActor(principal.WithWorkspaceID(ctx, workspace), principal.Principal{
+	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: capturedByZalo,
 	})
 	var live []ids.UUID

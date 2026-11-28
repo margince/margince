@@ -38,7 +38,7 @@ import (
 // asPassport binds an agent principal presenting one passport, which
 // taskOwnerOf reads to decide whose handle this is.
 func asPassport(e *integration.Env, passport ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + passport.String(),
@@ -95,7 +95,7 @@ func TestATaskHandleIsAnsweredToThePassportThatHoldsItAndToNoOther(t *testing.T)
 func stageApprovalForTask(t *testing.T, e *integration.Env) ids.ApprovalID {
 	t.Helper()
 	svc := approvals.NewService(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)))
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,

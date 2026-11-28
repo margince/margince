@@ -30,7 +30,6 @@ import (
 // meeting's outside guests, from the stored Google Calendar event, as the seat
 // whose calendar stamps the meeting. A stored answer only fills an empty one.
 func meetingGuestAnswersDataTask(pool *pgxpool.Pool) datatask.Task {
-	inWorkspace := installationContext(pool)
 	authority := identity.NewService(pool)
 	return datatask.Task{
 		ID: "core/1793003497_meeting_guest_answers", Version: 2,
@@ -40,10 +39,6 @@ func meetingGuestAnswersDataTask(pool *pgxpool.Pool) datatask.Task {
 			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: estimateStoredCalendarOriginals,
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-				ctx, err := inWorkspace(ctx)
-				if err != nil {
-					return datatask.BatchOut{}, err
-				}
 				return fillGuestAnswersBatch(ctx, tx, authority, in)
 			},
 		}},

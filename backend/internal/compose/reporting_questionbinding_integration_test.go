@@ -87,7 +87,7 @@ func seedBoundBook(t *testing.T) *boundBook {
 
 // seat is a full seat that may write reports.
 func (b *boundBook) seat(user ids.UUID, teams []ids.UUID) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), b.e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(),
 		UserID: user, SeatType: principal.SeatFull, TeamIDs: teams, Permissions: boundReportPerms,

@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -78,7 +77,7 @@ func TestTheClassifyPassLabelsPastAMessageTheModelsDecline(t *testing.T) {
 
 	brain := &withholdingWhere{inner: &scriptedClassifyBrain{}}
 	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
-	if err := classifier.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := classifier.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("one declined message failed the whole pass: %v", err)
 	}
 
@@ -131,7 +130,7 @@ func TestTheClassifyPassAsksADeclinedMessageOnceAcrossPasses(t *testing.T) {
 	}
 	brain := &withholdingWhere{inner: &scriptedClassifyBrain{}}
 	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	for pass := 1; pass <= 2; pass++ {
 		if err := classifier.RunWorkspace(ctx, 0); err != nil {
 			t.Fatalf("pass %d: %v", pass, err)
@@ -328,7 +327,7 @@ func TestAPassWithNoProviderBoundDeclinesNothing(t *testing.T) {
 	brain := &standInBrain{}
 	runOwedWorker(t, e, brain)
 	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
-	if err := classifier.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := classifier.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("a pass with no provider bound failed rather than waiting: %v", err)
 	}
 	if brain.calls != 2 {

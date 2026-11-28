@@ -49,14 +49,14 @@ func ForecastEvaluationDataset(
 	}
 	ctx, cancel := context.WithTimeout(ctx, bounds.Runtime)
 	defer cancel()
-	workspace, ok, err := database.LiveWorkspace(ctx, pool)
+	_, ok, err := database.LiveWorkspace(ctx, pool)
 	if err != nil {
 		return forecasting.EvaluationDataset{}, err
 	}
 	if !ok {
 		return forecasting.EvaluationDataset{}, errors.New("compose: a forecast evaluation reads the installation's workspace, and none is live")
 	}
-	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), forecastEvaluationActor)
+	ctx = principal.SystemActing(ctx, forecastEvaluationActor)
 	store := newForecastStoreFor(pool)
 	out := forecasting.EvaluationDataset{
 		Version: forecasting.EvaluationDatasetVersion, DefinitionVersion: forecasting.DefinitionVersion,

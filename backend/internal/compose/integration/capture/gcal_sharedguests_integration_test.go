@@ -131,7 +131,7 @@ func (s sharedGuests) leave(t *testing.T, seat ids.UUID) {
 // the meeting: the access its participant row gives.
 func (s sharedGuests) reads(t *testing.T, seat, meeting ids.UUID) bool {
 	t.Helper()
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), s.e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, OnBehalfOf: seat,
 		Permissions: principal.Permissions{

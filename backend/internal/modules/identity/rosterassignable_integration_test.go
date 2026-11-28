@@ -26,10 +26,10 @@ func TestTheRosterSaysWhoTheCallerMayMakeAnOwner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("inviting the rep: %v", err)
 	}
-	if err := e.svc.RedeemPasswordReset(principal.WithCorrelationID(principal.WithWorkspaceID(ctx, e.ws.UUID), ids.NewV7()), rawToken, "a rep password!"); err != nil {
+	if err := e.svc.RedeemPasswordReset(principal.WithCorrelationID(ctx, ids.NewV7()), rawToken, "a rep password!"); err != nil {
 		t.Fatalf("redeeming the invite token: %v", err)
 	}
-	rep, _, err := e.svc.Login(principal.WithWorkspaceID(ctx, e.ws.UUID), "rep@acme.test", "a rep password!", noDevice)
+	rep, _, err := e.svc.Login(ctx, "rep@acme.test", "a rep password!", noDevice)
 	if err != nil {
 		t.Fatalf("rep login: %v", err)
 	}

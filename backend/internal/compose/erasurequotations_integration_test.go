@@ -362,7 +362,7 @@ func TestAControllerReleasingARestrictionSaysSoOnTheCardsItWithdrew(t *testing.T
 // attributed to a contact the installation can name and an id with no app_user
 // row behind it is refused by design.
 func releaseControllerCtx(e *integration.Env) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,

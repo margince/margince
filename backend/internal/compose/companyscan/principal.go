@@ -12,7 +12,6 @@ package companyscan
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -22,18 +21,14 @@ import (
 
 // Authority resolves a human's grants and seat as one snapshot.
 type Authority interface {
-	EffectiveAuthority(ctx context.Context, workspaceID, humanID ids.UUID) (authz.RBAC, principal.SeatType, error)
+	EffectiveAuthority(ctx context.Context, humanID ids.UUID) (authz.RBAC, principal.SeatType, error)
 }
 
 // WorkerContext binds the viewer's own principal and the scan's correlation
 // onto a job context. The correlation id IS the row id, so every trace and
 // every audit row for one read is joinable on the scan.
 func WorkerContext(ctx context.Context, authority Authority, viewer ids.UserID, scanID ids.UUID) (context.Context, error) {
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errors.New("companyscan: the job context carries no workspace")
-	}
-	rbac, seat, err := authority.EffectiveAuthority(ctx, workspace, viewer.UUID)
+	rbac, seat, err := authority.EffectiveAuthority(ctx, viewer.UUID)
 	if err != nil {
 		return nil, fmt.Errorf("companyscan: resolving the reader's authority: %w", err)
 	}

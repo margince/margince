@@ -28,7 +28,7 @@ func (e *sendEnv) asAgentFor(t *testing.T, scope principal.RowScope) context.Con
 	if !ok {
 		t.Fatal("the rep's context carries no principal")
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(),

@@ -30,7 +30,7 @@ func seatChoosingALanguage(t *testing.T) (*Service, context.Context, ids.UUID) {
 	_, pool := setupIdentityDB(t)
 	svc := NewService(pool)
 	name := "locale-" + ids.NewV7().String()
-	wsID, _, _, err := svc.BootstrapInstallation(context.Background(), func() (InstallationBootstrap, error) {
+	_, _, _, err := svc.BootstrapInstallation(context.Background(), func() (InstallationBootstrap, error) {
 		return InstallationBootstrap{
 			CompanyName:   name,
 			BaseCurrency:  "EUR",
@@ -51,7 +51,7 @@ func seatChoosingALanguage(t *testing.T) (*Service, context.Context, ids.UUID) {
 	}); err != nil {
 		t.Fatalf("reading the bootstrapped admin: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), wsID.UUID)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + userID.String(), UserID: userID,

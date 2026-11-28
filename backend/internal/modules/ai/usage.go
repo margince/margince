@@ -10,14 +10,12 @@ package ai
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -100,11 +98,7 @@ func (m *Meter) UsageReport(ctx context.Context, budget BudgetPolicy, rates *Rat
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		return nil, BudgetStatus{}, err
 	}
-	rawWS, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, BudgetStatus{}, errors.New("ai: usage report outside workspace context")
-	}
-	monthly, err := budget.MonthlyTokenBudget(ctx, ids.From[ids.WorkspaceKind](rawWS))
+	monthly, err := budget.MonthlyTokenBudget(ctx)
 	if err != nil {
 		return nil, BudgetStatus{}, fmt.Errorf("ai: budget policy: %w", err)
 	}

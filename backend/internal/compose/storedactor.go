@@ -44,12 +44,8 @@ func (s storedActor) rebuild(ctx context.Context, stored migration.StoredActor, 
 	if stored.Type != principal.PrincipalHuman && stored.Type != principal.PrincipalAgent {
 		return principal.Principal{}, fmt.Errorf("a stored %q actor cannot be acted as: %w", stored.Type, apperrors.ErrPermissionDenied)
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return principal.Principal{}, errors.New("rebuilding a stored actor outside workspace context")
-	}
 	human := stored.UserID
-	actor, err := authz.MemberPrincipal(ctx, s.authority, ws, human)
+	actor, err := authz.MemberPrincipal(ctx, s.authority, human)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return principal.Principal{}, errActorSeatGone
 	}

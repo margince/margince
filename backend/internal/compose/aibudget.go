@@ -19,8 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // seatBudget derives the pool live: seat changes move the budget at
@@ -41,9 +39,9 @@ func NewSeatBudget(pool *pgxpool.Pool) ai.BudgetPolicy { return seatBudget{pool:
 // never more, and letting it error would halt every routed model call, the
 // budget resume sweep, and usage reporting for as long as the config stays
 // over-cap. A NEW value being written still validates strictly, in ReplaceBudget.
-func (b seatBudget) MonthlyTokenBudget(ctx context.Context, workspaceID ids.WorkspaceID) (int64, error) {
+func (b seatBudget) MonthlyTokenBudget(ctx context.Context) (int64, error) {
 	var monthly int64
-	err := database.WithTx(principal.WithWorkspaceID(ctx, workspaceID.UUID), b.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, b.pool, func(tx pgx.Tx) error {
 		budget, err := config.StoredApplyTx(ctx, tx, loadedConfig(), ai.BudgetSettings)
 		if err != nil {
 			return err

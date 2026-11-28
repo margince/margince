@@ -207,7 +207,7 @@ func TestAWorkspaceExclusionAnswersItForEveryone(t *testing.T) {
 // and false statement.
 func TestACallerWithNoHumanBehindItIsRefusedRatherThanServedNothing(t *testing.T) {
 	e := setupDedupe(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	connector := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",

@@ -13,7 +13,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // recordedUsage answers a fixed usage per subject and records what it was asked.
@@ -23,7 +22,7 @@ type recordedUsage struct {
 	err    error
 }
 
-func (r *recordedUsage) Usage(_ context.Context, _ ids.UUID, subjects []agentvolume.Holder) (map[string]agentvolume.Usage, error) {
+func (r *recordedUsage) Usage(_ context.Context, subjects []agentvolume.Holder) (map[string]agentvolume.Usage, error) {
 	r.asked = subjects
 	return r.answer, r.err
 }
@@ -42,7 +41,7 @@ func TestOnlyALivePassportIsAskedForUsage(t *testing.T) {
 	connection := passportRowForTest()
 	connection.Connection = &PassportConnectionRow{GrantID: ids.NewV7(), ClientID: "c", ClientName: "Claude"}
 	reader := &recordedUsage{}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 
 	Handlers{}.WithPassportUsage(reader).liveUsage(ctx, []PassportRow{live, revoked, expired, connection}, []string{"admin"}, now)
 
@@ -57,7 +56,7 @@ func TestOnlyALivePassportIsAskedForUsage(t *testing.T) {
 
 func TestThePassportListSurvivesAnUnreadableCounter(t *testing.T) {
 	reader := &recordedUsage{err: errors.New("redis down")}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 
 	usage := Handlers{}.WithPassportUsage(reader).liveUsage(ctx, []PassportRow{passportRowForTest()}, nil, clocktest.Now(t))
 

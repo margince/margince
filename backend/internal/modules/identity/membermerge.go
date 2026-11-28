@@ -361,7 +361,9 @@ func (s *Service) RecordMergeMailOutcome(ctx context.Context, actor Identity, ra
 // counterpart has left, answer one neutral ErrNotFound, so a token cannot be
 // probed.
 func (s *Service) ConfirmMemberMerge(ctx context.Context, rawToken string) error {
-	if _, ok := workspaceFrom(ctx); !ok {
+	if _, live, err := s.liveCompany(ctx); err != nil {
+		return err
+	} else if !live {
 		return apperrors.ErrNotFound
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {

@@ -122,12 +122,11 @@ func survivorOf(env events.Envelope) (ids.UUID, bool) {
 	return survivor, true
 }
 
-// systemContext binds the workspace and the system principal this pass writes
+// systemContext binds the system principal this pass writes
 // under. The fill is not a human's edit and must not be recorded as one, and
 // the correlation id carries through so the fill traces back to the event
 // that caused it.
 func (g *ContactAutoEnrich) systemContext(ctx context.Context, env events.Envelope, ws ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: autoEnrichActor,

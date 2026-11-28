@@ -317,16 +317,18 @@ func (s *Store) approvalTargetVisible(ctx context.Context, targetType string, ta
 		// half is that the row is still there to be acted on.
 		return s.rowExists(ctx, sharedConfigExistence[targetType], targetID)
 	case targetRuleActingWorkspace:
-		// The row half for a target that IS a workspace rather than a record: the
-		// workspace named must be the one this envelope belongs to, because the
-		// accepted effect writes to the acting workspace's sheet and not to the
-		// claimed one. It reaches no table (the row the proposal would create does
-		// not exist yet) and asks no grant — the floor above already did, which is
-		// what keeps a rep who happens to own a subscription from receiving
-		// proposed FX and model pricing that no surface will show them. An unbound
-		// workspace fails closed rather than comparing against the nil UUID.
-		ws, bound := principal.WorkspaceID(ctx)
-		return bound && targetID == ws, nil
+		// The row half for a target that is a workspace rather than a record.
+		// The workspace named must be the one this envelope belongs to. The
+		// accepted effect writes to the acting workspace's sheet, not the claimed one. It reaches no table, since the row the proposal would
+		// create does not exist yet. It asks no grant, because the floor above
+		// already did. That keeps a rep who owns a subscription from receiving
+		// proposed FX and model pricing that no surface shows them. A missing
+		// company fails closed rather than comparing against the nil UUID.
+		ws, err := s.db.Workspace(ctx)
+		if err != nil {
+			return false, err
+		}
+		return targetID == ws.UUID, nil
 	default:
 		// Unknown target type: fail closed, exactly like approvals.targetVisible.
 		return false, nil

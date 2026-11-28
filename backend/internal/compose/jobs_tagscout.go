@@ -48,7 +48,7 @@ func (w *tagScoutWorker) Work(ctx context.Context, _ *river.Job[TagScoutArgs]) e
 
 // suggestWorkspace runs the model path in one workspace as the scout.
 func (w *tagScoutWorker) suggestWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), tagScoutActor)
+	wsCtx := principal.SystemActing(ctx, tagScoutActor)
 	return w.report(ctx, wsCtx, func() (scoutTally, error) {
 		return w.suggester.RunWorkspace(wsCtx, w.now())
 	})

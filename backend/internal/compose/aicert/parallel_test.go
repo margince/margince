@@ -83,7 +83,7 @@ func certifyMixed(t *testing.T, parallel int) Record {
 	t.Helper()
 	withFixedNow(t, fixedResumeNow)
 	candidate, judge := mixedClients()
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, mixedCorpus(), testCensus(t),
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, mixedCorpus(), testCensus(t),
 		ai.ProviderConfig{Provider: providerClaudeCLI, Model: "candidate"},
 		ai.ProviderConfig{Provider: providerClaudeCLI, Model: "judge"}, ai.ProfileCloudFrontier, testRepeats, quietLogger(),
 		&certifyHooks{

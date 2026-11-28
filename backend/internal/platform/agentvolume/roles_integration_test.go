@@ -21,7 +21,7 @@ import (
 func TestARoleChangeKeepsTheCountAndMovesOnlyTheLimit(t *testing.T) {
 	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
 	src := &scriptedSource{policy: rolePolicy()}
-	meter := NewWithClock(redistest.Client(t), Limits{}, DefaultWindow, frozen(&at)).WithPolicySource(src)
+	meter := NewWithClock(redistest.Client(t), Limits{}, DefaultWindow, frozen(&at)).WithCompany(testCompany).WithPolicySource(src)
 	ws, passport := aWorkspace(), aPassport()
 	asAdmin := roledCall(t, ws, passport, "admin")
 	if err := meter.Consume(asAdmin, Calls, 1500); err != nil {
@@ -46,11 +46,11 @@ func TestARoleChangeKeepsTheCountAndMovesOnlyTheLimit(t *testing.T) {
 // One usage read judges each holder against its own roles.
 func TestUsageJudgesEachHolderByItsOwnRoles(t *testing.T) {
 	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{}, DefaultWindow, frozen(&at)).
+	meter := NewWithClock(redistest.Client(t), Limits{}, DefaultWindow, frozen(&at)).WithCompany(testCompany).
 		WithPolicySource(&scriptedSource{policy: rolePolicy()})
-	ws, admin, rep := aWorkspace(), aPassport(), aPassport()
+	admin, rep := aPassport(), aPassport()
 
-	usage, err := meter.Usage(inWorkspace(t), ws, []Holder{
+	usage, err := meter.Usage(inWorkspace(t), []Holder{
 		{Subject: admin.String(), Roles: []string{"admin"}}, {Subject: rep.String(), Roles: []string{"rep"}},
 	})
 	if err != nil {
@@ -68,7 +68,7 @@ func TestUsageJudgesEachHolderByItsOwnRoles(t *testing.T) {
 // roledCall is meteredCall for a passport whose granting human holds roles.
 func roledCall(t *testing.T, ws, passport ids.UUID, roles ...string) context.Context {
 	t.Helper()
-	return principal.WithActor(principal.WithWorkspaceID(t.Context(), ws), principal.Principal{
+	return principal.WithActor(t.Context(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:reader", PassportID: passport,
 		Permissions: principal.Permissions{RoleKeys: roles},
 	})

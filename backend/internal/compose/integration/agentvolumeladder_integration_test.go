@@ -36,7 +36,7 @@ func ladderApp(t *testing.T, slug string, limits agentvolume.Limits) (*apptest.A
 	// re-read on the REAL clock, and a one-hour bucket resets under any run that
 	// crosses the top of the hour — a flake that would read as the release
 	// having failed.
-	meter := agentvolume.New(redistest.Client(t), limits, agentvolume.DefaultWindow)
+	meter := agentvolume.New(redistest.Client(t), limits, agentvolume.DefaultWindow).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))
 	// The CONNECTOR composition, because half the ladder only exists behind
 	// /mcp: the REST door refuses on the volume budget but has no tool to name, so the
 	// step-up it would stage has no question in it. The hosted transport is
@@ -58,7 +58,7 @@ func spendCounter(t *testing.T, e *apptest.AppEnv, meter *agentvolume.Meter, pas
 	if err := e.Owner.QueryRow(t.Context(), `SELECT id FROM workspace LIMIT 1`).Scan(&ws); err != nil {
 		t.Fatalf("reading the workspace id: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(t.Context(), ws)
+	ctx := t.Context()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + passport.String(), PassportID: passport,
 	})

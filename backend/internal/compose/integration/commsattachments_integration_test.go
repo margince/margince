@@ -35,7 +35,7 @@ import (
 // a correlation id, and no session — the authority is rebuilt per delivery from
 // the sender's live grants, which is the behaviour under test.
 func sendWorkerCtx(ws ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
 
@@ -190,24 +190,5 @@ func TestEnsureTransmittableRefusesAnUnknownFileIndistinguishablyFromAnInvisible
 	}
 	if invisible == "" {
 		t.Error("the refusal carries no reason, so a parked delivery explains nothing")
-	}
-}
-
-// Outside a workspace the authority FAULTS rather than answering no.
-//
-// The distinction is load-bearing: the dispatcher parks a delivery on a (false,
-// reason) answer and retries it on an error. A missing workspace is a wiring
-// defect, and parking every message in the batch over it would destroy
-// legitimate sends that a fixed deployment would have delivered.
-func TestEnsureTransmittableFaultsRatherThanRefusingWithoutAWorkspace(t *testing.T) {
-	e := Setup(t)
-	_, blob := attachmentStore(e)
-
-	authority := compose.NewSendAttachmentAuthority(e.Pool, blob)
-	_, _, err := authority.EnsureTransmittable(
-		context.Background(), ids.From[ids.UserKind](e.Rep1), []ids.UUID{ids.NewV7()})
-
-	if err == nil {
-		t.Fatal("a send outside workspace context answered instead of faulting; the dispatcher would park rather than retry")
 	}
 }

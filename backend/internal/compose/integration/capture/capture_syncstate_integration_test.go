@@ -96,7 +96,7 @@ func TestSyncFailureNeverKillsAConnection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 
 	t.Run("rate limit honors Retry-After and stays connected", func(t *testing.T) {
 		moody.err = &connector.RateLimitedError{RetryAfter: 30 * time.Minute}

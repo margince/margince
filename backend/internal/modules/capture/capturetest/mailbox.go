@@ -72,7 +72,7 @@ func NewMailbox(t *testing.T, provider, address string) Mailbox {
 		t.Fatal(err)
 	}
 	testdb.AssertPoolsQuiesced(t)
-	ctx = principal.WithCorrelationID(principal.WithWorkspaceID(ctx, workspace), ids.NewV7())
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:" + provider, UserID: seat, OnBehalfOf: seat,
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"activity": {Create: true, Read: true}}, RowScope: principal.RowScopeAll},

@@ -122,7 +122,7 @@ func captureHomeFence(t *testing.T, e *integration.SearchEnv) int {
 // store, as the member's own archive does.
 func archiveNewestMail(t *testing.T, e *integration.SearchEnv) {
 	t.Helper()
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		SeatType: principal.SeatFull,

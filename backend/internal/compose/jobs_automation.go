@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TimeScanArgs schedules one clock-trigger scan pass (Task 14a): the
@@ -48,7 +47,7 @@ func (w *timeScanWorker) Work(ctx context.Context, _ *river.Job[TimeScanArgs]) e
 }
 
 func (w *timeScanWorker) scanWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	// Built per WORKSPACE: this is a fleet pass, so the scanner's engine binds
 	// the workspace this turn is for rather than whatever an installation
 	// resolver would answer (ADR-0091 §9 step 3).

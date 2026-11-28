@@ -147,9 +147,13 @@ func RecordInstallationRelease(ctx context.Context, pool *pgxpool.Pool, log *slo
 		if err := tx.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&observedAt); err != nil {
 			return fmt.Errorf("compose: reading the instant this release observation got its turn: %w", err)
 		}
+		marker, err := installationMarker(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if _, err := storekit.LogSystem(ctx, tx, installationReleaseObserved, map[string]any{
 			"release_version": version,
-			installationKey:   installationMarker(ctx),
+			installationKey:   marker,
 			"observed_at":     observedAt.UTC().Format(time.RFC3339Nano),
 		}); err != nil {
 			return err
@@ -276,8 +280,12 @@ func refuseMixedRelease(mine, installation string) error {
 // because their immutability trigger makes clearing them impossible.
 func lastObservedRelease(ctx context.Context, tx pgx.Tx) (string, error) {
 	var version string
-	err := tx.QueryRow(ctx, lastObservedReleaseQuery,
-		installationReleaseObserved, installationMarker(ctx)).Scan(&version)
+	marker, err := installationMarker(ctx, tx)
+	if err != nil {
+		return "", err
+	}
+	err = tx.QueryRow(ctx, lastObservedReleaseQuery,
+		installationReleaseObserved, marker).Scan(&version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}

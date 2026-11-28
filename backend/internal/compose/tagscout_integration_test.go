@@ -76,7 +76,7 @@ func (e *tagScoutEnv) note(ctx context.Context, t *testing.T, kind, body string,
 // pass runs one scout pass as the scout's own principal.
 func (e *tagScoutEnv) pass(t *testing.T, now time.Time) TagScoutPass {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:tag-scout")
+	ctx := principal.SystemActing(context.Background(), "system:tag-scout")
 	var pass TagScoutPass
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error

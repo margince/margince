@@ -160,7 +160,7 @@ func TestBackfillLifecycle(t *testing.T) {
 		}
 	})
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 
 	t.Run("each page commits cursor and counters — a resume never re-pages", func(t *testing.T) {
 		done, completed, retryAfter, err := registry.RunBackfillStep(wsCtx, run.ID)
@@ -271,7 +271,7 @@ func TestBackfillStepFaultsAreTerminal(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 
 	// startWithCursor opens a fresh run and overwrites its committed cursor.
 	// The prior run is terminal (error) by the time the next opens, so the

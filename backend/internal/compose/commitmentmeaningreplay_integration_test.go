@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestNonActionRereadPreservesExistingWorkAndRenewal(t *testing.T) {
@@ -37,7 +36,7 @@ func assertNonActionRereadPreservesAdmission(t *testing.T, f renewalPrivacyFixtu
 	if before.CommitmentAdmissions == nil {
 		t.Fatal("fixture has no current admission")
 	}
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), f.e.WS), "human:"+f.e.Rep1.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+f.e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(f.e.Pool, approvals.NewService(f.e.DB()))
 	for _, state := range []string{"completed", "unclear", "request"} {
 		c := f.commitment

@@ -276,7 +276,7 @@ func TestCaptureRefusesToDeriveARecord(t *testing.T) {
 		// must be a system_log line the nightly reconcile can find.
 		sink := capturemod.NewSink(e.DB()).WithEnsurer(recordingEnsurer{}, capturemod.NewTransactionalList(nil, nil))
 		ownerless := principal.WithCorrelationID(principal.WithActor(
-			principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+			context.Background(), principal.Principal{
 				Type: principal.PrincipalConnector, ID: "connector:gmail",
 				Scopes: principal.NewScopeSet(principal.ScopeRead),
 				Permissions: principal.Permissions{

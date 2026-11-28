@@ -134,9 +134,9 @@ func decodeJSONObject(raw json.RawMessage) (map[string]any, error) {
 
 func (s *Service) stageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.ApprovalID, error) {
 	var id ids.ApprovalID
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ids.ApprovalID{}, errors.New("crmapprovals: no workspace bound to context")
+	wsID, err := storekit.Workspace(ctx, tx)
+	if err != nil {
+		return ids.ApprovalID{}, fmt.Errorf("crmapprovals: staging needs a live company: %w", err)
 	}
 	stager, ok := principal.Actor(ctx)
 	if !ok {
@@ -165,7 +165,7 @@ func (s *Service) stageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 	// member's proposal is invisible to them and undecidable by them, for a
 	// kind whose own gate says a row belongs to one contact.
 	joinArgs := []any{in.Kind, nullUUID(in.TargetID), in.DiffHash}
-	err := tx.QueryRow(ctx, `SELECT id FROM approval
+	err = tx.QueryRow(ctx, `SELECT id FROM approval
 			WHERE kind = $1 AND target_entity_id IS NOT DISTINCT FROM $2 AND diff_hash = $3
 			  AND status = 'pending' AND expires_at > now()`+
 		subjectScope(in, stager, &joinArgs)+`

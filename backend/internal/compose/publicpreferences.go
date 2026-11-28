@@ -4,11 +4,10 @@
 package compose
 
 // The anonymous preference-center edge (B-E11.32): /v1/public/preferences/*
-// carries neither session nor workspace header, so this middleware —
-// composed like the public-booking edge — resolves the token to its tenant,
-// throttles the unauthenticated surface, and binds the workspace plus a
-// system principal confined to the preference endpoints. Everything
-// downstream (RBAC-gated consent store, audit attribution as
+// carries neither session nor workspace header. This middleware, composed like
+// the public-booking edge, resolves the token and throttles the unauthenticated
+// surface. It binds a system principal confined to the preference endpoints.
+// Everything downstream (RBAC-gated consent store, audit attribution as
 // actor_type=system) then works unchanged.
 
 import (

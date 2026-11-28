@@ -115,7 +115,7 @@ func mcpBulkDoor(client *apptest.MCPClient) bulkDoor {
 // meter, and answers both doors over it.
 func bulkDoorsApp(t *testing.T, slug string, limits agentvolume.Limits) (*apptest.AppEnv, *agentvolume.Meter, []bulkDoor) {
 	t.Helper()
-	meter := agentvolume.New(redistest.Client(t), limits, agentvolume.DefaultWindow)
+	meter := agentvolume.New(redistest.Client(t), limits, agentvolume.DefaultWindow).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))
 	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
 		return []compose.Option{
 			compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"),

@@ -129,7 +129,7 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	if _, err := b.registry.CancelBackfill(b.human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep1)); err != nil {
 		t.Fatal(err)
 	}
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "system:graph_edge_reconcile")
+	system := principal.SystemActing(context.Background(), "system:graph_edge_reconcile")
 	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {
 		t.Fatal(err)
 	}

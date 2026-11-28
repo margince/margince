@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -90,7 +89,7 @@ func seedLapsedPairAt(t *testing.T, e *Env, colleague, contact ids.UUID, subject
 		}
 		folded = append(folded, activity)
 	}
-	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
+	wsCtx := ctx
 	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, folded)
 	}); err != nil {
@@ -157,7 +156,7 @@ func seedColleagueMessage(t *testing.T, e *Env, colleague, sender, copied ids.UU
 			t.Fatal(err)
 		}
 	}
-	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
+	wsCtx := ctx
 	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{activity})
 	}); err != nil {
@@ -336,7 +335,7 @@ func seedConnectorMailFrom(t *testing.T, e *Env, contact, colleague ids.UUID, ma
 			t.Fatal(err)
 		}
 	}
-	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
+	wsCtx := ctx
 	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{activity})
 	}); err != nil {

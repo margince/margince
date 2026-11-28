@@ -52,7 +52,7 @@ func TestOlderHistoricalMailCanFillATitleAfterANewerMailWasAlreadyRead(t *testin
 		if _, err := newCaptureSink(b.env.Pool, CaptureConfig{}).Upsert(source, parsed.ToRecord("gmail", raw)); err != nil {
 			t.Fatal(err)
 		}
-		repair := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "system:contact_cohort_repair")
+		repair := principal.SystemActing(context.Background(), "system:contact_cohort_repair")
 		if err := NewConfidentialityVerdictEngine(b.env.Pool, &answerEveryThreadBrain{}, b.handlers.log).RunWorkspace(repair, 10); err != nil {
 			t.Fatal(err)
 		}
@@ -61,7 +61,7 @@ func TestOlderHistoricalMailCanFillATitleAfterANewerMailWasAlreadyRead(t *testin
 		}
 	}
 	write(-1, "Best regards,\nAlice Buyer")
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
+	system := principal.SystemActing(context.Background(), "agent:enrich")
 	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{id}, nil) }); err != nil {
 		t.Fatal(err)
 	}

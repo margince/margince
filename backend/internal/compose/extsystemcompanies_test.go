@@ -20,7 +20,7 @@ import (
 // Each new read needs its own declaration, runs only where no user gets the
 // answer, and refuses a malformed id before it touches the database.
 func TestTheSeatReadsNeedTheirDeclarationAnUnattendedCallAndAnActAs(t *testing.T) {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	binding := extensionRuntimeBinding{pool: &pgxpool.Pool{}}
 	company := ids.NewV7().String()
 	seat := extension.UserID(ids.NewV7().String())

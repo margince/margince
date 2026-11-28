@@ -82,7 +82,7 @@ type tagSuggestBacklog struct {
 	candidates []tagSuggestCandidate
 }
 
-// RunWorkspace runs one pass in the workspace bound in ctx, as the scout's
+// RunWorkspace runs one pass in the installation's workspace, as the scout's
 // system principal. A budget stop or a blocked provider ends the asking, and
 // the answers stored so far are still raised. With only the offline stand-in
 // bound, the phrase pass runs instead.

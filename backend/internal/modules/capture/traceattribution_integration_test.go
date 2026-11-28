@@ -46,7 +46,11 @@ func traceOwnerFor(ctx context.Context, t *testing.T, db *database.DB, sourceID 
 // produced it — the value that keeps it out of every manager's view.
 func TestAPersonalCaptureIsAttributedToItsMember(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t)
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	member := ids.NewV7()
 
 	seedMember(ctx, t, db, member)
@@ -74,7 +78,11 @@ func TestAPersonalCaptureIsAttributedToItsMember(t *testing.T) {
 // workspace-readable — which no other test would notice.
 func TestAPrincipalWithOnlyAUserIdStillAttributes(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t)
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	member := ids.NewV7()
 
 	seedMember(ctx, t, db, member)
@@ -95,14 +103,18 @@ func TestAPrincipalWithOnlyAUserIdStillAttributes(t *testing.T) {
 // often comes to this screen to ask about.
 func TestAnInternalDropIsTracedAndAttributed(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
-	ws, _ := principal.WorkspaceID(ctx)
+	company, err := db.Workspace(ctx)
+	if err != nil {
+		t.Fatalf("the installation has no workspace: %v", err)
+	}
+	ws := company.UUID
 	member := ids.NewV7()
 
 	seedMember(ctx, t, db, member)
 
 	sink := capture.NewSink(db)
 	// Both parties on the workspace's own domain.
-	_, err := sink.Upsert(memberSinkContext(ctx, ws, member),
+	_, err = sink.Upsert(memberSinkContext(ctx, ws, member),
 		mailRecord("attr-3", "colleague@acme.com", "colleague@acme.com", "rep@acme.com"))
 	// The sentinel, not merely non-nil: a failure in the trace write would also
 	// be non-nil, and this test would then blame the read below on it.
@@ -148,7 +160,6 @@ func userIDOnlySinkContext(ctx context.Context, ws, member ids.UUID) context.Con
 }
 
 func sinkContextFor(ctx context.Context, ws, userID, onBehalfOf ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type:       principal.PrincipalConnector,
 		ID:         "connector:imap",

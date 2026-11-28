@@ -109,11 +109,7 @@ func colleagueAuthority(db *database.DB) carddoer.ColleagueAuthority {
 // carried rather than omitted because its zero value fails closed to read-only,
 // which would silently narrow a read that is supposed to mirror the owner's.
 func (a dealOwnerAuthority) asOwner(ctx context.Context, owner ids.UUID) (context.Context, error) {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errors.New("compose: reading as a deal owner outside a bound workspace")
-	}
-	member, err := authz.MemberPrincipal(ctx, a.users, wsID, owner)
+	member, err := authz.MemberPrincipal(ctx, a.users, owner)
 	if err != nil {
 		return nil, fmt.Errorf("compose: deal owner %s authority: %w", owner, err)
 	}

@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // InlineLimit bounds the bytes any inline original read can retain.
@@ -88,22 +87,15 @@ func serviceOf(ctx context.Context) (*Service, error) {
 	return s, nil
 }
 
-func (s *Service) workspaceContext(ctx context.Context) (context.Context, error) {
-	known, present := principal.WorkspaceID(ctx)
-	if s.db != nil {
-		bound, err := s.db.Workspace(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if present && known != bound.UUID {
-			return nil, errors.New("original store workspace differs from the database")
-		}
-		known, present = bound.UUID, true
+// requireInstallation refuses an original access while no company is live.
+func (s *Service) requireInstallation(ctx context.Context) error {
+	if s.db == nil {
+		return errors.New("original store requires a database")
 	}
-	if !present || known.IsZero() {
-		return nil, errors.New("original store requires a workspace")
+	if _, err := s.db.Workspace(ctx); err != nil {
+		return err
 	}
-	return principal.WithWorkspaceID(ctx, known), nil
+	return nil
 }
 
 // prefix is where every original of this installation is stored. It names the
@@ -117,15 +109,10 @@ func (s *Service) prefix(ctx context.Context, tx pgx.Tx) (string, error) {
 	return blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), "raw-original", ""), nil
 }
 
-// storedKeyWorkspace reads the id from installation_state once per handle. A
-// handle with no database holds no stored data, so it names the bound workspace.
+// storedKeyWorkspace reads the id from installation_state once per handle.
 func (s *Service) storedKeyWorkspace(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
 	if s.db == nil {
-		ws, ok := principal.WorkspaceID(ctx)
-		if !ok || ws.IsZero() {
-			return ids.UUID{}, errors.New("original store requires a workspace")
-		}
-		return ws, nil
+		return ids.UUID{}, errors.New("original store requires a database")
 	}
 	if cached := s.storedKey.Load(); cached != nil {
 		return *cached, nil
@@ -205,8 +192,7 @@ func PrepareTx(ctx context.Context, tx pgx.Tx, payload []byte) ([]byte, *Referen
 	if err != nil {
 		return nil, nil, err
 	}
-	ctx, err = s.workspaceContext(ctx)
-	if err != nil {
+	if err := s.requireInstallation(ctx); err != nil {
 		return nil, nil, err
 	}
 	root, err := s.prefix(ctx, tx)

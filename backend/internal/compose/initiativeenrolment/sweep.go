@@ -25,7 +25,7 @@ type Sweep struct {
 
 // Workspace dates the live initiatives of one workspace, as the system.
 func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "system:initiative-enrolment")
+	ctx = principal.SystemActing(ctx, "system:initiative-enrolment")
 	_, err := s.Store.SyncLiveEnrolments(ctx)
 	return err
 }

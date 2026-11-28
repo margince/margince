@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestRenewalPreviewAndDeliveryShareDatesAndTheChosenRecipient(t *testing.T) {
@@ -38,7 +37,7 @@ func checkRenewalPreviewAndDelivery(t *testing.T, recipient string, recurring bo
 	e := Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	authority := identity.NewService(e.Pool)
-	rbac, err := authority.EffectiveRBAC(e.Admin(), e.WS, e.AdminUser)
+	rbac, err := authority.EffectiveRBAC(e.Admin(), e.AdminUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +68,7 @@ func checkRenewalPreviewAndDelivery(t *testing.T, recipient string, recurring bo
 		t.Fatal(err)
 	}
 	scanner := compose.NewTimeScannerWithClock(e.DB(), func() time.Time { return now }, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+	if err := scanner.ScanWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatal(err)
 	}
 	want := e.Rep1

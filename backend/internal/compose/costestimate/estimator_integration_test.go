@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // clockAt is the estimator's injected clock — the 7-day window and the rate
@@ -119,7 +118,7 @@ func (e *estEnv) seedWorkspace(t *testing.T) (ids.UUID, context.Context) {
 		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatal(err)
 	}
-	return ws, principal.WithWorkspaceID(context.Background(), ws)
+	return ws, context.Background()
 }
 
 func (e *estEnv) seedUser(t *testing.T, ws ids.UUID) ids.UserID {

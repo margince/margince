@@ -29,7 +29,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // sweepingEngine is the engine with no brain: these cases judge nothing, they
@@ -47,7 +46,7 @@ func TestAKeepOutReachesMailTheLedgerNeverJudged(t *testing.T) {
 	seedSenderOverride(t, e, e.Rep1, "ex.supplier@oldco.example", capture.OverrideKeepOut)
 
 	engine := sweepingEngine(e)
-	ws := principal.WithWorkspaceID(context.Background(), e.WS)
+	ws := context.Background()
 	if err := engine.HideNoiseStragglersWorkspace(ws); err != nil {
 		t.Fatalf("straggler sweep: %v", err)
 	}
@@ -83,7 +82,7 @@ func TestAKeepOutStillCannotReachMailTheWorkspaceCorrespondsWith(t *testing.T) {
 	seedSenderOverride(t, e, e.Rep1, "cfo@bigcorp.example", capture.OverrideKeepOut)
 
 	if err := sweepingEngine(e).HideNoiseStragglersWorkspace(
-		principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		context.Background()); err != nil {
 		t.Fatalf("straggler sweep: %v", err)
 	}
 	if n := countIn(t, e,
@@ -102,7 +101,7 @@ func TestABusinessDecisionMovesNoMail(t *testing.T) {
 	seedSenderOverride(t, e, e.Rep1, "dana.olsen@partner.example", capture.OverrideBusiness)
 
 	if err := sweepingEngine(e).HideNoiseStragglersWorkspace(
-		principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		context.Background()); err != nil {
 		t.Fatalf("straggler sweep: %v", err)
 	}
 	if n := countIn(t, e,

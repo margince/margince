@@ -38,7 +38,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAQualificationInFlightHoldsItsCorrespondence(t *testing.T) {
@@ -56,7 +55,7 @@ func TestAQualificationInFlightHoldsItsCorrespondence(t *testing.T) {
 	// The qualification, held open in its own transaction. It IS the holder —
 	// which is the real interleaving, and simpler than pinning the row with a
 	// third party: the erasure must wait for the stamp itself.
-	holderCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	holderCtx := context.Background()
 	holder, err := e.Pool.Begin(holderCtx)
 	if err != nil {
 		t.Fatal(err)

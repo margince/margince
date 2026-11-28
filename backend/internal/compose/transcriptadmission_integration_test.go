@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestTranscriptAdmissionProposesLateLogsAndFutureDeadlines(t *testing.T) {
@@ -41,7 +40,7 @@ func TestTranscriptAdmissionProposesLateLogsAndFutureDeadlines(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				worker := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), started.ID)
+				worker := withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), started.ID)
 				if err := proposer.Read(worker, e.Activities, started.ID, e.activity); err != nil {
 					t.Fatal(err)
 				}

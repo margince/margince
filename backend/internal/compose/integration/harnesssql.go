@@ -33,7 +33,7 @@ import (
 // FORCED, so the GUC must be set even for the owner-less test pool).
 func (e *Env) WsExec(t *testing.T, sql string, args ...any) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, sql, args...)
 		return err
@@ -69,7 +69,7 @@ func (e *Env) DestroyErasedLinks(store *activities.Store) error {
 // assert which rule refused and not merely that something did.
 func (e *Env) WsExecErr(t *testing.T, sql string, args ...any) error {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, sql, args...)
 		return err
@@ -79,7 +79,7 @@ func (e *Env) WsExecErr(t *testing.T, sql string, args ...any) error {
 // WsCount returns a scalar count in a workspace-bound transaction.
 func (e *Env) WsCount(t *testing.T, sql string, args ...any) int {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	var n int
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, sql, args...).Scan(&n)
@@ -93,7 +93,7 @@ func (e *Env) WsCount(t *testing.T, sql string, args ...any) int {
 // id a fixture planted through a writer that does not hand it back.
 func (e *Env) WsScalar(t *testing.T, sql string, args ...any) string {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	var out string
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, sql, args...).Scan(&out)

@@ -240,7 +240,7 @@ var drivenProvider = gmail.New(nil, nil).Descriptor().Name
 // connector identity acting under the granting human's permissions.
 func (p *preflightEnv) connectorCtx(t *testing.T) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), p.workspaceID(t))
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:" + drivenProvider,

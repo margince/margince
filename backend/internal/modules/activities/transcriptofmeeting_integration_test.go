@@ -57,7 +57,7 @@ func transcriptAs(ctx context.Context, t *testing.T, e *sendEnv, meeting ids.Act
 
 // transcriptCtx is meetingCtx's rep reading leads too, within rows.
 func transcriptCtx(e *sendEnv, rows principal.RowScope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

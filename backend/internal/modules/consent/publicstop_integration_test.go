@@ -231,7 +231,7 @@ func TestARepsWeakerStopDoesNotSwallowTheSubjectsOwn(t *testing.T) {
 func pressStop(t *testing.T, e *channelConsentEnv, token, action string) int {
 	t.Helper()
 	h := NewHandlers(database.BindTo(e.store.db.Pool(), ids.From[ids.WorkspaceKind](e.ws)))
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem,

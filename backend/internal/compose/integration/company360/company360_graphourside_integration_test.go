@@ -106,7 +106,7 @@ func seedReply(t *testing.T, e *integration.Env, owner *pgx.Conn, contact ids.UU
 // the projection the worker would have built.
 func foldEdges(t *testing.T, e *integration.Env, activityID ids.UUID) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:test",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},

@@ -19,7 +19,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // fenceFixture is one case's own records, so no case moves another's fence.
@@ -67,7 +66,7 @@ func homeFence(t *testing.T, e *Env) int64 {
 // inOneTx runs the statements as one transaction, the way a writer would.
 func inOneTx(t *testing.T, e *Env, statements []fenceStatement) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		for _, s := range statements {
 			if _, err := tx.Exec(ctx, s.sql, s.args...); err != nil {

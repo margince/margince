@@ -46,7 +46,7 @@ var ownArchivePerms = principal.Permissions{
 // asTeam1Member is a Team1 member on a full seat, which the read's writable and
 // archivable flags ask for before any grant.
 func asTeam1Member(e *Env, user ids.UUID, perms principal.Permissions) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAutoEnrichLaneAppliesDirectlyInsteadOfStaging(t *testing.T) {
@@ -49,7 +48,7 @@ func TestAutoEnrichLaneAppliesDirectlyInsteadOfStaging(t *testing.T) {
 		RequestedBy: read.RequestedBy,
 	}
 
-	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
+	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 

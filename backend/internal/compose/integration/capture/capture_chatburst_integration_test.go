@@ -151,7 +151,7 @@ func (f burstFiling) judge(brain *burstBrain) {
 		lane = brain
 	}
 	engine := compose.NewConfidentialityVerdictEngine(f.fx.e.Pool, lane, slog.New(slog.NewTextHandler(os.Stderr, nil)))
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), f.fx.e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		f.t.Fatalf("confidentiality pass: %v", err)
 	}
 }

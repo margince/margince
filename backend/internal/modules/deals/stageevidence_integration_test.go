@@ -367,7 +367,7 @@ var _ = crmcontracts.StageEvidence{}
 // deals — the ordinary rep. The fixture's deal belongs to somebody else, so
 // this is the principal a row-scope gate must withhold it from.
 func (e *configEnv) asScopedStranger() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman,
@@ -383,7 +383,7 @@ func (e *configEnv) asScopedStranger() context.Context {
 // asDealWriter holds the deal verbs the fixture needs, beside the pipeline
 // grant the criteria need.
 func (e *configEnv) asDealWriter() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,
@@ -401,7 +401,7 @@ func (e *configEnv) asDealWriter() context.Context {
 // asDealless holds pipeline grants but no deal verb at all — the reader the
 // object gate must refuse.
 func (e *configEnv) asDealless() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,

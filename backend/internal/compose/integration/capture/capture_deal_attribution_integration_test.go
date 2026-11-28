@@ -136,7 +136,7 @@ func (w dealWorld) stakeholder(t *testing.T, contactID, dealID ids.UUID) {
 func shareMailbox(t *testing.T, env captureEnv) {
 	t.Helper()
 	e, on := env.e, true
-	admin := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
+	admin := principal.WithCorrelationID(principal.WithActor(context.Background(),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull,
 			Permissions: principal.Permissions{
@@ -547,7 +547,7 @@ func secondSentMailbox(t *testing.T, e *integration.SearchEnv, user ids.UUID) fu
 	if err != nil {
 		t.Fatalf("connecting the second mailbox: %v", err)
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	return func(t *testing.T, sent map[string]bool, filed map[string][]ids.UUID, raws ...[]byte) {
 		t.Helper()
 		conn.raws, conn.sent, conn.deals, conn.kinds = raws, sent, filed, nil
@@ -569,7 +569,7 @@ func newRepairer(e *integration.SearchEnv, w dealWorld) repairer {
 	return repairer{
 		e:      e,
 		repair: capturemod.DealRepair{Candidates: w.store, Authority: identity.NewService(e.Pool), Filer: compose.ActivityDealFiler{}},
-		system: principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:data-task"),
+		system: principal.SystemActing(context.Background(), "system:data-task"),
 	}
 }
 
@@ -598,7 +598,7 @@ func (r repairer) preview(t *testing.T) map[capturemod.DealOutcome]int {
 // operatorPreview posts body to the operator preview as the API serves it,
 // as an operator holding the data task read grant.
 func (r repairer) operatorPreview(body string) *httptest.ResponseRecorder {
-	operator := principal.WithActor(principal.WithWorkspaceID(context.Background(), r.e.WS), principal.Principal{
+	operator := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + r.e.Rep1.String(), UserID: r.e.Rep1, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{"data_task": {Read: true}}, RowScope: principal.RowScopeAll,

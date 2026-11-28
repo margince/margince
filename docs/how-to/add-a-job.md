@@ -99,7 +99,7 @@ never one job row that loops over every workspace.
    A pass that writes names who acts and makes its own `correlation_id`, as above. No HTTP layer stands
    behind a job, and `storekit.Emit` fails without a `correlation_id`
    ([write-backbone.md](../explanation/write-backbone.md#6-correlation--causation-the-trace)).
-   The middleware binds the workspace and nothing else.
+   The middleware only refuses the job while no company is live. It binds nothing, because a store names the company through its own database handle.
 
    A `Work` of a dispatcher instead calls one of the fan-out helpers (`dispatchOnce`,
    `dispatchOne`, `runInstallationPass`). It makes no tenant write of its own:

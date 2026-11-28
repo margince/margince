@@ -67,7 +67,7 @@ func TestAReplacedHistoryExecutionCannotWriteMailOrCompleteItsSuccessor(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithCancel(principal.WithWorkspaceID(context.Background(), e.WS))
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var latest atomic.Int64
 	scheduler := capturemod.BackfillScheduler{

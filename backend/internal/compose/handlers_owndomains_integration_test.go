@@ -34,7 +34,7 @@ import (
 // ownDomainCtx binds an actor of the given kind carrying the capture_settings
 // grant the store gates on.
 func ownDomainCtx(e *integration.Env, kind principal.PrincipalType, grant principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	id := ids.NewV7()
 	prefix := "human:"

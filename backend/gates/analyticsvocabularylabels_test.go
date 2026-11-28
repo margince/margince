@@ -31,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -154,7 +153,7 @@ func deriveAnalyticsServer(t *testing.T) analyticsServer {
 	t.Helper()
 	// The system principal clears every grant, so this is the whole vocabulary
 	// rather than one seat's narrowing of it.
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()),
+	ctx := principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:gate"})
 	schema := compose.AnalyticsSchemaFor(ctx)
 	fields := map[string]bool{}

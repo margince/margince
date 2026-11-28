@@ -135,7 +135,7 @@ func (e *closeDateEnv) stageServerCard(t *testing.T) (ids.UUID, ids.ApprovalID) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	stager := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), closeDateSweepActor)
+	stager := principal.SystemActing(context.Background(), closeDateSweepActor)
 	id, err := e.svc.Stage(stager, approvals.StageInput{
 		Kind: deals.CloseDateCorrectionKind, ProposedChange: proposal, DiffHash: "h-" + ids.NewV7().String(),
 		TargetType: "deal", TargetID: deal, Summary: "the close date has passed",
@@ -148,7 +148,7 @@ func (e *closeDateEnv) stageServerCard(t *testing.T) (ids.UUID, ids.ApprovalID) 
 
 // applyCtx is what the auto-apply job binds: the workspace and no principal.
 func (e *closeDateEnv) applyCtx() context.Context {
-	return principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	return principal.WithCorrelationID(context.Background(), ids.NewV7())
 }
 
 func (e *closeDateEnv) approvalState(t *testing.T, id ids.ApprovalID) (string, bool) {
@@ -305,7 +305,7 @@ func switchesOff(e *closeDateEnv) func(ctx context.Context) error {
 // later switch-off updates the row and checks no key, so only the policy
 // lock can make it wait.
 func (e *closeDateEnv) setSwitch(ctx context.Context, on bool) error {
-	rep := principal.WithWorkspaceID(ctx, e.WS)
+	rep := ctx
 	rep = principal.WithActor(rep, principal.Principal{
 		Type: principal.PrincipalHuman,
 		ID:   principal.HumanIDPrefix + e.Rep1.String(), UserID: e.Rep1,

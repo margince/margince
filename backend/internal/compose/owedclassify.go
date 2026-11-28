@@ -148,7 +148,7 @@ type owedPayload struct {
 	Results []owedResult `json:"results"` // owedResultsKey
 }
 
-// RunWorkspace judges up to cap backlog messages in the workspace bound in ctx.
+// RunWorkspace judges up to cap backlog messages in the installation's workspace.
 //
 // A budget stop, or no provider bound, ends the pass cleanly: what is judged is
 // committed and the rest is simply still unjudged, which the next cycle reads

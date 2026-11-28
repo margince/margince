@@ -21,7 +21,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -138,7 +137,7 @@ const unsigned = "Thanks, that works."
 func (h *historyEnv) pass(t *testing.T) {
 	t.Helper()
 	enricher := NewCaptureEnricher(h.e.Pool, h.brain, slog.New(slog.DiscardHandler))
-	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), h.e.WS)); err != nil {
+	if _, err := enricher.RunWorkspace(context.Background()); err != nil {
 		t.Fatalf("signature pass: %v", err)
 	}
 }

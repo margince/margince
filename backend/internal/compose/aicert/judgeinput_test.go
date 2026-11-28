@@ -106,7 +106,7 @@ func TestTheJudgeIsShownTheTurnTheCandidateWasGiven(t *testing.T) {
 	census.BindCase(mintedIDSite(), factory)
 
 	sc := testScenarioOnSite("basic", mintedIDVariant, wideBands)
-	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, census,
+	if _, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, census,
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
@@ -186,7 +186,7 @@ func TestTheJudgeIsShownTheProductRulesAndTheExpectedAnswer(t *testing.T) {
 
 	sc := testScenario("basic", wideBands)
 	sc.Expect.Answer = JSONValue(`"` + expected + `"`)
-	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
+	if _, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
@@ -231,7 +231,7 @@ func TestACheckerSpecNeverReachesTheGrader(t *testing.T) {
 
 	sc := testScenario("banned_phrases", wideBands)
 	sc.Expect.Answer = JSONValue(`"` + banned + `"`)
-	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, census,
+	if _, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, census,
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},

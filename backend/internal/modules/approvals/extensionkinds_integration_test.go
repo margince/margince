@@ -71,7 +71,7 @@ func TestTheExistenceProbeReadsARegisteredUnitTable(t *testing.T) {
 		}
 	})
 
-	opCtx := principal.WithWorkspaceID(ctx, e.ws)
+	opCtx := ctx
 	for name, probe := range map[string]struct {
 		id   ids.UUID
 		want bool

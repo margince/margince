@@ -25,7 +25,7 @@ import (
 
 func TestARouteBackedWriteRepeatedUnderItsRetryKeyWritesOnce(t *testing.T) {
 	// A real meter, so the test sees what the replay charged.
-	e := setupConnectorWith(t, compose.WithAgentVolume(agentvolume.New(redistest.Client(t), agentvolume.Limits{}, time.Hour)))
+	e := setupConnectorWith(t, compose.WithAgentVolume(agentvolume.New(redistest.Client(t), agentvolume.Limits{}, time.Hour).WithCompany(agentvolume.FixedCompany(ids.UUID{1}))))
 	bearer, passport := apptest.PassportWithID(t, e.AppEnv, "retrying client", "read", "write")
 	// Unique per run, because a lead origin's label is unique and the lane repeats tests.
 	run := ids.NewV7().String()

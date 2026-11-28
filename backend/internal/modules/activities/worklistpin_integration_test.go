@@ -26,7 +26,7 @@ import (
 // belongs to one contact. Same grants and the same row scope — what differs is
 // only who it is, which is what the pin is keyed on.
 func asColleague(e *sendEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.other.String(), UserID: e.other,

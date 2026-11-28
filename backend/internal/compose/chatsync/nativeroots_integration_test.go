@@ -108,7 +108,7 @@ func TestNativeRootCorrectionsReviseOneRecapAndKeepHumanEdits(t *testing.T) {
 	e.link = state.Link.ID
 	lane := &nativeSummaryBoundary{summary: "The pilot remains conditional on Legal approval of the amended agreement."}
 	puller := &Puller{Pool: e.pool, Store: store, Chats: sessions, Activities: activities.NewStore(e.db()), Contacts: contacts.NewStore(e.db()), Lane: lane, Now: func() time.Time { return now }, Zone: time.UTC, Log: slog.Default()}
-	ctx := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), chatLinksPrincipal), ids.NewV7())
+	ctx := principal.WithCorrelationID(principal.WithActor(context.Background(), chatLinksPrincipal), ids.NewV7())
 	pull := func() {
 		t.Helper()
 		if err := puller.Pull(ctx, connection); err != nil {

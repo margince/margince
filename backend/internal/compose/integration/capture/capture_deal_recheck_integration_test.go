@@ -33,7 +33,7 @@ func unrecheckedLink(t *testing.T, env captureEnv, sourceID string, deal ids.UUI
 	env.sync(t, mailFrom("alice@acme.example", sourceID, "", "status"))
 	env.topic.unconfigured = false
 	mail := ids.From[ids.ActivityKind](activityOf(t, e, sourceID))
-	connector := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	connector := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: e.Rep1, OnBehalfOf: e.Rep1,
 		SeatType: principal.SeatFull, Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true, Update: true}, "deal": {Read: true}},

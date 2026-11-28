@@ -69,10 +69,11 @@ func (r *Registry) Grant(ctx context.Context, name string, auth connector.Auth, 
 	if err := requireDeclaredScopes(c, actor, name); err != nil {
 		return ids.Nil, err
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ids.Nil, errors.New("capture: connector grant outside workspace context")
+	company, err := r.db.Workspace(ctx)
+	if err != nil {
+		return ids.Nil, err
 	}
+	ws := company.UUID
 	if r.vault == nil {
 		return ids.Nil, errors.New("capture: no keyvault configured — a connector credential cannot be sealed")
 	}
@@ -85,7 +86,7 @@ func (r *Registry) Grant(ctx context.Context, name string, auth connector.Auth, 
 	// the seal below, so a refusal leaves neither a row nor a stored secret.
 	// The same check refuses a member whose role cannot record what capture
 	// writes, so no mailbox is connected only to fail on its first sync.
-	if err := r.requireCapturingGrantor(ctx, ws, actor.UserID); err != nil {
+	if err := r.requireCapturingGrantor(ctx, actor.UserID); err != nil {
 		return ids.Nil, err
 	}
 	// Put-then-commit (like blobstore): seal the credential in the vault
@@ -161,11 +162,7 @@ func (r *Registry) grantTx(ctx context.Context, tx pgx.Tx, row connectionUpsert,
 // requireCapturingMember is requireCapturingGrantor for the member a history
 // import is asked for, in the caller's workspace.
 func (r *Registry) requireCapturingMember(ctx context.Context, userID ids.UserID) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("capture: a history import outside workspace context")
-	}
-	return r.requireCapturingGrantor(ctx, ws, userID.UUID)
+	return r.requireCapturingGrantor(ctx, userID.UUID)
 }
 
 // requireCapturingGrantor resolves the granting human against identity's live
@@ -173,11 +170,11 @@ func (r *Registry) requireCapturingMember(ctx context.Context, userID ids.UserID
 // deactivated human resolves to ErrNotFound, which is the refusal. Nothing is
 // sealed or written first, so nothing has to be undone. Starting a history
 // import asks it too.
-func (r *Registry) requireCapturingGrantor(ctx context.Context, ws, userID ids.UUID) error {
+func (r *Registry) requireCapturingGrantor(ctx context.Context, userID ids.UUID) error {
 	if r.authority == nil {
 		return errors.New("capture: no authority resolver configured — a connector grant cannot be checked against live authority")
 	}
-	rbac, seat, err := r.authority.AdmittedAuthority(ctx, ws, userID, ids.Nil)
+	rbac, seat, err := r.authority.AdmittedAuthority(ctx, userID, ids.Nil)
 	if err != nil {
 		return fmt.Errorf("capture: the granting human's authority does not resolve: %w", err)
 	}

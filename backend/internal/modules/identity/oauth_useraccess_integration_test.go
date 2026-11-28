@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TestDeactivatingAHumanEndsTheConnectionsTheyConsentedTo is the sibling of the
@@ -29,7 +28,7 @@ import (
 // authority again with no new consent.
 func TestDeactivatingAHumanEndsTheConnectionsTheyConsentedTo(t *testing.T) {
 	e := setupRevocationEnv(t, "deactivate-ends-connection")
-	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
+	ctx := context.Background()
 	fixture := e.connectOAuthFor(t, e.member)
 	passportID := e.mintUnderGrantFor(t, fixture.grantID, e.member)
 

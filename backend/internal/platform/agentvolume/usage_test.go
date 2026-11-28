@@ -7,8 +7,6 @@ import (
 	"errors"
 	"testing"
 	"time"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestTheStateIsTheWorstAllowance(t *testing.T) {
@@ -29,8 +27,8 @@ func TestTheStateIsTheWorstAllowance(t *testing.T) {
 }
 
 func TestUsageWithoutACounterStoreIsUnanswerable(t *testing.T) {
-	for name, meter := range map[string]*Meter{"no store": New(nil, Limits{}, time.Hour), "unmetered": Unmetered()} {
-		if _, err := meter.Usage(t.Context(), ids.NewV7(), []Holder{{Subject: "x"}}); !errors.Is(err, ErrUnanswerable) {
+	for name, meter := range map[string]*Meter{"no store": New(nil, Limits{}, time.Hour).WithCompany(testCompany), "unmetered": Unmetered().WithCompany(testCompany)} {
+		if _, err := meter.Usage(t.Context(), []Holder{{Subject: "x"}}); !errors.Is(err, ErrUnanswerable) {
 			t.Errorf("%s: usage read answered %v, want ErrUnanswerable", name, err)
 		}
 	}

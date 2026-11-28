@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 )
 
@@ -190,7 +189,7 @@ func (e *BudgetDeferralError) RetryAt() (time.Time, bool) { return e.NextAttempt
 // counts (09 §2.4: seats × 6M base × 2 safety) without this module
 // reaching into identity's tables.
 type BudgetPolicy interface {
-	MonthlyTokenBudget(ctx context.Context, workspaceID ids.WorkspaceID) (int64, error)
+	MonthlyTokenBudget(ctx context.Context) (int64, error)
 }
 
 // StaticBudget is the fixed fallback policy: the single-seat default
@@ -200,7 +199,8 @@ type StaticBudget int64
 // DefaultMonthlyTokens = 1 seat × 6M base × 2 safety factor.
 const DefaultMonthlyTokens = StaticBudget(12_000_000)
 
-func (b StaticBudget) MonthlyTokenBudget(context.Context, ids.WorkspaceID) (int64, error) {
+// MonthlyTokenBudget is the fixed budget, whatever the call.
+func (b StaticBudget) MonthlyTokenBudget(context.Context) (int64, error) {
 	return int64(b), nil
 }
 

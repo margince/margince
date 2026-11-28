@@ -121,7 +121,7 @@ func TestTheAnsweringRungIsCurrentOnlyWithItsDecisionRecords(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	current, err := currentBindings(wsContext(t), laneRouted(census, withDecisions), byTask, quietLogger())
+	current, err := currentBindings(t.Context(), laneRouted(census, withDecisions), byTask, quietLogger())
 	if err != nil || !current[key] {
 		t.Fatalf("with current LLM and decision records the rung is not current (%v): %v", err, current)
 	}
@@ -129,7 +129,7 @@ func TestTheAnsweringRungIsCurrentOnlyWithItsDecisionRecords(t *testing.T) {
 	if err := WriteRecord(llmOnly, llm); err != nil {
 		t.Fatal(err)
 	}
-	current, err = currentBindings(wsContext(t), laneRouted(census, llmOnly), byTask, quietLogger())
+	current, err = currentBindings(t.Context(), laneRouted(census, llmOnly), byTask, quietLogger())
 	if err != nil || current[key] {
 		t.Errorf("a rung whose decision record is missing was skipped as current (%v)", err)
 	}
@@ -143,7 +143,7 @@ func TestTheDecisionPreflightSkipsATaskWhoseRungIsCurrent(t *testing.T) {
 	cfg.current = map[string]bool{candidateKey(ai.TaskSiteTriage, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}): true}
 	decider := &scriptedDecider{replies: []decision.Response{answer(labelWidget, 0.9, "jev")}}
 	scenarios := map[ai.Task][]Scenario{ai.TaskSiteTriage: {decidingScenario("basic", ai.TaskSiteTriage)}}
-	if err := preflightDecisions(wsContext(t), cfg, scenarios, &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(decider)}}, quietLogger()); err != nil {
+	if err := preflightDecisions(t.Context(), cfg, scenarios, &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(decider)}}, quietLogger()); err != nil {
 		t.Fatal(err)
 	}
 	if decider.called() != 0 {
@@ -157,7 +157,7 @@ func TestATaskThatCannotBeStampedDoesNotStopTheOthers(t *testing.T) {
 	census := decidingCensus(t, ai.TaskSummarize, defaultWidgetForm())
 	broken := Scenario{Name: "broken", Task: string(ai.TaskSummarize), Site: "no-such-site"}
 	cfg := RunnerConfig{Census: census, Binding: candidateA, JudgeBinding: aGeminiJudge, RecordDir: t.TempDir()}
-	current, err := currentBindings(wsContext(t), cfg, map[ai.Task][]Scenario{ai.TaskSummarize: {broken}}, quietLogger())
+	current, err := currentBindings(t.Context(), cfg, map[ai.Task][]Scenario{ai.TaskSummarize: {broken}}, quietLogger())
 	if err != nil {
 		t.Fatalf("one unstampable task stopped the STALE_ONLY check for every task: %v", err)
 	}

@@ -264,7 +264,7 @@ func (w *capturedDealRefileSweepWorker) Work(ctx context.Context, _ *river.Job[C
 }
 
 func (w *capturedDealRefileSweepWorker) scheduleWorkspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), dealRefileActor)
+	ctx = principal.SystemActing(ctx, dealRefileActor)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	var args CapturedDealRefileArgs
 	err := InstallationDB(w.pool).Tx(ctx, func(tx pgx.Tx) error {

@@ -151,7 +151,7 @@ func (w *parityWorld) readers(t *testing.T) map[string]context.Context {
 	}
 	as := func(p principal.Principal) context.Context {
 		p.TeamIDs, p.Permissions.Objects = []ids.UUID{w.team}, grants
-		ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), w.e.ws), ids.NewV7())
+		ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 		return principal.WithActor(ctx, p)
 	}
 	human := func(scope principal.RowScope, seat principal.SeatType) principal.Principal {

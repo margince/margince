@@ -176,7 +176,7 @@ func TestAColleaguesMeetingWithOutsideGuestsIsFiledOnGuestsWhoArriveLater(t *tes
 		lateGuestEvent("cancelled", "cancelled", held, lateGuestOrganizer,
 			ownerEntry("accepted"), guestEntry(lateGuests[0], "accepted")),
 	})
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	if err := env.registry.SyncOnce(wsCtx, connID); err != nil {
 		t.Fatalf("SyncOnce: %v", err)
 	}

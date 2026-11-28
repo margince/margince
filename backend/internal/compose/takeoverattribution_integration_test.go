@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type takeoverReading struct {
@@ -62,7 +61,7 @@ func newTakeoverReading(t *testing.T) takeoverReading {
 	}
 	return takeoverReading{
 		e: e, contact: contact, source: ids.UUID(source.Id), asOf: asOf,
-		ctx:      withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7()),
+		ctx:      withTranscriptReader(context.Background(), "human:"+e.Rep1.String(), ids.NewV7()),
 		dispatch: NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB())),
 	}
 }

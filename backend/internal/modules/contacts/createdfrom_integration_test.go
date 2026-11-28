@@ -26,7 +26,7 @@ import (
 // sourceReader binds one seat, as a human or as the agent acting for it, with
 // or without the activity read grant. The grant is the field's object half.
 func (e *privacyEnv) sourceReader(user ids.UUID, kind principal.PrincipalType, readsActivity bool) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	objects := map[string]principal.ObjectGrant{
 		"contact": {Create: true, Read: true, Update: true},

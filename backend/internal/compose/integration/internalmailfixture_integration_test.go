@@ -25,13 +25,13 @@ const fixtureOwnerEmail = "fixture-owner@example.test"
 
 type internalMailAuthority struct{}
 
-func (internalMailAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (internalMailAuthority) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
 		"activity": {Create: true}, "contact": {Create: true}, "lead": {Create: true},
 	}}}, nil
 }
 
-func (internalMailAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (internalMailAuthority) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -88,6 +88,6 @@ func operationalMailRecord(sourceID, counterparty string, addresses ...string) c
 	}
 }
 
-func (r internalMailAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r internalMailAuthority) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }

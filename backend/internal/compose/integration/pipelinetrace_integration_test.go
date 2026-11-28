@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	trace "github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func ladderAssembler(e *Env, payloads bool) *pipelinetrace.Assembler {
@@ -85,7 +84,7 @@ func seedTracedMessage(t *testing.T, e *Env, owner ids.UUID, in seed) seededMess
 		// One address on both rows, as the sink writes it.
 		entry.Counterparty = counterparty
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
 		return capture.Trace(ctx, tx, entry, entry.Counterparty != "")
 	}); err != nil {
@@ -129,7 +128,7 @@ func capturedChat(sourceID, provider, unit string) seed {
 
 func traceIDFor(t *testing.T, e *Env, sourceID string) ids.UUID {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	var id ids.UUID
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `

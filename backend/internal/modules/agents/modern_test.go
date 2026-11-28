@@ -374,7 +374,7 @@ func TestEveryCallerDerivedCatalogIsCachedPrivately(t *testing.T) {
 func TestDiscoverAnswersEveryCallerIdentically(t *testing.T) {
 	s := modernDispatcher(t)
 	readOnly := scopedAgentCtx(principal.ScopeRead)
-	privileged := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()),
+	privileged := principal.WithActor(context.Background(),
 		principal.Principal{
 			Type: principal.PrincipalAgent, ID: "agent:privileged", OnBehalfOf: ids.NewV7(),
 			Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite, principal.ScopeSend),

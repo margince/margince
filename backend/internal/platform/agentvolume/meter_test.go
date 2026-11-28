@@ -16,7 +16,7 @@ import (
 // written for.
 func agentCtx(t *testing.T) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(t.Context(), ids.New[ids.WorkspaceKind]().UUID)
+	ctx := t.Context()
 	return principal.WithActor(ctx, principal.Principal{
 		Type:       principal.PrincipalAgent,
 		ID:         "agent:reader",
@@ -28,7 +28,7 @@ func agentCtx(t *testing.T) context.Context {
 // is RBAC at the store, and they answered for the action themselves.
 func humanCtx(t *testing.T) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(t.Context(), ids.New[ids.WorkspaceKind]().UUID)
+	ctx := t.Context()
 	return principal.WithActor(ctx, principal.Principal{
 		Type:   principal.PrincipalHuman,
 		ID:     "human:reader",
@@ -47,7 +47,7 @@ var governedCounters = []Counter{Writes, Egress, Calls}
 // would make the whole bound removable by stopping one process — and it must
 // hold for EVERY governed counter, not only the one that shipped first.
 func TestAnUnreachableCounterRefusesTheAgentRatherThanAdmittingIt(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 	ctx := agentCtx(t)
 
 	for _, c := range governedCounters {
@@ -70,7 +70,7 @@ func TestAnUnreachableCounterRefusesTheAgentRatherThanAdmittingIt(t *testing.T) 
 // and only one of them may be refused. Conflating them would deny the product
 // to its own users on bounds written for agents.
 func TestAHumanIsNotMeteredEvenWhenTheCounterIsUnreachable(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 	ctx := humanCtx(t)
 
 	for _, c := range governedCounters {
@@ -89,7 +89,7 @@ func TestAHumanIsNotMeteredEvenWhenTheCounterIsUnreachable(t *testing.T) {
 // than assumed because the alternative reading (treat "no actor" as
 // fail-closed) would refuse every internal path in the product.
 func TestACallWithNoActorIsNotMetered(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 
 	if meter.Read(t.Context(), Writes).Exceeded {
 		t.Error("a call with no actor was refused by a bound that only governs agents")
@@ -100,7 +100,7 @@ func TestACallWithNoActorIsNotMetered(t *testing.T) {
 // points are shared by both doors and both kinds of caller, and a handler that
 // had to ask "is this an agent?" before every charge would eventually forget.
 func TestChargingAnUnmeteredCallerRecordsNothingAndDoesNotFail(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 
 	if err := meter.Consume(humanCtx(t), Writes, 25); err != nil {
 		t.Errorf("charging a human failed: %v", err)
@@ -116,8 +116,8 @@ func TestChargingAnUnmeteredCallerRecordsNothingAndDoesNotFail(t *testing.T) {
 // on the Passport alone would make "an agent without one" a silent exemption
 // from every bound, and the next principal shape that appears would inherit it.
 func TestAnAgentWithNoPassportIsStillMetered(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
-	ctx := principal.WithWorkspaceID(t.Context(), ids.New[ids.WorkspaceKind]().UUID)
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
+	ctx := t.Context()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:passportless",
 	})
@@ -133,7 +133,7 @@ func TestAnAgentWithNoPassportIsStillMetered(t *testing.T) {
 func TestTheWindowBucketRollsOverWithTheInjectedClock(t *testing.T) {
 	now := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	clock := func() time.Time { return now }
-	meter := NewWithClock(nil, Limits{}, time.Hour, clock)
+	meter := NewWithClock(nil, Limits{}, time.Hour, clock).WithCompany(testCompany)
 
 	first := meter.Bucket(t.Context())
 	now = now.Add(59 * time.Minute)
@@ -150,7 +150,7 @@ func TestTheWindowBucketRollsOverWithTheInjectedClock(t *testing.T) {
 // survives into a later one. An expiry shorter than the window under-counts
 // (the agent's charges vanish mid-window); a much longer one over-counts.
 func TestTheCounterOutlivesItsWindowByTheSkewSlackOnly(t *testing.T) {
-	meter := New(nil, Limits{}, 24*time.Hour)
+	meter := New(nil, Limits{}, 24*time.Hour).WithCompany(testCompany)
 
 	ttl := time.Duration(meter.window(t.Context()).ttlSeconds()) * time.Second
 
@@ -167,7 +167,7 @@ func TestTheCounterOutlivesItsWindowByTheSkewSlackOnly(t *testing.T) {
 // would let one agent's activity refuse another's — or let a heavy reader
 // exhaust its own send allowance.
 func TestEachPassportWorkspaceAndCounterCountsSeparately(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 	ws, other := ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.WorkspaceKind]().UUID
 	passport, second := ids.New[ids.PassportKind]().String(), ids.New[ids.PassportKind]().String()
 
@@ -190,7 +190,7 @@ func TestEachPassportWorkspaceAndCounterCountsSeparately(t *testing.T) {
 // connected Passport a free allowance on the release meant to tighten the bound.
 // This test makes a rename an explicit act.
 func TestTheCounterKeyPrefixIsPinnedToWhatIsAlreadyDeployed(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 	ws := ids.New[ids.WorkspaceKind]().UUID
 	key := meter.countKey(ws, "passport", Writes, 7)
 
@@ -205,10 +205,10 @@ func TestTheCounterKeyPrefixIsPinnedToWhatIsAlreadyDeployed(t *testing.T) {
 // rebind did not reach a holder, that holder would keep enforcing against a
 // meter nothing pays into.
 func TestRebindingReachesEveryHolderOfTheSharedPointer(t *testing.T) {
-	shared := New(nil, Limits{}, DefaultWindow)
+	shared := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 	held := shared // the gate's copy of the pointer, taken before the rebind
 
-	shared.RebindFrom(New(nil, Limits{Writes: 50}, time.Hour))
+	shared.RebindFrom(New(nil, Limits{Writes: 50}, time.Hour).WithCompany(testCompany))
 
 	if held.window(t.Context()).limits.Of(Writes) != 50 {
 		t.Errorf("a holder that took the pointer before the rebind still reads limit %d, not the rebound 50", held.window(t.Context()).limits.Of(Writes))
@@ -221,7 +221,7 @@ func TestRebindingReachesEveryHolderOfTheSharedPointer(t *testing.T) {
 func TestAnUnusableConfiguredWindowFallsBackToTheSpecDefault(t *testing.T) {
 	meter := NewWithClock(nil, Limits{}, 0, func() time.Time {
 		return time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	})
+	}).WithCompany(testCompany)
 
 	if got := meter.window(t.Context()).length; got != DefaultWindow {
 		t.Errorf("a zero window resolved to %s, not the %s default", got, DefaultWindow)
@@ -236,7 +236,7 @@ func TestAnUnusableConfiguredWindowFallsBackToTheSpecDefault(t *testing.T) {
 // answer, and only the second may refuse. Collapsing them would make every
 // Redis outage look like a deliberate opt-out.
 func TestAnUnmeteredCompositionAdmitsWhereAnUnreachableOneRefuses(t *testing.T) {
-	declared, unreachable := Unmetered(), New(nil, Limits{}, DefaultWindow)
+	declared, unreachable := Unmetered(), New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 	ctx := agentCtx(t)
 
 	for _, c := range governedCounters {
@@ -256,7 +256,7 @@ func TestAnUnmeteredCompositionAdmitsWhereAnUnreachableOneRefuses(t *testing.T) 
 // and is later rebound to a real meter actually becomes bounded — and one
 // rebound to Unmetered does not keep enforcing a counter nothing pays into.
 func TestRebindingCarriesWhetherTheCompositionIsBounded(t *testing.T) {
-	shared := New(nil, Limits{}, DefaultWindow)
+	shared := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 
 	shared.RebindFrom(Unmetered())
 
@@ -270,7 +270,7 @@ func TestRebindingCarriesWhetherTheCompositionIsBounded(t *testing.T) {
 // first read of a 500ms window panicked rather than answering.
 func TestASubSecondWindowBucketsRatherThanDividingByZero(t *testing.T) {
 	now := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(nil, Limits{}, 500*time.Millisecond, func() time.Time { return now })
+	meter := NewWithClock(nil, Limits{}, 500*time.Millisecond, func() time.Time { return now }).WithCompany(testCompany)
 
 	first := meter.Bucket(t.Context())
 	now = now.Add(600 * time.Millisecond)
@@ -293,7 +293,7 @@ func TestAnAgentWithNoWorkspaceIsRefusedRatherThanUnmetered(t *testing.T) {
 		t.Fatal("an unmetered composition refused a call")
 	}
 
-	bounded := New(nil, Limits{}, DefaultWindow)
+	bounded := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 	ctx := principal.WithActor(t.Context(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:no-workspace",
 		PassportID: ids.New[ids.PassportKind]().UUID,
@@ -307,7 +307,7 @@ func TestAnAgentWithNoWorkspaceIsRefusedRatherThanUnmetered(t *testing.T) {
 // And the other side of that branch stays intact: a human with no workspace is
 // still outside the control, not refused by it.
 func TestAHumanWithNoWorkspaceIsStillUnmetered(t *testing.T) {
-	meter := New(nil, Limits{}, DefaultWindow)
+	meter := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
 	ctx := principal.WithActor(t.Context(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:rep",
 	})
@@ -322,7 +322,7 @@ func TestAHumanWithNoWorkspaceIsStillUnmetered(t *testing.T) {
 // approval answered an hour later into whatever window happened to be current.
 func TestEveryReadingNamesItsOwnWindow(t *testing.T) {
 	now := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(nil, Limits{}, time.Hour, func() time.Time { return now })
+	meter := NewWithClock(nil, Limits{}, time.Hour, func() time.Time { return now }).WithCompany(testCompany)
 	ctx := agentCtx(t)
 
 	first := meter.Read(ctx, Writes).Bucket
@@ -366,10 +366,10 @@ func TestACounterValueThisMeterDidNotWriteIsAnErrorNotAZero(t *testing.T) {
 // of two different things — which is what a caller reaching for the package
 // default instead would produce.
 func TestTheMeterAnswersTheWindowItActuallyCounts(t *testing.T) {
-	if got := New(nil, Limits{}, time.Hour).window(t.Context()).length; got != time.Hour {
+	if got := New(nil, Limits{}, time.Hour).WithCompany(testCompany).window(t.Context()).length; got != time.Hour {
 		t.Errorf("Window() = %s, want the configured hour", got)
 	}
-	if got := New(nil, Limits{}, 0).window(t.Context()).length; got != DefaultWindow {
+	if got := New(nil, Limits{}, 0).WithCompany(testCompany).window(t.Context()).length; got != DefaultWindow {
 		t.Errorf("an unusable window answered %s, want the %s default", got, DefaultWindow)
 	}
 }
@@ -379,8 +379,8 @@ func TestTheMeterAnswersTheWindowItActuallyCounts(t *testing.T) {
 // the soft counter with no share to judge against — silently, since it refuses
 // nothing.
 func TestRebindingCarriesTheCostCeiling(t *testing.T) {
-	shared := New(nil, Limits{}, DefaultWindow)
-	live := New(nil, Limits{}, DefaultWindow).WithCostCeiling(fixedCeiling(40_000))
+	shared := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany)
+	live := New(nil, Limits{}, DefaultWindow).WithCompany(testCompany).WithCostCeiling(fixedCeiling(40_000))
 
 	shared.RebindFrom(live)
 

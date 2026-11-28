@@ -434,7 +434,11 @@ func routingDeclineReason(reason string) string {
 }
 
 func lockLeadRouting(ctx context.Context, tx pgx.Tx) error {
-	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('lead_routing:' || $1::text, 0))`, storekit.MustWorkspace(ctx))
+	installation, err := storekit.Workspace(ctx, tx)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('lead_routing:' || $1::text, 0))`, installation)
 	return err
 }
 

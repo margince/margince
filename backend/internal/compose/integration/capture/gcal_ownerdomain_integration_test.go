@@ -28,7 +28,7 @@ import (
 
 // domainAdmin may change the workspace's own domains and consumer list.
 func domainAdmin(e *integration.SearchEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
@@ -153,7 +153,7 @@ func connectUnlabelledCalendar(t *testing.T, env captureEnv, owner, guest string
 func connectUnlabelledCalendarAfterAMailboxOnItsDomain(t *testing.T, env captureEnv, owner, guest string) ids.UUID {
 	t.Helper()
 	labelled := connectCalendarOf(t, env, "other@"+domainOfAddress(owner), nil)
-	if err := env.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), env.e.WS), labelled); err != nil {
+	if err := env.registry.SyncOnce(context.Background(), labelled); err != nil {
 		t.Fatalf("SyncOnce of the labelled calendar: %v", err)
 	}
 	return connectUnlabelledCalendar(t, env, owner, guest)
@@ -211,7 +211,7 @@ func TestTheOwnersDomainDropsAMeetingOnlyWhereTheWorkspaceCallsItInternal(t *tes
 				setup(t, env)
 			}
 			connID := tc.connect(t, env, tc.owner, tc.guest)
-			if err := env.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), env.e.WS), connID); err != nil {
+			if err := env.registry.SyncOnce(context.Background(), connID); err != nil {
 				t.Fatalf("SyncOnce: %v", err)
 			}
 			var audience string

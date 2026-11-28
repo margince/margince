@@ -37,7 +37,7 @@ type reportFixture struct {
 func newReportFixture(t *testing.T) reportFixture {
 	t.Helper()
 	e := integration.Setup(t)
-	sys := principal.WithWorkspaceID(context.Background(), e.WS)
+	sys := context.Background()
 	sys = principal.WithCorrelationID(sys, ids.NewV7())
 	sys = principal.WithActor(sys, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 	return reportFixture{e: e, ctx: e.As(e.AdminUser, nil, importerPerms()), system: sys}
@@ -223,7 +223,7 @@ func TestTheDeliveryReportTaskKeepsOnlyAStatusAHumanHandPlacedBeforeTheBounce(t 
 	actingFor := func(p principal.Principal) context.Context {
 		p.Permissions = integration.AdminPerms
 		p.UserID = f.e.AdminUser
-		ctx := principal.WithWorkspaceID(context.Background(), f.e.WS)
+		ctx := context.Background()
 		return principal.WithActor(principal.WithCorrelationID(ctx, ids.NewV7()), p)
 	}
 	type moved struct {

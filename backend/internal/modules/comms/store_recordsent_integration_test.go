@@ -61,7 +61,7 @@ func (e *storeEnv) storeWith(identity MessageIdentityReconciler) *Store {
 // fault breadcrumb all need an actor, and the first two need a correlation id
 // as well — the workspace alone is not enough.
 func (e *storeEnv) asSendWorker() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, "system:comms-send")
 }
 

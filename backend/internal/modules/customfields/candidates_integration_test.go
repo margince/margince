@@ -109,7 +109,7 @@ func setupCandidates(t *testing.T) *candidatesFixture {
 	}
 
 	svc := NewService(appPool, schemaPool)
-	fctx := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(ctx, ws), ids.NewV7()),
+	fctx := principal.WithActor(principal.WithCorrelationID(ctx, ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:candidates-test", UserID: userID,
 			Permissions: principal.Permissions{

@@ -32,7 +32,7 @@ func TestAFirstDraftsReplayIsRefusedOnceARecordItWasWrittenFromIsOutOfReach(t *t
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}),
 		WithIdempotency(claims), WithReplayReader(reader), WithVolumeCharger(newCountingCharger()))
 	registry.Register(draftEmailTool{comms: comms, p: oneRecord(datasource.EntityContact, contact, `{}`, 1)})
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeDraft),
 	})

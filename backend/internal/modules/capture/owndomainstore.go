@@ -248,17 +248,21 @@ func (s *OwnDomainStore) Add(ctx context.Context, raw string) (OwnDomain, error)
 		// catalog carries no type for it. The audit row is the durable answer to
 		// "who put this domain in", which is the question that will be asked.
 		after := map[string]any{auditKeyOwnDomain: domain, "source": "admin", "verified": true}
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if beforeImage == nil {
 			// A domain nobody had seen: the list gained an entry, and there is
 			// no prior source or verification for the row to name.
-			_, err := storekit.AuditEvent(ctx, tx, "update", captureSettingsObject,
-				storekit.MustWorkspace(ctx), after)
+			_, err = storekit.AuditEvent(ctx, tx, "update", captureSettingsObject,
+				installation, after)
 			return err
 		}
 		// A candidate a mailbox had already seen, now confirmed: source and
 		// verified moved, and the row says what they moved from.
-		_, err := storekit.Audit(ctx, tx, "update", captureSettingsObject,
-			storekit.MustWorkspace(ctx), beforeImage, after)
+		_, err = storekit.Audit(ctx, tx, "update", captureSettingsObject,
+			installation, beforeImage, after)
 		return err
 	})
 	return out, err
@@ -304,8 +308,12 @@ func (s *OwnDomainStore) Remove(ctx context.Context, raw string) error {
 		// "archive", not a delete verb: the audit vocabulary is closed (0018)
 		// and withdrawing a registry entry IS retiring it — the same reading
 		// the consumer-mail list settled on.
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
 		removal, err := storekit.Audit(ctx, tx, "archive", captureSettingsObject,
-			storekit.MustWorkspace(ctx),
+			installation,
 			map[string]any{auditKeyOwnDomain: domain}, nil)
 		// A candidate nobody confirmed never counted as ours, so nothing follows.
 		if err != nil || s.removed == nil || !counted {

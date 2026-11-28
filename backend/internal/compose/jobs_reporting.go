@@ -40,7 +40,6 @@ func (w *reportScheduleSweepWorker) Work(ctx context.Context, _ *river.Job[Repor
 }
 
 func (w *reportScheduleSweepWorker) sweepWorkspace(ctx context.Context, workspace ids.UUID) error {
-	ctx = principal.WithWorkspaceID(ctx, workspace)
 	ctx = principal.SystemActing(ctx, "system:report-schedule")
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return newReportingService(w.pool, w.now).Sweep(ctx)

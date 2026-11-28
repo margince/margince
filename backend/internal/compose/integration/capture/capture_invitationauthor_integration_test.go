@@ -109,7 +109,7 @@ func claimOwnDomain(t *testing.T, e *integration.SearchEnv, domain string) {
 // read as seat.
 func listedAuthor(t *testing.T, e *integration.SearchEnv, seat ids.UUID, sourceID string) *crmcontracts.ActivityAuthor {
 	t.Helper()
-	reader := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	reader := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + seat.String(), UserID: seat, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}, "contact": {Read: true}},

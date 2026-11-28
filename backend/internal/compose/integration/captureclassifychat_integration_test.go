@@ -75,7 +75,7 @@ func TestAConnectorCapturedChatMessageIsLabelledAndTakesNoReplyVerdict(t *testin
 	classifier := compose.NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
 	// The system principal the capture_classify job binds (capturejobs.go).
 	// Without it a reply verdict write fails, and the test could not see one.
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:capture_classify",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})

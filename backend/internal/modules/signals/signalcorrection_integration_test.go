@@ -62,7 +62,6 @@ func TestACorrectedSignalKeepsItsOldKindAndEvidenceInTheAudit(t *testing.T) {
 	testdb.AssertPoolsQuiesced(t)
 	store := NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), nil)
 
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + admin.String(), UserID: admin,

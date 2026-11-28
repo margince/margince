@@ -73,7 +73,7 @@ func startImportReconnectingMidPage(t *testing.T, e *integration.SearchEnv, acco
 			t.Errorf("mid-page reconnect as %s: %v", reconnectAs, err)
 		}
 	}
-	if _, _, _, err := registry.RunBackfillStep(principal.WithWorkspaceID(context.Background(), e.WS), run.ID); err != nil {
+	if _, _, _, err := registry.RunBackfillStep(context.Background(), run.ID); err != nil {
 		t.Fatalf("RunBackfillStep across a reconnect: %v, want a clean return", err)
 	}
 	status, scanned, _, cursor = readBackfillRow(t, e, run.ID)
@@ -119,7 +119,7 @@ func connectAndSync(t *testing.T, registry *capturemod.Registry, e *integration.
 	if err != nil {
 		t.Fatalf("connecting %s: %v", account, err)
 	}
-	if err := registry.SyncOnce(principal.WithWorkspaceID(context.Background(), e.WS), connID); err != nil {
+	if err := registry.SyncOnce(context.Background(), connID); err != nil {
 		t.Fatalf("SyncOnce: %v", err)
 	}
 	if _, cursor := readConnectionAccount(t, e, connID); len(cursor) == 0 {

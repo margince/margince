@@ -33,7 +33,7 @@ import (
 // rows and events, and both need a principal — but nobody decided any of this,
 // so it is the clock's id rather than a contact's.
 func expiryCtx(e *integration.Env) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, approvals.ExpiryActor)
 }
 
@@ -257,7 +257,7 @@ func TestOnlyTheClockMayExpireApprovals(t *testing.T) {
 	// A system principal that is not the sweep is refused too: the audit rows
 	// this writes are attributed to ExpiryActor, so any other id would be
 	// writing decisions under a name that is not its own.
-	impostor := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
+	impostor := principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:something-else"})
 	if _, err := svc.ExpireDue(principal.WithCorrelationID(impostor, ids.NewV7())); err == nil {
 		t.Error("a system principal that is not the expiry sweep expired approvals under the sweep's name")

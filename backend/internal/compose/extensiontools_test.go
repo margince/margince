@@ -27,11 +27,11 @@ import (
 // to exercise a 🟢 read tool end to end without a database.
 type fullSeat struct{}
 
-func (fullSeat) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+func (fullSeat) EffectiveRBAC(context.Context, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{}, nil
 }
 
-func (fullSeat) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+func (fullSeat) SeatType(context.Context, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatFull, nil
 }
 
@@ -395,7 +395,7 @@ func TestComposedToolServesThroughAdmission(t *testing.T) {
 	for _, tool := range tools {
 		r.Register(tool)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
@@ -493,7 +493,7 @@ func TestComposedReadToolRequiresTheScope(t *testing.T) {
 	for _, tool := range tools {
 		r.Register(tool)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(), // no read scope
@@ -505,6 +505,6 @@ func TestComposedReadToolRequiresTheScope(t *testing.T) {
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
-func (r fullSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+func (r fullSeat) AdmittedAuthority(ctx context.Context, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, human, r.EffectiveRBAC, r.SeatType)
 }

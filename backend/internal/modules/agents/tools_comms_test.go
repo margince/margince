@@ -334,7 +334,7 @@ func (p *multiLinkProvider) Read(_ context.Context, ref datasource.EntityRef) (d
 // the scope arm of admission and be refused on the tier, which is the refusal
 // staging exists to catch.
 func sendCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
 		PassportID: ids.NewV7(),

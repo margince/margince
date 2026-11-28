@@ -58,7 +58,4 @@ func TestContactAutoEnrichWritesAsASystemPrincipal(t *testing.T) {
 	if actor.Type != principal.PrincipalSystem {
 		t.Errorf("actor type = %q, want a system principal", actor.Type)
 	}
-	if got, ok := principal.WorkspaceID(ctx); !ok || got != ws {
-		t.Error("the workspace did not bind, so every write would land outside RLS's reach")
-	}
 }

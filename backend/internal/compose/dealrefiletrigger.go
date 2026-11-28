@@ -50,11 +50,10 @@ func (g *DealRefileGen) HandleEvent(ctx context.Context, env events.Envelope) er
 		slog.InfoContext(ctx, "deal refiling deferred to recovery", "event_id", env.EventID, "event_type", env.Type)
 		return nil
 	}
-	ws, err := InstallationDB(g.pool).Workspace(ctx)
+	_, err := InstallationDB(g.pool).Workspace(ctx)
 	if err != nil {
 		return err
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	ctx = principal.WithCorrelationID(principal.SystemActing(ctx, dealRefileActor), env.Trace.CorrelationID)
 	return InstallationDB(g.pool).Tx(ctx, func(tx pgx.Tx) error {
 		scope, err := dealRefileScope(ctx, tx, g.pool, env)

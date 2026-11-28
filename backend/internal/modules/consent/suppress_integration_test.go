@@ -222,7 +222,7 @@ func TestAContactAnotherRepCannotSeeIsNotSuppressible(t *testing.T) {
 func TestASeatWithoutWriteAuthorityIsRefused(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	readOnly := principal.WithWorkspaceID(context.Background(), e.ws)
+	readOnly := context.Background()
 	readOnly = principal.WithCorrelationID(readOnly, ids.NewV7())
 	readOnly = principal.WithActor(readOnly, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,

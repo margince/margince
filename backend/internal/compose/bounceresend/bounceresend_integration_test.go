@@ -134,7 +134,7 @@ func newBounceFixtureSending(
 // bounce records a hard bounce the way the mailbox connector does.
 func (f bounceFixture) bounce(t *testing.T, id ids.UUID, address string) {
 	t.Helper()
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), f.e.WS), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: f.e.Rep1, OnBehalfOf: f.e.Rep1,
 	})
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())

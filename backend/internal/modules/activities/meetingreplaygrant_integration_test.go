@@ -8,11 +8,11 @@ package activities
 import (
 	"context"
 	"errors"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -20,7 +20,7 @@ import (
 
 // createOnlyCtx is meetingCtx's rep without the activity update grant.
 func createOnlyCtx(e *sendEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

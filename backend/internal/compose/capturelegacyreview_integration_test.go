@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, said approvalSummaryCopy, row capture.PendingCounterparty) (ids.UUID, error) {
@@ -67,7 +66,7 @@ func counterpartyLabel(row capture.PendingCounterparty) *string {
 // Historical approvals exercise the existing redemption contract after automatic staging stops.
 func seedLegacySenderReviews(t *testing.T, e *integration.Env, engine *CounterpartyVerdictEngine) error {
 	t.Helper()
-	return engine.inWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), func(ctx context.Context, _ ids.UUID) error {
+	return engine.inWorkspace(context.Background(), func(ctx context.Context, _ ids.UUID) error {
 		rows, err := engine.pending.AwaitingReview(ctx, 100)
 		if err != nil {
 			return err

@@ -84,7 +84,7 @@ func certifyWithLane(t *testing.T, lane *ai.DecisionsConfig, decider *scriptedDe
 		decisionOpts:  []ai.LocalOption{ai.WithFakeDecider(decider)},
 	}
 	candidate := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}
-	llm, err := certifyTask(wsContext(t), task, scenarios, census, candidate,
+	llm, err := certifyTask(t.Context(), task, scenarios, census, candidate,
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileCloudFrontier, 3, quietLogger(), hooks)
 	if err != nil {
 		t.Fatalf("certifyTask: %v", err)
@@ -93,7 +93,7 @@ func certifyWithLane(t *testing.T, lane *ai.DecisionsConfig, decider *scriptedDe
 		Census: census, RecordDir: t.TempDir(),
 		Routing: &ai.RoutingConfig{Profile: ai.ProfileCloudFrontier, Decisions: lane},
 	}
-	decisions, err := certifyDecisionsFor(wsContext(t), cfg, task, scenarios, candidate, llm, hooks, quietLogger())
+	decisions, err := certifyDecisionsFor(t.Context(), cfg, task, scenarios, candidate, llm, hooks, quietLogger())
 	return legRun{llm: llm, decisions: decisions, chatCalls: len(candidateFake.Calls()), err: err}
 }
 
@@ -216,7 +216,7 @@ func TestAVerdictTaskCertifiesOnJev(t *testing.T) {
 		profile: ai.ProfileCloudFrontier, llm: Record{Scenarios: []ScenarioRecord{{Scenario: "basic", Runs: 3, Passed: 3}}},
 		hooks: &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(decider)}},
 	}
-	records, err := leg.certify(wsContext(t), quietLogger())
+	records, err := leg.certify(t.Context(), quietLogger())
 	if err != nil {
 		t.Fatalf("certify: %v", err)
 	}
@@ -269,7 +269,7 @@ func TestTheDecisionPreflightFailsOnAFailedProbe(t *testing.T) {
 	cfg := RunnerConfig{Census: census, Routing: routing}
 
 	failing := &scriptedDecider{replies: []decision.Response{{}}, errs: []error{errors.New("the endpoint is down")}}
-	err := preflightDecisions(wsContext(t), cfg, scenarios, &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(failing)}}, quietLogger())
+	err := preflightDecisions(t.Context(), cfg, scenarios, &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(failing)}}, quietLogger())
 	if err == nil || !strings.Contains(err.Error(), "decisions lane jev_compatible:typesafe/jev-1.13") {
 		t.Fatalf("a failed probe: want the run refused naming the lane, got %v", err)
 	}
@@ -278,7 +278,7 @@ func TestTheDecisionPreflightFailsOnAFailedProbe(t *testing.T) {
 	}
 
 	healthy := &scriptedDecider{replies: []decision.Response{answer(labelWidget, 0.9, "jev")}}
-	if err := preflightDecisions(wsContext(t), cfg, scenarios, &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(healthy)}}, quietLogger()); err != nil {
+	if err := preflightDecisions(t.Context(), cfg, scenarios, &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(healthy)}}, quietLogger()); err != nil {
 		t.Fatalf("a healthy probe was refused: %v", err)
 	}
 }
@@ -314,7 +314,7 @@ func TestTheDecisionLegRefusesAScenarioTheLLMRecordNeverRan(t *testing.T) {
 		profile: ai.ProfileCloudFrontier, llm: Record{Scenarios: []ScenarioRecord{{Scenario: "another", Runs: 3, Passed: 3}}},
 		hooks: &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(decider)}},
 	}
-	records, err := leg.certify(wsContext(t), quietLogger())
+	records, err := leg.certify(t.Context(), quietLogger())
 	if err == nil || !strings.Contains(err.Error(), "no runs of scenario basic") {
 		t.Fatalf("certify = (%d records, %v), want a refusal naming the unmatched scenario", len(records), err)
 	}

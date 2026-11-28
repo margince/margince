@@ -23,7 +23,7 @@ import (
 )
 
 func reportingActor(e *forecastEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	grants := map[string]principal.ObjectGrant{}
 	for _, object := range []string{"report_definition", "report_edition", "report_schedule", "reporting_framework", "sales_target", "deal", "pipeline", "installation_settings", "forecast", "reporting_credit", "activity", "company", "contact", "team_oversight"} {
@@ -34,7 +34,7 @@ func reportingActor(e *forecastEnv) context.Context {
 
 func reportingWrittenClose(t *testing.T, e *forecastEnv) (crmcontracts.Deal, *deals.Store, context.Context) {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:reporting-fixture")
+	ctx := principal.SystemActing(context.Background(), "system:reporting-fixture")
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	won := e.seedID(t, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES($1,$2,'Won',10,'won',100)`, e.pipeline)
 	store := deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).SetClock(func() time.Time { return time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC) })

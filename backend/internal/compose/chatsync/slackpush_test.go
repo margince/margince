@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type recordedRootNotice struct {
@@ -46,7 +45,7 @@ func TestSlackSignedDeletionIsBoundToInstallationAndNativeRoot(t *testing.T) {
 	e := newPushEnv(t)
 	roots := rootNoticeBoundary{}
 	receiver := SlackReceiver{Receiver: e.receiver, Roots: &roots}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	delivery := signedSlack(t, `{"type":"event_callback","team_id":"team-ours","event_id":"Ev-root-removed","event":{"type":"message","subtype":"message_deleted","channel":"C-one","deleted_ts":"123.000001","ts":"999.000001"}}`, pushNow)
 	got, err := receiver.Receive(ctx, delivery)
 	if err != nil || statusOf(got) != "pull_queued" || len(roots) != 1 || len(e.pulls) != 1 {
@@ -81,7 +80,7 @@ func TestSlackRejectsForgedStaleAndForeignInstallationNotices(t *testing.T) {
 			case "another team":
 				delivery = signedSlack(t, `{"type":"event_callback","team_id":"foreign-team","event_id":"Ev-message","event":{"type":"message","channel":"C-one","ts":"123.000001"}}`, pushNow)
 			}
-			_, err := receiver.Receive(principal.WithWorkspaceID(context.Background(), ids.NewV7()), delivery)
+			_, err := receiver.Receive(context.Background(), delivery)
 			if !errors.Is(err, chatlinks.ErrEventRejected) || len(roots) != 0 || len(e.pulls) != 0 || len(e.replays) != 0 {
 				t.Fatalf("rejected notice took effect: %v roots=%+v pulls=%v replays=%v", err, roots, e.pulls, e.replays)
 			}

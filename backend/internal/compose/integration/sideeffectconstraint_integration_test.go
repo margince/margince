@@ -41,7 +41,7 @@ func TestARefusedAuditRowNamesItsOwnTable(t *testing.T) {
 	// audit row's other CHECK — the same table, the same class of defect, the
 	// same 23514 — and leaves that gate looking at a tree it can still vouch for.
 	ctx := principal.WithCorrelationID(
-		principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
+		principal.WithActor(context.Background(),
 			principal.Principal{Type: principal.PrincipalType("neither_human_nor_machine"), ID: "system"}), ids.NewV7())
 
 	// Written through the REAL writer, which is the point: an audit row is

@@ -54,7 +54,7 @@ func storedDuration(t *testing.T, e *sendEnv, call ids.UUID) *int64 {
 // answers how many rows it changed.
 func clearDurations(t *testing.T, e *sendEnv) int {
 	t.Helper()
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:negative-counts")
+	system := principal.SystemActing(context.Background(), "system:negative-counts")
 	in, changed := datatask.BatchIn{Limit: 1}, 0
 	for {
 		var out datatask.BatchOut

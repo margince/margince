@@ -12,13 +12,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func knowledgeRuntime(unit string, deps extensionRuntimeBinding) *callRuntime {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return runtimeFor(ctx, unit, "1.0.0", "job/probe", deps)
 }
 

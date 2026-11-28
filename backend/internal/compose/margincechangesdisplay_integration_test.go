@@ -252,7 +252,7 @@ func TestTheTeamListCountsTheValueEachKindOfChangeMoved(t *testing.T) {
 
 // ownersAgentReader is a passport agent reading for the deal's owner.
 func (v *dealVerdictEnv) ownersAgentReader() context.Context {
-	return principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), v.WS), ids.NewV7()),
+	return principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalAgent, ID: "agent:reader", SeatType: principal.SeatFull,
 			OnBehalfOf: v.Rep1, UserID: v.Rep1, TeamIDs: []ids.UUID{v.Team1},

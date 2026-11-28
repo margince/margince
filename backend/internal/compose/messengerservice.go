@@ -18,7 +18,7 @@ import (
 
 // GetMessengerService reports the same workspace boundary enforced by both credential writers.
 func (s Server) GetMessengerService(w http.ResponseWriter, r *http.Request) {
-	if _, _, ok := signedInHuman(w, r); !ok {
+	if _, ok := signedInHuman(w, r); !ok {
 		return
 	}
 	if s.links == nil {
@@ -56,7 +56,7 @@ func (s Server) GetMessengerService(w http.ResponseWriter, r *http.Request) {
 
 // DisconnectMessengerService revokes shared and personal access through their existing owners.
 func (s Server) DisconnectMessengerService(w http.ResponseWriter, r *http.Request, provider crmcontracts.MessengerProvider) {
-	if _, _, ok := signedInHuman(w, r); !ok {
+	if _, ok := signedInHuman(w, r); !ok {
 		return
 	}
 	if s.links == nil {
@@ -104,7 +104,7 @@ func (s Server) DisconnectMessengerService(w http.ResponseWriter, r *http.Reques
 
 // SelectMessengerService fixes the choice first so stale callbacks cannot reconnect the previous service.
 func (s Server) SelectMessengerService(w http.ResponseWriter, r *http.Request) {
-	if _, _, ok := signedInHuman(w, r); !ok {
+	if _, ok := signedInHuman(w, r); !ok {
 		return
 	}
 	if s.links == nil {

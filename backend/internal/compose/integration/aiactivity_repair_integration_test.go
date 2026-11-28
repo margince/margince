@@ -162,7 +162,7 @@ func TestTheRepairKeepsTheReadingWithTheContactWhoAskedForIt(t *testing.T) {
 // suite's admin context because the defect above is invisible under a human
 // principal — the test would pass while production filed the row wrong.
 func (f *readingFixture) reconcileCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), f.env.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:ai_activity_reconcile",

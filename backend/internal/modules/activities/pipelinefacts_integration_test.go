@@ -92,7 +92,7 @@ func (e *factsEnv) exec(t *testing.T, sql string, args ...any) {
 }
 
 func (e *factsEnv) as() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
@@ -277,7 +277,7 @@ func TestReadingPipelineFactsTakesTheRowScopeNotJustTheGrant(t *testing.T) {
 
 	asUser := func(userID ids.UUID, scope principal.RowScope) context.Context {
 		return principal.WithActor(
-			principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()),
+			principal.WithCorrelationID(context.Background(), ids.NewV7()),
 			principal.Principal{
 				Type: principal.PrincipalHuman, ID: "human:" + userID.String(), UserID: userID,
 				Permissions: principal.Permissions{
@@ -306,7 +306,7 @@ func TestReadingPipelineFactsTakesTheActivityGate(t *testing.T) {
 	e := setupFacts(t)
 	id := e.seed(t, capturedRow{kind: "email"})
 	ungranted := principal.WithActor(
-		principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()),
+		principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
 			Permissions: principal.Permissions{RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll},

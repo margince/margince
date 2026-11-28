@@ -472,7 +472,7 @@ func TestARestoredBodyIsJudgedAgainForItsReply(t *testing.T) {
 			pending := o.e.WsScalar(t, `SELECT id::text FROM capture_pending_counterparty WHERE email = 'pat@customer.example'`)
 			verdicts := NewCounterpartyVerdictEngine(o.e.Pool, &scriptedVerdictBrain{verdicts: map[string]string{pending: capture.KindContact}},
 				CaptureConfig{}, slog.New(slog.DiscardHandler))
-			if err := verdicts.RunWorkspace(principal.WithWorkspaceID(context.Background(), o.e.WS), 0); err != nil {
+			if err := verdicts.RunWorkspace(context.Background(), 0); err != nil {
 				t.Fatalf("deciding the sender: %v", err)
 			}
 			brain := &scriptedClassifyBrain{replies: map[string]string{"Signing": activities.ReplyVerdictNeutral}}

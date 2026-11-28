@@ -32,7 +32,7 @@ func agentActing(e *Env, human, passport ids.UUID) context.Context {
 		Scopes:      principal.ScopeSet{principal.ScopeRead: {}, principal.ScopeWrite: {}},
 		Permissions: AdminPerms,
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, agent.Principal())
 }

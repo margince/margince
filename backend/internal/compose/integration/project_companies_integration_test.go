@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Three companies building one project is the case this edge exists for: a
@@ -187,7 +186,7 @@ func TestACompanyWithDealsOnTheProjectCannotBeTakenOff(t *testing.T) {
 func oneProjectCompanyEdge(t *testing.T, e *Env, projectID ids.ProjectID) ids.UUID {
 	t.Helper()
 	var edge ids.UUID
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT id FROM relationship WHERE kind = 'project_company' AND project_id = $1

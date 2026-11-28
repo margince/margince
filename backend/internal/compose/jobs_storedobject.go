@@ -89,7 +89,7 @@ func (w *storedObjectReapWorker) reapBatch(ctx context.Context, workspace ids.UU
 	// The system principal, bound here rather than inherited: a queue carries
 	// no actor, and every read and write below is RBAC-gated. The pass is the
 	// installation's own bookkeeping, not any seat's.
-	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "stored_object_reap_worker")
+	ctx = principal.SystemActing(ctx, "stored_object_reap_worker")
 	db := database.NewAcrossWorkspaces(w.pool)
 	ledger := storedobjects.NewLedger(db)
 	before := w.now().UTC().Add(-storedobjects.ProvisionalObjectGrace)

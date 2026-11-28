@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAnAttachCannotOutrunTheArchive(t *testing.T) {
@@ -38,7 +37,7 @@ func TestAnAttachCannotOutrunTheArchive(t *testing.T) {
 
 	// The archive, held open. It IS the holder — the real interleaving, and the
 	// transaction the attach actually races.
-	holderCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	holderCtx := context.Background()
 	holder, err := e.Pool.Begin(holderCtx)
 	if err != nil {
 		t.Fatal(err)

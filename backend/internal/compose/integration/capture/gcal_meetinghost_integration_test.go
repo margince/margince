@@ -135,7 +135,7 @@ func (p *pairEnv) creditOf(t *testing.T, meeting ids.UUID) ([]ids.UUID, ids.UUID
 // claimOrganizerHost runs the claim as the data task's system job runs it.
 func (p *pairEnv) claimOrganizerHost(t *testing.T, meeting ids.UUID) bool {
 	t.Helper()
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), p.env.e.WS), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:meeting_organizer_host"})
 	var moved bool
 	err := database.WithTx(ctx, p.env.e.Pool, func(tx pgx.Tx) error {

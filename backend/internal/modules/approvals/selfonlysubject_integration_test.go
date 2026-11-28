@@ -30,7 +30,7 @@ import (
 // directly carries no OnBehalfOf, and a self-only row without one is decidable
 // by nobody (decidable fails closed), so it is not the shape under test.
 func (e *stagingEnv) forMember(member ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:vcard",

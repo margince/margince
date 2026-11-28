@@ -51,7 +51,7 @@ func learnSplitName(t *testing.T, e *integration.Env, id ids.ContactID, first st
 // participant_backfill job binds.
 func runDisplayNameRepair(t *testing.T, e *integration.Env) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: contacts.DisplayNameRepairActor,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},

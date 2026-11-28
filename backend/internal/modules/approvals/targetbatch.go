@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -92,7 +93,11 @@ func rowsPermitted(ctx context.Context, tx pgx.Tx, targetType string, rowIDs []i
 		// A price sheet proposal targets a workspace, and its effect writes to the
 		// acting one, so the target must be the acting workspace.
 		out := map[ids.UUID]bool{}
-		if wsID, ok := principal.WorkspaceID(ctx); ok && slices.Contains(rowIDs, wsID) {
+		wsID, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return nil, err
+		}
+		if slices.Contains(rowIDs, wsID) {
 			out[wsID] = true
 		}
 		return out, nil

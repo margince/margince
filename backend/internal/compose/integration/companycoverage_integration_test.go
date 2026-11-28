@@ -43,7 +43,7 @@ func companyCoverageFor(
 	t *testing.T, e *Env, perms principal.Permissions, companyID ids.UUID,
 ) network.CompanyCoverage {
 	t.Helper()
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
+	ctx := principal.WithActor(context.Background(),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:reader",
 			UserID: ids.NewV7(), Permissions: perms,
@@ -325,7 +325,7 @@ func TestAProjectStakeholderCountsTowardTheAccount(t *testing.T) {
 // company they were never admitted to.
 func TestAnAccountTheReaderCannotOpenIsRefused(t *testing.T) {
 	e := Setup(t)
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
+	ctx := principal.WithActor(context.Background(),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:reader", UserID: ids.NewV7(),
 			Permissions: coverageReaderPerms(true),

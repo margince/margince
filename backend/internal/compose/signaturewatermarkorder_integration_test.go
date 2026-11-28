@@ -23,7 +23,7 @@ func TestSignatureWatermarkOrdersEqualTimeMailAndRejectsAnOlderCompletion(t *tes
 	if bytes.Compare(low[:], high[:]) > 0 {
 		low, high = high, low
 	}
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), h.e.WS), "agent:enrich")
+	ctx := principal.SystemActing(context.Background(), "agent:enrich")
 	store := newContactsStore(InstallationDB(h.e.Pool))
 	contact := ids.From[ids.ContactKind](h.contact)
 	if err := store.MarkSignatureRead(ctx, contact, low, 3, contacts.SignatureRead{}, contacts.SignatureWork{}); err != nil {

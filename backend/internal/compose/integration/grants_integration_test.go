@@ -177,7 +177,7 @@ func TestAShareIsPassedOnOnlyByACallerWhoCouldChangeTheRow(t *testing.T) {
 // scope — the two permissions sharing a record needs, and nothing else, so a
 // refusal in these tests can only come from the rule under test.
 func grantingPrincipal(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		TeamIDs: teams,
@@ -401,7 +401,7 @@ func TestARecordsTermsAreRestatedOnlyByACallerWhoCouldChangeIt(t *testing.T) {
 	// types under test: read and update on each, and nothing else, so a refusal
 	// below can only come from the rule this test is about.
 	seat := func(user ids.UUID, scope principal.RowScope, teams []ids.UUID) context.Context {
-		ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+		ctx := context.Background()
 		return principal.WithActor(ctx, principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 			TeamIDs: teams,
@@ -513,7 +513,7 @@ func TestAStrangerToTheRecordCannotRestateItsGrants(t *testing.T) {
 	worker := e.SeedID(t, `INSERT INTO app_user (id, email, display_name, seat_type) VALUES ($1, 'worker@search.test', 'Worker', 'full')`)
 
 	seat := func(user ids.UUID, scope principal.RowScope, teams []ids.UUID) context.Context {
-		ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+		ctx := context.Background()
 		return principal.WithActor(ctx, principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 			TeamIDs: teams,

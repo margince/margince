@@ -116,7 +116,7 @@ func TestABatchedMergeFaceRefusesWithoutTheObjectGrant(t *testing.T) {
 	e := setupCapturePrivacy(t)
 	id := e.captureContact(t, "workspace")
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.owner.String(), UserID: e.owner,
@@ -131,7 +131,7 @@ func TestABatchedMergeFaceRefusesWithoutTheObjectGrant(t *testing.T) {
 // asCompanyReader binds a caller holding the object grants named and nothing else,
 // at full row scope, so what decides the count is the GRANT rather than the scope.
 func (e *privacyEnv) asCompanyReader(objects ...string) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	grants := map[string]principal.ObjectGrant{}
 	for _, object := range objects {

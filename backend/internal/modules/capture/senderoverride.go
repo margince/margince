@@ -155,12 +155,14 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 			Scan(&out.ID, &out.Address, &out.Decision, &out.OverruledKind); err != nil {
 			return fmt.Errorf("capture: recording a sender decision: %w", err)
 		}
-		// Audit-only, like the exclusion list beside it: this is capture
-		// configuration, and the closed event catalog carries no type for it.
-		// The object spelled as a literal, not through the constant: the audit
-		// gate reads call sites to tell an entity named at runtime from one
-		// named in the source, and a constant is something it cannot resolve.
-		if _, err := storekit.AuditEvent(ctx, tx, "update", "capture_settings", storekit.MustWorkspace(ctx),
+		// Audit-only, like the exclusion list beside it: the closed event catalog
+		// carries no type for it. The object is spelled as a literal, because the
+		// audit gate cannot resolve a constant at a call site.
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if _, err := storekit.AuditEvent(ctx, tx, "update", "capture_settings", installation,
 			map[string]any{fieldDecision: decision, "overruled_kind": kind}); err != nil {
 			return err
 		}
@@ -216,7 +218,11 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 			}
 		}
 		// Spelled as a literal for the audit gate; see Set.
-		_, err = storekit.AuditEvent(ctx, tx, "update", "capture_settings", storekit.MustWorkspace(ctx),
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
+		_, err = storekit.AuditEvent(ctx, tx, "update", "capture_settings", installation,
 			map[string]any{fieldDecision: "withdrawn"})
 		return err
 	})
@@ -449,7 +455,11 @@ func RecordPersonalStandingTx(ctx context.Context, tx pgx.Tx, owner ids.UUID, ad
 		return nil
 	}
 	// Spelled as a literal for the audit gate; see Set.
-	_, err = storekit.AuditEvent(ctx, tx, "update", "capture_settings", storekit.MustWorkspace(ctx),
+	installation, err := storekit.Workspace(ctx, tx)
+	if err != nil {
+		return err
+	}
+	_, err = storekit.AuditEvent(ctx, tx, "update", "capture_settings", installation,
 		map[string]any{fieldDecision: OverridePersonal})
 	return err
 }

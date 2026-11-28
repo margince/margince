@@ -24,7 +24,7 @@ func seatWith(objects ...string) context.Context {
 	for _, object := range objects {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},

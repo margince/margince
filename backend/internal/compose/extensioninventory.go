@@ -80,9 +80,13 @@ func ObserveExtensionInventory(ctx context.Context, pool *pgxpool.Pool, log *slo
 		if slices.Equal(last, current) {
 			return nil
 		}
+		marker, err := installationMarker(ctx, tx)
+		if err != nil {
+			return err
+		}
 		_, err = storekit.LogSystem(ctx, tx, extensionCompositionObserved, map[string]any{
 			"extensions":    current,
-			installationKey: installationMarker(ctx),
+			installationKey: marker,
 		})
 		if err != nil {
 			return err
@@ -95,7 +99,11 @@ func ObserveExtensionInventory(ctx context.Context, pool *pgxpool.Pool, log *slo
 	}
 	// Every boot runs it, so a failed or skipped sweep is retried from the recorded
 	// history. A storage fault does not stop the boot.
-	if err := extcapability.SweepGone(ctx, pool, boundExtensionRuntime().blob, extensionCompositionObserved, installationMarker(ctx), exts); err != nil {
+	company, err := database.ProvenWorkspace(ctx, pool)
+	if err != nil {
+		return err
+	}
+	if err := extcapability.SweepGone(ctx, pool, boundExtensionRuntime().blob, extensionCompositionObserved, company.String(), exts); err != nil {
 		log.Error("compose: deleting the objects of removed extensions failed; the next boot tries again", "err", err)
 	}
 	// Logged only after the transaction COMMITTED: an in-closure log line
@@ -111,15 +119,19 @@ func ObserveExtensionInventory(ctx context.Context, pool *pgxpool.Pool, log *slo
 // first enabled extension does.
 func lastObservedExtensions(ctx context.Context, tx pgx.Tx) ([]observedExtension, error) {
 	var detail []byte
+	marker, err := installationMarker(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
 	// occurred_at leads the ordering: uuidv7 ids are monotonic only
 	// within one process, and api + worker mint theirs independently —
 	// same-millisecond rows could sort against observation order on id
 	// alone. id stays as the deterministic tiebreak.
-	err := tx.QueryRow(ctx,
+	err = tx.QueryRow(ctx,
 		`SELECT detail->'extensions' FROM system_log
 		  WHERE action = $1 AND detail->>'installation' = $2
 		  ORDER BY occurred_at DESC, id DESC LIMIT 1`,
-		extensionCompositionObserved, installationMarker(ctx)).Scan(&detail)
+		extensionCompositionObserved, marker).Scan(&detail)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

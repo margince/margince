@@ -25,7 +25,7 @@ import (
 // passport must be a real row, because a staged approval is foreign-keyed to it.
 // A zero passport is automatic work, which a confirm-first tier refuses.
 func relinkAgentCtx(e *Env, passport ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:relink-probe", SeatType: principal.SeatFull,

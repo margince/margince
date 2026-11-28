@@ -24,7 +24,7 @@ import (
 // asArchiver is the rep holding the activity delete grant, so a test can
 // archive a conversation through the real lifecycle verb.
 func (e *sendEnv) asArchiver() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

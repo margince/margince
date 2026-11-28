@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Usage is one model call's metering record (§6): who spent, on what,
@@ -41,6 +42,14 @@ type Usage struct {
 type usageStore interface {
 	Record(ctx context.Context, u Usage) error
 	MonthTokens(ctx context.Context) (int64, error)
+	// Workspace names the company a call is served for: its result cache is
+	// partitioned by it, so an answer never crosses to another company.
+	Workspace(ctx context.Context) (ids.WorkspaceID, error)
+}
+
+// Workspace names the installation's live company.
+func (m *Meter) Workspace(ctx context.Context) (ids.WorkspaceID, error) {
+	return m.db.Workspace(ctx)
 }
 
 // Meter accumulates ai_usage counters per (workspace, day, task, tier).

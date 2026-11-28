@@ -83,7 +83,7 @@ type liveAreas struct {
 	areas *principal.WorkAreas
 }
 
-func (l liveAreas) AdmittedAuthority(context.Context, ids.UUID, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func (l liveAreas) AdmittedAuthority(context.Context, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authz.RBAC{PassportAreas: *l.areas}, principal.SeatFull, nil
 }
 

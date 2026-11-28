@@ -49,11 +49,11 @@ func (s *Server) publishClientRegistration(pool *pgxpool.Pool, svc *identity.Ser
 func clientRegistrationSwitches(pool *pgxpool.Pool, svc *identity.Service) identity.AdminRegistrationSwitches {
 	cfg := StoredConfig(pool)
 	return func(ctx context.Context) (identity.RegistrationMethods, error) {
-		wsID, err := svc.InstallationWorkspace(ctx)
+		_, err := svc.InstallationWorkspace(ctx)
 		if err != nil {
 			return identity.RegistrationMethods{}, fmt.Errorf("resolving the installation for the client registration switches: %w", err)
 		}
-		readCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, wsID.UUID), clientRegistrationReadActor)
+		readCtx := principal.SystemActing(ctx, clientRegistrationReadActor)
 		dynamic, err := config.StoredVal(readCtx, cfg, identity.DynamicClientRegistration)
 		if err != nil {
 			return identity.RegistrationMethods{}, fmt.Errorf("reading the self-registration switch: %w", err)

@@ -39,7 +39,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // confirmLinkToken returns the token from the most recently sealed confirm link.
@@ -140,6 +139,5 @@ func stagedConfirmSubject(t *testing.T, c *consentEnv) string {
 // goes through WithTx like every other write in this tree.
 func installationContext(t *testing.T, c *consentEnv) context.Context {
 	t.Helper()
-	return principal.WithWorkspaceID(context.Background(),
-		apptest.InstallationWorkspaceUUID(context.Background(), t, c.Pool))
+	return context.Background()
 }

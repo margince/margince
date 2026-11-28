@@ -53,7 +53,7 @@ func (c *telegramEnv) adminStoreCtx(t *testing.T) context.Context {
 	if err != nil {
 		t.Fatalf("parsing the admin id: %v", err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), c.workspaceID(t))
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + c.admin, UserID: user,
 		SeatType: principal.SeatFull, Permissions: integration.AdminPerms,
@@ -286,7 +286,7 @@ func channelRecordFor(u telegramUpdate) connector.NormalizedRecord {
 // captures and the contact that activity names, workspace-wide.
 func (c *telegramEnv) channelConnectorCtx(t *testing.T) context.Context {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), c.workspaceID(t))
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:telegram",
 		Permissions: principal.Permissions{
@@ -458,7 +458,7 @@ func TestErasedSubjectsNextMessageIsAcceptedAndPersistsNothing(t *testing.T) {
 // anybody: is this provider account an erased subject's?
 func (c *telegramEnv) accountSuppressed(t *testing.T, account string) bool {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), c.workspaceID(t))
+	ctx := context.Background()
 	var answer bool
 	if err := database.WithTx(ctx, c.Pool, func(tx pgx.Tx) error {
 		var err error

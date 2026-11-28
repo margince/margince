@@ -300,7 +300,7 @@ func TestASenderPurgeAnonymisesAContactTheVerdictCreated(t *testing.T) {
 	e := integration.Setup(t)
 	connectRep1Mailbox(t, e)
 	mail := seedPurgeableMail(t, e, mintedAddress, "Termin", e.Rep1)
-	verdictCtx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), verdictActor)
+	verdictCtx := principal.SystemActing(context.Background(), verdictActor)
 	if err := database.WithTx(verdictCtx, e.Pool, func(tx pgx.Tx) error {
 		_, err := createCounterpartyRecords(verdictCtx, tx, e.Contacts, nil, counterpartyCreation{
 			Email: mintedAddress, DisplayName: "Assistenz", Domain: purgeDomain,
@@ -355,7 +355,7 @@ func ownerAgentCtx(e *integration.Env) context.Context {
 }
 
 func ownerCtxAs(e *integration.Env, kind principal.PrincipalType, actorID string) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	grant := principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 	objects := map[string]principal.ObjectGrant{}

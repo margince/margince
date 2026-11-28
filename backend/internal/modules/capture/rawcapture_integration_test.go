@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // bootstrapRawCaptureWorkspace seeds a fresh workspace and returns a context
@@ -37,7 +36,7 @@ func bootstrapRawCaptureWorkspace(t *testing.T) context.Context {
 		`INSERT INTO workspace (id) VALUES ($1)`, wsUUID); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
-	return principal.WithWorkspaceID(ctx, wsUUID)
+	return ctx
 }
 
 // A redelivered update_id must refresh the stored original, never duplicate

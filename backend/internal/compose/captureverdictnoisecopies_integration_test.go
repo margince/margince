@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // noiseQuote is the body seedMail writes. The claim writer refuses a quotation
@@ -41,7 +40,7 @@ func TestRedactingNoiseMailDestroysEveryCopyOfItsText(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	ws := principal.WithWorkspaceID(context.Background(), e.WS)
+	ws := context.Background()
 	if err := engine.RunWorkspace(ws, 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}

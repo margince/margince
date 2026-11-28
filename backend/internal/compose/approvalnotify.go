@@ -118,7 +118,7 @@ func (a *ApprovalNotify) HandleEvent(ctx context.Context, env events.Envelope) e
 	// workspace every read is refused; without the actor the audited write below
 	// has nobody to name; without the causing event the audit row cannot be tied
 	// back to the staging that produced it.
-	sysCtx := principal.WithWorkspaceID(ctx, ws.UUID)
+	sysCtx := ctx
 	sysCtx = principal.WithCausationEvent(sysCtx, env.EventID)
 	sysCtx = principal.WithActor(sysCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: approvalNotifyActor,

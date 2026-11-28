@@ -72,7 +72,7 @@ func setBaseline(t *testing.T, e *integration.Env, seat ids.UUID, provider, day,
 	t.Helper()
 	registry := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), backfillAuthority{}, keyvault.NewMemory())
 	registry.Register(plainSyncConnector{name: provider})
-	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat,
 	})
 	var date *time.Time
@@ -95,7 +95,7 @@ func mailSource(t *testing.T, e *integration.Env, messageID string) ids.UUID {
 
 func dispatchFor(t *testing.T, e *integration.Env, source, seat ids.UUID) CommitmentOutcome {
 	t.Helper()
-	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+seat.String(), ids.NewV7())
+	ctx := withTranscriptReader(context.Background(), "human:"+seat.String(), ids.NewV7())
 	c := Commitment{
 		Meaning: openCommitmentMeaning("", ""), AsOf: baselineAsOf, SourceActivityID: source, ReadMessages: []ids.UUID{source},
 		Extractor: signalScanActor, Locator: commitmentLocator(source, claimKindOurs, seat.String(), "Send pricing"),

@@ -100,11 +100,9 @@ func financeSweepPrincipal() principal.Principal {
 	}
 }
 
-// syncWorkspace mirrors ONE workspace's source. It was the child job's Work,
-// and it still binds the workspace itself — the pass walks tenants, so the
-// binding belongs to the tenant's turn rather than to the row.
+// syncWorkspace mirrors one workspace's source. It was the child job's Work.
 func (w *financeSyncSweepWorker) syncWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	wsCtx = principal.WithActor(wsCtx, financeSweepPrincipal())
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 

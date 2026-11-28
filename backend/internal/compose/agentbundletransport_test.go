@@ -27,7 +27,7 @@ import (
 )
 
 func bundleRequest(path string, actor principal.Principal) *http.Request {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, actor)
 	return httptest.NewRequest(http.MethodGet, path, nil).WithContext(ctx)
 }

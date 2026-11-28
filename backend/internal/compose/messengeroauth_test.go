@@ -24,7 +24,7 @@ import (
 
 func messengerOAuthFixture() (Server, connectState, time.Time) {
 	now := time.Date(2026, 6, 1, 10, 0, 0, 0, time.UTC)
-	st := connectState{Workspace: ids.MustParse("11111111-1111-1111-1111-111111111111"), User: ids.MustParse("22222222-2222-2222-2222-222222222222"), Provider: "messenger:slack", Nonce: "browser-nonce", Version: stateVersionNamespacedCSRF}
+	st := connectState{User: ids.MustParse("22222222-2222-2222-2222-222222222222"), Provider: "messenger:slack", Nonce: "browser-nonce", Version: stateVersionNamespacedCSRF}
 	cfg := GraphConfig{StateKey: strings.Repeat("k", 32), PublicBaseURL: "https://app.example.test", APIBaseURL: "https://api.example.test"}
 	return Server{messengerOAuthHandlers: messengerOAuthHandlers{cfg: cfg, now: func() time.Time { return now }}}, st, now
 }
@@ -84,7 +84,7 @@ func TestMessengerConnectBindsTheHumanBrowserAndReportsTheRegisteredCallback(t *
 			return "https://slack.com/oauth/v2/authorize?" + url.Values{"state": {state}, "redirect_uri": {redirect}}.Encode()
 		}}, nil
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), state.Workspace)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + state.User.String(), UserID: state.User, SeatType: principal.SeatFull})
 	reply := httptest.NewRecorder()
 	server.ConnectMessenger(reply, httptest.NewRequest(http.MethodPost, "/v1/messenger/slack/connect", nil).WithContext(ctx), "slack")
@@ -109,8 +109,8 @@ func TestMessengerConnectBindsTheHumanBrowserAndReportsTheRegisteredCallback(t *
 		t.Fatal("callback differs from registered API address")
 	}
 	signed, err := newStateSigner([]byte(server.messengerOAuthHandlers.cfg.StateKey)).verify(target.Query().Get("state"), now)
-	if err != nil || signed.User != state.User || signed.Workspace != state.Workspace || signed.Provider != "messenger:slack" || signed.Nonce != cookies[0].Value {
-		t.Fatal("consent state did not bind browser, account, workspace and provider")
+	if err != nil || signed.User != state.User || signed.Provider != "messenger:slack" || signed.Nonce != cookies[0].Value {
+		t.Fatal("consent state did not bind browser, account and provider")
 	}
 }
 
@@ -134,7 +134,7 @@ func TestMessengerConsentPinsSlackWorkspaceAndReturnsToTheRecord(t *testing.T) {
 			return "https://slack.com/oauth/v2/authorize?" + url.Values{"state": {s}, "redirect_uri": {redirect}}.Encode()
 		}}, nil
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), state.Workspace)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + state.User.String(), UserID: state.User, SeatType: principal.SeatFull})
 	body := `{"record_type":"deal","record_id":"` + record.String() + `"}`
 	reply := httptest.NewRecorder()

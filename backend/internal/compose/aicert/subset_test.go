@@ -29,7 +29,7 @@ func certifyCorpusWith(t *testing.T, scenarios []Scenario, offTopic string) Reco
 		return "the " + containsWidget + " described"
 	}}
 	judge := requestKeyedClient{answer: func(model.Request) string { return scoreJSON(90) }}
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, scenarios, testCensus(t),
+	rec, err := certifyTask(t.Context(), ai.TaskSummarize, scenarios, testCensus(t),
 		ai.ProviderConfig{Provider: providerClaudeCLI, Model: "candidate"},
 		ai.ProviderConfig{Provider: providerClaudeCLI, Model: "judge"}, ai.ProfileCloudFrontier, testRepeats, quietLogger(),
 		&certifyHooks{

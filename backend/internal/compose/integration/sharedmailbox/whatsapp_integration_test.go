@@ -56,7 +56,7 @@ func (s *sharedMailboxSuite) whatsAppSeat(t *testing.T) ids.UUID {
 
 func (s *sharedMailboxSuite) fileWhatsApp(t *testing.T, seat ids.UUID) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), s.e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: whatsapp.CapturedBy,

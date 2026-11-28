@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TestCallMeterWritesTraceAndOptInPayload proves the two-row invariant: a
@@ -37,7 +36,7 @@ import (
 // round-tripping, and a call without a Payload writes ai_call only.
 func TestCallMeterWritesTraceAndOptInPayload(t *testing.T) {
 	e := Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	meter := ai.NewCallMeter(e.DB())
 
 	corr := ids.NewV7()
@@ -125,7 +124,7 @@ func TestCallMeterWritesTraceAndOptInPayload(t *testing.T) {
 // with a mail's text on it is traced, and its content is not kept.
 func TestCallMeterKeepsNoPayloadForANoPayloadTask(t *testing.T) {
 	e := Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if !ai.NoPayload(ai.TaskEmbeddings) {
 		t.Fatal("the embed workload is no longer no_payload; pick a task that is")
 	}
@@ -156,7 +155,7 @@ func TestCallMeterKeepsNoPayloadForANoPayloadTask(t *testing.T) {
 // terminal rungs) get none even though they share the transaction.
 func TestRecordWritesEveryAttemptOfOneLogicalCallInOneTransaction(t *testing.T) {
 	e := Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	meter := ai.NewCallMeter(e.DB())
 
 	logical := ids.NewV7()
@@ -233,7 +232,7 @@ func TestRecordWritesEveryAttemptOfOneLogicalCallInOneTransaction(t *testing.T) 
 // naming that hash satisfies the FK.
 func TestEnsureConfigIsIdempotentAndFKsFromAICall(t *testing.T) {
 	e := Setup(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	meter := ai.NewCallMeter(e.DB())
 
 	snap := ai.ConfigSnapshot{

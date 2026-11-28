@@ -122,7 +122,7 @@ func TestPersonalDecisionScopeAgreesAcrossHomeAndWorklist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	background := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:background-review")
+	background := principal.SystemActing(context.Background(), "system:background-review")
 	background = onBehalfOf(background, e.Rep1)
 	shared, err := queue.Stage(background, approvals.StageInput{
 		Kind: "advance_deal", ProposedChange: json.RawMessage(`{"stage":"won"}`),

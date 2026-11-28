@@ -39,7 +39,6 @@ func aProjectSubjectRecord() connector.NormalizedRecord {
 
 // captureSinkContextFor is the connector principal a mail sync captures under.
 func captureSinkContextFor(ctx context.Context, ws ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type:     principal.PrincipalConnector,
 		ID:       "connector:gmail",

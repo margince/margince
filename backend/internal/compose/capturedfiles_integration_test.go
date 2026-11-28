@@ -62,7 +62,7 @@ func captureWorkspace(t *testing.T) (context.Context, *database.DB, string) {
 		captureSeatID, "capture-seat-"+captureSeatID.String()+"@fixture.example"); err != nil {
 		t.Fatalf("seed the capturing seat: %v", err)
 	}
-	ctx = asConnectorFor(principal.WithWorkspaceID(ctx, ws), "connector:imap", captureSeatID)
+	ctx = asConnectorFor(ctx, "connector:imap", captureSeatID)
 	return principal.WithCorrelationID(ctx, ids.NewV7()), database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), ws.String()
 }
 

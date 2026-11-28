@@ -125,7 +125,7 @@ func buyerSays(t *testing.T, e *Env, buyer buyerSeat, body string) {
 // about an erased contact, not what an API chooses to show.
 func readSeat(t *testing.T, e *Env, seat ids.DealRoomParticipantID) (name, email string, revoked bool) {
 	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var revokedAt *string
 		err := tx.QueryRow(ctx,

@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // countingMailer records what it was handed and, when told to, refuses it.
@@ -279,7 +278,7 @@ func TestEveryRepIsMeasuredBeforeTheFirstRelayIsDialled(t *testing.T) {
 		}
 	}
 
-	if err := e.worker.measureWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS, weeklyMailClock); err != nil {
+	if err := e.worker.measureWorkspace(context.Background(), e.WS, weeklyMailClock); err != nil {
 		t.Fatalf("measuring the workspace: %v", err)
 	}
 

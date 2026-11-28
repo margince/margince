@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // sweepBatch is one pass's batch per seat, which the held mail must exceed.
@@ -126,7 +125,7 @@ func sweepOnce(t *testing.T, e *integration.Env) int {
 	t.Helper()
 	purger := compose.NewCapturePurger(e.Pool,
 		compose.NewRetentionServiceFor(compose.InstallationDB(e.Pool), nil, slog.Default()))
-	n, err := purger.SweepPersonalMail(principal.WithWorkspaceID(context.Background(), e.WS),
+	n, err := purger.SweepPersonalMail(context.Background(),
 		capturemod.DefaultPersonalPurgeWindows())
 	if err != nil {
 		t.Fatalf("sweeping personal mail: %v", err)

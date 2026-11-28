@@ -58,12 +58,12 @@ func publicRecordPreviews(s Server, svc *identity.Service) func(http.Handler) ht
 				s.writeRecordPreview(w, r, fallback, ratelimit.Refused(limit))
 				return
 			}
-			workspace, err := svc.InstallationWorkspace(r.Context())
+			_, err = svc.InstallationWorkspace(r.Context())
 			if err != nil {
 				s.writeRecordPreview(w, r, fallback, err)
 				return
 			}
-			ctx := principal.WithWorkspaceID(r.Context(), workspace.UUID)
+			ctx := r.Context()
 			ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:public_record_preview"})
 			masked, err := svc.MaskedByAnyRole(ctx, fieldmask.Deal)
 			if err != nil {

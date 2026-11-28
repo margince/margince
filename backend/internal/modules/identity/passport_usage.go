@@ -10,15 +10,13 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // PassportUsageReader reads the running window of each subject
 // (agentvolume.SubjectOf) in one round trip, each against the allowance its
 // human's roles give. compose wires the meter.
 type PassportUsageReader interface {
-	Usage(ctx context.Context, ws ids.UUID, subjects []agentvolume.Holder) (map[string]agentvolume.Usage, error)
+	Usage(ctx context.Context, subjects []agentvolume.Holder) (map[string]agentvolume.Usage, error)
 	AllowanceFor(ctx context.Context, roles []string) agentvolume.Allowance
 	ResetsAt(ctx context.Context) time.Time
 }
@@ -34,8 +32,7 @@ func (h Handlers) WithPassportUsage(r PassportUsageReader) Handlers {
 // allowance roles give: the rows are the caller's own passports. A failure is
 // logged and answers nothing: the list is still worth showing without it.
 func (h Handlers) liveUsage(ctx context.Context, rows []PassportRow, roles []string, now time.Time) map[string]agentvolume.Usage {
-	ws, bound := principal.WorkspaceID(ctx)
-	if h.passportUsage == nil || !bound {
+	if h.passportUsage == nil {
 		return nil
 	}
 	subjects := make([]agentvolume.Holder, 0, len(rows))
@@ -44,7 +41,7 @@ func (h Handlers) liveUsage(ctx context.Context, rows []PassportRow, roles []str
 			subjects = append(subjects, agentvolume.Holder{Subject: p.UsageSubject(), Roles: roles})
 		}
 	}
-	usage, err := h.passportUsage.Usage(ctx, ws, subjects)
+	usage, err := h.passportUsage.Usage(ctx, subjects)
 	if err != nil {
 		slog.WarnContext(ctx, "the passport list is answered without usage; the agent counters could not be read", "err", err)
 		return nil

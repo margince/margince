@@ -63,7 +63,7 @@ func revalidate(t *testing.T, e *loadEnv, item SettlementRepairItem, asOf time.T
 }
 
 func asLegacyWriter(e *loadEnv) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:legacy_settlement",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},

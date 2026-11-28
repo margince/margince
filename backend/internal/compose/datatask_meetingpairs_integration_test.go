@@ -123,7 +123,7 @@ func TestAHumanOutcomeCommittedWhileTheFoldWaitsBlocksIt(t *testing.T) {
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	_, copyID := foldedPair(t, e)
 
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	wsCtx := context.Background()
 	human, err := e.Pool.Begin(wsCtx)
 	if err != nil {
 		t.Fatal(err)

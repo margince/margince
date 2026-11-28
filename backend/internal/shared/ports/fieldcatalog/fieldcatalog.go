@@ -97,12 +97,11 @@ func (c Column) AppliesToPipeline(pipeline ids.UUID) bool {
 	return len(c.PipelineIDs) == 0 || slices.Contains(c.PipelineIDs, pipeline)
 }
 
-// Reader answers the active custom-field columns for one core object,
-// scoped to the workspace bound to ctx. Implemented by
-// modules/customfields' Service; a record store calls it once per
-// operation (Get/List/Create/Update) to learn which cf_* columns
-// participate, then drives platform/database/storekit's customcolumns.go
-// helpers with the result — the store itself never touches the
+// Reader answers the active custom-field columns for one core object in the
+// installation's workspace. Implemented by modules/customfields' Service. A
+// record store calls it once per operation (Get/List/Create/Update) to learn
+// which cf_* columns participate, then drives platform/database/storekit's
+// customcolumns.go helpers with the result. The store never touches the
 // custom_field catalog table.
 type Reader interface {
 	ActiveColumns(ctx context.Context, object string) ([]Column, error)

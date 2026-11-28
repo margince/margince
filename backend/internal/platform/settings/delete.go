@@ -64,7 +64,11 @@ func (s *Store) DeleteRawTx(ctx context.Context, tx pgx.Tx, key string) (bool, e
 	}
 	database.Forget(tx, ValueMemoKey(key))
 	forgetCachedWith(tx, key)
-	auditID, err := storekit.Audit(ctx, tx, def.AuditVerb(), def.Object(), storekit.MustWorkspace(ctx),
+	installation, err := storekit.Workspace(ctx, tx)
+	if err != nil {
+		return false, fmt.Errorf("settings: auditing the removal of %s: %w", key, err)
+	}
+	auditID, err := storekit.Audit(ctx, tx, def.AuditVerb(), def.Object(), installation,
 		map[string]any{key: def.AuditImage(before)},
 		map[string]any{key: def.AuditImage(after)})
 	if err != nil {

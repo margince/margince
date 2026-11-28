@@ -63,7 +63,7 @@ func (e *SearchEnv) dealAndCompanyReader(user ids.UUID) context.Context {
 			RowScope: principal.RowScopeTeam,
 		},
 	}
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), actor)
+	return principal.WithActor(context.Background(), actor)
 }
 
 func TestAFilteredExportWithholdsACompanyTheExporterCannotOpen(t *testing.T) {

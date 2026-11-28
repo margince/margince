@@ -193,7 +193,7 @@ func TestAColleagueSeesWhatMarginceChangedButNotWhy(t *testing.T) {
 		}
 	}
 
-	agent := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), v.WS), ids.NewV7()),
+	agent := principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalAgent, ID: "agent:change-report", SeatType: principal.SeatFull,
 			OnBehalfOf: v.Rep2, UserID: v.Rep2, TeamIDs: []ids.UUID{v.Team1},
@@ -279,7 +279,7 @@ func TestAnOwnerWhoseAmountIsMaskedSeesTheChangeButNoAmount(t *testing.T) {
 func TestAnAgentCannotUndoMarginceChangesInBulk(t *testing.T) {
 	v := setupDealVerdict(t)
 	v.run(t)
-	agent := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), v.WS), ids.NewV7()),
+	agent := principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()),
 		principal.Principal{
 			Type: principal.PrincipalAgent, ID: "agent:bulk-undo", SeatType: principal.SeatFull,
 			OnBehalfOf: v.Rep1, UserID: v.Rep1, TeamIDs: []ids.UUID{v.Team1},

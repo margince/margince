@@ -88,7 +88,7 @@ func TestAnOwnDomainRemovedMidRunNoLongerDropsTheNextMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, _, err := registry.RunBackfillStep(principal.WithWorkspaceID(context.Background(), e.WS), run.ID); err != nil {
+	if _, _, _, err := registry.RunBackfillStep(context.Background(), run.ID); err != nil {
 		t.Fatal(err)
 	}
 	stored := func(messageID string) bool {

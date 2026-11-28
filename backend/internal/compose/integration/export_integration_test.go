@@ -36,7 +36,7 @@ func exportReadGrants() map[string]principal.ObjectGrant {
 }
 
 func (e *SearchEnv) exportAdmin() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{Objects: exportReadGrants(), RowScope: principal.RowScopeAll},
@@ -44,7 +44,7 @@ func (e *SearchEnv) exportAdmin() context.Context {
 }
 
 func (e *SearchEnv) exportRep(user, team ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		TeamIDs:     []ids.UUID{team},
@@ -282,7 +282,7 @@ func TestExportOmitsObjectsWithoutReadGrant(t *testing.T) {
 	e := SetupSearch(t)
 	e.seedExportFixture(t)
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	contactOnly := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{

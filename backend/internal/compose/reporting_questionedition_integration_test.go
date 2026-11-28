@@ -196,7 +196,7 @@ func TestALegalHoldBehindAKeptAnswerHoldsItsEdition(t *testing.T) {
 		t.Fatal(err)
 	}
 	retention := NewRetentionServiceFor(InstallationDB(q.e.Pool), nil, slog.New(slog.DiscardHandler))
-	system := principal.SystemActing(principal.WithWorkspaceID(ctx, q.e.WS), "system:privacy-retention")
+	system := principal.SystemActing(ctx, "system:privacy-retention")
 	if err := retention.EvaluateInstallation(system); err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +253,7 @@ func privacyController(e *forecastEnv) context.Context {
 	for _, object := range []string{"contact", "company", "deal", "activity", "lead", "project", "report_edition", "report_definition"} {
 		grants[object] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:controller", UserID: e.Rep1, SeatType: principal.SeatFull, Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: grants}})
 }

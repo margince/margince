@@ -57,7 +57,7 @@ func (s *InquiryService) Preview(ctx context.Context, ex Executors, ev workflow.
 		}
 		return InquiryPreview{SourceID: ev.Entity.ID, SourceVersion: int64(*receipt.Activity.Version), Target: receipt.Target, ExistingTask: &task}, nil
 	}
-	admit, err := ownerContext(ctx, ex.Authority, ev.WorkspaceID, ev.OwnerID)
+	admit, err := ownerContext(ctx, ex.Authority, ev.OwnerID)
 	if err != nil {
 		return InquiryPreview{}, err
 	}

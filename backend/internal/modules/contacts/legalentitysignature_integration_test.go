@@ -85,7 +85,7 @@ func setupSigning(t *testing.T, withWorkspaceTemplate bool) signingEnv {
 
 // as is the sender's own session: a send only ever asks for its own signature.
 func (e signingEnv) as(user ids.UUID) context.Context {
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{RoleKeys: []string{"rep"}, Objects: entityAdmin, RowScope: principal.RowScopeAll},

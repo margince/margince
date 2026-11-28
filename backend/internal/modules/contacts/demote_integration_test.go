@@ -260,7 +260,7 @@ func TestPromotePreviewNamesTheOutcomeWithoutWriting(t *testing.T) {
 // withGrants answers a context for the same user with exactly the object
 // grants given — how a role narrower than admin reaches the store.
 func (e *promoteConsentEnv) withGrants(objects map[string]principal.ObjectGrant) context.Context {
-	opCtx := principal.WithWorkspaceID(context.Background(), e.ws)
+	opCtx := context.Background()
 	opCtx = principal.WithCorrelationID(opCtx, ids.NewV7())
 	return principal.WithActor(opCtx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
@@ -276,7 +276,7 @@ func (e *promoteConsentEnv) withGrants(objects map[string]principal.ObjectGrant)
 // Every lead this suite seeds carries no owner, so none of them is theirs —
 // they hold the grants to demote a lead and the scope to reach none of these.
 func (e *promoteConsentEnv) asStranger() context.Context {
-	opCtx := principal.WithWorkspaceID(context.Background(), e.ws)
+	opCtx := context.Background()
 	opCtx = principal.WithCorrelationID(opCtx, ids.NewV7())
 	other := ids.NewV7()
 	return principal.WithActor(opCtx, principal.Principal{

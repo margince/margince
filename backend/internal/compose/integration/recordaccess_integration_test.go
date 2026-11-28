@@ -156,8 +156,8 @@ func (w *accessWorld) setTeam(t *testing.T, team, user ids.UUID, on bool) {
 // and seat, read in one snapshot.
 func (w *accessWorld) as(t *testing.T, user ids.UUID) context.Context {
 	t.Helper()
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), w.e.WS), ids.NewV7())
-	p, err := authz.MemberPrincipal(ctx, w.directory, w.e.WS, user)
+	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
+	p, err := authz.MemberPrincipal(ctx, w.directory, user)
 	if err != nil {
 		t.Fatalf("resolving member %s: %v", user, err)
 	}

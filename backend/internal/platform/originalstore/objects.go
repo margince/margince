@@ -26,8 +26,7 @@ func Read(ctx context.Context, ref Reference) (payload []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	ctx, err = s.workspaceContext(ctx)
-	if err != nil {
+	if err := s.requireInstallation(ctx); err != nil {
 		return nil, err
 	}
 	if err := s.validate(ctx, ref); err != nil {

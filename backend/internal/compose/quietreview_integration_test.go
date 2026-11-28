@@ -357,8 +357,8 @@ func TestQuietReviewWithoutActivityReadReadsNoCorrespondence(t *testing.T) {
 		   "contact":{"read":true},"company":{"read":true}},"row_scope":"all"}`)
 	id := e.seedSweepDeal(t, "No activity grant", e.late, new(95), new(-30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), closeDateSweepActor)
-	authority, _, err := identity.NewService(e.Pool).EffectiveAuthority(ctx, e.WS, e.Rep1)
+	ctx := principal.SystemActing(context.Background(), closeDateSweepActor)
+	authority, _, err := identity.NewService(e.Pool).EffectiveAuthority(ctx, e.Rep1)
 	if err != nil || authority.Permissions.Objects["activity"].Read {
 		t.Fatalf("the restricted owner still reads activities: authority %+v, error %v", authority.Permissions, err)
 	}

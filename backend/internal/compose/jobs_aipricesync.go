@@ -44,7 +44,7 @@ func (w *aiPriceSyncSweepWorker) Work(ctx context.Context, _ *river.Job[AIPriceS
 // syncWorkspace is one workspace's turn; its failure is logged here and joined
 // by runInstallationPass, so it does not stop the others.
 func (w *aiPriceSyncSweepWorker) syncWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), aiPriceSyncActor)
+	wsCtx := principal.SystemActing(ctx, aiPriceSyncActor)
 	if err := w.sync.RunScheduled(wsCtx); err != nil {
 		w.log.WarnContext(wsCtx, "ai price sync: this workspace's pass failed", "workspace", workspace, "error", err)
 		return jobs.FaultContext(ctx, err)

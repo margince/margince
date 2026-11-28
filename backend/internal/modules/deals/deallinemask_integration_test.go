@@ -23,7 +23,7 @@ import (
 
 // maskedSeller may change the deal but not read its amount.
 func (e *reviewEnv) maskedSeller() context.Context {
-	return principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
+	return principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"sales"}, RowScope: principal.RowScopeOwn,

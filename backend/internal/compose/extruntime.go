@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -150,12 +149,10 @@ type callRuntime struct {
 	via     string
 	deps    extensionRuntimeBinding
 
-	// callCtx is the context the INVOCATION arrived on, held for exactly one
-	// value: the workspace. Every capability re-derives the tenant from here
-	// rather than from the context the handler passes in, which is what makes
-	// "a handler cannot widen its own scope" a property of construction
-	// instead of a property of principal.WithWorkspaceID happening to be
-	// unreachable from an extension module. See scoped.
+	// callCtx is the context the invocation arrived on. Every capability takes
+	// the actor, correlation id and causation from here rather than from the
+	// context the handler passes in. That makes "a handler cannot change who
+	// is acting" a property of construction. See scoped.
 	//
 	// Held in a field rather than threaded, because the capability methods
 	// are the published Runtime's and cannot grow a parameter for it.
@@ -242,45 +239,31 @@ func (r *callRuntime) usable() error {
 	return nil
 }
 
-// scoped is the gate plus the pin: it checks the lifetime and returns ctx
-// re-bound to what THE INVOCATION arrived under — its workspace, its actor and
-// its correlation id.
+// scoped is the gate plus the pin. It checks the lifetime and returns ctx
+// re-bound to what the invocation arrived under: its actor and its correlation
+// id.
 //
 // Rebinding rather than trusting the incoming ctx is the point. Everything a
-// handler passes down — cancellation, deadline, request values — is kept,
-// because a handler shortening its own deadline is legitimate; the one thing
-// it cannot carry is a different tenant. Without this the workspace would be
-// whatever the handler supplied, and the design's claim that a unit cannot
-// widen its own scope would rest on principal.WithWorkspaceID being
-// unreachable from an extension module rather than on anything structural.
+// handler passes down is kept, such as cancellation, deadline and request
+// values, because a handler may shorten its own deadline. It cannot carry a
+// different actor. The tenant needs no pin, because the database handle every
+// capability runs through names the installation's one company.
 func (r *callRuntime) scoped(ctx context.Context) (context.Context, error) {
 	if err := r.usable(); err != nil {
 		return nil, err
 	}
-	ws, ok := principal.WorkspaceID(r.callCtx)
-	if !ok {
-		// Raised against the invocation rather than the handler's context.
-		// An unpinned invocation is a core wiring fault, and no ctx a handler
-		// builds may supply the missing tenant.
-		return nil, database.ErrNoWorkspace
-	}
-	ctx = principal.WithWorkspaceID(ctx, ws)
-
-	// The tenant is not the only thing the invocation knows and the handler's
-	// context may not. A core write resolves its actor and its correlation id
-	// from the context as well — Audit refuses without an actor, Emit without a
-	// correlation — so a handler that opened its transaction on
-	// context.Background() would reach the write path with neither, and the
-	// write would fail on plumbing rather than on anything the unit did. They
-	// travel the same way as the workspace and for the same reason: taken from
-	// the INVOCATION, so what a handler passes can shorten a deadline but
-	// cannot change who is acting.
+	// A core write resolves its actor and its correlation id from the context.
+	// Audit refuses without an actor and Emit without a correlation. A handler
+	// that opened its transaction on context.Background() would reach the write
+	// path with neither, and the write would fail on plumbing. Both are taken
+	// from the invocation, so a handler can shorten a deadline but cannot change
+	// who is acting.
 	//
-	// A value the invocation does not carry is left alone rather than
-	// defaulted. There is nothing to forge past — a unit cannot reach
-	// principal.With… at all, the package being internal to the backend module
-	// — so an unbound actor here means the invocation arrived without one, and
-	// inventing a stand-in would put a fictional identity on an audit row.
+	// A value the invocation does not carry is left alone rather than defaulted.
+	// A unit cannot reach principal.With at all, because the package is internal
+	// to the backend module. An unbound actor here means the invocation arrived
+	// without one, and inventing a stand-in would put a fictional identity on an
+	// audit row.
 	if actor, bound := principal.Actor(r.callCtx); bound {
 		ctx = principal.WithActor(ctx, actor)
 	}

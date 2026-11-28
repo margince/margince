@@ -170,7 +170,7 @@ func TestASoleDecidersMutedProposalRemainsReachableAndExpiresNormally(t *testing
 	e := setupStaging(t)
 	target := newDealSeeder(t, e).deal(t)
 	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact)
-	worker := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()), principal.Principal{Type: principal.PrincipalSystem, ID: "system:follow-up", OnBehalfOf: e.rep})
+	worker := principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()), principal.Principal{Type: principal.PrincipalSystem, ID: "system:follow-up", OnBehalfOf: e.rep})
 	id, err := e.svc.Stage(worker, StageInput{Kind: kindDealFollowUp, ProposedChange: []byte(`{"subject":"Call the buyer"}`), DiffHash: "personal-follow-up", TargetType: tableDeal, TargetID: target})
 	if err != nil {
 		t.Fatal(err)

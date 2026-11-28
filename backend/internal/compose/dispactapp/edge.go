@@ -112,11 +112,11 @@ func (e *Edge) Or(seats Seats, next func(*http.Request) (context.Context, error)
 		if e == nil || !IsCallToken(bearer) {
 			return next(r)
 		}
-		wsID, err := seats.InstallationWorkspace(r.Context())
+		_, err := seats.InstallationWorkspace(r.Context())
 		if err != nil {
 			return nil, fmt.Errorf("dispactapp: resolving the installation: %w: %w", err, agents.ErrAuthUnavailable)
 		}
-		ctx, err := e.Authenticate(principal.WithWorkspaceID(r.Context(), wsID.UUID), seats, bearer)
+		ctx, err := e.Authenticate(r.Context(), seats, bearer)
 		if errors.Is(err, ErrRejected) {
 			// The caller only learns 401; the log names the check that failed.
 			e.log.InfoContext(r.Context(), "dispact app: a call token was refused", "err", err)

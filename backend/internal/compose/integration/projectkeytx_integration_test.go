@@ -78,7 +78,7 @@ func TestTheSubjectKeyRungNeedsNoSecondConnection(t *testing.T) {
 	// A deadline rather than waiting for the suite's: a deadlock here is the
 	// FINDING, and a test that reports it as "the package timed out" sends the
 	// reader to the wrong place.
-	reader := principal.WithActor(principal.WithWorkspaceID(context.Background(), ws.UUID),
+	reader := principal.WithActor(context.Background(),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:probe", UserID: ids.NewV7(),
 			Permissions: principal.Permissions{

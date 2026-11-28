@@ -24,7 +24,7 @@ import (
 // withCompanyGrants is the env's actor with the company and edge grants a link
 // and the employment its promotion carries need.
 func (e *promoteConsentEnv) withCompanyGrants() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	all := principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	return principal.WithActor(ctx, principal.Principal{

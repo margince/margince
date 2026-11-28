@@ -26,7 +26,7 @@ import (
 )
 
 func connectorCtx(e *integration.Env) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:test",
@@ -108,7 +108,7 @@ func TestSeatDerivedBudget(t *testing.T) {
 	e := integration.Setup(t)
 	// The harness seeds four full-seat humans: three reps and the admin seat.
 	const seats = 4
-	budget, err := NewSeatBudget(e.Pool).MonthlyTokenBudget(context.Background(), ids.From[ids.WorkspaceKind](e.WS))
+	budget, err := NewSeatBudget(e.Pool).MonthlyTokenBudget(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestSeatDerivedBudget(t *testing.T) {
 		`UPDATE app_user SET status = 'deactivated' WHERE seat_type = 'full'`); err != nil {
 		t.Fatalf("deactivating the full seats: %v", err)
 	}
-	budget, err = NewSeatBudget(e.Pool).MonthlyTokenBudget(context.Background(), ids.From[ids.WorkspaceKind](e.WS))
+	budget, err = NewSeatBudget(e.Pool).MonthlyTokenBudget(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

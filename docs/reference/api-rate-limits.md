@@ -65,7 +65,7 @@ Regenerate with `cd backend && go test ./gates -run TestRateLimitReferenceMatche
 | `mcp/revoke` | 60 | 1m0s | [internal/compose/mcpedge.go:268](../../backend/internal/compose/mcpedge.go) |
 | `mcp/stream-open` | 30 | 1m0s | [internal/compose/mcpedge.go:265](../../backend/internal/compose/mcpedge.go) |
 | `mcp/token` | 60 | 1m0s | [internal/compose/mcpedge.go:266](../../backend/internal/compose/mcpedge.go) |
-| `name` | configured: `ratelimit.Escalation{PerMinute: perMinute, BlockAfter: limits.BlockAfter, Cooldown: limits.Cooldown, MaxCooldown: limits.MaxCooldown, MinSenders: minSenders}` | clock minute; configured cooldown | [internal/modules/webforms/throttle.go:52](../../backend/internal/modules/webforms/throttle.go) |
+| `name` | configured: `ratelimit.Escalation{PerMinute: perMinute, BlockAfter: limits.BlockAfter, Cooldown: limits.Cooldown, MaxCooldown: limits.MaxCooldown, MinSenders: minSenders}` | clock minute; configured cooldown | [internal/modules/webforms/throttle.go:51](../../backend/internal/modules/webforms/throttle.go) |
 | `public-booking/per-ip` | 60 | 1m0s | [internal/compose/publicbooking.go:54](../../backend/internal/compose/publicbooking.go) |
 | `public-booking/per-slug` | 20 | 1m0s | [internal/compose/publicbooking.go:55](../../backend/internal/compose/publicbooking.go) |
 | `public-confirm/per-ip` | 60 | 1m0s | [internal/compose/publicconfirm.go:44](../../backend/internal/compose/publicconfirm.go) |
@@ -75,10 +75,10 @@ Regenerate with `cd backend && go test ./gates -run TestRateLimitReferenceMatche
 | `public-deal-room/link-shared` | 10 | 1m0s | [internal/compose/publicdealroom.go:68](../../backend/internal/compose/publicdealroom.go) |
 | `public-deal-room/per-ip` | 60 | 1m0s | [internal/compose/publicdealroom.go:61](../../backend/internal/compose/publicdealroom.go) |
 | `public-deal-room/per-session-write` | 20 | 1m0s | [internal/compose/publicdealroom.go:69](../../backend/internal/compose/publicdealroom.go) |
-| `public-forms/unknown-keys` | configured: `limits.UnknownKeys` | 1m0s | [internal/modules/webforms/throttle.go:63](../../backend/internal/modules/webforms/throttle.go) |
+| `public-forms/unknown-keys` | configured: `limits.UnknownKeys` | 1m0s | [internal/modules/webforms/throttle.go:62](../../backend/internal/modules/webforms/throttle.go) |
 | `public-instrument/per-ip` | 600 | 1m0s | [internal/compose/publicinstrument.go:27](../../backend/internal/compose/publicinstrument.go) |
-| `public-preferences/per-ip` | 60 | 1m0s | [internal/compose/publicpreferences.go:42](../../backend/internal/compose/publicpreferences.go) |
-| `public-preferences/per-token` | 20 | 1m0s | [internal/compose/publicpreferences.go:43](../../backend/internal/compose/publicpreferences.go) |
+| `public-preferences/per-ip` | 60 | 1m0s | [internal/compose/publicpreferences.go:41](../../backend/internal/compose/publicpreferences.go) |
+| `public-preferences/per-token` | 20 | 1m0s | [internal/compose/publicpreferences.go:42](../../backend/internal/compose/publicpreferences.go) |
 | `record-previews/per-ip` | 60 | 1m0s | [internal/compose/publicrecordpreview.go:32](../../backend/internal/compose/publicrecordpreview.go) |
 | `setup/claim-per-ip` | 20 | 1m0s | [internal/compose/handlers_setup.go:47](../../backend/internal/compose/handlers_setup.go) |
 

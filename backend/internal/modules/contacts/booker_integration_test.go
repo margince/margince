@@ -22,7 +22,7 @@ import (
 
 // asPublicBooking is the principal the public booking door runs under.
 func (e *dedupeEnv) asPublicBooking() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:public_booking"})
 }

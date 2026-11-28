@@ -118,8 +118,9 @@ func TestASettingThatIsNotDeclaredCacheableIsAlwaysReadFromTheDatabase(t *testin
 	}
 }
 
-// A context with no workspace is refused whether the value is cached or not.
-func TestACachedSettingReadWithoutAWorkspaceIsRefusedLikeAMiss(t *testing.T) {
+// An installation with no live company refuses a setting read whether the value
+// is cached or not.
+func TestACachedSettingReadWithNoLiveCompanyIsRefusedLikeAMiss(t *testing.T) {
 	e := Setup(t)
 	clock := &cacheClock{now: time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)}
 	settings.EnableCacheAt(e.Pool, settings.CacheLifetime, clock.Now)
@@ -132,19 +133,17 @@ func TestACachedSettingReadWithoutAWorkspaceIsRefusedLikeAMiss(t *testing.T) {
 	if err := settings.Set(ctx, store, cachedProbe, "x"); err != nil {
 		t.Fatal(err)
 	}
-	clock.advance(settings.CacheLifetime)
-	bare := principal.WithActor(context.Background(), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + e.AdminUser.String(), UserID: e.AdminUser, Permissions: granted,
-	})
-	_, miss := settings.Get(bare, store, cachedProbe)
-	if !errors.Is(miss, database.ErrNoWorkspace) {
-		t.Fatalf("a miss without a workspace = %v, want ErrNoWorkspace", miss)
-	}
 	if _, err := settings.Get(ctx, store, cachedProbe); err != nil {
 		t.Fatal(err)
 	}
-	if _, hit := settings.Get(bare, store, cachedProbe); !errors.Is(hit, database.ErrNoWorkspace) {
-		t.Fatalf("a hit without a workspace = %v, want ErrNoWorkspace", hit)
+	e.WsExec(t, `UPDATE workspace SET archived_at = now()`)
+	database.ForgetInstallationProofs()
+	if _, hit := settings.Get(ctx, store, cachedProbe); !errors.Is(hit, database.ErrNotBootstrapped) {
+		t.Fatalf("a hit with no live company = %v, want ErrNotBootstrapped", hit)
+	}
+	clock.advance(settings.CacheLifetime)
+	if _, miss := settings.Get(ctx, store, cachedProbe); !errors.Is(miss, database.ErrNotBootstrapped) {
+		t.Fatalf("a miss with no live company = %v, want ErrNotBootstrapped", miss)
 	}
 }
 

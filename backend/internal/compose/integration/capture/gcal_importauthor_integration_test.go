@@ -164,7 +164,7 @@ func TestTheImportedCopiesTaskFoldsOnlyTheAuthorsCalendarCopy(t *testing.T) {
 				}
 			}
 			task := activities.ImportedMeetingCopiesDataTask(activities.NewStore(e.DB()), identity.MemberPrincipalTx)
-			ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:datatask-test")
+			ctx := principal.SystemActing(context.Background(), "system:datatask-test")
 
 			for range 2 {
 				e.RunDataTask(ctx, t, task)
@@ -272,7 +272,7 @@ func importTitledMeeting(
 }
 
 func declaredImporterCtx(e *integration.SearchEnv, seat ids.UUID, scope principal.RowScope) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, OnBehalfOf: seat, SeatType: principal.SeatFull,

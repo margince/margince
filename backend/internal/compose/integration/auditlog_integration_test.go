@@ -57,7 +57,7 @@ func TestAuditLogReadRequiresAdminHuman(t *testing.T) {
 
 	// An agent on no passport is refused even with unbounded grants: automatic
 	// work has no user behind it, and the store is what says so.
-	agentCtx := principal.WithWorkspaceID(t.Context(), e.WS)
+	agentCtx := t.Context()
 	agentCtx = principal.WithCorrelationID(agentCtx, ids.NewV7())
 	agentCtx = principal.WithActor(agentCtx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(),

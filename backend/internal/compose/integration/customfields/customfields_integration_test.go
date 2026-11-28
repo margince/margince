@@ -53,7 +53,7 @@ func columnOnTable(t *testing.T, owner *pgx.Conn, table, column string) bool {
 // wsExecErr runs one statement workspace-bound and returns its error —
 // for assertions that a write is REFUSED by the database (WsExec fatals).
 func wsExecErr(e *integration.Env, ws ids.UUID, sql string, args ...any) error {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	return database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, sql, args...)
 		return err

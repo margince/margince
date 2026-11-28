@@ -41,7 +41,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -281,7 +280,7 @@ func TestTestMailboxFullLoop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parsing the connection id: %v", err)
 	}
-	syncCtx := principal.WithWorkspaceID(context.Background(), p.workspaceID(t))
+	syncCtx := context.Background()
 	if err := p.captureRegistry().SyncOnce(syncCtx, connID); err != nil {
 		t.Fatalf("SyncOnce: %v", err)
 	}

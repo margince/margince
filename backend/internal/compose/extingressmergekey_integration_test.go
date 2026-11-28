@@ -15,7 +15,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -139,7 +138,7 @@ func admitPendingSender(t *testing.T, e *ingressEnv, email string) {
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("admitting %s by verdict: %v", email, err)
 	}
 }

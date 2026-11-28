@@ -122,7 +122,10 @@ func (s *OwnerIdentityStore) RestoreRemoval(ctx context.Context, id ids.UUID) (O
 		if err := s.addressClaimedTx(ctx, tx, out); err != nil {
 			return err
 		}
-		ws := storekit.MustWorkspace(ctx)
+		ws, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
 		_, err = storekit.AuditEvent(storekit.WithReversal(ctx, captureSettingsObject, ws, withdrawn.auditID), tx,
 			"update", captureSettingsObject, ws, ownerIdentityAuditImage(out))
 		return err

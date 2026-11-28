@@ -5,7 +5,6 @@ package capture
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -17,13 +16,9 @@ import (
 // that human's live authority. Capture syncs and the deal repair both build
 // it here, so a repair decides under the scope the capture ran with.
 func connectorActing(ctx context.Context, authority authz.Resolver, name string, grantedBy ids.UserID) (context.Context, error) {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errors.New("capture: sync outside workspace context")
-	}
 	// The authz resolver and the principal seam are untyped (ids.UUID);
 	// widen the typed granting-human id at each of those edges.
-	member, err := authz.MemberPrincipal(ctx, authority, wsID, grantedBy.UUID)
+	member, err := authz.MemberPrincipal(ctx, authority, grantedBy.UUID)
 	if err != nil {
 		return nil, fmt.Errorf("capture: granting human no longer resolves — the grant dies with them: %w", err)
 	}

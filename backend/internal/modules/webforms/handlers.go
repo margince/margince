@@ -32,6 +32,11 @@ func (h Handlers) WithThrottle(t *Throttle) Handlers {
 	return h
 }
 
+// Workspace names the installation's company, which the intake's ceilings count under.
+func (h Handlers) Workspace(ctx context.Context) (ids.WorkspaceID, error) {
+	return h.store.db.Workspace(ctx)
+}
+
 // Throttle is the intake's brake, which the public edge asks before any work.
 func (h Handlers) Throttle() *Throttle { return h.throttle }
 
@@ -48,7 +53,11 @@ func (h Handlers) wireWithIntake(ctx context.Context, f Form) crmcontracts.WebFo
 	if h.throttle == nil {
 		return w
 	}
-	state := h.throttle.IntakeState(ctx, f.Key)
+	workspace := ""
+	if ws, err := h.Workspace(ctx); err == nil {
+		workspace = ws.String()
+	}
+	state := h.throttle.IntakeState(workspace, f.Key)
 	if state.State == "" {
 		return w
 	}

@@ -44,11 +44,11 @@ func inviteAndLogin(t *testing.T, e *revocationEnv, email, name string) Identity
 	if err != nil {
 		t.Fatalf("inviting %s: %v", email, err)
 	}
-	redeemCtx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws.UUID), ids.NewV7())
+	redeemCtx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 	if err := e.svc.RedeemPasswordReset(redeemCtx, rawToken, seatNamePassword); err != nil {
 		t.Fatalf("redeeming %s's invite token: %v", email, err)
 	}
-	identity, _, err := e.svc.Login(principal.WithWorkspaceID(context.Background(), e.ws.UUID), email, seatNamePassword, noDevice)
+	identity, _, err := e.svc.Login(context.Background(), email, seatNamePassword, noDevice)
 	if err != nil {
 		t.Fatalf("%s login: %v", email, err)
 	}
@@ -250,7 +250,7 @@ func TestNamingRefusesADealRoomBuyer(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-names-buyer")
 
 	buyerCtx := principal.WithActor(
-		principal.WithWorkspaceID(context.Background(), e.ws.UUID),
+		context.Background(),
 		principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:room-guest"})
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/users/names", nil).WithContext(buyerCtx)

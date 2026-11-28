@@ -85,7 +85,7 @@ func (w *suppressionJournalWorker) Work(ctx context.Context, _ *river.Job[Suppre
 func (w *suppressionJournalWorker) exportWorkspace(ctx context.Context, workspace ids.UUID) error {
 	// The system principal, bound here rather than inherited: a queue carries
 	// no actor, and ExportSuppressions is gated on the contact delete grant.
-	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), suppressionJournalActor)
+	ctx = principal.SystemActing(ctx, suppressionJournalActor)
 	eraser := privacy.NewEraser(database.NewAcrossWorkspaces(w.pool)).WithCountry(identity.CountryForDecision).WithJournalStore(w.blob).WithExtensions(ExtensionData())
 	written, err := eraser.ExportSuppressions(ctx)
 	if err != nil {

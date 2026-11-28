@@ -194,7 +194,7 @@ func TestTheSwitchRouteTakesAnAdminAndRefusesEveryoneElse(t *testing.T) {
 	if rec := putSwitch(e.As(e.Rep1, nil, RepPerms), h); rec.Code != http.StatusForbidden {
 		t.Errorf("a rep switching it off got %d, want 403", rec.Code)
 	}
-	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+	agent := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", UserID: e.AdminUser, OnBehalfOf: e.AdminUser,
 		PassportID: ids.NewV7(),
 		Permissions: principal.Permissions{

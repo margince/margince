@@ -221,7 +221,7 @@ func TestMonthSpendWithNoPricedLineCarriesNoFigure(t *testing.T) {
 func TestMonthSpendRefusesAReaderWithoutTheDiagnosticsGrant(t *testing.T) {
 	ledger := newSpendLedger(t, setupRateStore(t))
 	ledger.at(julyDay(20, 15))
-	seat := principal.WithActor(principal.WithWorkspaceID(context.Background(), ledger.ws), principal.Principal{
+	seat := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:spend-test",
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"fixture"},

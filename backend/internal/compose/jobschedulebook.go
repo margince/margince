@@ -176,7 +176,7 @@ func installationSettingReader(ctx context.Context, pool *pgxpool.Pool) (func(*c
 	if err != nil {
 		return nil, err
 	}
-	cfg, readCtx := StoredConfig(pool), bootCtx(ctx, ws, scheduleReadActor)
+	cfg, readCtx := StoredConfig(pool), bootCtx(ctx, scheduleReadActor)
 	return func(s *config.Setting[int]) (int, error) {
 		if ws.IsZero() {
 			return bootOrDefault(cfg, s)
@@ -403,7 +403,7 @@ func readInstallationZone(ctx context.Context, pool *pgxpool.Pool) (*time.Locati
 	if ws.IsZero() {
 		return time.UTC, nil
 	}
-	readCtx := bootCtx(ctx, ws, scheduleReadActor)
+	readCtx := bootCtx(ctx, scheduleReadActor)
 	var zone *time.Location
 	err = database.WithTx(readCtx, pool, func(tx pgx.Tx) (err error) {
 		zone, err = identity.ZoneAppliedTx(readCtx, tx)

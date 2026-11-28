@@ -22,7 +22,7 @@ var pastTheHorizon = requestInstant.AddDate(0, 0, 200)
 // asSeat binds one seat at all row scope with every activity grant, the shape a
 // rep taking or editing a request needs.
 func (e *loadEnv) asSeat(user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + user.String(), UserID: user,

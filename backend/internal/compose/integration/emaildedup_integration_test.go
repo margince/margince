@@ -53,7 +53,7 @@ func theSameMessage(messageID, from, to string) []byte {
 // connector name lives here and nowhere in the record: that is the whole point
 // — provenance is authenticated, identity is not adapter-specific.
 func connectorCtx(e *integration.Env, adapter string, owner ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:" + adapter,

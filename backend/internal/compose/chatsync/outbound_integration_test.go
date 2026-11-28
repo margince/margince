@@ -110,7 +110,7 @@ func TestNativeOutboundReadsTheCompleteBodyAndRechecksItBeforeDelivery(t *testin
 			e.flusher.Chats = nativeRootSessions{session: chatlinks.Session{Provider: "slack", ConnectionID: connection, TeamID: "T_NATIVE", Chat: bot}}
 			lane := &outboundModelBoundary{}
 			e.flusher.Lane = lane
-			ctx := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), chatLinksPrincipal), ids.NewV7())
+			ctx := principal.WithCorrelationID(principal.WithActor(context.Background(), chatLinksPrincipal), ids.NewV7())
 			source := strings.Repeat("The team reviewed operational details of the proposed pilot.\n", 130) + "FINAL CONDITION: Legal has not approved the amended agreement."
 			subject := "Pilot plan and approval condition"
 			store := activities.NewStore(e.db())

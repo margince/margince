@@ -33,17 +33,17 @@ func TestASeatSignsInWithEitherSpellingOfItsDomain(t *testing.T) {
 		t.Fatalf("inviting a rep at a unicode domain: %v", err)
 	}
 	if err := e.svc.RedeemPasswordReset(
-		principal.WithCorrelationID(principal.WithWorkspaceID(ctx, e.ws.UUID), ids.NewV7()),
+		principal.WithCorrelationID(ctx, ids.NewV7()),
 		rawToken, password,
 	); err != nil {
 		t.Fatalf("redeeming the invite: %v", err)
 	}
 
-	invited, _, err := e.svc.Login(principal.WithWorkspaceID(ctx, e.ws.UUID), unicodeAddress, password, "")
+	invited, _, err := e.svc.Login(ctx, unicodeAddress, password, "")
 	if err != nil {
 		t.Fatalf("signing in with the spelling the invite used: %v", err)
 	}
-	other, _, err := e.svc.Login(principal.WithWorkspaceID(ctx, e.ws.UUID), punycodeAddress, password, "")
+	other, _, err := e.svc.Login(ctx, punycodeAddress, password, "")
 	if err != nil {
 		t.Fatalf("signing in with the punycode spelling of the same domain: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestASeatWithNoFoldedDomainStillSignsIn(t *testing.T) {
 		t.Fatalf("inviting a rep at a unicode domain: %v", err)
 	}
 	if err := e.svc.RedeemPasswordReset(
-		principal.WithCorrelationID(principal.WithWorkspaceID(ctx, e.ws.UUID), ids.NewV7()),
+		principal.WithCorrelationID(ctx, ids.NewV7()),
 		rawToken, password,
 	); err != nil {
 		t.Fatalf("redeeming the invite: %v", err)
@@ -84,7 +84,7 @@ func TestASeatWithNoFoldedDomainStillSignsIn(t *testing.T) {
 		t.Fatalf("clearing the folded domain: %v", err)
 	}
 
-	if _, _, err := e.svc.Login(principal.WithWorkspaceID(ctx, e.ws.UUID), stored, password, ""); err != nil {
+	if _, _, err := e.svc.Login(ctx, stored, password, ""); err != nil {
 		t.Fatalf("signing in as a seat whose folded domain was never written: %v", err)
 	}
 }
@@ -111,7 +111,7 @@ func TestTheSeatSpelledAsTypedWinsAnAmbiguousLogin(t *testing.T) {
 			t.Fatalf("inviting %s: %v", seat.email, err)
 		}
 		if err := e.svc.RedeemPasswordReset(
-			principal.WithCorrelationID(principal.WithWorkspaceID(ctx, e.ws.UUID), ids.NewV7()),
+			principal.WithCorrelationID(ctx, ids.NewV7()),
 			rawToken, seat.password,
 		); err != nil {
 			t.Fatalf("redeeming the invite for %s: %v", seat.email, err)
@@ -124,7 +124,7 @@ func TestTheSeatSpelledAsTypedWinsAnAmbiguousLogin(t *testing.T) {
 		{unicodeAddress, unicodePassword, "Amb Unicode"},
 		{punycodeAddress, punycodePassword, "Amb Punycode"},
 	} {
-		id, _, err := e.svc.Login(principal.WithWorkspaceID(ctx, e.ws.UUID),
+		id, _, err := e.svc.Login(ctx,
 			attempt.address, attempt.password, "")
 		if err != nil {
 			t.Fatalf("signing in as %s with its own password: %v", attempt.address, err)
@@ -148,7 +148,7 @@ func TestADisabledSeatsLinkDoesNotSignInItsOtherSpelling(t *testing.T) {
 
 	resolve := func(subject string) (ids.UserID, error) {
 		var got ids.UserID
-		err := e.svc.db.Tx(principal.WithWorkspaceID(ctx, e.ws.UUID), func(tx pgx.Tx) error {
+		err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
 			var err error
 			got, _, err = e.svc.resolveFederatedUser(ctx, tx, "google", subject, punycodeAddress)
 			return err
@@ -191,7 +191,7 @@ func redeemedSeat(t *testing.T, e *revocationEnv, address string) ids.UserID {
 		t.Fatalf("inviting %s: %v", address, err)
 	}
 	if err := e.svc.RedeemPasswordReset(
-		principal.WithCorrelationID(principal.WithWorkspaceID(ctx, e.ws.UUID), ids.NewV7()),
+		principal.WithCorrelationID(ctx, ids.NewV7()),
 		rawToken, "a federated rep password!",
 	); err != nil {
 		t.Fatalf("redeeming %s: %v", address, err)

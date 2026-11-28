@@ -99,10 +99,9 @@ func TestGraphCallbackRejectsGmailState(t *testing.T) {
 	// is bound into the signed tuple.
 	h := graphWiredHandlers()
 	state := h.signer.sign(connectState{
-		Workspace: ids.MustParse("11111111-1111-1111-1111-111111111111"),
-		User:      ids.MustParse("22222222-2222-2222-2222-222222222222"),
-		Provider:  "gmail",
-		Nonce:     "n",
+		User:     ids.MustParse("22222222-2222-2222-2222-222222222222"),
+		Provider: "gmail",
+		Nonce:    "n",
 	}, time.Now().Add(time.Minute))
 	code := "the-code"
 	rec := httptest.NewRecorder()

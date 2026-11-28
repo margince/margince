@@ -30,7 +30,7 @@ func executorFixture(t *testing.T) (context.Context, *pgxpool.Pool, *Engine, *ti
 	if dsn == "" {
 		t.Fatal("MARGINCE_TEST_DSN is required; run make test-it")
 	}
-	ctx := principal.SystemActing(principal.WithWorkspaceID(t.Context(), ids.NewV7()), "system:datatask-test")
+	ctx := principal.SystemActing(t.Context(), "system:datatask-test")
 	conn, err := pgx.Connect(ctx, dsn)
 	if err != nil {
 		t.Fatal(err)

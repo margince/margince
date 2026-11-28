@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // acmeTeamSite is a two-page site whose /team page names two contacts: Anna
@@ -64,7 +63,7 @@ func runTeamDeepReadOn(t *testing.T, e *integration.Env, company ids.UUID, site 
 	t.Helper()
 	worker, svc := newDeepReadTestWorker(e, site, brain)
 	read, args := startDeepRead(t, e, company)
-	if err := worker.run(principal.WithWorkspaceID(context.Background(), e.WS), args); err != nil {
+	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
@@ -94,7 +93,7 @@ func stageSiteLeadFrom(
 	t.Helper()
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	var id ids.ApprovalID
-	ctx := withClaimedRequester(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), readID)
+	ctx := withClaimedRequester(context.Background(), "human:"+e.Rep1.String(), readID)
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		in, err := siteLeadStageInput(approvalSummaryCopyIn(ctx, tx), readID, company, seedURL, contact, bundleID)
 		if err != nil {

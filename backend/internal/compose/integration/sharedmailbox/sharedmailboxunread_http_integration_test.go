@@ -17,7 +17,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A shared mailbox has no owner to show a skipped span to. Its admins see it on
@@ -49,7 +48,7 @@ func TestASharedMailboxShowsItsUnreadSpanToItsAdmins(t *testing.T) {
 		t.Errorf("the span reads %s to %s, want %s to %s", got.From, got.To, from, to)
 	}
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	var categories capture.OperationalCategories
 	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error

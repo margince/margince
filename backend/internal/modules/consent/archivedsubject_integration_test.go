@@ -39,7 +39,7 @@ import (
 // ran unbounded would stay green with the withdrawal's probe deleted entirely.
 // Since the whole change IS a choice of probe, one arm has to be bounded.
 func boundedRepCtx(ws, user ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,

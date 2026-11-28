@@ -29,7 +29,6 @@ import (
 // memberContext binds a human with no object grants at all — the ordinary seat
 // reading their own capture activity.
 func memberContext(ctx context.Context, ws, member ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type:        principal.PrincipalHuman,
 		ID:          "human:" + member.String(),
@@ -42,7 +41,6 @@ func memberContext(ctx context.Context, ws, member ids.UUID) context.Context {
 // managerContext binds a human holding capture_trace read — the shared-channel
 // operator view.
 func managerContext(ctx context.Context, ws, member ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type:   principal.PrincipalHuman,
 		ID:     "human:" + member.String(),

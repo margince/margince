@@ -48,7 +48,7 @@ func (fx *autoFixture) listRule(t *testing.T, owner, list ids.UUID) ids.UUID {
 
 func (fx *autoFixture) pauser(notices *pauseNotices) (*RulePauser, context.Context) {
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), fx.ws), "system")
+	ctx := principal.SystemActing(context.Background(), "system")
 	return NewRulePauser(db, notices, nil), ctx
 }
 

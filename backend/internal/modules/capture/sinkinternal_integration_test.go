@@ -75,7 +75,6 @@ func bootstrapInternalMailWorkspace(t *testing.T, ownDomains ...string) (context
 // mailSinkContext binds the per-user mail connector principal the sync loop
 // mints.
 func mailSinkContext(ctx context.Context, ws ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector,
 		ID:   "connector:imap",

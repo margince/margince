@@ -72,7 +72,7 @@ func TestCertifyTaskWithTraceWritesCandidateAndJudgePayloads(t *testing.T) {
 	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
 	sc := testScenario("basic", wideBands)
 
-	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
+	if _, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		trace:         trace,
@@ -150,7 +150,7 @@ func TestPayloadTraceNilReceiverIsSafe(t *testing.T) {
 	}
 	// traceCalls reaches the receiver only through record, so it inherits the
 	// nil-safety — must not panic.
-	traceCalls(wsContext(t), trace, "candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, []ai.Call{payloadCall()}, quietLogger())
+	traceCalls(t.Context(), trace, "candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, []ai.Call{payloadCall()}, quietLogger())
 }
 
 // traceCalls is best-effort: a write failure is logged and swallowed so a
@@ -171,7 +171,7 @@ func TestTraceCallLogsAndContinuesOnWriteFailure(t *testing.T) {
 	var buf bytes.Buffer
 	log := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	// Must not panic and must not surface the error to the caller.
-	traceCalls(wsContext(t), trace, "candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, []ai.Call{payloadCall()}, log)
+	traceCalls(t.Context(), trace, "candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, []ai.Call{payloadCall()}, log)
 	if !strings.Contains(buf.String(), "payload trace write failed") {
 		t.Fatalf("expected a warning about the failed trace write, got: %q", buf.String())
 	}
@@ -204,7 +204,7 @@ func TestCertifyTaskWithTraceWritesEveryCallARunMade(t *testing.T) {
 	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
 	sc := testScenarioOnSite("basic", retryVariant, wideBands)
 
-	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, retryCensus(t),
+	if _, err := certifyTask(t.Context(), ai.TaskSummarize, []Scenario{sc}, retryCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},

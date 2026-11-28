@@ -232,6 +232,5 @@ func startAutoEnrichRead(ctx context.Context, contactsStore *contacts.Store,
 // company-update/visibility gates StartSiteReadQueued and the settings read
 // enforce, without impersonating any human.
 func (w *captureAutoEnrichSweepWorker) workspaceCtx(ctx context.Context, ws ids.WorkspaceID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	return principal.SystemActing(ctx, systemAutoEnrichActor)
 }

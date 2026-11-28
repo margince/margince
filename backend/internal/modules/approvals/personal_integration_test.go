@@ -26,7 +26,7 @@ func TestPersonalDecisionsRemainReachableBehindATeamBacklog(t *testing.T) {
 		t.Helper()
 		ctx, deal := agent, target
 		if kind == "advance_deal" {
-			ctx, deal = principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "background-review"), teamDeal
+			ctx, deal = principal.SystemActing(context.Background(), "background-review"), teamDeal
 		}
 		id, err := e.svc.Stage(ctx, StageInput{
 			Kind: kind, ProposedChange: []byte(`{"body":"Review the proposal."}`),

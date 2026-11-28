@@ -21,7 +21,7 @@ import (
 
 // exportRequest builds a GET carrying the given principal.
 func exportRequest(actor principal.Principal) *http.Request {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, actor)
 	return httptest.NewRequest(http.MethodGet, "/v1/exports/bundle", nil).WithContext(ctx)
 }

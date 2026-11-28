@@ -218,7 +218,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	app := avail.app
-	actor, ws, ok := signedInHuman(w, r)
+	actor, ok := signedInHuman(w, r)
 	if !ok {
 		return
 	}
@@ -229,11 +229,11 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	st := connectState{
-		Workspace: ws, User: actor.UserID, Provider: string(provider), Connection: ask.connection,
+		User: actor.UserID, Provider: string(provider), Connection: ask.connection,
 		ReturnTo: ask.returnTo, Then: ask.then, WindowMonths: ask.windowMonths,
 		SharedConsent: sharesConsent(string(provider), ask.then),
 	}
-	authURL := h.mintConsent(w, app, st)
+	authURL := h.mintConsent(r.Context(), w, app, st)
 	if st.SharedConsent {
 		var err error
 		if authURL, err = withCalendarScopes(authURL, st.Then); err != nil {
@@ -353,12 +353,12 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	h.chainAfterConnect(runCtx, w, r, st, consent)
 }
 
-// signedInHuman answers the human starting a consent and their workspace, or
-// writes the 401 and false.
-func signedInHuman(w http.ResponseWriter, r *http.Request) (principal.Principal, ids.UUID, bool) {
+// signedInHuman answers the human starting a consent, or writes the 401 and
+// false. A human principal exists only behind the identity middleware, which
+// has proven the installation's company live.
+func signedInHuman(w http.ResponseWriter, r *http.Request) (principal.Principal, bool) {
 	actor, ok := principal.Actor(r.Context())
-	ws, hasWS := principal.WorkspaceID(r.Context())
-	if !ok || actor.Type != principal.PrincipalHuman || !hasWS {
+	if !ok || actor.Type != principal.PrincipalHuman {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnauthorized,
 			Code:   codeUnauthorized,
@@ -366,18 +366,17 @@ func signedInHuman(w http.ResponseWriter, r *http.Request) (principal.Principal,
 			// naming a mailbox mislabels most of the ones it refuses.
 			Detail: "Connecting an account is a signed-in human action.",
 		})
-		return principal.Principal{}, ids.UUID{}, false
+		return principal.Principal{}, false
 	}
-	return actor, ws, true
+	return actor, true
 }
 
 // grantorContext reconstructs the granting human's authority from the trusted
-// (signed) state: workspace + user id. A minimal read-scoped human principal is
-// what Registry.Connect needs — it stamps granted_by and checks the connector's
-// read scope; the live authority behind it is resolved separately.
+// (signed) state: the user id. Registry.Connect needs a minimal read-scoped
+// human principal, because it stamps granted_by and checks the connector's read
+// scope. The live authority behind it is resolved separately.
 func grantorContext(ctx context.Context, st connectState) context.Context {
-	runCtx := principal.WithWorkspaceID(ctx, st.Workspace)
-	return principal.WithActor(runCtx, principal.Principal{
+	return principal.WithActor(ctx, principal.Principal{
 		Type:   principal.PrincipalHuman,
 		ID:     "human:" + st.User.String(),
 		UserID: st.User,
@@ -393,7 +392,7 @@ func (h connectorHandlers) liveGrantorAuthority(ctx context.Context, st connectS
 	if h.authority == nil {
 		return authz.RBAC{}, "", errors.New("connector callback: no authority resolver wired — a grant cannot be checked against live authority")
 	}
-	return h.authority.AdmittedAuthority(ctx, st.Workspace, st.User, ids.Nil)
+	return h.authority.AdmittedAuthority(ctx, st.User, ids.Nil)
 }
 
 func (h connectorHandlers) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.DisconnectConnectorParams) {

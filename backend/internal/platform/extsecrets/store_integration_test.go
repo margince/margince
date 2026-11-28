@@ -107,7 +107,7 @@ func setup(t *testing.T) *env {
 // ctxFor binds the workspace and an actor: the store writes a system_log row
 // on every operation, and storekit.LogSystem needs both.
 func (e *env) ctxFor(ws ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, "system:extsecrets-test")
 }
 

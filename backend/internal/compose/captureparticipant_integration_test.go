@@ -43,7 +43,7 @@ import (
 // way capture.Registry builds it — UserID is the mailbox owner, and it is the
 // only place that fact exists.
 func mailboxOwnerCtx(e *integration.Env, owner ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",

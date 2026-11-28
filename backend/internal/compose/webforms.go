@@ -96,13 +96,16 @@ func publicForms(forms webforms.Handlers) func(http.Handler) http.Handler {
 				forms.AnswerRefusal(w, r, apperrors.ErrNotFound)
 				return
 			}
-			// The workspace is already bound: the identity middleware binds the
-			// installation's into every request, public paths included.
 			ctx := principal.WithActor(r.Context(), principal.Principal{
 				Type: principal.PrincipalSystem,
 				ID:   "system:public_web_form",
 			})
-			workspace, _ := principal.WorkspaceID(ctx)
+			company, err := forms.Workspace(r.Context()) //nolint:contextcheck // the request's own context; r was rewritten above and the analyzer loses it
+			if err != nil {
+				forms.AnswerRefusal(w, r, err)
+				return
+			}
+			workspace := company.UUID
 			address := httpserver.ClientIP(r)
 			// A preflight has its own ceiling, so it spends no form's budget.
 			if r.Method == http.MethodOptions {

@@ -31,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -77,7 +76,7 @@ func TestABudgetStopLeavesTheSendersItNeverAskedAboutUnspent(t *testing.T) {
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	// The pass reports no error: a budget stop is an ordinary end to a pass,
 	// not a fault, and the worker must not treat it as one.
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), senders); err != nil {
+	if err := engine.RunWorkspace(context.Background(), senders); err != nil {
 		t.Fatalf("a budget stop failed the pass: %v", err)
 	}
 	if brain.calls != 1 {
@@ -117,7 +116,7 @@ func TestABudgetStopLeavesTheThreadsItNeverAskedAboutUnspent(t *testing.T) {
 
 	brain := &brokeBrain{}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("a budget stop failed the pass: %v", err)
 	}
 	if brain.calls != 1 {
@@ -186,7 +185,7 @@ func TestAPassWhoseContextDiesMidBatchSaysSo(t *testing.T) {
 		seedPendingDisposition(t, e, address, "broke.example", activityID)
 	}
 
-	ctx, stop := context.WithCancel(principal.WithWorkspaceID(context.Background(), e.WS))
+	ctx, stop := context.WithCancel(context.Background())
 	brain := &brokeBrain{onAsk: stop}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
@@ -212,7 +211,7 @@ func TestAThreadPassWhoseContextDiesMidBatchSaysSo(t *testing.T) {
 		seedThreadQuestion(t, e, key, activityID)
 	}
 
-	ctx, stop := context.WithCancel(principal.WithWorkspaceID(context.Background(), e.WS))
+	ctx, stop := context.WithCancel(context.Background())
 	brain := &brokeBrain{onAsk: stop}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default())
 

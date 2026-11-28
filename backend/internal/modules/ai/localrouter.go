@@ -8,6 +8,7 @@ import (
 	"maps"
 	"sync"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/decision"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -17,6 +18,7 @@ import (
 // that names no budget still gets a static single-seat ceiling, never an
 // unbounded one.
 type localOpts struct {
+	company         ids.WorkspaceID
 	callStore       CallRecorder
 	cacheOff        bool
 	unlimited       bool
@@ -41,6 +43,13 @@ type harnessClient struct {
 // tool, the aicert lane) assembles a Router through instead of hand-rolling
 // one.
 type LocalOption func(*localOpts)
+
+// WithCompany names the company a DB-less router serves, so a caller that
+// drops its cached answers by company can name the same one. The default is a
+// fresh company per router.
+func WithCompany(company ids.WorkspaceID) LocalOption {
+	return func(o *localOpts) { o.company = company }
+}
 
 // WithCallStore installs a CallRecorder so a DB-less caller can still
 // observe every completion terminal (an in-memory store for a cert run
@@ -143,7 +152,7 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 	// the upstream preferences production would send for the same binding.
 	cfg.Tiers = maps.Clone(cfg.Tiers)
 	cfg.applyUpstreamDefaults()
-	o := localOpts{monthlyBudget: int64(DefaultMonthlyTokens)}
+	o := localOpts{monthlyBudget: int64(DefaultMonthlyTokens), company: ids.New[ids.WorkspaceKind]()}
 	for _, opt := range opts {
 		opt(&o)
 	}
@@ -188,7 +197,7 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 	// default (the router skips tracing when calls == nil), captures no
 	// payloads (WithPayloadCapture opts in), and logs through slog.Default;
 	// WithCallStore opts a caller into tracing.
-	router := assembleRouter(clients, embedder, cfg.Profile, &memoryMeter{}, StaticBudget(o.monthlyBudget), o.callStore, meta, o.capturePayloads, nil)
+	router := assembleRouter(clients, embedder, cfg.Profile, &memoryMeter{company: o.company}, StaticBudget(o.monthlyBudget), o.callStore, meta, o.capturePayloads, nil)
 	router.cacheOff = o.cacheOff
 	router.unlimited = o.unlimited
 	router.captureWhole = o.captureWhole
@@ -240,6 +249,13 @@ func (h harnessClient) clientsFor(cfg RoutingConfig) (map[Tier]model.Client, mod
 type memoryMeter struct {
 	mu     sync.Mutex
 	tokens int64
+	// company is the synthetic company a DB-less run serves, fixed for the life
+	// of the process.
+	company ids.WorkspaceID
+}
+
+func (m *memoryMeter) Workspace(context.Context) (ids.WorkspaceID, error) {
+	return m.company, nil
 }
 
 func (m *memoryMeter) Record(_ context.Context, u Usage) error {

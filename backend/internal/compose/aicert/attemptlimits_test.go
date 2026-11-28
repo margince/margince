@@ -156,7 +156,7 @@ func TestTheLaneMeasuresAWaitedTaskWithoutItsLimit(t *testing.T) {
 	reference, cancel := context.WithTimeout(context.Background(), ai.CallCeiling-time.Second)
 	defer cancel()
 	referenceDeadline, _ := reference.Deadline()
-	_, err = certifyTask(wsContext(t), row.Task, []Scenario{scenario}, censusOfSites(t, site),
+	_, err = certifyTask(t.Context(), row.Task, []Scenario{scenario}, censusOfSites(t, site),
 		ai.ProviderConfig{Provider: row.Slowest.Provider, Model: row.Slowest.Model}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
 		ai.ProfileCloudFrontier, 1, quietLogger(),
 		&certifyHooks{

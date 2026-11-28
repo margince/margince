@@ -82,12 +82,12 @@ func setupNotices(t *testing.T) *noticeEnv {
 // engineCtx is who really creates a notice: the automation engine's system
 // principal inside a correlation scope.
 func (e *noticeEnv) engineCtx() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	return principal.SystemActing(ctx, "system:automation")
 }
 
 func (e *noticeEnv) asUser(u ids.UserID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + u.String(), UserID: u.UUID,
 	})

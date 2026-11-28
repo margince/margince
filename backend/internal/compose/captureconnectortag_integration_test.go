@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // seedTag puts one word in the vocabulary, archived or live.
@@ -153,7 +152,7 @@ func TestTwoConnectorsFileUnderTheirOwnWord(t *testing.T) {
 		nordID.String(): "contact", suedID.String(): "contact",
 	}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -179,7 +178,7 @@ func TestAConnectorWithNoWordFilesNothing(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -201,7 +200,7 @@ func TestAnArchivedWordFilesNothingAndTheContactIsStillMade(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -252,7 +251,7 @@ func TestAContactThatWasAlreadyHereIsNotFiledUnderTheConnectorsWord(t *testing.T
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
@@ -273,7 +272,7 @@ func TestABareConnectorStampFilesUnderNoWord(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
-	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := engine.RunWorkspace(context.Background(), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 

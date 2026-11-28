@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -245,10 +245,9 @@ func TestACoreWithNoAuthorityRefuses(t *testing.T) {
 // it produced. Without it, the whole attribution story could ship inert and
 // green, which is exactly how it was found.
 func TestTheRuntimeBindsTheUnitsAttribution(t *testing.T) {
-	invocation := principal.WithWorkspaceID(
-		principal.WithActor(context.Background(), principal.Principal{
-			Type: principal.PrincipalHuman, ID: "the-caller",
-		}), ids.NewV7())
+	invocation := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "the-caller",
+	})
 
 	// The binding a served call has, minus a database: scoped refuses on an
 	// unwired ROLE before it binds anything, and &pgxpool.Pool{} is a handle

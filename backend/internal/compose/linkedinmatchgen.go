@@ -197,7 +197,6 @@ func (g *LinkedInMatchGen) matchWorkspace(ctx context.Context, workspace ids.UUI
 // the member's own authority before any record is read — this one only reaches
 // linkedin_connection and the roster.
 func (g *LinkedInMatchGen) matchContext(ctx context.Context, env events.Envelope, ws ids.UUID) context.Context {
-	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:linkedin_match",

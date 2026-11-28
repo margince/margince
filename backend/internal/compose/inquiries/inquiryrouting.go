@@ -249,11 +249,7 @@ func (r Routing) recipient(ctx context.Context, id ids.UUID, target datasource.E
 }
 
 func (r Routing) human(ctx context.Context, id ids.UUID) (context.Context, error) {
-	workspace, err := r.db.Workspace(ctx)
-	if err != nil {
-		return nil, err
-	}
-	member, err := authz.MemberPrincipal(ctx, identity.NewService(r.db.Pool()), workspace.UUID, id)
+	member, err := authz.MemberPrincipal(ctx, identity.NewService(r.db.Pool()), id)
 	if err != nil {
 		return nil, err
 	}

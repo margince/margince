@@ -238,7 +238,7 @@ func (e *recencyEnv) reminderIsDone(t *testing.T, reminder ids.UUID) bool {
 // as() assert what a create-only caller can do, and a grant added there is one
 // their assertions stop noticing.
 func (e *recencyEnv) asResolver() context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx := context.Background()
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

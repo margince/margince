@@ -55,7 +55,7 @@ func (w *owedVerdictWorker) Work(ctx context.Context, _ *river.Job[OwedVerdictAr
 }
 
 func (w *owedVerdictWorker) judgeWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	// The workspace binding alone is not enough here, and the difference is the
 	// whole reason this is spelled out: the backlog read and the verdict write
 	// are both RBAC-gated, so an unbound context fails them with "no actor bound
@@ -93,7 +93,7 @@ func (w *owedVerdictWorker) settleWorkspace(ctx context.Context, workspace ids.U
 	if w.settler == nil {
 		return nil
 	}
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx := ctx
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: activities.RequestSettlementActor,

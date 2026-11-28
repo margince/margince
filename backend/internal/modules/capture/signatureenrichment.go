@@ -69,7 +69,11 @@ func (r *Registry) SetSignatureEnrichment(ctx context.Context, mb Mailbox, enabl
 		// Audit-only, like every other capture-configuration change beside it:
 		// the closed public-event catalog carries no type for a posture, and
 		// inventing one would put a mailbox's own setting on the outbound bus.
-		_, err := storekit.Audit(ctx, tx, "update", captureSettingsObject, storekit.MustWorkspace(ctx),
+		installation, err := storekit.Workspace(ctx, tx)
+		if err != nil {
+			return err
+		}
+		_, err = storekit.Audit(ctx, tx, "update", captureSettingsObject, installation,
 			signatureEnrichmentImage(name, before), signatureEnrichmentImage(name, enabled))
 		return err
 	})

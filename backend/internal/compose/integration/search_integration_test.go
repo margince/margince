@@ -41,7 +41,7 @@ func TestSearchHonorsObjectRBAC(t *testing.T) {
 	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Rostock Contact', 'manual', 'human:x')`)
 	e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Rostock Werft', 'manual', 'human:x')`)
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	companyOnly := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{
@@ -426,7 +426,7 @@ const objPartner = "partner"
 // searchSeat is rep1 holding exactly these grants at this row scope, in the
 // teams given (nil for a seat no team bounds).
 func searchSeat(e *SearchEnv, teams []ids.UUID, scope principal.RowScope, grants map[string]principal.ObjectGrant) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		TeamIDs:     teams,
@@ -648,7 +648,7 @@ func TestCatalogHitsAreWithheldWithoutTheObjectGrant(t *testing.T) {
 	e.SeedID(t, `INSERT INTO product (id, name, unit_price_minor, currency, source, captured_by)
 	             VALUES ($1, 'Ilmenau bracket', 2500, 'EUR', 'manual', 'human:x')`)
 
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	noCatalog := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{
@@ -720,7 +720,7 @@ func callSearch(t *testing.T, e *SearchEnv, budget time.Duration, q string) (int
 // searchAs is a reader who may see everything, so the assertions below are
 // about the ceiling rather than about scope.
 func searchAs(e *SearchEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx := context.Background()
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{
