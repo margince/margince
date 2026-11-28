@@ -26,6 +26,9 @@ import (
 // purpose, so two admins naming one label at once cannot both pass the check.
 const purposeCatalogLock = "consent.consent_purpose.create"
 
+// fieldLabel names a purpose's label in a validation fault and an audit payload.
+const fieldLabel = "label"
+
 // lockPurposeLabels holds purposeCatalogLock and then refuses a label that reads
 // like another listed purpose, except the one being renamed.
 func lockPurposeLabels(ctx context.Context, tx pgx.Tx, label string, except ids.PurposeID) error {
@@ -73,7 +76,7 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 		if err != nil {
 			return err
 		}
-		return auditPurposeChange(ctx, tx, p.ID, "created", nil, map[string]any{"key": p.Key, "label": p.Label})
+		return auditPurposeChange(ctx, tx, p.ID, "created", nil, map[string]any{fieldKey: p.Key, fieldLabel: p.Label})
 	})
 	return p, err
 }
@@ -94,7 +97,7 @@ func refuseConfusableLabel(ctx context.Context, tx pgx.Tx, label string, except 
 	wanted := purposeReading(label)
 	for _, purpose := range listed {
 		if purposeReading(purpose.Label) == wanted || purposeReading(purpose.Key) == wanted {
-			return &ValidationError{Field: "label", Reason: fmt.Sprintf(
+			return &ValidationError{Field: fieldLabel, Reason: fmt.Sprintf(
 				"this label reads like %q; choose another label to tell the two purposes apart", purpose.Label)}
 		}
 	}
