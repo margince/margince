@@ -9,12 +9,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// RecordedByAgent includes legacy notes and passport calls without a scheduled run.
+const agentActivityOrigin = "agent"
+
+// RecordedByAgent identifies an assistant through the activity origin or writer.
 func RecordedByAgent(origin, capturedBy string) bool {
-	return origin == "agent" || strings.HasPrefix(capturedBy, string(principal.PrincipalAgent)+":")
+	return origin == agentActivityOrigin || strings.HasPrefix(capturedBy, string(principal.PrincipalAgent)+":")
 }
 
 // RecordedByAgentSQL is RecordedByAgent over an activity row.
 func RecordedByAgentSQL(alias string) string {
-	return "(" + alias + ".origin = 'agent' OR starts_with(coalesce(" + alias + ".captured_by, ''), '" + string(principal.PrincipalAgent) + ":'))"
+	return "(" + alias + ".origin = '" + agentActivityOrigin + "' OR starts_with(coalesce(" + alias + ".captured_by, ''), '" + string(principal.PrincipalAgent) + ":'))"
 }

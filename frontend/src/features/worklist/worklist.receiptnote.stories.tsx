@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { vi } from "../i18n/vi";
+import { vi } from "../../i18n/vi";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../testing/story-utils";
-import { ReceiptNote } from "./receiptnote";
+} from "../../testing/story-utils";
+import { ReceiptNote } from "./worklist.receiptnote";
 
 const id = "01a05500-0000-7000-8000-0000000000a1";
 export default {

@@ -7,13 +7,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import type { components } from "../api/schema";
-import { activityTimeline } from "../design-system/activitytimeline";
-import { TimelineList } from "../design-system/timeline";
-import { LocaleProvider } from "../i18n";
-import { vi as vietnamese } from "../i18n/vi";
-import { meFixture } from "../testing/mefixture";
-import { HandledForYouPanel } from "../features/worklist/worklist.handled";
+import type { components } from "../../api/schema";
+import { activityTimeline } from "../../design-system/activitytimeline";
+import { TimelineList } from "../../design-system/timeline";
+import { LocaleProvider } from "../../i18n";
+import { vi as vietnamese } from "../../i18n/vi";
+import { meFixture } from "../../testing/mefixture";
+import { HandledForYouPanel } from "./worklist.handled";
 
 afterEach(() => {
   cleanup();
@@ -46,10 +46,13 @@ const note: components["schemas"]["Activity"] = {
 
 it("shows the same AI attribution and translation action in Worklist and History", async () => {
   const translated: unknown[] = [];
+  const activityReads: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: Request) => {
       const path = new URL(input.url).pathname;
+      if (input.method === "GET" && path.includes("/activities/"))
+        activityReads.push(path);
       if (path.endsWith(`/activities/${note.id}/reader-rendering`)) {
         translated.push(await input.json());
         return new Response(
@@ -79,7 +82,7 @@ it("shows the same AI attribution and translation action in Worklist and History
               receipts: [
                 {
                   id: "receipt-note",
-                  kind: "create_activity_note",
+                  kind: "magic.action.create_activity_note",
                   summary: "Đã lưu ghi chú",
                   occurred_at: note.occurred_at,
                   subject: {
@@ -132,5 +135,7 @@ it("shows the same AI attribution and translation action in Worklist and History
   );
   expect(await worklist.findByText("Đánh giá rủi ro")).toBeTruthy();
   expect(worklist.getByText(chip)).toBeTruthy();
+  expect(worklist.getByText(note.subject ?? "")).toBeTruthy();
+  expect(activityReads).toEqual([`/v1/activities/${note.id}`]);
   expect(translated).toEqual([{ locale: "vi", expected_source_version: 4 }]);
 });

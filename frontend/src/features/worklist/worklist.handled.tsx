@@ -24,7 +24,6 @@
 import { useEffect, useState } from "react";
 import type { components } from "../../api/schema";
 import { BundleUndo } from "../../components/marginchanges";
-import { ReceiptNote } from "../../components/receiptnote";
 import { ReceiptDetail } from "../../components/receiptdetail";
 import { ReceiptsMore } from "../../components/receiptsmore";
 import { ReceiptVerbs } from "../../components/receiptverbs";
@@ -57,6 +56,7 @@ import {
 } from "../../lib/worklistrouting";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
+import { ReceiptNote } from "./worklist.receiptnote";
 
 /** The id a link to the Change history panel lands on. */
 export const CHANGE_HISTORY_ID = "worklist-change-history";
@@ -244,7 +244,11 @@ function ReceiptRecord({ receipt }: { readonly receipt: Receipt }) {
   ) : (
     subject.label
   );
-  return subject.type === "activity" ? (
+  const noteAction = "magic.action.create_activity_note";
+  const isNote =
+    receipt.kind === noteAction ||
+    receipt.completed_change?.summary.key === noteAction;
+  return subject.type === "activity" && isNote ? (
     <ReceiptNote activityId={subject.id}>{link}</ReceiptNote>
   ) : (
     link

@@ -21,15 +21,16 @@ import (
 
 func TestAgentNotesLeaveEveryRecordClockQuiet(t *testing.T) {
 	for _, c := range []struct {
-		name, kind    string
-		agent, refold bool
+		name, kind             string
+		agent, refold, restamp bool
 	}{
-		{"passport note without a run", "note", true, false},
-		{"legacy agent note after refold", "note", true, true},
-		{"member note", "note", false, false},
-		{"assistant call", "call", true, false},
-		{"assistant meeting", "meeting", true, false},
-		{"assistant email", "email", true, false},
+		{"passport note without a run", "note", true, false, false},
+		{"legacy agent note after refold", "note", true, true, false},
+		{"member note", "note", false, false, false},
+		{"a corrected writer refreshes every clock", "note", false, false, true},
+		{"assistant call", "call", true, false, false},
+		{"assistant meeting", "meeting", true, false, false},
+		{"assistant email", "email", true, false, false},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			w := newPrivateMailWorld(t)
@@ -39,7 +40,7 @@ func TestAgentNotesLeaveEveryRecordClockQuiet(t *testing.T) {
 			}
 			records := map[string]ids.UUID{"contact": w.contact, "company": w.company, "deal": w.deal.UUID, "project": ids.UUID(project.Id)}
 			links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: w.contact}, {EntityType: "deal", EntityID: w.deal.UUID}, {EntityType: "project", EntityID: ids.UUID(project.Id)}}
-			log := func(ctx context.Context, kind string, at time.Time) {
+			log := func(ctx context.Context, kind string, at time.Time) ids.UUID {
 				t.Helper()
 				subject := "Buyer follow-up"
 				in := activities.LogActivityInput{Kind: kind, Subject: &subject, OccurredAt: &at, Source: "manual", Links: links}
@@ -50,21 +51,33 @@ func TestAgentNotesLeaveEveryRecordClockQuiet(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if principal.Actor(ctx).Type == principal.PrincipalAgent && (row.RecordedByAgent == nil || !*row.RecordedByAgent) {
+				actor, ok := principal.Actor(ctx)
+				if !ok {
+					t.Fatal("missing writer")
+				}
+				if actor.Type == principal.PrincipalAgent && (row.RecordedByAgent == nil || !*row.RecordedByAgent) {
 					t.Fatal("History must label the same activity as AI-written")
 				}
+				return ids.UUID(row.Id)
 			}
 			old := w.now.AddDate(0, 0, -65)
 			log(w.e.Admin(), "call", old)
 			ctx := w.e.Admin()
 			if c.agent {
-				ctx = w.e.AgentFor(t, w.e.AdminUser, nil, principal.Actor(ctx).Permissions)
+				actor, ok := principal.Actor(ctx)
+				if !ok {
+					t.Fatal("missing member")
+				}
+				ctx = w.e.AgentFor(t, w.e.AdminUser, nil, actor.Permissions)
 			}
 			recent := w.now.Add(-time.Hour)
-			log(ctx, c.kind, recent)
+			recentID := log(ctx, c.kind, recent)
 			want := recent
-			if c.agent && c.kind == "note" {
+			if (c.agent && c.kind == "note") || c.restamp {
 				want = old
+			}
+			if c.restamp {
+				w.e.WsExec(t, `UPDATE activity SET captured_by=$1 WHERE id=$2`, "agent:passport", recentID)
 			}
 			if c.refold {
 				for table, id := range records {

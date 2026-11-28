@@ -107,7 +107,8 @@ Also called: contacts made from notification mail, automatic senders.
 On **Deals**, use **View** → **Filters** → **Close date**, shown in the next question. The list screens have no other date filter, so sort them by date, or build a filter on **Filters and views**. Its date fields are **Created** (every type), **Last activity** (contacts, companies and deals), **Expected close** (deals) and date custom fields.
 1. Press **New filter**, pick the record type, press **Add condition** and pick a date field.
 2. Pick **is after**, **is on or after**, **is before** or **is on or before**. Give the value **On a date**, or as **Days ago** to count back from today.
-Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, and neither does a newsletter.
+Last activity is the date of the newest email, chat message, meeting, call or note.
+A note an AI assistant wrote does not count as activity. A task never changes it, and neither does a newsletter.
 Also called: created this month, filter by created date, date range.
 
 ### How do I find deals closing this month?
