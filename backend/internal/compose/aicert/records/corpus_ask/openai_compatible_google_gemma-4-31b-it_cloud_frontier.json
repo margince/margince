@@ -18,13 +18,13 @@
   "context_scopes": null,
   "context_owed": 0,
   "judge_score_p50": 96,
-  "judge_score_min": 82,
-  "latency_p50": 2116,
-  "latency_p95": 6199,
-  "mean_tokens": 2243,
-  "mean_tokens_in": 2157,
-  "mean_tokens_out": 86,
-  "mean_cached_tokens": 866,
+  "judge_score_min": 78,
+  "latency_p50": 1092,
+  "latency_p95": 1591,
+  "mean_tokens": 2250,
+  "mean_tokens_in": 2161,
+  "mean_tokens_out": 89,
+  "mean_cached_tokens": 563,
   "mean_cache_write_tokens": 0,
   "est_cost_microusd": 0,
   "judge_served_model": "claude-sonnet-5-5",
@@ -32,20 +32,16 @@
   "self_judged": false,
   "served_identity_source": "echo",
   "candidate_upstream": {
-    "only": [
-      "crusoe"
-    ],
+    "only": null,
     "ignore": null,
-    "quantizations": [
-      "bf16"
-    ],
-    "sort": "",
-    "require_parameters": null,
+    "quantizations": null,
+    "sort": "throughput",
+    "require_parameters": true,
     "allow_fallbacks": null,
     "preferred_max_latency_p90": 0,
     "reasoning_effort": ""
   },
-  "ran_at": "2026-11-27T22:45:23Z",
+  "ran_at": "2026-11-28T12:05:19Z",
   "scenarios": [
     {
       "scenario": "corpus_ask_returns_nothing_when_the_passages_do_not_answer",
@@ -57,7 +53,7 @@
       "passed": 3,
       "judge_scores": [
         97,
-        96,
+        97,
         97
       ],
       "bands": {
@@ -81,7 +77,7 @@
       "passed": 3,
       "judge_scores": [
         96,
-        97,
+        96,
         96
       ],
       "bands": {
@@ -105,7 +101,7 @@
       "passed": 3,
       "judge_scores": [
         96,
-        96,
+        93,
         96
       ],
       "bands": {
@@ -128,8 +124,8 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        96,
         97,
+        96,
         97
       ],
       "bands": {
@@ -152,9 +148,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        90,
-        93,
-        82
+        78,
+        80,
+        90
       ],
       "bands": {
         "certified_min": 70,

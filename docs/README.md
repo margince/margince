@@ -203,7 +203,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [ai-prompts.md](reference/ai-prompts.md): every text this build sends to a model. Generated.
 - [agent-tool-budget.md](reference/agent-tool-budget.md): what the tool list of each agent costs a
   model. Generated.
-- [ai-certification.md](reference/ai-certification.md): the grade of each Margince AI feature on each model. Generated.
+- [ai-certification.md](reference/ai-certification.md): the grade of each Margince AI feature on each model. Generated. [open-vs-closed-models.md](reference/open-vs-closed-models.md) sets the open-weight setups beside the closed ones by grade and cost.
 - [mcp-parity.md](reference/mcp-parity.md): how much of the web app an agent can do through MCP. Generated.
 - [mcp-tool-roles.md](reference/mcp-tool-roles.md): which role can use which MCP tool, measured by a test. Generated.
 - [mcp-tool-coverage.md](reference/mcp-tool-coverage.md): the score of each AI tool a user can connect, per job. Generated.

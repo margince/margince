@@ -6,25 +6,25 @@
   "prompt_version": "p294d69272ae21d0d644921170e2f808f",
   "corpus_version": "v1",
   "verdict": "not_supported",
-  "runs": 33,
-  "passed": 25,
-  "reliability": 0.7575757575757576,
-  "reported_accepted": 25,
+  "runs": 18,
+  "passed": 18,
+  "reliability": 1,
+  "reported_accepted": 18,
   "reported_wrong_answer": 0,
-  "reported_invalid": 8,
+  "reported_invalid": 0,
   "reported_abstained": 0,
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
   "context_owed": 0,
-  "judge_score_p50": 66,
+  "judge_score_p50": 86,
   "judge_score_min": 0,
-  "latency_p50": 3351,
-  "latency_p95": 9196,
-  "mean_tokens": 2576,
-  "mean_tokens_in": 2397,
-  "mean_tokens_out": 179,
-  "mean_cached_tokens": 1304,
+  "latency_p50": 1714,
+  "latency_p95": 2538,
+  "mean_tokens": 2601,
+  "mean_tokens_in": 2400,
+  "mean_tokens_out": 201,
+  "mean_cached_tokens": 1137,
   "mean_cache_write_tokens": 0,
   "est_cost_microusd": 0,
   "judge_served_model": "claude-sonnet-5-5",
@@ -32,20 +32,16 @@
   "self_judged": false,
   "served_identity_source": "echo",
   "candidate_upstream": {
-    "only": [
-      "crusoe"
-    ],
+    "only": null,
     "ignore": null,
-    "quantizations": [
-      "bf16"
-    ],
-    "sort": "",
-    "require_parameters": null,
+    "quantizations": null,
+    "sort": "throughput",
+    "require_parameters": true,
     "allow_fallbacks": null,
     "preferred_max_latency_p90": 0,
     "reasoning_effort": ""
   },
-  "ran_at": "2026-11-27T22:47:56Z",
+  "ran_at": "2026-11-28T12:05:23Z",
   "scenarios": [
     {
       "scenario": "deal_status_a_current_request_is_the_blocker",
@@ -53,12 +49,39 @@
       "stamp": "fa8a5a1f639bca2b9f1db2310dcef6f55dca523321f3358bee6b11f42ee9c19877ef5a52b492250cc892b68d50d4f327bcc79477814d2c81f0d579a905c664fc82babaca582f8712672f9c16765e95798856ea573fed8a20a4f52482738ff2e7",
       "verdict": "certified",
       "judge_band": "certified",
+      "runs": 6,
+      "passed": 6,
+      "judge_scores": [
+        88,
+        81,
+        62,
+        82,
+        71,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 6,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "deal_status_offer_left_hanging",
+      "site": "deal_status",
+      "stamp": "65cf19feb85a8c1fef9c5b9ba840b598c352d5e6b157dcc2a10a912d9f90629bab447adb85121c3fd24630cc1aa6044615b824e8a5d8582867743b72fa5ea5eada41e26f53bfcb21682a427b5c3561f94d7f04e2870c50dd982eac8ba7cd67ad",
+      "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        90,
-        82,
-        80
+        86,
+        86,
+        86
       ],
       "bands": {
         "certified_min": 70,
@@ -72,59 +95,17 @@
       "reported_abstained": 0
     },
     {
-      "scenario": "deal_status_offer_left_hanging",
-      "site": "deal_status",
-      "stamp": "65cf19feb85a8c1fef9c5b9ba840b598c352d5e6b157dcc2a10a912d9f90629bab447adb85121c3fd24630cc1aa6044615b824e8a5d8582867743b72fa5ea5eada41e26f53bfcb21682a427b5c3561f94d7f04e2870c50dd982eac8ba7cd67ad",
-      "verdict": "certified",
-      "judge_band": "certified",
-      "runs": 12,
-      "passed": 8,
-      "judge_scores": [
-        88,
-        66,
-        72,
-        72,
-        72,
-        62,
-        64,
-        66,
-        68,
-        80,
-        82,
-        66
-      ],
-      "bands": {
-        "certified_min": 70,
-        "degraded_min": 50,
-        "floor": 40
-      },
-      "context_owed": 0,
-      "reported_accepted": 8,
-      "reported_wrong_answer": 0,
-      "reported_invalid": 4,
-      "reported_abstained": 0
-    },
-    {
       "scenario": "deal_status_an_old_request_under_review_is_no_blocker",
       "site": "deal_status",
       "stamp": "04905e57114e07d035b4030d4dc7b6dcccbea720893a953fb861f93e41e6a201b4be10d373874ec7b852f97df6d0096e2acbfa417d170d531aafb0f4af048cf7539e9a662ebd5cdc271806b6a9f4d30519e24db9adec32443402316fbbe9dea0",
       "verdict": "not_supported",
       "judge_band": "not_supported",
-      "runs": 12,
-      "passed": 8,
+      "runs": 3,
+      "passed": 3,
       "judge_scores": [
         1,
-        1,
         0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        1,
-        1
+        0
       ],
       "bands": {
         "certified_min": 70,
@@ -132,9 +113,9 @@
         "floor": 40
       },
       "context_owed": 0,
-      "reported_accepted": 8,
+      "reported_accepted": 3,
       "reported_wrong_answer": 0,
-      "reported_invalid": 4,
+      "reported_invalid": 0,
       "reported_abstained": 0
     },
     {
@@ -146,9 +127,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        88,
         80,
-        90
+        90,
+        88
       ],
       "bands": {
         "certified_min": 70,
@@ -172,7 +153,7 @@
       "judge_scores": [
         88,
         88,
-        80
+        88
       ],
       "bands": {
         "certified_min": 70,

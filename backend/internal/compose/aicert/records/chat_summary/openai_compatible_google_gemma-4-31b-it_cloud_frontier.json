@@ -3,7 +3,7 @@
   "provider": "openai_compatible",
   "served_model": "google/gemma-4-31b-it",
   "env_class": "cloud_frontier",
-  "prompt_version": "p23daa3825dc3d3e4bc86d2847d08ab93",
+  "prompt_version": "p49443edf72c5d3381a593ee68d53910d",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 18,
@@ -18,13 +18,13 @@
   "context_scopes": null,
   "context_owed": 0,
   "judge_score_p50": 96,
-  "judge_score_min": 81,
-  "latency_p50": 1771,
-  "latency_p95": 2248,
-  "mean_tokens": 1630,
-  "mean_tokens_in": 1519,
-  "mean_tokens_out": 111,
-  "mean_cached_tokens": 622,
+  "judge_score_min": 80,
+  "latency_p50": 1236,
+  "latency_p95": 2097,
+  "mean_tokens": 1799,
+  "mean_tokens_in": 1671,
+  "mean_tokens_out": 128,
+  "mean_cached_tokens": 803,
   "mean_cache_write_tokens": 0,
   "est_cost_microusd": 0,
   "judge_served_model": "claude-sonnet-5-5",
@@ -32,36 +32,32 @@
   "self_judged": false,
   "served_identity_source": "echo",
   "candidate_upstream": {
-    "only": [
-      "crusoe"
-    ],
+    "only": null,
     "ignore": null,
-    "quantizations": [
-      "bf16"
-    ],
-    "sort": "",
-    "require_parameters": null,
+    "quantizations": null,
+    "sort": "throughput",
+    "require_parameters": true,
     "allow_fallbacks": null,
     "preferred_max_latency_p90": 0,
     "reasoning_effort": ""
   },
-  "ran_at": "2026-11-27T22:42:53Z",
+  "ran_at": "2026-11-28T12:05:05Z",
   "scenarios": [
     {
       "scenario": "decision_on_discount",
       "site": "episode",
-      "stamp": "a1dfaa478ebb22251db224a9eb48bfdb52cd88f09cb17fdb7f2f5763ec815ac6cc1977e0f04beae791e1d6fb023375329320fc8adac78af4342e39b3e964194971134cd0f86154c933fefb697320e1d405cd7ebe6a1c53b7060c7295807f0abf",
+      "stamp": "a1dfaa478ebb22251db224a9eb48bfdb52cd88f09cb17fdb7f2f5763ec815ac600f77fb0b2b2244336b65a658ff4142d916cc0d0dca0229338275b606c72183b3b07d782239ed480d472c0ae17e61c5fd6e81b38bdb83dd63e4feaae540189cc",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
       "passed": 6,
       "judge_scores": [
-        89,
-        90,
-        93,
+        80,
         88,
-        81,
-        93
+        90,
+        88,
+        88,
+        89
       ],
       "bands": {
         "certified_min": 80,
@@ -77,7 +73,7 @@
     {
       "scenario": "instruction_in_chat_is_data",
       "site": "episode",
-      "stamp": "1e52fd555a6def4b8aca8d5eb33fa01e179500e364f642bf0ec7ad89d56cf3ccf21e163b1c960917bb2b9a785323a4365a4369a779743c4bd165c5367dd35f38483e60468f69483cd3a3b11e5250a385434e15321e740a4af68aa8eb252f169d",
+      "stamp": "1e52fd555a6def4b8aca8d5eb33fa01e179500e364f642bf0ec7ad89d56cf3cca59234600165578d44845c49617e482bf782ad1f0274698c70ae66cb603debabbe9d3eee7295aa39f1383c455756fc0fa86e9703ca4721e6deb2797cf8291fd0",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
@@ -104,18 +100,18 @@
     {
       "scenario": "small_talk_is_not_filed",
       "site": "episode",
-      "stamp": "0e9a9c21ac6dc284fc28152b8ceb8742b5cb8e722e90629435155ae6510c65c7e77dc63f73f534d5f1bb701cd080f5bad867eeaf38b1bdab57442684bf17e9521a8e3b007006d804bb97c70d6a5a4852a6fb64251c3261620ca7f30719dc0a4a",
+      "stamp": "0e9a9c21ac6dc284fc28152b8ceb8742b5cb8e722e90629435155ae6510c65c7f09075702d132bd936f64082ec8d71e985d68c830fcfd477a232230a0ec56aa93cc3f18d089cc677372aafa444bcec8b8aa30046acb1160a508025262300a527",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
       "passed": 6,
       "judge_scores": [
         97,
+        96,
         97,
         96,
         96,
-        97,
-        97
+        96
       ],
       "bands": {
         "certified_min": 80,

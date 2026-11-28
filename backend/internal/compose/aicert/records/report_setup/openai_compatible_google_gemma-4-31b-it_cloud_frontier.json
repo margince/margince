@@ -19,12 +19,12 @@
   "context_owed": 0,
   "judge_score_p50": 96,
   "judge_score_min": 88,
-  "latency_p50": 2123,
-  "latency_p95": 3042,
-  "mean_tokens": 938,
-  "mean_tokens_in": 825,
-  "mean_tokens_out": 112,
-  "mean_cached_tokens": 317,
+  "latency_p50": 1153,
+  "latency_p95": 2021,
+  "mean_tokens": 959,
+  "mean_tokens_in": 827,
+  "mean_tokens_out": 131,
+  "mean_cached_tokens": 213,
   "mean_cache_write_tokens": 0,
   "est_cost_microusd": 0,
   "judge_served_model": "claude-sonnet-5-5",
@@ -32,20 +32,16 @@
   "self_judged": false,
   "served_identity_source": "echo",
   "candidate_upstream": {
-    "only": [
-      "crusoe"
-    ],
+    "only": null,
     "ignore": null,
-    "quantizations": [
-      "bf16"
-    ],
-    "sort": "",
-    "require_parameters": null,
+    "quantizations": null,
+    "sort": "throughput",
+    "require_parameters": true,
     "allow_fallbacks": null,
     "preferred_max_latency_p90": 0,
     "reasoning_effort": ""
   },
-  "ran_at": "2026-11-27T23:18:18Z",
+  "ran_at": "2026-11-28T12:06:19Z",
   "scenarios": [
     {
       "scenario": "custom_report_setup_names_back_a_measure_it_cannot_express",
@@ -56,9 +52,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
-        97,
-        96
+        96,
+        96,
+        97
       ],
       "bands": {
         "certified_min": 70,
@@ -80,7 +76,7 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        96,
+        97,
         97,
         97
       ],
@@ -128,9 +124,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
         96,
-        97
+        96,
+        96
       ],
       "bands": {
         "certified_min": 70,
@@ -152,9 +148,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        92,
-        95,
-        92
+        96,
+        96,
+        96
       ],
       "bands": {
         "certified_min": 70,
@@ -178,7 +174,7 @@
       "judge_scores": [
         92,
         88,
-        92
+        93
       ],
       "bands": {
         "certified_min": 70,

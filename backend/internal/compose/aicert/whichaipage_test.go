@@ -68,6 +68,7 @@ type whichAICert struct {
 }
 
 type whichAISetup struct {
+	File          string `json:"file"`
 	Title         string `json:"title"`
 	WhereDataGoes string `json:"where_data_goes"`
 	Bands         struct {
@@ -77,9 +78,15 @@ type whichAISetup struct {
 	} `json:"bands"`
 	NotMeasured int `json:"untested"`
 	Tasks       []struct {
+		Task  string `json:"task"`
 		Label string `json:"label"`
 		Band  string `json:"band"`
 		State string `json:"state"`
+		Model struct {
+			Provider string `json:"provider"`
+			Model    string `json:"model"`
+			Env      string `json:"env"`
+		} `json:"model"`
 	} `json:"tasks"`
 }
 

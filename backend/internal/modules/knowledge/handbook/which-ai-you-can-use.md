@@ -25,12 +25,12 @@ Also called: which model should I use, best model, recommended model, which LLM,
 | Anthropic Claude | global cloud | 34 | 3 | 0 | 1 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 8 | 15 | 3 |
-| Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 33 |
+| Gemma 4 you could run yourself, through OpenRouter | global cloud | 22 | 6 | 9 | 1 |
 | Mistral models in the EU, through OpenRouter | EU-hosted cloud | 11 | 2 | 12 | 13 |
 | Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
 | Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
 
-[79 of these 203 grades](https://github.com/margince/margince/blob/main/docs/reference/ai-certification.md#stale-records-and-why) were measured on an older version of Margince and wait for a re-check.
+[74 of these 235 grades](https://github.com/margince/margince/blob/main/docs/reference/ai-certification.md#stale-records-and-why) were measured on an older version of Margince and wait for a re-check.
 
 ### What does a grade of a Margince AI feature mean?
 A grade of a Margince AI feature says how often it was right. **Ready** means right in at least 90 of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over what it makes. **Not reliable yet** means wrong too often: leave it off. **Not measured** means nobody has tested that feature on that model yet.

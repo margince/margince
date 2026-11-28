@@ -17,12 +17,12 @@
   "context_applied": false,
   "context_scopes": null,
   "context_owed": 0,
-  "latency_p50": 3052,
-  "latency_p95": 4952,
-  "mean_tokens": 1295,
-  "mean_tokens_in": 1016,
-  "mean_tokens_out": 278,
-  "mean_cached_tokens": 442,
+  "latency_p50": 1509,
+  "latency_p95": 2598,
+  "mean_tokens": 1265,
+  "mean_tokens_in": 1024,
+  "mean_tokens_out": 241,
+  "mean_cached_tokens": 320,
   "mean_cache_write_tokens": 0,
   "est_cost_microusd": 0,
   "judge_served_model": "",
@@ -30,20 +30,16 @@
   "self_judged": false,
   "served_identity_source": "echo",
   "candidate_upstream": {
-    "only": [
-      "crusoe"
-    ],
+    "only": null,
     "ignore": null,
-    "quantizations": [
-      "bf16"
-    ],
-    "sort": "",
-    "require_parameters": null,
+    "quantizations": null,
+    "sort": "throughput",
+    "require_parameters": true,
     "allow_fallbacks": null,
     "preferred_max_latency_p90": 0,
     "reasoning_effort": ""
   },
-  "ran_at": "2026-11-27T22:53:49Z",
+  "ran_at": "2026-11-28T12:05:37Z",
   "scenarios": [
     {
       "scenario": "contact_fields_from_a_mail_signature",

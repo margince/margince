@@ -18,13 +18,13 @@
   "context_scopes": null,
   "context_owed": 0,
   "judge_score_p50": 97,
-  "judge_score_min": 95,
-  "latency_p50": 1692,
-  "latency_p95": 2172,
-  "mean_tokens": 647,
-  "mean_tokens_in": 611,
+  "judge_score_min": 93,
+  "latency_p50": 800,
+  "latency_p95": 966,
+  "mean_tokens": 649,
+  "mean_tokens_in": 614,
   "mean_tokens_out": 35,
-  "mean_cached_tokens": 264,
+  "mean_cached_tokens": 204,
   "mean_cache_write_tokens": 0,
   "est_cost_microusd": 0,
   "judge_served_model": "claude-sonnet-5-5",
@@ -32,20 +32,16 @@
   "self_judged": false,
   "served_identity_source": "echo",
   "candidate_upstream": {
-    "only": [
-      "crusoe"
-    ],
+    "only": null,
     "ignore": null,
-    "quantizations": [
-      "bf16"
-    ],
-    "sort": "",
-    "require_parameters": null,
+    "quantizations": null,
+    "sort": "throughput",
+    "require_parameters": true,
     "allow_fallbacks": null,
     "preferred_max_latency_p90": 0,
     "reasoning_effort": ""
   },
-  "ran_at": "2026-11-27T23:43:25Z",
+  "ran_at": "2026-11-28T12:06:46Z",
   "scenarios": [
     {
       "scenario": "a_one_contact_consultancy_is_still_a_company",
@@ -56,9 +52,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        98,
         97,
-        98
+        97,
+        97
       ],
       "bands": {
         "certified_min": 80,
@@ -81,8 +77,8 @@
       "passed": 3,
       "judge_scores": [
         96,
-        97,
-        96
+        95,
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -105,8 +101,8 @@
       "passed": 3,
       "judge_scores": [
         98,
-        98,
-        98
+        97,
+        97
       ],
       "bands": {
         "certified_min": 70,
@@ -129,8 +125,8 @@
       "passed": 3,
       "judge_scores": [
         95,
-        96,
-        95
+        97,
+        93
       ],
       "bands": {
         "certified_min": 70,
@@ -153,7 +149,7 @@
       "passed": 3,
       "judge_scores": [
         97,
-        97,
+        98,
         98
       ],
       "bands": {
