@@ -30,7 +30,7 @@ type seed struct {
 	Kind      string
 	Queue     string   // empty means "default"
 	State     string   // river_job_state
-	Workspace ids.UUID // the zero value writes NO workspace_id key at all — a dispatcher
+	Workspace ids.UUID // a legacy key from a release that queued one; the zero value writes none
 	// Connection is the fan-out unit of the three per-connection dispatchers.
 	// The zero value writes no connection_id key, which is what a
 	// workspace-grained child's args look like.
@@ -108,10 +108,10 @@ func seedJob(ctx context.Context, t *testing.T, pool *pgxpool.Pool, s seed) {
 // count answers one group's Count, or 0 when the group is absent — the two
 // are different claims, so the absent case is asserted explicitly where it
 // matters rather than being folded in here.
-func count(snap jobs.Snapshot, kind, state, workspace string) int64 {
+func count(snap jobs.Snapshot, kind, state string) int64 {
 	var total int64
 	for _, r := range snap.Rows {
-		if r.Kind == kind && r.State == state && r.WorkspaceID == workspace {
+		if r.Kind == kind && r.State == state {
 			total += r.Count
 		}
 	}
@@ -136,33 +136,28 @@ func unitFor(snap jobs.Snapshot, kind string) (jobs.SweepUnit, bool) {
 	return jobs.SweepUnit{}, false
 }
 
-// TestStatsCountsLiveWorkAndNamesTheWorkspaceThatOwnsIt proves the two
-// properties every reader downstream stands on: a tenant job reports its
-// workspace, and a dispatcher reports the empty string rather than being
-// silently grouped with one.
-func TestStatsCountsLiveWorkAndNamesTheWorkspaceThatOwnsIt(t *testing.T) {
+// TestStatsCountsLiveWorkPerKindWhateverItsArgsCarry proves that a row is
+// counted under its kind and state alone: a row a release before this one
+// queued still carries a workspace key, and must land beside the rows that do
+// not.
+func TestStatsCountsLiveWorkPerKindWhateverItsArgsCarry(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
-	ws := ids.NewV7()
 
-	seedJob(ctx, t, pool, seed{Kind: "tenant_pass", State: "available", Workspace: ws})
-	seedJob(ctx, t, pool, seed{Kind: "tenant_pass", State: "discarded", Workspace: ws})
-	seedJob(ctx, t, pool, seed{Kind: "the_dispatcher", State: "available"}) // no workspace
+	seedJob(ctx, t, pool, seed{Kind: "a_pass", State: "available", Workspace: ids.NewV7()})
+	seedJob(ctx, t, pool, seed{Kind: "a_pass", State: "available"})
+	seedJob(ctx, t, pool, seed{Kind: "a_pass", State: "discarded"})
 
 	snap, err := jobs.Stats(ctx, pool)
 	if err != nil {
 		t.Fatalf("Stats: %v", err)
 	}
 
-	if got := count(snap, "tenant_pass", "available", ws.String()); got != 1 {
-		t.Errorf("tenant available = %d, want 1", got)
+	if got := count(snap, "a_pass", "available"); got != 2 {
+		t.Errorf("available = %d, want 2: a legacy workspace key must not split the group", got)
 	}
-	if got := count(snap, "tenant_pass", "discarded", ws.String()); got != 1 {
-		t.Errorf("tenant discarded = %d, want 1: a failed pass must stay visible", got)
-	}
-	if got := count(snap, "the_dispatcher", "available", ""); got != 1 {
-		t.Errorf("dispatcher under empty workspace = %d, want 1: a null args workspace "+
-			"means a dispatcher, and the reader must be able to say so", got)
+	if got := count(snap, "a_pass", "discarded"); got != 1 {
+		t.Errorf("discarded = %d, want 1: a failed pass must stay visible", got)
 	}
 }
 
@@ -178,7 +173,7 @@ func TestStatsExcludesCompletedWorkFromTheRuntimeGauges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Stats: %v", err)
 	}
-	if got := count(snap, "done", "completed", ""); got != 0 {
+	if got := count(snap, "done", "completed"); got != 0 {
 		t.Errorf("a completed row reached the runtime gauges: count = %d", got)
 	}
 }
@@ -236,136 +231,23 @@ func TestStatsMeasuresTheAgeOfRunnableWorkOnlyAndInTheDatabasesOwnClock(t *testi
 	}
 }
 
-// TestAPresentButEmptyWorkspaceIsNotReportedAsADispatcher — river_job has
-// no constraint forcing the workspace key to be absent rather than empty,
-// and the reader's whole invariant is that an empty label means dispatcher.
-// The two must be distinguishable in the snapshot or the renderer cannot
-// tell them apart either.
-func TestAPresentButEmptyWorkspaceIsNotReportedAsADispatcher(t *testing.T) {
-	_, pool := migratedAppPool(t)
-	ctx := t.Context()
-
-	seedJob(ctx, t, pool, seed{Kind: "real_dispatcher", State: "available"})
-	if _, err := pool.Exec(ctx, `
-		INSERT INTO river_job (state, kind, queue, args, tags, errors, max_attempts,
-		                       attempt, created_at, scheduled_at)
-		VALUES ('available', 'malformed_row', 'default', '{"workspace_id": ""}'::jsonb,
-		        '{}'::varchar(255)[], '{}'::jsonb[], 3, 0, now(), now())`); err != nil {
-		t.Fatalf("seeding a present-but-empty workspace row: %v", err)
-	}
-
-	snap, err := jobs.Stats(ctx, pool)
-	if err != nil {
-		t.Fatalf("Stats: %v", err)
-	}
-
-	var sawDispatcher, sawMalformed bool
-	for _, r := range snap.Rows {
-		switch r.Kind {
-		case "real_dispatcher":
-			sawDispatcher = true
-			if !r.Untenanted {
-				t.Error("a row with no workspace key at all was not reported as untenanted")
-			}
-		case "malformed_row":
-			sawMalformed = true
-			if r.Untenanted {
-				t.Error("a row whose workspace key is PRESENT but empty was reported as a " +
-					"dispatcher; the empty label would then mean two different things")
-			}
-			if r.WorkspaceID != "" {
-				t.Errorf("WorkspaceID = %q, want the stored empty string verbatim", r.WorkspaceID)
-			}
-		}
-	}
-	// Without these, a snapshot missing either row passes every assertion
-	// above by never entering its arm — the distinction would be untested
-	// while the test reported green.
-	if !sawDispatcher {
-		t.Error("the untenanted dispatcher row never reached the snapshot")
-	}
-	if !sawMalformed {
-		t.Error("the present-but-empty row never reached the snapshot")
-	}
-}
-
-// TestASweepChildWithAnEmptyWorkspaceIsNotCountedAsATenant — the sweep pair
-// answers "how much of the fleet did this pass cover", so a malformed row
-// admitted as a workspace of its own inflates the fleet with a phantom
-// tenant. It is excluded by the same test the state read uses.
-func TestASweepChildWithAnEmptyWorkspaceIsNotCountedAsATenant(t *testing.T) {
-	_, pool := migratedAppPool(t)
-	ctx := t.Context()
-	tenant := ids.NewV7()
-
-	seedJob(ctx, t, pool, seed{
-		Kind: "sweep_child", State: "completed",
-		Workspace: tenant, Tags: []string{jobs.SweepTag},
-	})
-	if _, err := pool.Exec(ctx, `
-		INSERT INTO river_job (state, kind, queue, args, tags, errors, max_attempts,
-		                       attempt, created_at, scheduled_at)
-		VALUES ('available', 'sweep_child', 'default', '{"workspace_id": ""}'::jsonb,
-		        ARRAY['sweep']::varchar(255)[], '{}'::jsonb[], 3, 0, now(), now())`); err != nil {
-		t.Fatalf("seeding a tagged present-but-empty workspace row: %v", err)
-	}
-
-	snap, err := jobs.Stats(ctx, pool)
-	if err != nil {
-		t.Fatalf("Stats: %v", err)
-	}
-	pass, ok := sweepFor(snap, "sweep_child")
-	if !ok {
-		t.Fatal("the real tagged child is missing from the sweep read")
-	}
-	if pass.Workspaces != 1 {
-		t.Errorf("Workspaces = %d, want 1: a row whose workspace key is present but empty "+
-			"is malformed, not a tenant this pass covered", pass.Workspaces)
-	}
-}
-
-// TestSweepCountsEachWorkspacesLatestOutcomeAndSurvivesADeduplicatedRetry
-// seeds the exact shape a rescued dispatcher produces — one workspace whose
-// older child is still live and so was deduplicated out of the newer
-// fan-out — and asserts the fleet is still reported whole. A fixture that
-// gives every row the same timestamp proves the fixture, not the query.
-func TestSweepCountsEachWorkspacesLatestOutcomeAndSurvivesADeduplicatedRetry(t *testing.T) {
+// TestSweepReadsAKindsLatestEndedOutcomeAndSurvivesADeduplicatedRetry seeds the
+// shape a rescued dispatcher produces: an older child still live, so it was
+// deduplicated out of the newer fan-out, beside a newer one that ended. The
+// kind reports one pass, and its outcome is the latest row that ENDED. A
+// fixture that gives every row the same timestamp proves the fixture, not the
+// query.
+func TestSweepReadsAKindsLatestEndedOutcomeAndSurvivesADeduplicatedRetry(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	older, newer := time.Now().Add(-2*time.Hour), time.Now().Add(-1*time.Hour)
-	wsA, wsB, wsC, wsD := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	tagged := []string{jobs.SweepTag}
 
-	// A: still retryable from the EARLIER fan-out — deduplicated out of the
-	// newer one, so its only row carries the old timestamp.
-	seedJob(ctx, t, pool, seed{
-		Kind: "sweep_child", State: "retryable",
-		Workspace: wsA, Tags: []string{jobs.SweepTag}, CreatedAt: older,
-	})
-	// B: succeeded earlier, ran again in the newer pass and died.
-	seedJob(ctx, t, pool, seed{
-		Kind: "sweep_child", State: "completed",
-		Workspace: wsB, Tags: []string{jobs.SweepTag}, CreatedAt: older,
-	})
-	seedJob(ctx, t, pool, seed{
-		Kind: "sweep_child", State: "discarded",
-		Workspace: wsB, Tags: []string{jobs.SweepTag}, CreatedAt: newer,
-	})
-	// C: fine, newest pass only.
-	seedJob(ctx, t, pool, seed{
-		Kind: "sweep_child", State: "completed",
-		Workspace: wsC, Tags: []string{jobs.SweepTag}, CreatedAt: newer,
-	})
-	// D: cancelled, which counts as failed for the same reason discarded
-	// does — a cancelled pass did not run, whatever the reason.
-	seedJob(ctx, t, pool, seed{
-		Kind: "sweep_child", State: "cancelled",
-		Workspace: wsD, Tags: []string{jobs.SweepTag}, CreatedAt: newer,
-	})
+	seedJob(ctx, t, pool, seed{Kind: "sweep_child", State: "retryable", Tags: tagged, CreatedAt: older})
+	seedJob(ctx, t, pool, seed{Kind: "sweep_child", State: "completed", Tags: tagged, CreatedAt: older})
+	seedJob(ctx, t, pool, seed{Kind: "sweep_child", State: "cancelled", Tags: tagged, CreatedAt: newer})
 	// A hand-triggered job of the same kind, carrying no sweep tag.
-	seedJob(ctx, t, pool, seed{
-		Kind: "sweep_child", State: "available",
-		Workspace: ids.NewV7(), CreatedAt: newer,
-	})
+	seedJob(ctx, t, pool, seed{Kind: "sweep_child", State: "completed", CreatedAt: time.Now()})
 
 	snap, err := jobs.Stats(ctx, pool)
 	if err != nil {
@@ -375,19 +257,16 @@ func TestSweepCountsEachWorkspacesLatestOutcomeAndSurvivesADeduplicatedRetry(t *
 	if !ok {
 		t.Fatal("no sweep reported for a tagged kind")
 	}
-	if pass.Workspaces != 4 {
-		t.Errorf("Workspaces = %d, want 4: a workspace deduplicated out of the newest "+
-			"fan-out is still covered, and an untagged row is not a fleet pass at all",
-			pass.Workspaces)
+	if pass.Passes != 1 {
+		t.Errorf("Passes = %d, want 1: an installation has one pass of a kind", pass.Passes)
 	}
-	if pass.Failed != 2 {
-		t.Errorf("Failed = %d, want 2: only B's LATEST outcome counts, and B succeeded "+
-			"before it died; D was cancelled, which is also work that did not happen",
-			pass.Failed)
+	if pass.Failed != 1 {
+		t.Errorf("Failed = %d, want 1: the latest TAGGED row that ended was cancelled, which is "+
+			"work that did not happen, and the untagged completed row is not a fleet pass", pass.Failed)
 	}
 }
 
-// TestTheUnitPairSeesAFailedConnectionTheWorkspacePairMasks is the whole
+// TestTheUnitPairSeesAFailedConnectionTheKindPairMasks is the whole
 // reason the second pair exists, seeded as the exact shape that hides the
 // failure: ONE workspace, TWO connections, the broken one failing FIRST and
 // the healthy one completing after it.
@@ -403,7 +282,7 @@ func TestSweepCountsEachWorkspacesLatestOutcomeAndSurvivesADeduplicatedRetry(t *
 // derived from the contract: only kinds a dispatcher declares it fans out to
 // per connection are read at all, so a fixture kind would prove a query that
 // never runs.
-func TestTheUnitPairSeesAFailedConnectionTheWorkspacePairMasks(t *testing.T) {
+func TestTheUnitPairSeesAFailedConnectionTheKindPairMasks(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	earlier, later := time.Now().Add(-2*time.Hour), time.Now().Add(-1*time.Hour)
@@ -428,10 +307,10 @@ func TestTheUnitPairSeesAFailedConnectionTheWorkspacePairMasks(t *testing.T) {
 	if !ok {
 		t.Fatal("no per-workspace sweep reported for a tagged kind")
 	}
-	if pass.Workspaces != 1 || pass.Failed != 0 {
+	if pass.Passes != 1 || pass.Failed != 0 {
 		t.Errorf("workspace pair = %d/%d covered/failed, want 1/0 — this pair counts one workspace "+
 			"once and reads its LATEST child, which is why the failure is invisible here",
-			pass.Workspaces, pass.Failed)
+			pass.Passes, pass.Failed)
 	}
 
 	unit, ok := unitFor(snap, "telegram_poll")
@@ -511,7 +390,7 @@ func TestARealRiverInsertCarriesTheSweepTagIntoTheColumnTheReadFiltersOn(t *test
 		t.Fatalf("jobs.New: %v", err)
 	}
 
-	if err := runner.Enqueue(ctx, taggedArgs{Workspace: ids.NewV7()},
+	if err := runner.Enqueue(ctx, taggedArgs{},
 		&river.InsertOpts{Tags: []string{jobs.SweepTag}}); err != nil {
 		t.Fatalf("enqueueing a tagged job: %v", err)
 	}
@@ -525,17 +404,13 @@ func TestARealRiverInsertCarriesTheSweepTagIntoTheColumnTheReadFiltersOn(t *test
 		t.Fatal("a job River inserted with the sweep tag is absent from the sweep read; " +
 			"the tag did not survive the insert path the dispatchers use")
 	}
-	if pass.Workspaces != 1 {
-		t.Errorf("Workspaces = %d, want 1", pass.Workspaces)
+	if pass.Passes != 1 {
+		t.Errorf("Passes = %d, want 1", pass.Passes)
 	}
 }
 
-// taggedArgs is a workspace-scoped kind for the round-trip above. It spells
-// its workspace key the way every WorkspaceScoped kind does, because that
-// spelling is what args->>'workspace_id' reads.
-type taggedArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
+// taggedArgs is a kind for the round-trip above.
+type taggedArgs struct{}
 
 func (taggedArgs) Kind() string { return "tagged_round_trip" }
 
@@ -547,9 +422,9 @@ type taggedWorker struct {
 
 func (taggedWorker) Work(context.Context, *river.Job[taggedArgs]) error { return nil }
 
-// TestSweepIgnoresAWorkspacesSupersededFailure — the mirror of the above. A
-// workspace that failed and then succeeded is not a tenant being missed.
-func TestSweepIgnoresAWorkspacesSupersededFailure(t *testing.T) {
+// TestSweepIgnoresASupersededFailure — the mirror of the above. A
+// pass that failed and then succeeded is not a pass being missed.
+func TestSweepIgnoresASupersededFailure(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	ws := ids.NewV7()
@@ -615,7 +490,7 @@ func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
 // excludes every one of its rows forever — the gauge would then read
 // greenest exactly when such a pass was failing on every tick.
 // embed_drift_sweep is used rather than a made-up kind for the same reason
-// TestTheUnitPairSeesAFailedConnectionTheWorkspacePairMasks uses
+// TestTheUnitPairSeesAFailedConnectionTheKindPairMasks uses
 // telegram_poll: the standalone-kind arm is derived from the contract, so a
 // fixture kind would prove a query that never runs.
 func TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace(t *testing.T) {
@@ -635,8 +510,8 @@ func TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace(t *testing.T) {
 	if !ok {
 		t.Fatal("a tagged row of a standalone Fleet kind is missing from the sweep read entirely")
 	}
-	if pass.Workspaces != 1 {
-		t.Errorf("Workspaces = %d, want 1: there is no workspace grain for this kind, and the pass ran once", pass.Workspaces)
+	if pass.Passes != 1 {
+		t.Errorf("Passes = %d, want 1: there is no workspace grain for this kind, and the pass ran once", pass.Passes)
 	}
 	if pass.Failed != 1 {
 		t.Errorf("Failed = %d, want 1: the only tick discarded", pass.Failed)
@@ -669,47 +544,11 @@ func TestSweepReadsOnlyTheLatestTickOfAStandaloneFleetPass(t *testing.T) {
 	if !ok {
 		t.Fatal("no sweep reported for a tagged standalone Fleet kind")
 	}
-	if pass.Workspaces != 1 {
-		t.Errorf("Workspaces = %d, want 1", pass.Workspaces)
+	if pass.Passes != 1 {
+		t.Errorf("Passes = %d, want 1", pass.Passes)
 	}
 	if pass.Failed != 0 {
 		t.Errorf("Failed = %d, want 0: the LATEST tick succeeded", pass.Failed)
-	}
-}
-
-// TestSweepDoesNotDoubleCountAStandaloneKindsRowThatCarriesAWorkspaceID —
-// nothing in the tree writes a workspace_id onto an embed_drift_sweep row
-// today, so the per-workspace arm's exclusion of the standalone-kind set is
-// defensive rather than load-bearing. This is what proves it actually holds:
-// without it, a row shaped like the second one below would be read by BOTH
-// arms and summed into one inflated count by the outer GROUP BY.
-func TestSweepDoesNotDoubleCountAStandaloneKindsRowThatCarriesAWorkspaceID(t *testing.T) {
-	_, pool := migratedAppPool(t)
-	ctx := t.Context()
-
-	// The ordinary shape: no workspace_id at all.
-	seedJob(ctx, t, pool, seed{
-		Kind: "embed_drift_sweep", State: "completed",
-		Tags: []string{jobs.SweepTag},
-	})
-	// A row of the SAME kind that also carries a workspace_id — a shape
-	// nothing here produces, exercising the defensive exclusion rather than
-	// data the fleet actually writes.
-	seedJob(ctx, t, pool, seed{
-		Kind: "embed_drift_sweep", State: "completed",
-		Tags: []string{jobs.SweepTag}, Workspace: ids.NewV7(),
-	})
-
-	snap, err := jobs.Stats(ctx, pool)
-	if err != nil {
-		t.Fatalf("Stats: %v", err)
-	}
-	pass, ok := sweepFor(snap, "embed_drift_sweep")
-	if !ok {
-		t.Fatal("no sweep reported for the standalone kind")
-	}
-	if pass.Workspaces != 1 {
-		t.Errorf("Workspaces = %d, want 1: a row that slipped past the per-workspace arm's exclusion must not also be summed on top of the per-kind arm's own reading", pass.Workspaces)
 	}
 }
 
@@ -775,9 +614,9 @@ func TestAPendingNextTickDoesNotMaskADiscardedStandalonePass(t *testing.T) {
 	if !ok {
 		t.Fatal("no sweep reported for a tagged standalone Fleet kind")
 	}
-	if pass.Workspaces != 1 {
-		t.Errorf("Workspaces = %d, want 1: the pass is still covered — a queued tick is reach, "+
-			"and only the OUTCOME waits for a row that ended", pass.Workspaces)
+	if pass.Passes != 1 {
+		t.Errorf("Passes = %d, want 1: the pass is still covered — a queued tick is reach, "+
+			"and only the OUTCOME waits for a row that ended", pass.Passes)
 	}
 	if pass.Failed != 1 {
 		t.Errorf("Failed = %d, want 1: the last tick that ENDED was discarded, and the one after "+
@@ -785,20 +624,19 @@ func TestAPendingNextTickDoesNotMaskADiscardedStandalonePass(t *testing.T) {
 	}
 }
 
-// The same at workspace grain, because it is the same defect: one tenant's share
-// discarded, and a newer unfinished child of the next pass over it.
-func TestAPendingNextChildDoesNotMaskAWorkspacesDiscardedShare(t *testing.T) {
+// The same for a fan-out child kind: its last finished row discarded, and a
+// newer unfinished one of the next pass over it.
+func TestAPendingNextChildDoesNotMaskADiscardedShare(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
-	ws := ids.NewV7()
 	earlier, later := time.Now().Add(-2*time.Hour), time.Now().Add(-time.Hour)
 
 	seedJob(ctx, t, pool, seed{
-		Kind: "embed_drift", State: "discarded", Workspace: ws,
+		Kind: "embed_drift", State: "discarded",
 		Tags: []string{jobs.SweepTag}, CreatedAt: earlier,
 	})
 	seedJob(ctx, t, pool, seed{
-		Kind: "embed_drift", State: "running", Workspace: ws,
+		Kind: "embed_drift", State: "running",
 		Tags: []string{jobs.SweepTag}, CreatedAt: later,
 	})
 
@@ -810,11 +648,11 @@ func TestAPendingNextChildDoesNotMaskAWorkspacesDiscardedShare(t *testing.T) {
 	if !ok {
 		t.Fatal("no sweep reported for a tagged fan-out kind")
 	}
-	if pass.Workspaces != 1 {
-		t.Errorf("Workspaces = %d, want 1: the tenant was reached", pass.Workspaces)
+	if pass.Passes != 1 {
+		t.Errorf("Passes = %d, want 1", pass.Passes)
 	}
 	if pass.Failed != 1 {
-		t.Errorf("Failed = %d, want 1: this tenant's last finished share was discarded, and a "+
+		t.Errorf("Failed = %d, want 1: the last finished share was discarded, and a "+
 			"running retry is not yet evidence it recovered", pass.Failed)
 	}
 }
@@ -839,9 +677,9 @@ func TestAPassWithNothingEndedYetReportsNoFailure(t *testing.T) {
 		t.Fatal("no sweep reported for a tagged standalone Fleet kind — the counts below would " +
 			"both read 0 from a missing row and look like agreement")
 	}
-	if pass.Workspaces != 1 || pass.Failed != 0 {
-		t.Errorf("Workspaces = %d Failed = %d, want 1 and 0: a first tick still running has "+
-			"neither succeeded nor failed", pass.Workspaces, pass.Failed)
+	if pass.Passes != 1 || pass.Failed != 0 {
+		t.Errorf("Passes = %d Failed = %d, want 1 and 0: a first tick still running has "+
+			"neither succeeded nor failed", pass.Passes, pass.Failed)
 	}
 }
 

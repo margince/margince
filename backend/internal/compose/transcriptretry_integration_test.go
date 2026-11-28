@@ -37,7 +37,7 @@ func (e *transcriptEnv) tryTranscript(t *testing.T, first int, brains ...complet
 	var errs []error
 	for i, brain := range brains {
 		worker := &transcriptProposeWorker{
-			language: installationLanguage(e.Pool), activities: e.Activities, users: identity.NewService(e.Pool), log: quiet,
+			language: installationLanguage(e.Pool), activities: e.Activities, users: identity.NewService(e.Pool), bind: installationBinder(e.Pool), log: quiet,
 		}
 		worker.proposer = NewTranscriptProposer(e.Pool, brain, e.svc, now, quiet)
 		ctx, cancel := context.WithCancel(context.Background())

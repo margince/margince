@@ -39,12 +39,12 @@ type approvalOwnerNoticeWorker struct {
 }
 
 func (w *approvalOwnerNoticeWorker) Work(ctx context.Context, job *river.Job[ApprovalOwnerNoticeArgs]) error {
+	if job.Args.ApprovalID.IsZero() || job.Args.DeciderID.IsZero() {
+		return river.JobCancel(jobs.FaultContext(ctx, fmt.Errorf("owner announcement requires a request and recipient: %w", apperrors.ErrInvalidArgument)))
+	}
 	wsCtx, err := bindInstallation(ctx, w.pool)
 	if err != nil {
 		return river.JobCancel(jobs.FaultContext(ctx, err))
-	}
-	if job.Args.ApprovalID.IsZero() || job.Args.DeciderID.IsZero() {
-		return river.JobCancel(jobs.FaultContext(ctx, fmt.Errorf("owner announcement requires a request and recipient: %w", apperrors.ErrInvalidArgument)))
 	}
 	ctx = principal.SystemActing(wsCtx, "system:approval-owner-notice")
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())

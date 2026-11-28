@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "6ed1fb88ab20ddba1f37a2c440d2cb7a70792599d558df99fe551230e8b763af"
+const jobContractHash = "d66defad98da9a49baa7c3605fd2b262880550a0037cac4391a98e52e4df91aa"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.

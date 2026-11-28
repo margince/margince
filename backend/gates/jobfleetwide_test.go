@@ -19,7 +19,7 @@ package gates
 // AST-checkable, and a gate that pretended otherwise would be lying about what
 // it verified. This one is a CLOSED ALLOWLIST instead: a dispatcher's Work must
 // contain a call to one of compose's three fan-out helpers —
-// dispatchPerWorkspace, dispatchWith or dispatchOne.
+// dispatchOnce or dispatchOne.
 //
 // The set is the whole allowlist, and a direct River Insert is deliberately
 // NOT in it. Those three are where a fan-out child's insert options are built,
@@ -40,7 +40,7 @@ package gates
 // scheduled pass — one job declaration, not a dispatcher and a child — so the
 // loop itself is no longer the finding.
 //
-// What is still a finding is reaching the fleet by HAND. runPerWorkspace is now
+// What is still a finding is reaching the fleet by HAND. runInstallationPass is now
 // a sanctioned spelling beside the three dispatch helpers: it enumerates the
 // live workspaces, attempts every one, and joins the failures, so a pass that
 // walks the fleet through it cannot silently skip a tenant or swallow a
@@ -92,34 +92,13 @@ import (
 // failure to resolve still trips it.
 const fleetWideDispatcherFloor = 20
 
-// fanOutHelpers are the compose helpers that ARE a fan-out. See the allowlist
-// above for why the set is closed and why a direct River insert is not in it.
-// fanOutHelpers are the sanctioned ways a FleetWide job reaches the fleet.
-//
-// The first two ENQUEUE one child per unit; the rest RUN the pass for each
-// workspace in this process, which is what ADR-0103 collapsed the workspace
-// dispatchers into — over the live workspaces, over every one including the
-// archived (what a retention pass owes), or over a set the pass scanned for
-// itself.
-//
-// runEach is that last case, and it is the loop the other two are built on. The
-// overlay reconcile uses it directly because its population is the DUE
-// connections rather than the fleet: its next_sweep_at gate is the backoff, and
-// sweeping a workspace that is not due would spend incumbent quota to do
-// nothing. Going through it rather than writing the loop is what keeps the
-// guarantee — every workspace attempted, the failures joined.
-//
-// dispatchPerWorkspace was a sixth, and it is gone: ADR-0103 retired the last
-// caller, and a helper nothing calls is a spelling this gate would go on
-// admitting for a shape the tree no longer has.
-//
-// All five are listed together because the arm below is about the same thing
-// for all of them: a FleetWide job must reach the
-// fleet through a helper that knows what a unit is, and not through a loop it
-// wrote itself.
+// fanOutHelpers are the sanctioned ways a FleetWide job reaches the
+// installation: dispatchOnce and dispatchOne ENQUEUE the child, and
+// runInstallationPass RUNS the pass in this process (ADR-0103). A direct River
+// insert is not in the set, because it would lose the sweep tag and the
+// declared attempt cap those helpers stamp.
 var fanOutHelpers = []string{
-	"dispatchWith", "dispatchOne",
-	"runPerWorkspace", "runPerEveryWorkspace", "runEach",
+	"dispatchOnce", "dispatchOne", "runInstallationPass",
 }
 
 // fleetWideDispatcher is one resolved args→worker→Work association and what
@@ -403,7 +382,7 @@ func checkFleetWideDispatchers(t *testing.T, dir string) {
 			continue
 		}
 		if !d.fansOut {
-			t.Errorf("%s:%d: %s works FleetWide args %s but never reaches the fleet. It must do so through dispatchWith or dispatchOne — which build the child's insert options, so a direct River insert around them loses the sweep tag and the declared attempt cap — or through runPerWorkspace / runPerEveryWorkspace / runEach, which walk the workspaces in this process (ADR-0103). A loop of its own is the shape all four exist to replace.",
+			t.Errorf("%s:%d: %s works FleetWide args %s but never reaches the fleet. It must do so through dispatchOnce or dispatchOne — which build the child's insert options, so a direct River insert around them loses the sweep tag and the declared attempt cap — or through runInstallationPass, which runs the pass over the installation in this process (ADR-0103).",
 				d.pos.Filename, d.pos.Line, d.worker, d.args)
 		}
 		for _, verb := range d.writes {

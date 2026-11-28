@@ -49,7 +49,7 @@ var queueDepthStates = map[string]bool{
 // which is legitimately per-queue rather than per-kind — "how long has the
 // oldest runnable job in this queue waited" does not split by which kind
 // that job is.
-type queueKey struct{ queue, workspace string }
+type queueKey struct{ queue string }
 
 // queueKindKey identifies one series of the depth/running gauges. Kind is
 // on the wire alongside queue because most kinds share the "default" queue
@@ -57,16 +57,16 @@ type queueKey struct{ queue, workspace string }
 // breakdown collapses dozens of unrelated kinds into one series named
 // "default" — useless for "which kind is backed up" or "which kind is
 // actually running".
-type queueKindKey struct{ kind, queue, workspace string }
+type queueKindKey struct{ kind, queue string }
 
 // kindKey identifies one series of the per-kind gauges. Dead work is keyed
 // by kind rather than by queue because "which work will never run" is a
 // question about the kind, not about the lane it happened to sit in.
-type kindKey struct{ kind, workspace string }
+type kindKey struct{ kind string }
 
 // stateKey identifies one series of the unrecognised-state gauge, which
 // carries the state itself so an operator can see what appeared.
-type stateKey struct{ state, queue, workspace string }
+type stateKey struct{ state, queue string }
 
 // The river_job_state values this renderer classifies by name. Named so
 // the spelling that decides which gauge a row lands on exists once.
@@ -99,10 +99,9 @@ func aggregate(rows []jobs.StateRow) jobSeries {
 		unrecognised: map[stateKey]int64{},
 	}
 	for _, r := range rows {
-		ws := workspaceLabelFor(r)
-		qk := queueKey{queue: r.Queue, workspace: ws}
-		qkk := queueKindKey{kind: r.Kind, queue: r.Queue, workspace: ws}
-		kk := kindKey{kind: r.Kind, workspace: ws}
+		qk := queueKey{queue: r.Queue}
+		qkk := queueKindKey{kind: r.Kind, queue: r.Queue}
+		kk := kindKey{kind: r.Kind}
 		switch {
 		case queueDepthStates[r.State]:
 			a.depth[qkk] += r.Count
@@ -117,7 +116,7 @@ func aggregate(rows []jobs.StateRow) jobSeries {
 			// false for half the rows under it.
 			a.cancelled[kk] += r.Count
 		default:
-			a.unrecognised[stateKey{state: r.State, queue: r.Queue, workspace: ws}] += r.Count
+			a.unrecognised[stateKey{state: r.State, queue: r.Queue}] += r.Count
 		}
 		a.ageFrom(qk, r)
 	}
@@ -149,58 +148,11 @@ func (a jobSeries) ageFrom(qk queueKey, r jobs.StateRow) {
 	}
 }
 
-// malformedWorkspaceLabel stands in for a row whose workspace key is
-// PRESENT but empty. Such a row is malformed — a job either does tenant
-// work and names its workspace, or does none and carries no key — and
-// rendering it under the empty label would count it as a dispatcher,
-// breaking the one invariant every reader of these gauges stands on. It
-// gets a value of its own so it is visible as the anomaly it is, and the
-// cardinality it can add is exactly one.
-//
-// Plain ASCII, so label() passes it through unchanged rather than escaping
-// it into something unreadable. A raw workspace id equal to this string
-// would be indistinguishable from the marker — but such a row is itself
-// malformed (a real id is a uuid), it lands on the same series, and the
-// invariant that matters, empty ⇔ dispatcher, is untouched either way.
-const malformedWorkspaceLabel = "malformed_workspace_id"
-
-// workspaceLabelFor answers the workspace label for one group: empty for a
-// dispatcher, the id for tenant work, and a marker for a row that is
-// neither.
-func workspaceLabelFor(r jobs.StateRow) string {
-	if r.Untenanted {
-		return ""
-	}
-	if r.WorkspaceID == "" {
-		return malformedWorkspaceLabel
-	}
-	return r.WorkspaceID
-}
-
 // writeJobMetrics renders the job-runtime section. Pure over snap so the
 // exposition text is provable without a database.
 //
-// workspace_id is admitted on these gauges by ADR-0080/A125 — the id, never
-// a name, because the exposition endpoint has no redaction path.
-//
-// AN EMPTY VALUE IS A FLEET-WIDE PASS, and that used to read "is a
-// dispatcher". The two were the same thing until ADR-0103 collapsed the
-// workspace dispatchers: a dispatcher did no tenant work, and a null in this
-// column meant a row that only enumerated and enqueued. A collapsed pass owns
-// no workspace either — it walks them — but it does the tenant work itself, so
-// the old sentence describes the opposite of what an empty value means, on the
-// gauges an operator reads during an incident.
-//
-// The label still EARNS its exception, for a reason that also changed. It was
-// licensed while the fan-out existed, to tell one workspace's share of a pass
-// from another's; there are no such shares now. What it still separates is the
-// kinds whose args NAME a workspace — a queued send, an import, an ingest —
-// from the ones that answer for the installation. An operator reading queue
-// depth wants that split: a backlog on somebody's import is a different fact
-// from a backlog on the nightly passes.
-//
-// TestTheWorkspaceLabelStillSeparatesTwoPopulations holds that justification,
-// so it is a check rather than a paragraph.
+// The series carry no workspace label: an installation holds one company, so
+// every row of river_job belongs to it.
 //
 // It returns an error because an io.Writer can fail. A scrape that
 // swallowed a refused write would serve a truncated exposition, which
@@ -217,22 +169,22 @@ func writeJobMetrics(w io.Writer, snap jobs.Snapshot) error {
 		return err
 	}
 	if err := writeQueueKindGauge(w, "margince_job_queue_depth",
-		"Jobs waiting to run (available + scheduled + retryable + pending) per kind, queue and workspace. An empty workspace_id is a fleet-wide pass, which answers for the installation rather than for one tenant.",
+		"Jobs waiting to run (available + scheduled + retryable + pending) per kind and queue.",
 		depth); err != nil {
 		return err
 	}
 	if err := writeQueueKindGauge(w, "margince_job_running",
-		"Jobs currently executing per kind, queue and workspace.",
+		"Jobs currently executing per kind and queue.",
 		running); err != nil {
 		return err
 	}
 	if err := writeKindGauge(w, "margince_job_discarded",
-		"Jobs that exhausted every attempt and will never run without intervention, per kind and workspace.",
+		"Jobs that exhausted every attempt and will never run without intervention, per kind.",
 		discarded); err != nil {
 		return err
 	}
 	if err := writeKindGauge(w, "margince_job_cancelled",
-		"Jobs stopped deliberately before their attempts ran out, per kind and workspace. Counted apart from discarded because the operator story differs -- a discarded job spent every attempt, a cancelled one was stopped. Both are work that will not happen, which is why the sweep pair counts either as a workspace missed.",
+		"Jobs stopped deliberately before their attempts ran out, per kind. Counted apart from discarded because the operator story differs -- a discarded job spent every attempt, a cancelled one was stopped. Both are work that will not happen, which is why the sweep pair counts either as a pass missed.",
 		cancelled); err != nil {
 		return err
 	}
@@ -259,12 +211,11 @@ func writeQueueKindGauge(w io.Writer, name, help string, series map[queueKindKey
 		return err
 	}
 	keys := sortedKeysOf(series, func(a, b queueKindKey) int {
-		return cmp.Or(cmp.Compare(a.kind, b.kind), cmp.Compare(a.queue, b.queue),
-			cmp.Compare(a.workspace, b.workspace))
+		return cmp.Or(cmp.Compare(a.kind, b.kind), cmp.Compare(a.queue, b.queue))
 	})
 	for _, k := range keys {
-		if _, err := fmt.Fprintf(w, "%s{kind=%s,queue=%s,workspace_id=%s} %d\n",
-			name, label(k.kind), label(k.queue), label(k.workspace), series[k]); err != nil {
+		if _, err := fmt.Fprintf(w, "%s{kind=%s,queue=%s} %d\n",
+			name, label(k.kind), label(k.queue), series[k]); err != nil {
 			return err
 		}
 	}
@@ -276,11 +227,11 @@ func writeKindGauge(w io.Writer, name, help string, series map[kindKey]int64) er
 		return err
 	}
 	keys := sortedKeysOf(series, func(a, b kindKey) int {
-		return cmp.Or(cmp.Compare(a.kind, b.kind), cmp.Compare(a.workspace, b.workspace))
+		return cmp.Compare(a.kind, b.kind)
 	})
 	for _, k := range keys {
-		if _, err := fmt.Fprintf(w, "%s{kind=%s,workspace_id=%s} %d\n",
-			name, label(k.kind), label(k.workspace), series[k]); err != nil {
+		if _, err := fmt.Fprintf(w, "%s{kind=%s} %d\n",
+			name, label(k.kind), series[k]); err != nil {
 			return err
 		}
 	}
@@ -290,12 +241,12 @@ func writeKindGauge(w io.Writer, name, help string, series map[kindKey]int64) er
 func writeAgeGauge(w io.Writer, series map[queueKey]float64) error {
 	const name = "margince_job_oldest_queued_age_seconds"
 	if err := writeFamilyHeader(w, name,
-		"Seconds the oldest runnable-and-unclaimed job has waited per queue and workspace. A job scheduled for the future is not counted; it is not late."); err != nil {
+		"Seconds the oldest runnable-and-unclaimed job has waited per queue. A job scheduled for the future is not counted; it is not late."); err != nil {
 		return err
 	}
 	for _, k := range sortedQueueKeys(series) {
-		if _, err := fmt.Fprintf(w, "%s{queue=%s,workspace_id=%s} %.0f\n",
-			name, label(k.queue), label(k.workspace), series[k]); err != nil {
+		if _, err := fmt.Fprintf(w, "%s{queue=%s} %.0f\n",
+			name, label(k.queue), series[k]); err != nil {
 			return err
 		}
 	}
@@ -319,12 +270,11 @@ func writeUnrecognisedStateGauge(w io.Writer, series map[stateKey]int64) error {
 	keys := sortedKeysOf(series, func(a, b stateKey) int {
 		return cmp.Or(
 			cmp.Compare(a.state, b.state),
-			cmp.Compare(a.queue, b.queue),
-			cmp.Compare(a.workspace, b.workspace))
+			cmp.Compare(a.queue, b.queue))
 	})
 	for _, k := range keys {
-		if _, err := fmt.Fprintf(w, "%s{state=%s,queue=%s,workspace_id=%s} %d\n",
-			name, label(k.state), label(k.queue), label(k.workspace), series[k]); err != nil {
+		if _, err := fmt.Fprintf(w, "%s{state=%s,queue=%s} %d\n",
+			name, label(k.state), label(k.queue), series[k]); err != nil {
 			return err
 		}
 	}
@@ -343,12 +293,12 @@ func writeFamilyHeader(w io.Writer, name, help string) error {
 // Go's %q is not that format. It emits \t, \r and \xNN for control
 // characters, and a parser meeting an escape the format does not define
 // rejects the whole exposition rather than the one series. That matters
-// here because workspace_id is args->>'workspace_id' verbatim from a table
-// with no constraint on it and direct app-role CRUD, so a single
+// here because kind and queue are river_job columns verbatim, in a table
+// with no constraint on them and direct app-role CRUD, so a single
 // raw-inserted row could otherwise poison every scrape for every metric.
 // A control character outside those three is rewritten as a PRINTABLE
 // <0xNN>, never dropped. Dropping is lossy, and lossy is not safe here: two
-// distinct malformed workspace ids differing only in a control byte would
+// distinct malformed kind names differing only in a control byte would
 // collapse to the same label set, and duplicate series are exactly the
 // thing that makes a scrape unparseable — the failure this escaping exists
 // to prevent.
@@ -385,7 +335,7 @@ func label(value string) string {
 // order is not stable.
 func sortedQueueKeys[V any](series map[queueKey]V) []queueKey {
 	return sortedKeysOf(series, func(a, b queueKey) int {
-		return cmp.Or(cmp.Compare(a.queue, b.queue), cmp.Compare(a.workspace, b.workspace))
+		return cmp.Compare(a.queue, b.queue)
 	})
 }
 

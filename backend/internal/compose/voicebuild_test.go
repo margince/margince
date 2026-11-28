@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -95,12 +94,6 @@ func TestClaimTimeReadsTheClaimGeneration(t *testing.T) {
 // before any seat is read.
 func TestVoiceBuildWorkerCtxRefusesArgsItCannotBind(t *testing.T) {
 	worker := &voiceBuildWorker{}
-	user := ids.NewV7()
-	if _, _, err := voiceBuildWorkerCtx(context.Background(), worker.users, VoiceBuildArgs{
-		RequestedBy: user.String(),
-	}); err == nil {
-		t.Fatal("args carrying no workspace must be an explicit error — binding a zero id would fail at the first tenant query instead")
-	}
 	if _, _, err := voiceBuildWorkerCtx(context.Background(), worker.users, VoiceBuildArgs{
 		RequestedBy: "",
 	}); err == nil {

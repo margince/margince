@@ -28,7 +28,7 @@ var storeBuilders = regexp.MustCompile(`(providerRunStore|workspaceJobDB|Install
 
 // A nested tool’s passport does not authorize the worker that called it.
 var actorBinders = regexp.MustCompile(
-	`\w+\s*(=|:=)\s*(forColleague|providerJobActor|reconcileWorkerCtx|partSlimJobActor|principal\.(WithActor|SystemActing))\(`)
+	`\w+\s*(=|:=)\s*(forColleague|providerJobActor|reconcileWorkerCtx|partSlimJobActor|geocodeJobActor|technicalActor|vatCheckJobActor|principal\.(WithActor|SystemActing))\(`)
 
 // Work signatures may omit the job argument; the receiver identifies the worker.
 var workMethod = regexp.MustCompile(`func \(\w+ \*(\w+)\) (?:Work|\w*[Ww]orkspace)\(`)

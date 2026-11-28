@@ -91,7 +91,7 @@ func (f *AssuranceFreshness) HandleBatch(ctx context.Context, envs []events.Enve
 		if err := f.store.MarkInputsChanged(ctx, tx, subjects); err != nil {
 			return err
 		}
-		if err := f.queueRescans(ctx, tx, ws.UUID, subjects); err != nil {
+		if err := f.queueRescans(ctx, tx, subjects); err != nil {
 			return err
 		}
 		eventIDs := make([]ids.UUID, len(envs))
@@ -103,12 +103,12 @@ func (f *AssuranceFreshness) HandleBatch(ctx context.Context, envs []events.Enve
 }
 
 // queueRescans queues one pass per changed deal, at most
-// assuranceRescanBatchLimit of them and never past the workspace's backlog
-// limit (assuranceRescanRoom). A workspace nobody started is not
+// assuranceRescanBatchLimit of them and never past the backlog
+// limit (assuranceRescanRoom). An installation nobody started is not
 // checked, so nothing is queued there. A change that reaches every deal queues
 // nothing: that is the nightly pass's work.
 func (f *AssuranceFreshness) queueRescans(
-	ctx context.Context, tx pgx.Tx, workspace ids.UUID, subjects []assurance.ChangedSubject,
+	ctx context.Context, tx pgx.Tx, subjects []assurance.ChangedSubject,
 ) error {
 	if f.rescans == nil {
 		return nil
@@ -126,7 +126,7 @@ func (f *AssuranceFreshness) queueRescans(
 	if err != nil || !enrolled {
 		return err
 	}
-	room, err := assuranceRescanRoom(ctx, tx, workspace)
+	room, err := assuranceRescanRoom(ctx, tx)
 	if err != nil {
 		return err
 	}

@@ -37,7 +37,7 @@ func TestTheRequestersOwnPromiseIsFiledByTheirAgent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("starting the reading: %v", err)
 	}
-	reader := &transcriptProposeWorker{users: identity.NewService(e.Pool)}
+	reader := &transcriptProposeWorker{users: identity.NewService(e.Pool), bind: installationBinder(e.Pool)}
 	worker, live, err := reader.readerFor(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep2.String(), started.ID)
 	if err != nil || !live {
 		t.Fatalf("binding the reader for Rep2: live=%t err=%v", live, err)
@@ -90,7 +90,7 @@ func TestAReadingForARequesterWhoMayNoLongerReadTheMeetingFailsWithAReason(t *te
 		e.svc, func() time.Time { return clocktest.Now(t) }, slog.New(slog.DiscardHandler))
 	worker := &transcriptProposeWorker{
 		language: installationLanguage(e.Pool), activities: e.Activities, proposer: proposer,
-		users: identity.NewService(e.Pool), log: slog.New(slog.DiscardHandler),
+		users: identity.NewService(e.Pool), bind: installationBinder(e.Pool), log: slog.New(slog.DiscardHandler),
 	}
 	job := &river.Job[TranscriptProposeArgs]{JobRow: &rivertype.JobRow{}, Args: TranscriptProposeArgs{
 		ActivityID: e.activity.UUID, TranscriptReadID: started.ID, RequestedBy: "human:" + e.Rep1.String(),

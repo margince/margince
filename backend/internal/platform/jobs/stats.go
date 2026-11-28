@@ -17,10 +17,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// SweepTag marks a job row as one workspace's share of a fleet pass. Every
-// site that fans work out to the fleet stamps it; a workspace job enqueued
-// by a user action carries no tag and is correctly not counted as a fleet
-// pass.
+// SweepTag marks a job row as one share of a fleet pass. Every
+// site that fans work out to the fleet stamps it; a job enqueued by a user
+// action carries no tag and is correctly not counted as a fleet pass.
 //
 // Nothing enforces that a new fan-out remembers the tag — an untagged one
 // is simply absent from the sweep gauges. Deriving that obligation needs a
@@ -43,9 +42,9 @@ const sweepTagPredicate = `'` + SweepTag + `' = ANY(tags)`
 // backwards.
 const runnableStates = `('available','retryable','scheduled')`
 
-// terminalBadStates are the states a workspace's pass can end in having
-// done nothing. cancelled counts: a cancelled pass did not run, whatever
-// the reason, and the sweep pair answers "are tenants being missed".
+// terminalBadStates are the states a pass can end in having done nothing.
+// cancelled counts: a cancelled pass did not run, whatever the reason, and the
+// sweep pair answers "did the pass run".
 const terminalBadStates = `('discarded','cancelled')`
 
 // terminalStates are the states a run has ENDED in, good or bad. A row in any
@@ -54,26 +53,13 @@ const terminalBadStates = `('discarded','cancelled')`
 // blind spot this names.
 const terminalStates = `('completed','discarded','cancelled')`
 
-// StateRow is one (queue, kind, workspace, state) group of the job table as
-// it stands right now. WorkspaceID is the empty string for a dispatcher —
-// which is exact rather than a default, because a job that does tenant work
-// declares its workspace and a null in that column means a dispatcher and
-// nothing else (see role.go).
+// StateRow is one (queue, kind, state) group of the job table as it stands
+// right now.
 type StateRow struct {
 	Queue string
 	Kind  string
-	// WorkspaceID is the value of the args key VERBATIM. It is the empty
-	// string only when the key is absent or JSON null — which is what
-	// Untenanted reports, and the two must not be conflated: a row carrying
-	// a present-but-EMPTY workspace_id is malformed, not a dispatcher, and
-	// a reader that could not tell them apart would count it as one.
-	WorkspaceID string
-	// Untenanted is true when the workspace key is absent or null — the
-	// exact test the scoped read's dispatcher arm uses, so the two surfaces
-	// cannot disagree about which rows are fleet-wide.
-	Untenanted bool
-	State      string
-	Count      int64
+	State string
+	Count int64
 	// OldestRunnableAgeSeconds is how long the oldest job in this group has
 	// been ELIGIBLE and unclaimed, and is NIL when the group holds no such
 	// job. Nil and zero are different claims — nothing is runnable versus
@@ -84,39 +70,35 @@ type StateRow struct {
 	OldestRunnableAgeSeconds *float64
 }
 
-// SweepPass is one fan-out kind read per workspace: how many workspaces it
-// covers, and how many of those it is currently failing. For a Fleet kind
-// that fans out to nothing (ADR-0103's collapsed pass — the row itself
-// answers for the whole installation, not one workspace's share of it),
-// Workspaces is 1 when the latest tagged row exists at all, the closest
-// reading this pair has to "the pass ran".
+// SweepPass is one fleet-pass kind read as a whole: whether it has a surviving
+// tagged row, and whether the latest of those that ENDED failed. An
+// installation holds one company, so a kind has one pass to count: Passes is 1
+// when the kind has a tagged row at all and Failed is 1 when the latest ended
+// one is dead.
 type SweepPass struct {
-	Kind       string
-	Workspaces int64
-	Failed     int64
+	Kind   string
+	Passes int64
+	Failed int64
 }
 
 // SweepUnit is one fan-out kind read per FAN-OUT UNIT — the grain the
 // dispatcher actually ran the pass at — for the kinds whose unit is finer than
-// a workspace.
+// the installation.
 //
-// It exists because SweepPass counts workspaces, and three dispatchers fan out
-// per CONNECTION and one per BUILD. A workspace holding two connections
-// produces two children per pass, and if one fails while the other succeeds
-// afterwards, the workspace's most recent child is the successful one: the
-// failure is real, the tenant is being half-served, and the workspace pair
-// reports nothing. Counting at the declared unit is what makes that visible.
+// It exists because SweepPass counts one pass per kind, and three dispatchers
+// fan out per CONNECTION and one per BUILD. If one connection's child fails
+// while another succeeds afterwards, the kind's most recent child is the
+// successful one: the failure is real, the installation is being half-served,
+// and the kind pair reports nothing. Counting at the declared unit is what
+// makes that visible.
 //
-// Only the kinds whose unit is NOT the workspace are reported. For the other
-// twenty the unit key IS workspace_id, so this pair would restate
-// SweepPass value for value; publishing both would be one number twice.
+// Only the kinds whose unit is NOT the installation are reported. For the
+// others the unit is the whole kind, so this pair would restate SweepPass value
+// for value; publishing both would be one number twice.
 //
 // The two families therefore OVERLAP rather than partition: a per-connection
-// kind is reported by both, at two grains, because its rows carry a workspace
-// id as well as a connection id. That is the point — the coarse reading
-// answers fleet coverage and the fine one answers whether every unit ran —
-// but it means the two must never be summed, and an alert reads whichever
-// grain it means rather than adding them together.
+// kind is reported by both, at two grains. The two must never be summed, and an
+// alert reads whichever grain it means.
 type SweepUnit struct {
 	Kind string
 	Unit FanOutUnit
@@ -131,7 +113,7 @@ type SweepUnit struct {
 type Snapshot struct {
 	Rows   []StateRow
 	Sweeps []SweepPass
-	// Units is empty when no declared kind fans out below the workspace,
+	// Units is empty when no declared kind fans out below the installation,
 	// which is a legitimate fleet rather than a failed read — Stats returns
 	// the error for that.
 	Units []SweepUnit
@@ -175,7 +157,7 @@ func Stats(ctx context.Context, pool *pgxpool.Pool) (Snapshot, error) {
 }
 
 // subWorkspaceFanOuts answers the fan-out child kinds whose declared unit is
-// finer than a workspace, paired with the args key that identifies one — the
+// finer than the installation, paired with the args key that identifies one — the
 // two arrays statsBySweepUnit joins the job table against.
 //
 // Derived from the contract on every call rather than kept as a list: a
@@ -189,15 +171,12 @@ func subWorkspaceFanOuts() (kinds, argsKeys []string) {
 // subWorkspaceFanOutsOf is the selection itself, over a table it is handed.
 //
 // Separate from its caller so the partition can be exercised against a table a
-// test builds. ADR-0103 retired every workspace fan-out, so no live declaration
-// stands on that side of the split any more — and the rule did not retire with
-// them: the unit still exists for an extension to declare, and a
-// workspace-grain fan-out must still be kept out of the unit pair, because
-// margince_sweep_workspaces already states exactly that number.
+// test builds. An installation-grain fan-out must be kept out of the unit pair,
+// because margince_sweep_workspaces already states exactly that number.
 func subWorkspaceFanOutsOf(units map[string]FanOutUnit) (kinds, argsKeys []string) {
 	for _, kind := range slices.Sorted(maps.Keys(units)) {
 		key := units[kind].ArgsKey()
-		if units[kind] == FanOutWorkspace || key == "" {
+		if units[kind] == FanOutInstallation || key == "" {
 			continue
 		}
 		kinds = append(kinds, kind)
@@ -206,24 +185,19 @@ func subWorkspaceFanOutsOf(units map[string]FanOutUnit) (kinds, argsKeys []strin
 	return kinds, argsKeys
 }
 
-// standaloneFleetKinds answers the kinds statsBySweep must read PER KIND
-// rather than per workspace_id: a Fleet kind (jobs.FleetWide) that fans out
-// to nothing is ADR-0103's collapsed pass — it owns no tenant by
-// declaration, so no row of it ever carries a workspace_id, and its own
-// tagged row is the whole pass rather than a dispatcher's row a child kind
-// elsewhere makes visible. A Fleet kind that DOES fan out (FanOutTo set) is
-// the opposite case: its own row is excluded exactly as before, because the
-// children it enqueues are the real per-workspace signal.
-func standaloneFleetKinds() []string {
-	return standaloneFleetKindsOf(allSpecs())
+// fanOutDispatcherKinds answers the kinds statsBySweep leaves out: a dispatcher
+// that fans out to children. Its own row enqueues and does no work, so the
+// children it enqueues are the real signal.
+func fanOutDispatcherKinds() []string {
+	return fanOutDispatcherKindsOf(allSpecs())
 }
 
-// standaloneFleetKindsOf is the selection itself, over a table a test can
-// build — the same split subWorkspaceFanOutsOf keeps for the same reason.
-func standaloneFleetKindsOf(table map[string]Spec) []string {
+// fanOutDispatcherKindsOf is the selection itself, over a table a test can
+// build.
+func fanOutDispatcherKindsOf(table map[string]Spec) []string {
 	var kinds []string
 	for _, kind := range slices.Sorted(maps.Keys(table)) {
-		if spec := table[kind]; spec.Fleet && spec.FanOutTo == "" {
+		if table[kind].FanOutTo != "" {
 			kinds = append(kinds, kind)
 		}
 	}
@@ -236,15 +210,10 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 	// assertion, which is a live intermittent flake elsewhere in this tree.
 	// The age has NO coalesce: a group with nothing runnable answers NULL,
 	// which the reader carries as "no such job" rather than as a measured
-	// zero. The workspace key is reported alongside a separate IS NULL
-	// test, because `->>` yields the empty string for a present-but-empty
-	// value as readily as coalesce does for an absent one — and those are a
-	// malformed row and a dispatcher respectively.
+	// zero.
 	const q = `
 		SELECT queue,
 		       kind,
-		       coalesce(args->>'workspace_id', '') AS workspace_id,
-		       (args->>'workspace_id' IS NULL) AS untenanted,
 		       state::text,
 		       count(*)::bigint,
 		       max(EXTRACT(EPOCH FROM (now() - scheduled_at)))
@@ -252,7 +221,7 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 		                     AND scheduled_at <= now())::double precision
 		FROM river_job
 		WHERE state <> 'completed'
-		GROUP BY 1, 2, 3, 4, 5`
+		GROUP BY 1, 2, 3`
 
 	cursor, err := pool.Query(ctx, q)
 	if err != nil {
@@ -263,7 +232,7 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 	var out []StateRow
 	for cursor.Next() {
 		var r StateRow
-		if err := cursor.Scan(&r.Queue, &r.Kind, &r.WorkspaceID, &r.Untenanted,
+		if err := cursor.Scan(&r.Queue, &r.Kind,
 			&r.State, &r.Count, &r.OldestRunnableAgeSeconds); err != nil {
 			return nil, fmt.Errorf("jobs: scanning job state counts: %w", err)
 		}
@@ -275,107 +244,52 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 	return out, nil
 }
 
-// statsBySweep reports, per fleet-pass kind, how many workspaces it covers
-// and how many of those it is currently failing.
+// statsBySweep reports, per fleet-pass kind, whether it has run and whether
+// its latest outcome is a failure.
 //
-// It reads the LATEST OUTCOME PER WORKSPACE, never a batch. There is no
-// such thing as "the last pass" in this table: River resolves a uniqueness
-// conflict with ON CONFLICT DO UPDATE SET kind = EXCLUDED.kind, which
-// writes neither created_at nor metadata, so a child still active from the
-// previous pass is deduplicated and produces no row for the current one. A
-// dispatcher retried while 90 of 100 children are live inserts 10 fresh
-// rows — any batch-keyed reading, by timestamp or by a minted pass id,
-// would report that fleet as 10.
+// It reads the LATEST OUTCOME PER KIND, never a batch. There is no such thing
+// as "the last pass" in this table: River resolves a uniqueness conflict with
+// ON CONFLICT DO UPDATE SET kind = EXCLUDED.kind, which writes neither
+// created_at nor metadata, so a child still active from the previous pass is
+// deduplicated and produces no row for the current one.
 //
-// Per-workspace-latest also answers the question the pair exists for — are
-// tenants being missed — more directly than a batch count did: a workspace
-// whose most recent pass of a kind is dead is a tenant being missed,
-// whether that happened this pass or three passes ago. And because it
-// counts DISTINCT workspaces, a dispatcher that fans out per connection
-// rather than per workspace still counts each workspace once, with no
-// special case.
+// The sweep tag is what separates a fleet pass from a job someone triggered by
+// hand. A fan-out dispatcher's own row is excluded: it enqueues and does no
+// work, and the children it enqueues are what this query counts for that kind.
 //
-// The sweep tag is what separates a fleet pass from a workspace job someone
-// triggered by hand. A dispatcher's own row carries no workspace and is
-// excluded: it is not one workspace's share of anything — the children it
-// enqueues are, and those are what this query counts for that kind. A row
-// whose workspace key is PRESENT but empty is excluded by the same test
-// rather than counted as a workspace of its own — it is malformed, and a
-// phantom tenant here would misreport how much of the fleet a pass actually
-// covers.
+// The two readings come from DIFFERENT rows of the same kind. Coverage asks
+// "did the pass run", so it counts any tagged row, a pending one included. The
+// outcome asks "what did the last attempt that ENDED do", so it reads the
+// latest row in a terminal state and ignores one still on its way. Reading both
+// from the newest row would let a tick that exhausted its attempts read as
+// healthy for as long as a successor existed, since a periodic pass has a
+// pending or running next tick almost all the time.
 //
-// A Fleet kind that fans out to NOTHING is a different shape, not a
-// malformed row: it owns no tenant by declaration (every such kind is
-// ADR-0103's collapsed periodic pass today, though the selection is by
-// declared shape — Fleet with no FanOutTo — rather than by that name), so
-// none of its rows will EVER carry a workspace_id — the first arm's
-// predicate excludes every one of them, forever. standaloneFleetKinds()
-// names exactly those kinds, and the second arm reads the latest tagged row
-// PER KIND for them instead of per workspace — the closest reading "did the
-// last pass happen" has when there is no workspace grain to read at all.
-// The two arms are kind-disjoint by construction (a kind is declared with a
-// FanOutTo or without one, never both), so UNION ALL cannot double-count
-// one kind between them; the exclusion in the first arm is defensive, so
-// the split
-// holds even if that ever stopped being true of the data.
+// A later COMPLETED run still supersedes an earlier failure: it is terminal, so
+// it is the latest ended row.
 func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) {
-	standalone := standaloneFleetKinds()
-	// The two readings come from DIFFERENT rows of the same group, and that is the
-	// whole of this query's shape. Coverage asks "did the pass reach this tenant",
-	// so it counts a group with any tagged row, a pending one included. The
-	// outcome asks "what did the last attempt that ENDED do", so it reads the
-	// latest row in a terminal state and ignores one still on its way.
-	//
-	// Reading both from the newest row is what this fixes. A periodic pass has a
-	// pending or running next tick almost all the time, so the newest row is
-	// usually one that has not run, and a tick that exhausted its attempts read as
-	// healthy for as long as a successor existed — the gauge reported 0 failed
-	// while the discard counter next to it rose once an hour.
-	//
-	// A later COMPLETED run still supersedes an earlier failure: it is terminal,
-	// so it is the latest ended row. That rule is deliberate — the tenant is being
-	// served now — and only the masking by an unfinished row is gone.
+	dispatchers := fanOutDispatcherKinds()
 	const q = `
 		WITH tagged AS (
-		    SELECT kind, args->>'workspace_id' AS workspace, state::text AS state,
-		           created_at, id,
-		           kind = ANY(coalesce($1::text[], ARRAY[]::text[])) AS standalone
+		    SELECT kind, state::text AS state, created_at, id
 		    FROM river_job
 		    WHERE ` + sweepTagPredicate + `
+		      AND NOT (kind = ANY(coalesce($1::text[], ARRAY[]::text[])))
 		),
-		-- One row per group, whatever state it is in: the coverage count.
-		grouped AS (
-		    (SELECT DISTINCT ON (kind, workspace) kind, workspace
-		     FROM tagged
-		     WHERE coalesce(workspace, '') <> '' AND NOT standalone
-		     ORDER BY kind, workspace, created_at DESC, id DESC)
-		    UNION ALL
-		    (SELECT DISTINCT ON (kind) kind, NULL AS workspace
-		     FROM tagged WHERE standalone
-		     ORDER BY kind, created_at DESC, id DESC)
-		),
-		-- One row per group among those that ENDED: the outcome.
 		ended AS (
-		    (SELECT DISTINCT ON (kind, workspace) kind, workspace, state
-		     FROM tagged
-		     WHERE coalesce(workspace, '') <> '' AND NOT standalone
-		       AND state IN ` + terminalStates + `
-		     ORDER BY kind, workspace, created_at DESC, id DESC)
-		    UNION ALL
-		    (SELECT DISTINCT ON (kind) kind, NULL AS workspace, state
-		     FROM tagged
-		     WHERE standalone AND state IN ` + terminalStates + `
-		     ORDER BY kind, created_at DESC, id DESC)
+		    SELECT DISTINCT ON (kind) kind, state
+		    FROM tagged
+		    WHERE state IN ` + terminalStates + `
+		    ORDER BY kind, created_at DESC, id DESC
 		)
-		SELECT g.kind,
-		       count(*)::bigint,
-		       count(*) FILTER (WHERE e.state IN ` + terminalBadStates + `)::bigint
-		FROM grouped g
-		LEFT JOIN ended e
-		       ON e.kind = g.kind AND e.workspace IS NOT DISTINCT FROM g.workspace
-		GROUP BY g.kind`
+		SELECT t.kind,
+		       1::bigint,
+		       (count(e.kind) FILTER (WHERE e.state IN ` + terminalBadStates + `) > 0)::int::bigint
+		FROM (SELECT DISTINCT kind FROM tagged) t
+		LEFT JOIN ended e ON e.kind = t.kind
+		GROUP BY t.kind`
 
-	cursor, err := pool.Query(ctx, q, standalone)
+	cursor, err := pool.Query(ctx, q, dispatchers)
 	if err != nil {
 		return nil, fmt.Errorf("jobs: reading sweep passes: %w", err)
 	}
@@ -384,7 +298,7 @@ func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) 
 	var out []SweepPass
 	for cursor.Next() {
 		var s SweepPass
-		if err := cursor.Scan(&s.Kind, &s.Workspaces, &s.Failed); err != nil {
+		if err := cursor.Scan(&s.Kind, &s.Passes, &s.Failed); err != nil {
 			return nil, fmt.Errorf("jobs: scanning sweep passes: %w", err)
 		}
 		out = append(out, s)
@@ -401,21 +315,16 @@ func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) 
 // The reading rule is the SAME — coverage from any tagged row of the unit, the
 // outcome from the latest row of it that ENDED, for the reason statsBySweep sets
 // out in full — and only the key it is latest PER changes:
-// args->>'connection_id' instead of args->>'workspace_id'. That is
-// what removes the masking. A workspace with a healthy connection and a broken
-// one is one healthy unit and one failed unit here, where the workspace pair
-// sees only whichever child ran last.
+// args->>'connection_id' instead of the kind. That is what removes the
+// masking. An installation with a healthy connection and a broken one is one
+// healthy unit and one failed unit here, where the kind pair sees only
+// whichever child ran last.
 //
 // The kind→key pairing arrives as two aligned arrays and is JOINED against
 // rather than spliced into the SQL, so a kind name and an args key never reach
 // the statement as text. The unnest join is also what bounds the scan to the
 // declared sub-unit kinds: a row of any other kind matches no pair and is
 // not read.
-//
-// The workspace predicate is carried over from statsBySweep unchanged, for the
-// reason it holds there: every kind read here is a tenant kind, so a row with a
-// unit key and no workspace is malformed, and counting it would credit a pass
-// with a unit belonging to no tenant.
 //
 // An empty pairing means the contract declares no such dispatcher, and the
 // query is skipped rather than run with two empty arrays — the answer is the
@@ -434,7 +343,6 @@ func statsBySweepUnit(ctx context.Context, pool *pgxpool.Pool) ([]SweepUnit, err
 		    JOIN unnest($1::text[], $2::text[]) AS u(kind, args_key) ON u.kind = j.kind
 		    WHERE '` + SweepTag + `' = ANY(j.tags)
 		      AND coalesce(j.args->>u.args_key, '') <> ''
-		      AND coalesce(j.args->>'workspace_id', '') <> ''
 		),
 		grouped AS (
 		    SELECT DISTINCT ON (kind, unit) kind, unit

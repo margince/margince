@@ -207,7 +207,7 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 			return fmt.Errorf("migrate up: writing the reconcile count: %w", err)
 		}
 	}
-	// No REQUEST ceiling — River's own migrator and the index below are DDL, and
+	// No REQUEST ceiling — River's own migrator and the index drop below are DDL, and
 	// this is the role that runs it — but the MIGRATION ceiling still applies.
 	// WithoutRequestCeilings lifts statement_timeout to 0, which is right for
 	// escaping the 30s a request gets and wrong as a final answer: River's migrator
@@ -223,8 +223,8 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 	if err != nil {
 		return err
 	}
-	if _, err := riverPool.Exec(ctx, riverWorkspaceArgIndex); err != nil {
-		return fmt.Errorf("migrate: creating the river workspace-arg index: %w", err)
+	if _, err := riverPool.Exec(ctx, dropRiverWorkspaceArgIndex); err != nil {
+		return fmt.Errorf("migrate: dropping the retired river workspace-arg index: %w", err)
 	}
 	if _, err := fmt.Fprintf(stdout, upSummaryFormat, report.Applied, riverApplied); err != nil {
 		return fmt.Errorf("migrate up: writing the confirmation: %w", err)
@@ -246,27 +246,17 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 // migration read as "behind" instead of passing on the core lane alone.
 const upSummaryFormat = "applied %d core+custom+extension + %d river migration(s); schema is at head\n"
 
-// riverWorkspaceArgIndex indexes River's per-job workspace argument. Jobs
-// fan out per workspace and both job-health statements already scan the
-// table, so the fan-out multiplies the rows they read.
+// dropRiverWorkspaceArgIndex removes the index an earlier release built over
+// the job args' workspace key. No job names a workspace any more and nothing
+// reads that key, so the index only costs writes on river_job.
 //
-// It lives here rather than in a migration file for two reasons that both
-// come from river_job not being ours: the table does not exist while the
-// core lane runs (River's own migrator creates it, on the pool opened
-// above), and dbmigrate.Up wraps every migration in a transaction unless the
-// file asks otherwise with dbmigrate.NoTransactionMarker.
-//
-// Deliberately NOT CONCURRENTLY. This runs outside dbmigrate's
-// per-migration transaction but alongside boot, and a plain CREATE INDEX
-// on a fresh river_job is trivial. If that table ever grows large enough
-// for the write lock to matter, the answer is a concurrent build HERE and
-// not a migration: river_job does not exist while the core lane runs, which
-// is the first reason above, and this step already runs outside any
-// transaction. dbmigrate.NoTransactionMarker is for a migration that needs
-// the same freedom on a table the core lane can see.
-const riverWorkspaceArgIndex = `
-CREATE INDEX IF NOT EXISTS river_job_workspace_arg
-    ON river_job ((args ->> 'workspace_id'))`
+// It lives here rather than in a migration file for the reason the index did:
+// river_job is not ours, the table does not exist while the core lane runs
+// (River's own migrator creates it, on the pool opened above), and dbmigrate
+// wraps every migration in a transaction. Plain DROP INDEX IF EXISTS takes a
+// brief lock on a table whose rows are short-lived, so it needs no
+// concurrent form.
+const dropRiverWorkspaceArgIndex = `DROP INDEX IF EXISTS river_job_workspace_arg`
 
 // reportExtensionNamespaces names the extension lanes BEFORE they are
 // applied, and says so explicitly when there are none.

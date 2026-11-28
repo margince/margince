@@ -135,7 +135,8 @@ var voiceBuilder = colleagueJob{work: "agent:voice-builder", books: "system:voic
 // worker may steal a running row from a dead one.
 func (w *voiceBuildWorker) reclaimAfter() time.Duration { return voiceBuildTimeout + time.Minute }
 
-// voiceBuildWorkerCtx binds the build's workspace and its two principals,
+// voiceBuildWorkerCtx binds the build's two principals on a context that already
+// carries the installation's workspace,
 // both for the requester: visibleProfile admits only the profile owner. work
 // is nil when the requester left or lost their seat, and the build is then
 // failed through books.
@@ -143,10 +144,6 @@ func voiceBuildWorkerCtx(ctx context.Context, users *identity.Service, args Voic
 	requester, err := ids.Parse(args.RequestedBy)
 	if err != nil {
 		return nil, nil, fmt.Errorf("voice_build: requester id: %w", err)
-	}
-	ctx, err = installationJobCtx(ctx, users)
-	if err != nil {
-		return nil, nil, err
 	}
 	books, work, err = forColleague(principal.WithCorrelationID(ctx, ids.NewV7()), users, requester, voiceBuilder)
 	if err != nil && !workRefused(err) {
@@ -158,7 +155,11 @@ func voiceBuildWorkerCtx(ctx context.Context, users *identity.Service, args Voic
 func (w *voiceBuildWorker) Work(ctx context.Context, job *river.Job[VoiceBuildArgs]) error {
 	// Into their own variables: voiceBuildWorkerCtx returns nils on an error,
 	// and assigning over ctx would hand that nil to the fault below.
-	books, work, err := voiceBuildWorkerCtx(ctx, w.users, job.Args)
+	bound, err := installationJobCtx(ctx, w.users)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	books, work, err := voiceBuildWorkerCtx(bound, w.users, job.Args)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

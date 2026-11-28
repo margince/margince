@@ -60,7 +60,7 @@ func TestEachImportAttemptIsItsOwnJob(t *testing.T) {
 		if err := json.Unmarshal(encoded, &keys); err != nil {
 			t.Fatal(err)
 		}
-		for _, key := range []string{"workspace_id", "run_id", "attempt"} {
+		for _, key := range []string{"run_id", "attempt"} {
 			if _, ok := keys[key]; !ok {
 				t.Errorf("%s args carry no %q key: %s", args.Kind(), key, encoded)
 			}

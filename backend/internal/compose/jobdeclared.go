@@ -102,8 +102,8 @@ func roleName(r jobs.Role) string {
 // omitted rather than given an invented value.
 func fanOutUnitName(u jobs.FanOutUnit) string {
 	switch u {
-	case jobs.FanOutWorkspace:
-		return "workspace"
+	case jobs.FanOutInstallation:
+		return "installation"
 	case jobs.FanOutConnection:
 		return "connection"
 	case jobs.FanOutBuild:

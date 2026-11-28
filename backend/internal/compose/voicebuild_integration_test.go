@@ -209,7 +209,7 @@ func (v *voiceBuildEnv) workCtx(t *testing.T) context.Context {
 func (v *voiceBuildEnv) principals(t *testing.T) (books, work context.Context) {
 	t.Helper()
 	worker := newVoiceBuildWorker(v.e.Pool, nil, slog.New(slog.DiscardHandler))
-	books, work, err := voiceBuildWorkerCtx(context.Background(), worker.users, VoiceBuildArgs{
+	books, work, err := voiceBuildWorkerCtx(principal.WithWorkspaceID(context.Background(), v.e.WS), worker.users, VoiceBuildArgs{
 		ProfileID: v.profile.ID.String(),
 		BuildID:   ids.NewV7().String(), RequestedBy: v.e.Rep1.String(),
 	})

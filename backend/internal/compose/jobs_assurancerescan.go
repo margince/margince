@@ -42,8 +42,7 @@ const (
 	// queues. A larger burst leaves the rest to the nightly pass; their
 	// markers already say the findings are out of date.
 	assuranceRescanBatchLimit = 50
-	// assuranceRescanBacklogLimit is how many one-deal checks may wait in one
-	// workspace. Under sustained edits the rest are left to the nightly pass,
+	// assuranceRescanBacklogLimit is how many one-deal checks may wait. Under sustained edits the rest are left to the nightly pass,
 	// so the queue cannot grow without bound.
 	assuranceRescanBacklogLimit = 200
 	// assuranceRescanRetry is when a pass that saw its deal change runs again.
@@ -58,14 +57,14 @@ type assuranceRescanEnqueuer interface {
 
 // assuranceRescanInsertOpts dedupes on the deal while a job waits or runs. A
 // change during a run is not lost: the run sees it and runs again.
-// assuranceRescanRoom is how many more checks may be queued for workspace.
-func assuranceRescanRoom(ctx context.Context, tx pgx.Tx, workspace ids.UUID) (int, error) {
+// assuranceRescanRoom is how many more checks may be queued.
+func assuranceRescanRoom(ctx context.Context, tx pgx.Tx) (int, error) {
 	var waiting int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM river_job
-		 WHERE kind = $1 AND args->>'workspace_id' = $2
+		 WHERE kind = $1
 		   AND state IN ('available', 'pending', 'scheduled', 'retryable')`,
-		AssuranceDealRescanArgs{}.Kind(), workspace.String()).Scan(&waiting); err != nil {
+		AssuranceDealRescanArgs{}.Kind()).Scan(&waiting); err != nil {
 		return 0, fmt.Errorf("compose: counting the waiting deal checks: %w", err)
 	}
 	return max(0, min(assuranceRescanBatchLimit, assuranceRescanBacklogLimit-waiting)), nil
