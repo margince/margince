@@ -7,8 +7,9 @@
 # head and the same workflow, so every integration job of that attempt having
 # succeeded is enough. Each attempt is read on its own, since the run's job list
 # shows only the newest attempt, where the lane has not run yet. Sonar merges
-# that attempt's shard coverage, which expires after a day, so a re-run that
-# finds any of it gone runs the lane again.
+# that attempt's shard coverage, which expires after a day and is downloaded
+# only once this run's other jobs end. A re-run that finds any of it gone, or
+# due to expire within COVERAGE_MARGIN_HOURS, runs the lane again.
 #
 # A group of one entry on an unchanged main has the tree the pull request's last
 # run merged and tested. Running the eight shards again proves nothing new and
@@ -26,7 +27,8 @@
 #
 # Reads REPO, and MERGE_GROUP_SHA and MERGE_GROUP_REF
 # (refs/heads/gh-readonly-queue/<base>/pr-<n>-<base sha>) on the merge queue, or
-# RUN_ID and RUN_ATTEMPT on a pull request re-run.
+# RUN_ID and RUN_ATTEMPT on a pull request re-run. NOW_EPOCH stands in for the
+# clock in tests.
 set -euo pipefail
 
 repo="${REPO:?REPO is empty: pass github.repository}"
@@ -51,11 +53,16 @@ lane_verdict() {
 			END { printf "%d %d %d", n, bad, shards }'
 }
 
+# Longer than this run's jobs that Sonar waits on can take, their queue included.
+COVERAGE_MARGIN_HOURS=6
+
 # kept_shard_pods ATTEMPT prints how many of that attempt's shard coverage
-# artifacts have not expired.
+# artifacts outlast the margin.
 kept_shard_pods() {
+	local cutoff=$(( ${NOW_EPOCH:-$(date +%s)} + COVERAGE_MARGIN_HOURS * 3600 ))
 	gh api --paginate "repos/$repo/actions/runs/$run_id/artifacts?per_page=100" \
-		--jq "[.artifacts[] | select(.expired | not) | select(.name | test(\"^integration-shard-[0-9]+-attempt-$1\$\"))] | length" |
+		--jq "[.artifacts[] | select(.expired | not) | select((.expires_at | fromdateiso8601) > $cutoff)
+			| select(.name | test(\"^integration-shard-[0-9]+-attempt-$1\$\"))] | length" |
 		awk '{ n += $1 } END { print n + 0 }'
 }
 
@@ -70,7 +77,7 @@ if [[ -z "${MERGE_GROUP_SHA:-}" ]]; then
 		kept="$(kept_shard_pods "$earlier")" ||
 			read_failed "Could not list the artifacts of run $run_id."
 		if [[ "$kept" -lt "$shards" ]]; then
-			not_proven "Attempt $earlier of run $run_id passed the lane, but $((shards - kept)) of its $shards shards' coverage has expired."
+			not_proven "Attempt $earlier of run $run_id passed the lane, but $((shards - kept)) of its $shards shards' coverage expires within ${COVERAGE_MARGIN_HOURS}h."
 		fi
 		echo "Attempt $earlier of run $run_id passed all $jobs integration jobs on this tree." >&2
 		echo "proven=true"

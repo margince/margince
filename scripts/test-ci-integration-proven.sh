@@ -104,8 +104,11 @@ expect "a ref without a pull request runs the lane" proven=false \
 
 # A pull request re-run: the proof is an earlier attempt of the same run, while
 # its shards' coverage pods are still there for Sonar to merge.
-pod() { printf '{"name":"integration-shard-1-attempt-%s","expired":%s}' "$1" "$2"; }
-rerun=(MERGE_GROUP_SHA= RUN_ID=9 STUB_RUN_ARTIFACTS="$(artifacts "$(pod 1 false)")")
+# The clock stands at 2026-01-01T00:00:00Z; the script wants six hours to spare.
+pod() {
+	printf '{"name":"integration-shard-1-attempt-%s","expired":%s,"expires_at":"%s"}' "$1" "$2" "${3:-2026-01-01T12:00:00Z}"
+}
+rerun=(MERGE_GROUP_SHA= RUN_ID=9 NOW_EPOCH=1767225600 STUB_RUN_ARTIFACTS="$(artifacts "$(pod 1 false)")")
 skipped_lane="$(jobs "$(job 'integration / integration build' '"skipped"')")"
 red_lane="$(jobs "$(job 'integration / integration shard (2/8)' '"failure"')")"
 expect "a re-run whose first attempt passed the lane skips it" proven=true \
@@ -119,6 +122,9 @@ expect "a failed attempt read runs the lane" proven=false \
 	"${rerun[@]}" RUN_ATTEMPT=2 STUB_ATTEMPT_1=FAIL
 expect "a passed attempt whose shard coverage expired runs the lane" proven=false \
 	"${rerun[@]}" RUN_ATTEMPT=2 STUB_ATTEMPT_1="$green_lane" STUB_RUN_ARTIFACTS="$(artifacts "$(pod 1 true)")"
+expect "coverage that would expire before Sonar downloads it runs the lane" proven=false \
+	"${rerun[@]}" RUN_ATTEMPT=2 STUB_ATTEMPT_1="$green_lane" \
+	STUB_RUN_ARTIFACTS="$(artifacts "$(pod 1 false 2026-01-01T05:00:00Z)")"
 expect "coverage of another attempt does not stand in for the proving one" proven=false \
 	"${rerun[@]}" RUN_ATTEMPT=3 STUB_ATTEMPT_2="$red_lane" STUB_ATTEMPT_1="$green_lane" \
 	STUB_RUN_ARTIFACTS="$(artifacts "$(pod 2 false)")"
