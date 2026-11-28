@@ -80,6 +80,7 @@ func TestAgentNotesLeaveEveryRecordClockQuiet(t *testing.T) {
 				w.e.WsExec(t, `UPDATE activity SET captured_by=$1 WHERE id=$2`, "agent:passport", recentID)
 			}
 			if c.refold {
+				w.e.WsExec(t, `UPDATE activity SET origin=$1,captured_by=$2 WHERE id=$3`, "human", "agent:legacy-run", recentID)
 				for table, id := range records {
 					w.e.WsExec(t, `UPDATE `+pgx.Identifier{table}.Sanitize()+` SET last_activity_at=$1 WHERE id=$2`, recent, id)
 				}
