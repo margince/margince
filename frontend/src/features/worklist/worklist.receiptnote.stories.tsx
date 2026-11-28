@@ -41,7 +41,7 @@ const note: components["schemas"]["Activity"] = {
 };
 
 export default {
-  title: "Worklist/Change history/AI-written note",
+  title: "Records/Worklist/AI-written note",
   component: ReceiptNote,
 } satisfies Meta<typeof ReceiptNote>;
 
