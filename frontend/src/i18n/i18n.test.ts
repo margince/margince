@@ -133,7 +133,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // "Deal" and "Email" are the words Vietnamese sales teams use, borrowed
   // rather than translated, as the Deals screen itself is named.
   "co.deals.col.deal",
-  "record.verb.email",
   // The area's name, which is the same word in all three catalogs by decision:
   // "Analytics" is what the product calls this surface, and both German and
   // Vietnamese borrow it as a term of art rather than translating it. The
@@ -299,7 +298,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "restricted.kind.email",
   "timeline.filters.kind.email",
   "auth.email",
-  "contact.action.email",
   "contact.memory.channelEmail",
   "history.field.email",
   "activity.webForm.email",

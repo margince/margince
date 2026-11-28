@@ -1009,6 +1009,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
+- `idx_own_domain_spelling_cursor`: `btree (identifier_spelling_row_id(domain))`
 - `workspace_email_domain_pkey`: `unique, btree (domain)`
 
 **Triggers**

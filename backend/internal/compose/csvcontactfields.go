@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
 // contactCreateFrom builds the create input for one mapped row.
@@ -302,7 +303,7 @@ func emailsMergedOnto(current []byte, mapped []contacts.ContactEmailInput) ([]co
 	if err := json.Unmarshal(current, &record); err != nil {
 		return nil, false, fmt.Errorf("import: reading the stored emails: %w", err)
 	}
-	incoming := strings.ToLower(strings.TrimSpace(mapped[0].Email))
+	incoming := correspondence.Fold(mapped[0].Email)
 	merged := append([]contacts.ContactEmailInput(nil), mapped...)
 	merged[0].Position = 1
 	merged[0].IsPrimary = true

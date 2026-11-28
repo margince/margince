@@ -23,6 +23,8 @@ import (
 	"errors"
 	"net/url"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
 // ErrFetchPolicy marks an address this product refuses to read on its own
@@ -104,7 +106,7 @@ func MayFetch(raw string) FetchDecision {
 // refuse — a parser differential between this policy and the HTTP client
 // underneath it. Case folds for the same reason.
 func normalizeHost(host string) string {
-	return strings.TrimRight(strings.ToLower(strings.TrimSpace(host)), ".")
+	return strings.TrimRight(owndomain.Fold(host), ".")
 }
 
 // isWebScheme reports whether a URL names a scheme this product fetches.

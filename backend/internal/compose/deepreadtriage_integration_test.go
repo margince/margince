@@ -75,7 +75,7 @@ func openTriageQuestion(t *testing.T, e *integration.Env, domain, email, display
 	if err != nil {
 		t.Fatalf("starting the triage read: %v", err)
 	}
-	return SiteDeepReadArgs{Workspace: e.WS, SiteReadID: read.ID, RequestedBy: systemDomainTriageActor}
+	return SiteDeepReadArgs{SiteReadID: read.ID, RequestedBy: systemDomainTriageActor}
 }
 
 // captureMailFrom lands one inbound mail from the sender in the owner's

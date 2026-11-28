@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -368,7 +367,7 @@ func TestAReceiptErasedBetweenTheReadAndTheRaiseIsNotRaised(t *testing.T) {
 		`SELECT delivery_due_at FROM comms_outbound WHERE template_key = 'optout_acknowledgement'`).Scan(&dueAt); err != nil {
 		t.Fatal(err)
 	}
-	ctx, err := installationJobCtx(context.Background(), identity.NewService(l.e.Pool))
+	ctx, err := bindInstallation(context.Background(), l.e.Pool)
 	if err != nil {
 		t.Fatal(err)
 	}

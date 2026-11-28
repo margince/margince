@@ -20,7 +20,7 @@ const (
 	mailAdmissionQueue = "mail_admission"
 )
 
-func backfillScheduler(workspace ids.UUID) capture.BackfillScheduler {
+func backfillScheduler() capture.BackfillScheduler {
 	return capture.BackfillScheduler{
 		Enqueue: func(ctx context.Context, tx pgx.Tx, id ids.UUID, generation int64, due time.Time) error {
 			client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
@@ -33,12 +33,12 @@ func backfillScheduler(workspace ids.UUID) capture.BackfillScheduler {
 			if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
 				return err
 			}
-			_, err = client.InsertTx(ctx, tx, CaptureBackfillArgs{Workspace: workspace, BackfillID: id.String(), ExecutionGeneration: generation},
+			_, err = client.InsertTx(ctx, tx, CaptureBackfillArgs{BackfillID: id.String(), ExecutionGeneration: generation},
 				jobs.QueuedAs[CaptureBackfillArgs](&river.InsertOpts{MaxAttempts: rowOwnedMaxAttempts, ScheduledAt: successorStart(due, now), UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}}))
 			return err
 		},
 		Executing: func(ctx context.Context, tx pgx.Tx, id ids.UUID, generation int64) (bool, error) {
-			return jobs.IsRunningTx(ctx, tx, CaptureBackfillArgs{Workspace: workspace, BackfillID: id.String(), ExecutionGeneration: generation})
+			return jobs.IsRunningTx(ctx, tx, CaptureBackfillArgs{BackfillID: id.String(), ExecutionGeneration: generation})
 		},
 	}
 }

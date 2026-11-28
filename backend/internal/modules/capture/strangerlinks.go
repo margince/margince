@@ -65,7 +65,7 @@ func unrelatedSites(sender string, hosts []string, own InternalDomains) []string
 // or the canonical address for an IP literal. A sender's IP literal arrives
 // bracketed, as in user@[192.0.2.1], and a link's arrives bare.
 func siteOf(host string) string {
-	host = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(host)), ".")
+	host = strings.TrimSuffix(owndomain.Fold(host), ".")
 	literal := strings.TrimPrefix(strings.TrimSuffix(strings.TrimPrefix(host, "["), "]"), "ipv6:")
 	if ip := net.ParseIP(literal); ip != nil {
 		return ip.String()

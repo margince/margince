@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -169,7 +170,7 @@ func capLockKey(address string) int64 {
 //
 // Held by: TestTheLockAndTheCountNormalizeAlike (authorizecaplock_test.go)
 func normalizeCapAddress(address string) string {
-	return strings.ToLower(strings.TrimSpace(address))
+	return correspondence.Fold(address)
 }
 
 // advertisingMessagesReceived counts what the recipient has GOT or is ABOUT TO
@@ -235,11 +236,7 @@ func advertisingMessagesReceived(ctx context.Context, tx pgx.Tx, address string,
 		  JOIN communication_decision d ON d.delivery_id = o.id
 		 WHERE d.phase = 'transmit'
 		   AND d.resolved_category = $3
-		   -- Trimmed and lowered on BOTH sides, matching normalizeCapAddress.
-		   -- decisionRecipientKey stores the address folded. A row from an
-		   -- earlier release holds it as the caller supplied it, and comparing
-		   -- raw would let that mailbox past its cap.
-		   AND lower(btrim(d.recipient_address)) = $1
+		   AND `+correspondence.FoldSQL("d.recipient_address")+` = $1
 		   AND (
 		         (o.status = 'sent' AND o.sent_at IS NOT NULL AND o.sent_at >= $2)
 		      OR (o.status = 'pending' AND d.decided_at >= $2)

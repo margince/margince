@@ -311,12 +311,14 @@ export function aliases(): Map<string, string> {
     ts.sys,
     FRONTEND_ROOT,
   );
-  const base = options.baseUrl ?? FRONTEND_ROOT;
   return new Map(
     Object.entries(options.paths ?? {}).flatMap(([specifier, targets]) =>
       targets
         .slice(0, 1)
-        .map((target): [string, string] => [specifier, resolve(base, target)]),
+        .map((target): [string, string] => [
+          specifier,
+          resolve(FRONTEND_ROOT, target),
+        ]),
     ),
   );
 }

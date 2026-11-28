@@ -83,7 +83,7 @@ func (q *questionEditions) send(t *testing.T) crmcontracts.ReportingEdition {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := q.worker.Work(context.Background(), nil); err != nil {
+	if err := q.worker.Work(boundBackground(t), nil); err != nil {
 		t.Fatal(err)
 	}
 	done, err := q.service.GetExecution(q.human, ids.UUID(request.Id))

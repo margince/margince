@@ -193,7 +193,6 @@ func bumpGraphMailboxes(
 	var faults error
 	for _, d := range hits {
 		if err := inserter.Enqueue(ctx, CaptureSyncArgs{
-			Workspace:    d.Workspace.UUID,
 			ConnectionID: d.ID.String(),
 			Provider:     providerGraph,
 		}, pushSyncOpts()); err != nil {

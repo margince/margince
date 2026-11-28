@@ -114,7 +114,7 @@ func TestASignalReadsItsPartsInAnotherLanguage(t *testing.T) {
 			"Mail hiện chạy trên Microsoft 365 (trước đây là máy chủ mail riêng)",
 		},
 		{kindGhostedThread, `{"days":14}`, "Chúng ta đã viết cách đây ít nhất 14 ngày và chưa ai trả lời."},
-		{kindProjectGoneQuiet, `{"project":"ERP rollout","days":30}`, "Không có gì được lưu cho ERP rollout trong ít nhất 30 ngày."},
+		{kindProjectGoneQuiet, `{"project":"ERP rollout","days":30}`, "ERP rollout không có cập nhật nào trong ít nhất 30 ngày."},
 	} {
 		if got, ok := signalSummaryWords(textlang.Vietnamese, c.kind, json.RawMessage(c.params)); !ok || got != c.want {
 			t.Errorf("%s reads %q (%v), want %q", c.kind, got, ok, c.want)

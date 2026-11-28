@@ -11,7 +11,7 @@ import (
 var agentDefinitions = map[string]Definition{
 	"stage.open": {Words: langcopy.Phrase{En: "open", De: "offen", Vi: "mở"}},
 	"stage.won":  {Words: langcopy.Phrase{En: "won", De: "gewonnen", Vi: "thắng"}},
-	"stage.lost": {Words: langcopy.Phrase{En: "lost", De: "verloren", Vi: "thua"}},
+	"stage.lost": {Words: langcopy.Phrase{En: "lost", De: "verloren", Vi: "thất bại"}, Retired: wordings{textlang.Vietnamese: {"thua"}}},
 
 	"agent.fieldListMore": {Words: langcopy.Phrase{En: commaSeparatedPair, De: commaSeparatedPair, Vi: commaSeparatedPair}, Arguments: []string{argumentText, argumentText}},
 

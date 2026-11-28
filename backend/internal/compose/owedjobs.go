@@ -51,7 +51,7 @@ type owedVerdictWorker struct {
 }
 
 func (w *owedVerdictWorker) Work(ctx context.Context, _ *river.Job[OwedVerdictArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.judgeWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.judgeWorkspace))
 }
 
 func (w *owedVerdictWorker) judgeWorkspace(ctx context.Context, workspace ids.UUID) error {

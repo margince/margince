@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "3168e4b5bdbcb7eadf1c09904bdcbc779157b6fa9e8302852b4ef4bd308740c1"
+const jobContractHash = "e805e12318a6b5301fde011f3e7046671edc1ce63a59b7eed6c1451c337d1674"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -212,45 +212,4 @@ var (
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
 	_ jobs.FleetWide = WeeklyReviewGenerateArgs{}
 	_ jobs.FleetWide = ZaloTokenRenewArgs{}
-)
-
-// The declared tenant-scoped kinds: each says which workspace it is for
-// in its own args.
-var (
-	_ jobs.WorkspaceScoped = AccountScanArgs{}
-	_ jobs.WorkspaceScoped = ApprovalOwnerNoticeArgs{}
-	_ jobs.WorkspaceScoped = AssuranceDealRescanArgs{}
-	_ jobs.WorkspaceScoped = AssuranceRunArgs{}
-	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
-	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
-	_ jobs.WorkspaceScoped = CapturedDealRefileArgs{}
-	_ jobs.WorkspaceScoped = ChatLinkFlushArgs{}
-	_ jobs.WorkspaceScoped = ChatPullArgs{}
-	_ jobs.WorkspaceScoped = CheckCompanyVatArgs{}
-	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
-	_ jobs.WorkspaceScoped = SendEmailArgs{}
-	_ jobs.WorkspaceScoped = DocumentExtractArgs{}
-	_ jobs.WorkspaceScoped = FinanceSyncArgs{}
-	_ jobs.WorkspaceScoped = FxRateRefreshArgs{}
-	_ jobs.WorkspaceScoped = GeocodeCompanyArgs{}
-	_ jobs.WorkspaceScoped = GmailWatchRenewArgs{}
-	_ jobs.WorkspaceScoped = GraphWatchRenewArgs{}
-	_ jobs.WorkspaceScoped = ImportCommitArgs{}
-	_ jobs.WorkspaceScoped = ImportUndoArgs{}
-	_ jobs.WorkspaceScoped = ImportValidateArgs{}
-	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
-	_ jobs.WorkspaceScoped = SendNotificationEmailArgs{}
-	_ jobs.WorkspaceScoped = ProviderRunSubmitArgs{}
-	_ jobs.WorkspaceScoped = SiteDeepReadArgs{}
-	_ jobs.WorkspaceScoped = StageEvidenceReadArgs{}
-	_ jobs.WorkspaceScoped = StageEvidenceRereadArgs{}
-	_ jobs.WorkspaceScoped = StandingLineCheckArgs{}
-	_ jobs.WorkspaceScoped = TechnicalEnrichCompanyArgs{}
-	_ jobs.WorkspaceScoped = TelegramIngestArgs{}
-	_ jobs.WorkspaceScoped = TelegramPollArgs{}
-	_ jobs.WorkspaceScoped = TranscriptProposeArgs{}
-	_ jobs.WorkspaceScoped = VCardIngestArgs{}
-	_ jobs.WorkspaceScoped = VoiceBuildArgs{}
-	_ jobs.WorkspaceScoped = WhatsAppIngestArgs{}
-	_ jobs.WorkspaceScoped = ZaloOAIngestArgs{}
 )

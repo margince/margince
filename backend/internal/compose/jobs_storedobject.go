@@ -72,7 +72,7 @@ type storedObjectReapWorker struct {
 
 func (w *storedObjectReapWorker) Work(ctx context.Context, _ *river.Job[StoredObjectReapArgs]) error {
 	stop := w.now().Add(storedObjectReapDrainBudget)
-	return jobs.FaultContext(ctx, runPerEveryWorkspace(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
+	return jobs.FaultContext(ctx, runEveryWorkspacePass(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
 		return w.reapWorkspace(ctx, workspace, stop)
 	}))
 }
@@ -90,7 +90,7 @@ func (w *storedObjectReapWorker) reapBatch(ctx context.Context, workspace ids.UU
 	// no actor, and every read and write below is RBAC-gated. The pass is the
 	// installation's own bookkeeping, not any seat's.
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "stored_object_reap_worker")
-	db := InstallationDB(w.pool)
+	db := database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace))
 	ledger := storedobjects.NewLedger(db)
 	before := w.now().UTC().Add(-storedobjects.ProvisionalObjectGrace)
 	provisional, err := ledger.ListProvisional(ctx, before, w.batch)

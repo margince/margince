@@ -76,11 +76,9 @@ func writeAddDeclaredWorker(b *strings.Builder) {
 	b.WriteString("}\n\n")
 }
 
-// writeRoleAssertions renders the compile-time role markers. They are
-// load-bearing — jobs.WorkspaceScoped is what binds a job's workspace, and the
-// fleet-report gate reads both markers — so a misspelled accessor or a marker
-// on the wrong type is a build error at the args type, which is where a
-// contributor will actually see it.
+// writeRoleAssertions renders the compile-time role marker. The fleet-report
+// gate reads it, so a marker on the wrong type is a build error at the args
+// type, which is where a contributor will actually see it.
 func writeRoleAssertions(b *strings.Builder, c contract) {
 	b.WriteString("// The FLEET-WIDE kinds: a row of one carries no tenant. A dispatcher\n")
 	b.WriteString("// enumerates and enqueues; a collapsed pass walks the workspaces itself\n")
@@ -92,19 +90,4 @@ func writeRoleAssertions(b *strings.Builder, c contract) {
 		}
 	}
 	b.WriteString(")\n\n")
-
-	// Keyed on the ARGS, not on the role. A worker carries a tenant while its
-	// module still has one to carry (ADR-0091 §8 phase D is removing them one
-	// module at a time), and a worker whose args no longer name a workspace must
-	// not be asserted to bind one — the marker would be a claim about a field
-	// that does not exist.
-	b.WriteString("// The declared tenant-scoped kinds: each says which workspace it is for\n")
-	b.WriteString("// in its own args.\n")
-	b.WriteString("var (\n")
-	for _, name := range c.sortedKinds() {
-		if def := c.Kinds[name]; def.Role == roleWorker && def.hasWorkspaceArg() {
-			fmt.Fprintf(b, "\t_ jobs.WorkspaceScoped = %s{}\n", def.GoType)
-		}
-	}
-	b.WriteString(")\n")
 }

@@ -34,11 +34,8 @@ import (
 
 // GeocodeBackfillArgs is one pass over the companies never asked about.
 //
-// It carries NO workspace, like WebhookRetryArgs and for the same reason: a
-// periodic insert has no tenant to name, and a WorkspaceScoped kind whose args
-// carry none fails every tick with "declares WorkspaceScoped but carries no
-// workspace". The tenant belongs on the per-company job this pass queues —
-// that is the one that reads and writes a row.
+// It carries no arguments: a periodic insert names nothing, and the per-company
+// job this pass queues is the one that reads and writes a row.
 type GeocodeBackfillArgs struct{}
 
 // Kind is the stable job identifier River persists in river_job.
@@ -78,17 +75,13 @@ type geocodeBackfillWorker struct{ pool *pgxpool.Pool }
 // nomination harmless — but a half-committed pass that logged success would
 // misreport what it did.
 func (w *geocodeBackfillWorker) Work(ctx context.Context, _ *river.Job[GeocodeBackfillArgs]) error {
-	workspaces, err := database.LiveWorkspaces(ctx, w.pool)
-	if err != nil {
+	ws, ok, err := database.LiveWorkspace(ctx, w.pool)
+	if err != nil || !ok {
 		return jobs.FaultContext(ctx, err)
 	}
-	queued := 0
-	for _, ws := range workspaces {
-		n, err := w.sweepOneWorkspace(ctx, ws)
-		if err != nil {
-			return jobs.FaultContext(ctx, err)
-		}
-		queued += n
+	queued, err := w.sweepOneWorkspace(ctx, ws)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
 	}
 	if queued == 0 {
 		return nil
@@ -151,7 +144,6 @@ func (w *geocodeBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UU
 	}
 	for _, companyID := range due {
 		if _, err := client.Insert(wsCtx, GeocodeCompanyArgs{
-			Workspace: ws,
 			CompanyID: companyID.UUID,
 		}, geocodeBackfillOpts()); err != nil {
 			return 0, err

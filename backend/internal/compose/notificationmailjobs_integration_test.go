@@ -94,9 +94,13 @@ func (e *noticeMailEnv) work(t *testing.T, notice ids.UUID) {
 func (e *noticeMailEnv) workRung(notice ids.UUID, attempt int) error {
 	job := &river.Job[SendNotificationEmailArgs]{
 		JobRow: &rivertype.JobRow{Attempt: attempt, MaxAttempts: notificationMailJobAttempts},
-		Args:   SendNotificationEmailArgs{Workspace: e.e.WS, NoticeID: notice.String()},
+		Args:   SendNotificationEmailArgs{NoticeID: notice.String()},
 	}
-	return e.worker.Work(context.Background(), job)
+	ctx, err := bindInstallation(context.Background(), e.worker.pool)
+	if err != nil {
+		return err
+	}
+	return e.worker.Work(ctx, job)
 }
 
 // emailState is the claim and its cause as the row holds them.
@@ -352,9 +356,6 @@ func TestOnlyAnEmailSeatsNoticeStagesAMailJob(t *testing.T) {
 	rows := e.delivered(t)
 	if staged[0].args.NoticeID != rows[0].id.String() {
 		t.Errorf("the staged job names %q rather than the notice that was written (%s)", staged[0].args.NoticeID, rows[0].id)
-	}
-	if staged[0].args.Workspace != e.e.WS {
-		t.Errorf("the staged job carries workspace %s, not this installation's %s", staged[0].args.Workspace, e.e.WS)
 	}
 
 	// THE OPTIONS ARE THE LADDER, and this kind's only copy of it. api/jobs.yaml

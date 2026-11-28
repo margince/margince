@@ -24,6 +24,7 @@ package mailrole
 import (
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
@@ -133,7 +134,7 @@ func Tokens() []string {
 // with a ticket routing tag, and reading the tag as part of the name makes one
 // queue look like thousands of separate senders.
 func split(address string) (local, domain string, ok bool) {
-	address = strings.ToLower(strings.TrimSpace(address))
+	address = correspondence.Fold(address)
 	at := strings.LastIndex(address, "@")
 	if at <= 0 || at == len(address)-1 {
 		return "", "", false
@@ -151,7 +152,7 @@ func split(address string) (local, domain string, ok bool) {
 // `asia-accounting@` are role mailboxes whose role word is not the whole local
 // part, and matching the whole string would miss both.
 func localPartRole(local string) (string, bool) {
-	local = strings.ToLower(strings.TrimSpace(local))
+	local = correspondence.Fold(local)
 	if local == "" {
 		return "", false
 	}
@@ -232,7 +233,7 @@ func isNameRune(r rune) bool {
 }
 
 func helpdeskVendor(domain string) string {
-	domain = strings.ToLower(strings.TrimSpace(domain))
+	domain = owndomain.Fold(domain)
 	for vendor := range helpdeskVendors {
 		// A subdomain is the ordinary shape: `acme.zendesk.com`. Suffix matching
 		// on a dot-prefixed vendor cannot match a lookalike registration

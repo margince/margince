@@ -377,10 +377,16 @@ func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 		t.Fatal("the extension namespace's table is absent — up applied core+custom and silently skipped the extension lane")
 	}
 	assertRecorded(t, dsn, "schema_migrations_"+namespace, "0001")
-	assertRiverWorkspaceArgIndex(t, dsn)
+	assertNoRiverWorkspaceArgIndex(t, dsn)
+
+	// An installation upgraded from a release that built the index loses it on
+	// the next run.
+	if _, err := conn.Exec(ctx, `CREATE INDEX river_job_workspace_arg ON river_job ((args ->> 'workspace_id'))`); err != nil {
+		t.Fatalf("planting the retired index: %v", err)
+	}
 
 	// Idempotent: the second run must apply nothing at all, extension lane
-	// included, and must not fail re-creating the index.
+	// included, and must not fail dropping an index that is already gone.
 	out.Reset()
 	if err := up(ctx, conn, dsn, core, custom, []dbmigrate.Namespace{probe}, defaultStatementCeiling, &out); err != nil {
 		t.Fatalf("second up: %v", err)
@@ -388,6 +394,7 @@ func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 	if !strings.Contains(out.String(), "applied 0 core+custom+extension + 0 river") {
 		t.Errorf("re-running up over a database at head printed %q, want a zero-applied summary", out.String())
 	}
+	assertNoRiverWorkspaceArgIndex(t, dsn)
 }
 
 // TestWorkspaceExistsAnswersTheEntrypointsQuestion pins the three states the deploy
@@ -464,11 +471,9 @@ func assertRecorded(t *testing.T, dsn, table, version string) {
 	}
 }
 
-// assertRiverWorkspaceArgIndex pins the post-River statement. It cannot be a
-// core migration (river_job does not exist while the core lane runs, and
-// dbmigrate wraps each migration in a transaction), so nothing but this test
-// would notice it disappearing.
-func assertRiverWorkspaceArgIndex(t *testing.T, dsn string) {
+// assertNoRiverWorkspaceArgIndex pins the statement that retires the index.
+// Only this test would notice it disappearing, because it is not a migration.
+func assertNoRiverWorkspaceArgIndex(t *testing.T, dsn string) {
 	t.Helper()
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, dsn)
@@ -488,7 +493,7 @@ func assertRiverWorkspaceArgIndex(t *testing.T, dsn string) {
 	).Scan(&exists); err != nil {
 		t.Fatalf("probing for the river index: %v", err)
 	}
-	if !exists {
-		t.Error("river_job_workspace_arg is absent — the per-workspace job fan-out and both job-health statements fall back to a sequential scan")
+	if exists {
+		t.Error("river_job_workspace_arg exists — nothing reads the job args' workspace key, so the index only slows river_job writes")
 	}
 }

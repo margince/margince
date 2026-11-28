@@ -36,7 +36,7 @@ func (w *reportScheduleSweepWorker) Work(ctx context.Context, _ *river.Job[Repor
 	if !w.features.Enabled(crmcontracts.CoreFeatureAnalytics) {
 		return nil
 	}
-	return jobs.FaultContext(ctx, runPerWorkspace(w.features.Context(ctx), w.pool, w.sweepWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(w.features.Context(ctx), w.pool, w.sweepWorkspace))
 }
 
 func (w *reportScheduleSweepWorker) sweepWorkspace(ctx context.Context, workspace ids.UUID) error {

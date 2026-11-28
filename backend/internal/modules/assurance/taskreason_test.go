@@ -61,7 +61,7 @@ func TestTheTaskCountsItsFindingsInWords(t *testing.T) {
 		{textlang.English, 7, "7 forecast inputs need attention"},
 		{textlang.German, 1, "1 Angabe zur Prognose muss geprüft werden"},
 		{textlang.German, 2, "2 Angaben zur Prognose müssen geprüft werden"},
-		{textlang.Vietnamese, 3, "3 đầu vào dự báo cần xem lại"},
+		{textlang.Vietnamese, 3, "3 số liệu dự báo cần kiểm tra lại"},
 	} {
 		got, err := TaskSubject(c.findings).Render(c.lang)
 		if err != nil || got != c.want {

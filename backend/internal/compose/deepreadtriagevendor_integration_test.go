@@ -101,7 +101,7 @@ func runVendorTriage(t *testing.T, e *integration.Env, domain string) *triageBra
 	if err != nil {
 		t.Fatalf("starting the triage read: %v", err)
 	}
-	return runVendorTriageRead(t, e, SiteDeepReadArgs{Workspace: e.WS, SiteReadID: read.ID, RequestedBy: systemDomainTriageActor}, domain)
+	return runVendorTriageRead(t, e, SiteDeepReadArgs{SiteReadID: read.ID, RequestedBy: systemDomainTriageActor}, domain)
 }
 
 func runVendorTriageRead(t *testing.T, e *integration.Env, args SiteDeepReadArgs, domain string) *triageBrainFake {

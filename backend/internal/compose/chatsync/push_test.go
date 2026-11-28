@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
-	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -334,17 +333,13 @@ type pullArgs struct{ conn ids.UUID }
 
 func (pullArgs) Kind() string { return "chat_pull" }
 
-func (pullArgs) WorkspaceID() ids.UUID { return ids.Nil }
-
 func (a pullArgs) Connection() ids.UUID { return a.conn }
-
-func bindAny(ctx context.Context, _ jobs.WorkspaceScoped) (context.Context, error) { return ctx, nil }
 
 func TestANoticeDuringAPullRunsItOnceMore(t *testing.T) {
 	conn := ids.NewV7()
 	marks := fakeMarks{}
 	worker := &PullWorker[pullArgs]{
-		Bind: bindAny, Marks: marks,
+		Marks:  marks,
 		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return pushNow }},
 	}
 	job := &river.Job[pullArgs]{Args: pullArgs{conn: conn}}
@@ -402,7 +397,7 @@ func TestANoticeOfUnknownShapeIsRefusedBeforeItCounts(t *testing.T) {
 
 func TestAPullWhoseMarksCannotBeReadRunsOnceMore(t *testing.T) {
 	worker := &PullWorker[pullArgs]{
-		Bind: bindAny, Marks: brokenMarks{},
+		Marks:  brokenMarks{},
 		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return pushNow }},
 	}
 	var snooze *river.JobSnoozeError
@@ -417,7 +412,7 @@ func TestANoticeInTheMillisecondThePullStartedRunsItOnceMore(t *testing.T) {
 	// The store keeps milliseconds, so a notice 300µs after the start reads back as pushNow.
 	marks := fakeMarks{noticeKey(conn): time.UnixMilli(start.Add(300 * time.Microsecond).UnixMilli())}
 	worker := &PullWorker[pullArgs]{
-		Bind: bindAny, Marks: marks,
+		Marks:  marks,
 		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return start }},
 	}
 	var snooze *river.JobSnoozeError

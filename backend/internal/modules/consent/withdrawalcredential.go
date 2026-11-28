@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -414,7 +415,7 @@ func (s *Store) RevokeSubjectCredentialsTx(
 // purposes too. Consolidating them would change the cap's lock key, which does
 // not belong in a slice about withdrawal links.
 func normalizeAddress(address string) string {
-	return strings.ToLower(strings.TrimSpace(address))
+	return correspondence.Fold(address)
 }
 
 // purposeKeyByID reads the key a named-purpose credential was minted for, so

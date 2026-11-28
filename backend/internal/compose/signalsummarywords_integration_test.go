@@ -161,7 +161,7 @@ func TestAQuietProjectReadsInTheReadersLanguage(t *testing.T) {
 	}
 
 	got := readSummary(readerIn(t, e, signalSeat(), textlang.Vietnamese), t, e, company, kindProjectGoneQuiet)
-	if want := "Không có gì được lưu cho ERP rollout trong ít nhất 30 ngày."; got != want {
+	if want := "ERP rollout không có cập nhật nào trong ít nhất 30 ngày."; got != want {
 		t.Errorf("a Vietnamese reader reads %q, want %q", got, want)
 	}
 }

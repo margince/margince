@@ -323,7 +323,7 @@ func (h importHandlers) commitRun(
 	if err := refuseAuthorFromNonImporter(ctx, *run.Mapping); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	queue, ws, err := h.jobQueue(ctx)
+	queue, err := h.jobQueue()
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
@@ -338,7 +338,7 @@ func (h importHandlers) commitRun(
 		return crmcontracts.ImportRun{}, importwire.Problem(err)
 	}
 
-	approved, err := h.startOrResume(ctx, migration.NewRunStore(h.db), run, version, queue.commits(ws))
+	approved, err := h.startOrResume(ctx, migration.NewRunStore(h.db), run, version, queue.commits())
 	if err != nil {
 		return crmcontracts.ImportRun{}, h.sessionRefusal(ctx, err)
 	}
@@ -362,15 +362,11 @@ func (h importHandlers) startOrResume(
 
 // jobQueue answers the queue an attempt's job goes on, and the workspace the
 // job names: the one this handler's database is bound to.
-func (h importHandlers) jobQueue(ctx context.Context) (*importEnqueuer, ids.UUID, error) {
+func (h importHandlers) jobQueue() (*importEnqueuer, error) {
 	if h.queue == nil {
-		return nil, ids.UUID{}, errNoImportQueue
+		return nil, errNoImportQueue
 	}
-	ws, err := h.db.Workspace(ctx)
-	if err != nil {
-		return nil, ids.UUID{}, err
-	}
-	return h.queue, ws.UUID, nil
+	return h.queue, nil
 }
 
 // staged is the read every id-bearing operation starts from: the store's own

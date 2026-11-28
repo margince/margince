@@ -5,7 +5,6 @@ package chatsync
 
 import (
 	"context"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -87,7 +87,7 @@ func outboundReaders(ctx context.Context, tx pgx.Tx, link chatlinks.Link, audien
 	}
 	byEmail := map[string]ids.UUID{}
 	for _, viewer := range viewers {
-		byEmail[strings.ToLower(strings.TrimSpace(viewer.Email))] = viewer.ID
+		byEmail[correspondence.Fold(viewer.Email)] = viewer.ID
 	}
 	members := []ids.UUID{}
 	seen := map[ids.UUID]bool{}
@@ -95,7 +95,7 @@ func outboundReaders(ctx context.Context, tx pgx.Tx, link chatlinks.Link, audien
 		if member.ID == botID {
 			continue
 		}
-		id, found := byEmail[strings.ToLower(strings.TrimSpace(member.Email))]
+		id, found := byEmail[correspondence.Fold(member.Email)]
 		if !found || !member.Active || member.External || member.Bot || seen[id] {
 			return nil, chatlinks.ErrAudienceNeedsReview
 		}

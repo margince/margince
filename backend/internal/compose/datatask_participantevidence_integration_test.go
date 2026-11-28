@@ -60,7 +60,7 @@ func TestParticipantEvidenceCorrectionRollsBackReplaysAndRepairsLegacyGaps(t *te
 	worker := dataTaskReconcileWorker{pool: e.Pool}
 	clearParticipantEvidenceFixture(t)
 	readiness(false)
-	if err := worker.Work(rivertest.WorkContext(t.Context(), client), nil); err != nil {
+	if err := worker.Work(rivertest.WorkContext(boundBackground(t), client), nil); err != nil {
 		t.Fatal(err)
 	}
 	readiness(false)
@@ -90,7 +90,7 @@ func TestParticipantEvidenceCorrectionRollsBackReplaysAndRepairsLegacyGaps(t *te
 	readiness(true)
 	clearParticipantEvidenceFixture(t)
 	readiness(false)
-	if err := worker.Work(rivertest.WorkContext(t.Context(), client), nil); err != nil {
+	if err := worker.Work(rivertest.WorkContext(boundBackground(t), client), nil); err != nil {
 		t.Fatal(err)
 	}
 	readiness(true)

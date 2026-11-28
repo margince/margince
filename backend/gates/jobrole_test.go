@@ -5,19 +5,13 @@
 
 package gates
 
-// Every River job declares its role, and the declaration is the contract: a job
-// either does tenant work for one workspace (jobs.WorkspaceScoped, method
-// WorkspaceID) or only scans and enqueues (jobs.FleetWide). A job
-// that declares neither is the shape this gate exists to prevent — an
-// inline `for each workspace` loop inside one job row, whose per-workspace
-// failures have nowhere durable to land, so River records success while
-// tenants silently failed.
+// Every River job declares its kind in api/jobs.yaml, and a job names no
+// workspace and has no WorkspaceID method.
 //
-// api/jobs.yaml states that role per kind and jobkinds_gen.go turns each
-// statement into a compile-time assertion, so the role of a DECLARED kind is
-// the compiler's to check. What is left here is the two halves those generated
-// assertions provably cannot reach — a type the contract has never heard of,
-// and a type that answers to both roles at once.
+// jobkinds_gen.go turns the fleet-wide kinds into a compile-time assertion, so
+// a declared kind is the compiler's to check. This file holds the two halves
+// the assertions cannot reach. One is a type the contract has never heard of.
+// The other is a type that grows a workspace accessor back.
 
 import (
 	"go/ast"
@@ -35,9 +29,6 @@ import (
 // matched nothing would otherwise report green. The tree holds ~30 job
 // kinds before the dispatcher split and more after; this floor only has to
 // be low enough never to false-alarm.
-// It falls with ADR-0103: collapsing the workspace dispatchers retires 27 child
-// kinds, and a child that carried a Workspace arg was one of the kinds this
-// census inspected.
 const jobArgsFloor = 20
 
 // goFilesUnder returns every hand-written .go file beneath root.
@@ -162,25 +153,22 @@ func TestEveryJobArgsTypeIsDeclaredInTheContract(t *testing.T) {
 	}
 }
 
-// TestNoJobArgsDeclaresBothRoles holds what the generated assertions cannot:
-// Go has no negative constraint, so `var _ jobs.FleetWide = T{}` is satisfied
-// just as happily by a type that ALSO implements WorkspaceID. Only a walker
-// sees both at once.
-func TestNoJobArgsDeclaresBothRoles(t *testing.T) {
+// TestNoJobArgsDeclaresAWorkspaceAccessor holds what the generated assertions
+// cannot: Go has no negative constraint, so only a walker sees an args type
+// that grew a WorkspaceID method.
+func TestNoJobArgsDeclaresAWorkspaceAccessor(t *testing.T) {
 	t.Parallel()
 	byType := methodsByType(t, filepath.Join("internal", "compose"))
-	roled := 0
+	fleet := 0
 	for typeName, methods := range byType {
-		scoped, fleet := methods["WorkspaceID"], methods["FleetWide"]
-		if !scoped && !fleet {
-			continue
+		if methods["FleetWide"] {
+			fleet++
 		}
-		roled++
-		if scoped && fleet {
-			t.Errorf("%s declares both WorkspaceID() and FleetWide(): a job does one workspace's work or dispatches, never both", typeName)
+		if methods["Kind"] && methods["WorkspaceID"] {
+			t.Errorf("%s is a River job and declares WorkspaceID(): an installation holds one company, so a job names no workspace", typeName)
 		}
 	}
-	if roled < jobArgsFloor {
-		t.Fatalf("found only %d types declaring a role, expected at least %d — the walker matched almost nothing and this gate would pass vacuously", roled, jobArgsFloor)
+	if fleet < jobArgsFloor {
+		t.Fatalf("found only %d fleet-wide types, expected at least %d — the walker matched almost nothing and this gate would pass vacuously", fleet, jobArgsFloor)
 	}
 }

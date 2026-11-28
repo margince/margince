@@ -11,9 +11,10 @@ package activities
 import (
 	"context"
 	"strconv"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
 // RecipientDirectory answers whether an address belongs to a contact or lead
@@ -134,7 +135,7 @@ func (s *Store) resolveRecipients(ctx context.Context, tx pgx.Tx, origin SendOri
 	var first string
 	unresolved := 0
 	for _, addr := range recipients {
-		if normalized := strings.ToLower(strings.TrimSpace(addr)); !visible[normalized] {
+		if normalized := correspondence.Fold(addr); !visible[normalized] {
 			if first == "" {
 				first = addr
 			}

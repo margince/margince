@@ -76,10 +76,9 @@ func setupReembedFleet(t *testing.T) *reembedFleetEnv {
 // case goes with the enumeration — there is no per-tenant enqueue left to skip.
 func TestEmbedReindexRebuildsTheCorpusInOnePassAndHandsTheMarkerBack(t *testing.T) {
 	re := setupReembedFleet(t)
-	// A second live workspace and an archived one still exist, deliberately:
-	// the pass must not grow work with them, which a fan-out did by
-	// construction. Nothing below counts jobs per tenant.
-	SeedExtraWorkspace(t, re.Owner, "reindex-second", false)
+	// An archived workspace still exists. The pass must not grow work with it,
+	// which a fan-out did by construction. Nothing below counts
+	// jobs per tenant.
 	SeedExtraWorkspace(t, re.Owner, "reindex-archived", true)
 
 	leadID := re.SeedID(t, `INSERT INTO lead (id, full_name, source, captured_by) VALUES ($1, 'One Pass Lead', 'manual', 'human:x')`)

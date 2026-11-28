@@ -232,9 +232,9 @@ func ambientPollInserter(t *testing.T, e *integration.Env) telegramEnqueuer {
 // dispatcher stamps from its own scan.
 func runOnePoll(t *testing.T, worker *telegramPollWorker, ws ids.UUID, conn capture.ChannelConnection) error {
 	t.Helper()
-	return worker.Work(context.Background(), &river.Job[TelegramPollArgs]{
+	return worker.Work(boundBackground(t), &river.Job[TelegramPollArgs]{
 		JobRow: &rivertype.JobRow{Kind: TelegramPollArgs{}.Kind(), Attempt: 1},
-		Args:   TelegramPollArgs{Workspace: ws, ConnectionID: conn.ID.String()},
+		Args:   TelegramPollArgs{ConnectionID: conn.ID.String()},
 	})
 }
 
@@ -331,7 +331,7 @@ func workOneIngestJob(t *testing.T, e *integration.Env, worker *telegramIngestWo
 // queued job has none.
 func workIngestArgs(t *testing.T, worker *telegramIngestWorker, args TelegramIngestArgs) {
 	t.Helper()
-	if err := worker.Work(context.Background(), &river.Job[TelegramIngestArgs]{Args: args}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[TelegramIngestArgs]{Args: args}); err != nil {
 		t.Fatalf("ingest Work: %v", err)
 	}
 }

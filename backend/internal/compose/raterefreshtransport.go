@@ -6,7 +6,7 @@ package compose
 // The rate-refresh transport: the admin-only FX propose-refresh endpoint
 // enqueues an async River job through the api role's insert-only runner (the api
 // never fetches in-request — the worker does) and returns 202 immediately. The
-// unique window (ByArgs + activeSweepStates) makes a double-click a no-op rather
+// unique window (the kind over activeSweepStates) makes a double-click a no-op rather
 // than a second fetch. Without WithRateRefresh wired, the op stays 501.
 
 import (
@@ -18,7 +18,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -63,16 +62,15 @@ func (h rateRefreshHandlers) ProposeFxRateRefresh(w http.ResponseWriter, r *http
 		httperr.Write(w, r, err)
 		return
 	}
-	args := FxRateRefreshArgs{Workspace: storekit.MustWorkspace(ctx), RequestedBy: requestedBy(ctx)}
-	// ByArgs uniqueness now hashes only the river:"unique"-tagged WorkspaceID
-	// (RequestedBy is provenance, untagged), so two admins refreshing the same
-	// workspace collapse to one in-flight refresh rather than racing two.
+	args := FxRateRefreshArgs{RequestedBy: requestedBy(ctx)}
+	// Unique by kind alone, not by args: RequestedBy is provenance, so two
+	// admins refreshing at once collapse to one in-flight refresh.
 	opts := jobs.QueuedAs[FxRateRefreshArgs](&river.InsertOpts{
 		// One-off: an admin pressed refresh and nothing re-presses it. The
 		// sheet is diffed at the end, so a run that gives up stages nothing and
 		// the next click starts over.
 		MaxAttempts: oneOffJobMaxAttempts,
-		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
 	})
 	if err := h.enqueue.Enqueue(ctx, args, opts); err != nil {
 		httperr.Write(w, r, err)

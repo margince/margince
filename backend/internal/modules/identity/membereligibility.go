@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -105,7 +106,7 @@ func refuseWaitingInvitation(ctx context.Context, tx pgx.Tx, email string) error
 // The raw arm is the only one that answers for a seat whose
 // email_domain_folded is unwritten, and FoldLoginDomainsTx writes those a page
 // at a time.
-func typedLoginAddress(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
+func typedLoginAddress(email string) string { return correspondence.Fold(email) }
 
 // sameLoginIdentity reports whether two spellings name one seat login. The
 // local parts match lowercased and the domains match once folded, as

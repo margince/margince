@@ -24,7 +24,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -51,7 +50,6 @@ func (e *transcriptReadEngine) start(w http.ResponseWriter, r *http.Request, id 
 	read, joined, err := e.activities.StartTranscriptReadQueued(r.Context(), activityID, requestedBy(r.Context()),
 		func(ctx context.Context, tx pgx.Tx, read activities.TranscriptRead) error {
 			return e.enqueue.EnqueueTx(ctx, tx, TranscriptProposeArgs{
-				Workspace:        storekit.MustWorkspace(ctx),
 				ActivityID:       activityID.UUID,
 				TranscriptReadID: read.ID,
 				RequestedBy:      read.RequestedBy,
@@ -254,7 +252,6 @@ func TranscriptReadOnLanding(enqueue transcriptReadEnqueuer) activities.Transcri
 	}
 	return func(ctx context.Context, tx pgx.Tx, read activities.TranscriptRead) error {
 		return enqueue.EnqueueTx(ctx, tx, TranscriptProposeArgs{
-			Workspace:        storekit.MustWorkspace(ctx),
 			ActivityID:       read.ActivityID.UUID,
 			TranscriptReadID: read.ID,
 			RequestedBy:      read.RequestedBy,

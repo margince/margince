@@ -60,7 +60,7 @@ func nominatimAnswering(t *testing.T, body string) (*geocode.Nominatim, func() [
 func runAddressCountryPass(t *testing.T, e *integration.Env, geocoder geocode.Client, at time.Time) {
 	t.Helper()
 	worker := newAddressCountryWorker(e.Pool, geocoder, func() time.Time { return at })
-	if err := worker.Work(context.Background(), &river.Job[AddressCountryCheckArgs]{}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[AddressCountryCheckArgs]{}); err != nil {
 		t.Fatalf("running the address country check: %v", err)
 	}
 }

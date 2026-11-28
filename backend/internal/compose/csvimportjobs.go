@@ -36,16 +36,12 @@ const importWorkerActor = "system:import-worker"
 
 // ImportCommitArgs names one attempt at committing a run.
 type ImportCommitArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-	RunID     ids.UUID `json:"run_id"`
-	Attempt   int      `json:"attempt"`
+	RunID   ids.UUID `json:"run_id"`
+	Attempt int      `json:"attempt"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (ImportCommitArgs) Kind() string { return "import_commit" }
-
-// WorkspaceID binds the slice to its tenant (jobs.WorkspaceScoped).
-func (a ImportCommitArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 func (a ImportCommitArgs) lease() migration.Lease {
 	return migration.Lease{Run: a.RunID, Status: migration.StatusRunning, Attempt: a.Attempt}
@@ -57,16 +53,12 @@ func (ImportCommitArgs) insertOpts() *river.InsertOpts {
 
 // ImportUndoArgs names one attempt at undoing a run.
 type ImportUndoArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-	RunID     ids.UUID `json:"run_id"`
-	Attempt   int      `json:"attempt"`
+	RunID   ids.UUID `json:"run_id"`
+	Attempt int      `json:"attempt"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (ImportUndoArgs) Kind() string { return "import_undo" }
-
-// WorkspaceID binds the slice to its tenant (jobs.WorkspaceScoped).
-func (a ImportUndoArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 func (a ImportUndoArgs) lease() migration.Lease {
 	return migration.Lease{Run: a.RunID, Status: migration.StatusUndoing, Attempt: a.Attempt}
@@ -78,7 +70,7 @@ func (ImportUndoArgs) insertOpts() *river.InsertOpts {
 
 // importJobArgs is an attempt's job: test, commit or undo.
 type importJobArgs interface {
-	jobs.WorkspaceScoped
+	river.JobArgs
 	lease() migration.Lease
 	insertOpts() *river.InsertOpts
 }
@@ -112,23 +104,23 @@ func (e importEnqueuer) enqueue(ctx context.Context, tx pgx.Tx, args importJobAr
 }
 
 // validates queues the test-run job of the attempt a move into validating opened.
-func (e *importEnqueuer) validates(ws ids.UUID) migration.Enqueue {
+func (e *importEnqueuer) validates() migration.Enqueue {
 	return func(ctx context.Context, tx pgx.Tx, run migration.Run) error {
-		return e.enqueue(ctx, tx, ImportValidateArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt})
+		return e.enqueue(ctx, tx, ImportValidateArgs{RunID: run.ID, Attempt: run.JobAttempt})
 	}
 }
 
 // commits queues the commit job of the attempt a move into running opened.
-func (e *importEnqueuer) commits(ws ids.UUID) migration.Enqueue {
+func (e *importEnqueuer) commits() migration.Enqueue {
 	return func(ctx context.Context, tx pgx.Tx, run migration.Run) error {
-		return e.enqueue(ctx, tx, ImportCommitArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt})
+		return e.enqueue(ctx, tx, ImportCommitArgs{RunID: run.ID, Attempt: run.JobAttempt})
 	}
 }
 
 // undos queues the undo job of the attempt a move into undoing opened.
-func (e *importEnqueuer) undos(ws ids.UUID) migration.Enqueue {
+func (e *importEnqueuer) undos() migration.Enqueue {
 	return func(ctx context.Context, tx pgx.Tx, run migration.Run) error {
-		return e.enqueue(ctx, tx, ImportUndoArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt})
+		return e.enqueue(ctx, tx, ImportUndoArgs{RunID: run.ID, Attempt: run.JobAttempt})
 	}
 }
 
@@ -182,14 +174,7 @@ func newImportSlicer(pool *pgxpool.Pool, log *slog.Logger) importSlicer {
 // with its cause, because the engine records only the failures it returns.
 func (s importSlicer) slice(ctx context.Context, args importJobArgs, work importSliceWork) (result importSliceResult, err error) {
 	ctx = s.features.Context(ctx)
-	db, err := workspaceJobDB(s.pool, args)
-	if err != nil {
-		return importSliceResult{}, err
-	}
-	ctx, err = workspaceJobCtx(ctx, args)
-	if err != nil {
-		return importSliceResult{}, err
-	}
+	db := InstallationDB(s.pool)
 	lease, runs := args.lease(), migration.NewRunStore(db)
 	system := principal.SystemActing(ctx, importWorkerActor)
 	defer func() {
