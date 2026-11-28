@@ -13,12 +13,12 @@ import { RowOpen } from "../../design-system/rowopen";
 import { translate, useLocale, useT } from "../../i18n";
 import { appRoute, findApp, mayOpenApp } from "../../lib/extensionapps";
 import {
-  EXTENSION_SCREEN,
   type ExtensionDescriptor,
   type UnitSecretScope,
   unitsForSecretScope,
   unitTitle,
 } from "../../lib/extensions";
+import { EXTENSION_SCREEN } from "../../lib/extensionscreen";
 import { navigate, routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import "./extension-units.css";

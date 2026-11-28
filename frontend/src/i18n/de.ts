@@ -3194,6 +3194,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.singleKeyOffHint":
     "Aktiviere sie unter Einstellungen → Nutzerkonto.",
   "shell.more": "Mehr",
+  "shell.embedSignInBody":
+    "Melde dich in einem Browser-Tab bei Margince an. Komm dann hierher zurück und wähle Erneut versuchen.",
+  "shell.embedOpen": "Margince öffnen",
   "shell.unknownPage": "Nicht gefunden",
   "shell.unavailableForRole": "Für deine Rolle nicht verfügbar.",
   "shell.unknownAddress": "Diese Adresse führt in Margince nirgendwohin.",

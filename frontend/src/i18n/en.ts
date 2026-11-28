@@ -3076,6 +3076,9 @@ export const en = {
   "shell.shortcuts.singleKeyOff": "Single-key shortcuts are off",
   "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
   "shell.more": "More",
+  "shell.embedSignInBody":
+    "Sign in to Margince in a browser tab. Then come back here and select Retry.",
+  "shell.embedOpen": "Open Margince",
   "shell.unknownPage": "Not found",
   "shell.unavailableForRole": "Not available for your role.",
   "shell.unknownAddress": "This address does not lead anywhere in Margince.",
