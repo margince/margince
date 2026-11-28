@@ -283,16 +283,20 @@ export const VietnameseTools: Story = {
   },
 };
 export const VietnameseSearch: Story = {
-  render: story([], "vi"),
+  render: story([], "vi", [
+    { ...TOOLS[0], name: "find_records", title: "Find records" },
+  ]),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(
-      await canvas.findByRole("searchbox"),
-      "search_records",
-    );
+    await userEvent.type(await canvas.findByRole("searchbox"), "find_records");
     await userEvent.click(
-      await canvas.findByRole("button", { name: /Tìm kiếm/ }),
+      await canvas.findByRole("button", {
+        name: vietnameseCopy["tools.descriptionToggle"].replace(
+          "{tool}",
+          vietnameseCopy["tools.name.find_records"],
+        ),
+      }),
     );
-    await canvas.findByText(/Search records/);
+    await canvas.findByText(/Find records/);
   },
 };
