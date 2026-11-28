@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -112,9 +113,13 @@ func upsertConsentWithProof(
 	// a claimed one (verdict.go, gate.go). Rows the retired operator-token
 	// endpoint produced carry NULL here and authorize nothing.
 	var trigger *string
+	var confirmedFrom httpserver.RequestOrigin
 	if doiConfirmedAt != nil && in.MailboxProof.proves() {
 		named := string(in.MailboxProof)
 		trigger = &named
+		// The device and address that opened the mailed link are the evidence a
+		// human, not a scanner of the mail, answered it.
+		confirmedFrom = httpserver.RequestOriginFrom(ctx)
 	}
 	// The published row this rests on, where the door knew which one. Written
 	// BESIDE policy_text rather than instead of it: the text stays readable
@@ -123,11 +128,13 @@ func upsertConsentWithProof(
 	err := tx.QueryRow(ctx, `
 		INSERT INTO consent_event (`+sub.column+`, purpose_id, new_state, lawful_basis, source,
 		                           policy_text, policy_version, double_opt_in_confirmed_at, captured_at, captured_by,
-		                           issuance_trigger, consent_text_version_id, subject_request_id, kept_until)
-		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		                           issuance_trigger, consent_text_version_id, subject_request_id, kept_until,
+		                           confirm_ip, confirm_user_agent)
+		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id`,
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, in.Source,
 		text, version, doiConfirmedAt, capturedAt, actorID, trigger,
-		zeroUUIDAsNull(in.TextVersionID), zeroUUIDAsNull(in.SubjectRequest), keptUntil).Scan(&proofID)
+		zeroUUIDAsNull(in.TextVersionID), zeroUUIDAsNull(in.SubjectRequest), keptUntil,
+		confirmedFrom.IP, confirmedFrom.UserAgent).Scan(&proofID)
 	return proofID, err
 }

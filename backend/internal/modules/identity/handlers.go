@@ -328,7 +328,7 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, session, err := h.svc.Login(withUserAgent(r.Context(), r.UserAgent()), string(req.Email), req.Password, presentedDeviceProof(r))
+	id, session, err := h.svc.Login(httpserver.WithRequestOrigin(r.Context(), r), string(req.Email), req.Password, presentedDeviceProof(r))
 	if err != nil {
 		if errors.Is(err, ErrBadCredentials) {
 			h.loginFailures.Record(accountKey)

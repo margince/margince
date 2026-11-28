@@ -220,7 +220,6 @@ var foreignKeyNoIndexNeeded = map[string]string{
 	"tag":                        "a tag is archived, keeping the rows that carried it explainable",
 	"commission_entry":           "append-only: a commission entry is a financial record",
 	"communication_instruction":  "an instruction is consumed or revoked in place",
-	"communication_review":       "append-only: a review is the decision somebody made",
 	"consent_text_version":       "append-only, and the migration revokes DELETE on it: a proof row pointing at a removed version is the failure it prevents",
 	"close_date_run":             "append-only: a sweep run holds the cursor the next one resumes from",
 	"deal_stage_evidence":        "append-only: evidence for why a stage moved",
