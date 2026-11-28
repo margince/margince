@@ -273,7 +273,8 @@ or the name of an advisory lock would carry a zero id.
 
 The jobs that clean up data in archived workspaces run through `runEveryWorkspacePass`, which reads every
 workspace row. They are listed in `everyWorkspaceKinds`, and the middleware leaves them unbound, so they
-run when no company is live.
+run when no company is live. The re-embed binds through the search store and hands its marker back when no company is
+live, so it is listed in `searchBoundKinds` and left unbound too.
 
 **One pass over one corpus.** `embed_reindex` is one: the search data has no
 workspace column, so one row rebuilds it all. It declares `cadence: on_demand`, because a human's

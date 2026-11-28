@@ -48,10 +48,18 @@ var everyWorkspaceKinds = map[string]bool{
 	SuppressionJournalArgs{}.Kind():     true,
 }
 
+// searchBoundKinds are the jobs that bind a workspace through the search store
+// and answer an installation with no live workspace themselves: the re-embed
+// hands its marker back and cancels. The middleware would fail such a job
+// before it could.
+var searchBoundKinds = map[string]bool{
+	EmbedReindexArgs{}.Kind(): true,
+}
+
 // installationBinding is the jobs.Config.BindWorkspace of the worker client.
 func installationBinding(pool *pgxpool.Pool) jobs.BindWorkspace {
 	return func(ctx context.Context, job *rivertype.JobRow) (context.Context, error) {
-		if everyWorkspaceKinds[job.Kind] {
+		if everyWorkspaceKinds[job.Kind] || searchBoundKinds[job.Kind] {
 			return ctx, nil
 		}
 		return bindInstallation(ctx, pool)
