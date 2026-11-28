@@ -196,7 +196,7 @@ func renderOpenVsClosed(setups map[string]map[string]openVsClosedRow, titles map
 		fmt.Fprintf(&p, "| %s | %s | %d | %d | %d | %d | %s | %s |\n", t.Title, s.weights,
 			t.Bands.Ready, t.Bands.UsableWithCare, t.Bands.NotReliableYet, t.NotMeasured, cost, againstBase(setups[s.file], base))
 	}
-	p.WriteString("\n**Cost basis.** One run is the mean tokens that feature's test cases used, priced at the list price in " +
+	p.WriteString("\nCost basis: one run is the mean tokens that feature's test cases used, priced at the list price in " +
 		"[`pricing.go`](../../backend/internal/modules/ai/pricing.go): input and output only, no cache discount. " +
 		"It compares models on equal work. It is not a forecast of a bill, because a real workspace calls the " +
 		"features in a different mix.\n\n")
@@ -208,12 +208,12 @@ func renderOpenVsClosed(setups map[string]map[string]openVsClosedRow, titles map
 	}
 
 	p.WriteString("## How to read the comparison\n\n")
-	p.WriteString("- **The judges differ.** A second model scores answer quality, and each family was scored by its own " +
+	p.WriteString("- The judges differ. A second model scores answer quality, and each family was scored by its own " +
 		"judge. Compare the grades with that in mind, and trust \"tries right\" in " +
 		"[ai-certification.md](ai-certification.md) most, because a mechanical check decides it.\n")
-	p.WriteString("- **A feature with no price is left out of the total**, and the table says how many. " +
+	p.WriteString("- A feature with no price is left out of the total, and the table says how many. " +
 		"A setup that cannot carry a feature at all reads \"Not measured\".\n")
-	p.WriteString("- **Open weights are measured through a broker here.** The grade belongs to the model, and the " +
+	p.WriteString("- Open weights are measured through a broker here. The grade belongs to the model, and the " +
 		"serving, speed and price of a host you run yourself are separate measurements.\n")
 	return []byte(p.String())
 }
@@ -230,7 +230,11 @@ func writeOpenVsClosedFeatures(p *strings.Builder, open whichAISetup, rows, base
 			behind = append(behind, t.Label)
 		}
 	}
-	fmt.Fprintf(p, "\n**Where Gemini is Ready and this setup is not (%d):** %s.\n\n", len(behind), strings.Join(behind, ", "))
+	fmt.Fprintf(p, "\nGemini is Ready and this setup is not on %d features:\n\n", len(behind))
+	for _, label := range behind {
+		fmt.Fprintf(p, "- %s\n", label)
+	}
+	p.WriteString("\n")
 }
 
 // rowOrNotMeasured reads a feature a setup does not bind as "Not measured".
