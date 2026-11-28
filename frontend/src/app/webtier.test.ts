@@ -222,14 +222,21 @@ describe("every response the web tier sends carries the whole security set", () 
           continue;
         }
         if (where.pattern === EMBED_PATH && name === "X-Frame-Options") {
-          expect(own.get(name), "the embed path's frame-ancestors decides").toBe(
-            undefined,
-          );
+          expect(
+            own.get(name),
+            "the embed path's frame-ancestors decides",
+          ).toBe(undefined);
           continue;
         }
-        if (where.pattern === EMBED_PATH && name === "Content-Security-Policy") {
+        if (
+          where.pattern === EMBED_PATH &&
+          name === "Content-Security-Policy"
+        ) {
           expect(own.get(name), "the embed path's own frame-ancestors").toBe(
-            value.replace("frame-ancestors 'none'", "frame-ancestors $embed_ancestors"),
+            value.replace(
+              "frame-ancestors 'none'",
+              "frame-ancestors $embed_ancestors",
+            ),
           );
           continue;
         }
@@ -260,7 +267,10 @@ it("lets only the embed path name frame ancestors, and none until an operator do
   const defaulted = where.body.indexOf(`set $embed_ancestors "'none'";`);
   const included = where.body.indexOf("include /etc/nginx/margince/*.conf;");
   expect(defaulted, "the default").toBeGreaterThan(-1);
-  expect(included, "the operator's file, read after the default").toBeGreaterThan(defaulted);
+  expect(
+    included,
+    "the operator's file, read after the default",
+  ).toBeGreaterThan(defaulted);
   for (const other of locations().filter((l) => l.pattern !== EMBED_PATH)) {
     expect(other.body, other.pattern).not.toContain("$embed_ancestors");
   }

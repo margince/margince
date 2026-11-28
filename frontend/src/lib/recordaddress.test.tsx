@@ -190,7 +190,12 @@ it.each([
   [`#/contacts/${CONTACT}`, `/#/contacts/${CONTACT}`],
 ])("reloads %s at the root when it opens on the embed path", (hash, to) => {
   const replace = vi.fn();
-  vi.stubGlobal("location", { pathname: EMBED_PATH, search: "", hash, replace });
+  vi.stubGlobal("location", {
+    pathname: EMBED_PATH,
+    search: "",
+    hash,
+    replace,
+  });
   try {
     publishRecordAddress();
   } finally {
@@ -202,7 +207,12 @@ it.each([
 it("keeps a unit's screen on the embed path, and only there", () => {
   const replace = vi.fn();
   for (const hash of ["#/ext/linkedin", "#/ext/openchannel?tab=a"]) {
-    vi.stubGlobal("location", { pathname: EMBED_PATH, search: "", hash, replace });
+    vi.stubGlobal("location", {
+      pathname: EMBED_PATH,
+      search: "",
+      hash,
+      replace,
+    });
     try {
       publishRecordAddress();
     } finally {

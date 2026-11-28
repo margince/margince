@@ -688,25 +688,30 @@ Give **every** language the installation ships (`en`, `de`, `vi`),
 or the generator refuses. A reader of the missing one would get an empty screen. Keys outside your space are
 refused too: your own copy never writes over core text. To change core wording, use an override, below. The steps alone are in [override-core-wording-from-an-extension.md](override-core-wording-from-an-extension.md).
 
-### Show the screen inside a frame on another origin
+### Show the screen on another origin's page
 
-A browser extension's panel can show your screen in a frame. Point the frame at `/embed/#/ext/<name>`. On
-that path the web app draws your screen and nothing around it: no navigation, no command palette and no
-onboarding. Any other address on `/embed/` reloads at `/`, so a frame can never show a core screen. A
-reader with no session sees a card that opens Margince in a new tab to sign in, because a provider sign-in
-does not run inside a frame.
+A browser extension's panel can embed your screen in an `<iframe>`. Point it at `/embed/#/ext/<name>`. On
+that path the web app draws your screen and nothing around it: no menu, no command palette and no
+onboarding. Any other address on `/embed/` reloads at `/`, so an `<iframe>` can never show a core screen.
+A reader with no session sees a card that opens Margince in a new tab. A provider sign-in does not run
+inside an `<iframe>`, so they sign in there and come back.
 
-Framing is refused until the operator allows an origin. The web image's nginx reads every
-`/etc/nginx/margince/*.conf` in the `/embed/` location. One line opens it to one origin:
+The web image refuses to be embedded until the operator allows an origin. Its nginx reads every
+`/etc/nginx/margince/*.conf` in the `/embed/` location. One line allows one origin:
 
 ```nginx
 set $embed_ancestors "chrome-extension://<extension id>";
 ```
 
-The value goes into that page's `frame-ancestors`. List several origins with spaces between them. Every
-other page keeps `frame-ancestors 'none'` and `X-Frame-Options: DENY`. A frame and its host talk with
-`postMessage`. Accept a message only when `event.source` is `window.parent`, and answer to
-`location.ancestorOrigins[0]`.
+In the release's Compose files, mount a folder at `/etc/nginx/margince` in the `web` service. The value
+goes into that page's `frame-ancestors`. List several origins with spaces between them. Every other page
+keeps `frame-ancestors 'none'` and `X-Frame-Options: DENY`.
+
+The session cookie is `SameSite=Strict`, so a browser sends it to the `<iframe>` only when it counts the
+page as same-site. Chrome does that for an extension page with host permission for the Margince origin.
+A plain web page on another site gets the sign-in card each time. The `<iframe>` and its host send each
+other messages with `postMessage`. Accept a message only when `event.source` is `window.parent`, and
+answer to `location.ancestorOrigins[0]`.
 
 ## Override core wording
 

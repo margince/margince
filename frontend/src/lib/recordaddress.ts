@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { bookingSlugFromPath, isShareableBookingSlug } from "./bookingaddress";
+import { EXTENSION_SCREEN } from "./extensionscreen";
 import { opensElsewhere } from "./linkclick";
 
 const IDENTIFIER =
@@ -125,7 +126,7 @@ export function isConsentAddress(pathname: string, hash: string): boolean {
  * extension's panel. Only a unit's screen is shown there.
  */
 export const EMBED_PATH = "/embed/";
-const EMBED_ROUTE = /^#\/ext\/[^/?]+(?:[/?]|$)/;
+const EMBED_ROUTE = new RegExp(`^#/${EXTENSION_SCREEN}/[^/?]+(?:[/?]|$)`);
 
 /** True when the app is a unit's screen inside an allowed frame. */
 export function isEmbedAddress(pathname: string, hash: string): boolean {
