@@ -100,17 +100,13 @@ func (t *VCardIngestTrigger) HandleEvent(ctx context.Context, env events.Envelop
 	if !carries {
 		return nil
 	}
-	ws, err := InstallationDB(t.pool).Workspace(ctx)
-	if err != nil {
-		return err
-	}
 	// ByArgs alone, over the active states: the args name ONE message, so two
 	// deliveries of the same capture event collapse onto one import while two
 	// different messages each get their own. This is the opposite choice from
 	// the signature trigger, which collapses a whole burst onto one workspace
 	// pass — that one re-derives its own candidates, and this one cannot,
 	// because the message it names is the only place its cards live.
-	child := VCardIngestArgs{Workspace: ws.UUID, Activity: activityID}
+	child := VCardIngestArgs{Activity: activityID}
 	return t.enqueue.Enqueue(ctx, child, vcardIngestInsertOpts())
 }
 

@@ -34,6 +34,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -64,7 +65,7 @@ type assuranceSweepWorker struct {
 }
 
 func (w *assuranceSweepWorker) Work(ctx context.Context, _ *river.Job[AssuranceSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.assureWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.assureWorkspace))
 }
 
 // assuranceActor is the principal the nightly pass runs as, and therefore the
@@ -95,24 +96,19 @@ func (w *assuranceSweepWorker) assureWorkspace(ctx context.Context, workspace id
 			"workspace_id", workspace)
 		return nil
 	}
-	return w.check(wsCtx, workspace, false)
+	return w.check(wsCtx, false)
 }
 
-// AssuranceRunArgs is one pass a human asked for, on one workspace.
+// AssuranceRunArgs is one pass a human asked for.
 //
-// Uniqueness is keyed on Workspace alone (river:"unique"), so two managers
-// pressing recheck at once collapse to one pass rather than racing two;
-// RequestedBy is provenance and stays outside the hash.
+// The insert is unique by kind alone (assuranceRunInsertOpts), so two managers
+// pressing recheck at once collapse to one pass. RequestedBy is provenance.
 type AssuranceRunArgs struct {
-	Workspace   ids.UUID `json:"workspace_id" river:"unique"`
-	RequestedBy string   `json:"requested_by"`
+	RequestedBy string `json:"requested_by"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (AssuranceRunArgs) Kind() string { return "assurance_run" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a AssuranceRunArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // assuranceRunWorker runs the pass one human asked for.
 //
@@ -123,13 +119,17 @@ type assuranceRunWorker struct {
 }
 
 func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceRunArgs]) error {
-	// The guard FIRST, before the worker touches anything: a zero workspace
-	// would bind an empty GUC and the pass would then read and write as
-	// whatever the connection happens to carry.
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+	// A row queued before the upgrade has a different unique key from a new
+	// one, so two passes can be queued. One pass at a time is the lock's.
+	lease, held, err := database.TrySessionLease(ctx, w.sweep.pool, "assurance_run", w.sweep.log)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	if !held {
+		return nil
+	}
+	defer lease.Close(ctx)
+	wsCtx := ctx
 	// SYSTEM, on a pass a human asked for, and deliberately: the pass reads the
 	// whole pipeline, and every exception it raises is captured_by whoever it
 	// runs as. Attributed to the manager who pressed the button, the run would
@@ -144,7 +144,7 @@ func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceR
 			"%s: a pass somebody asked for carries no asker", job.Args.Kind(),
 		))
 	}
-	return jobs.FaultContext(ctx, w.sweep.check(wsCtx, job.Args.Workspace, true))
+	return jobs.FaultContext(ctx, w.sweep.check(wsCtx, true))
 }
 
 // check runs one pass and reports what it came to.
@@ -159,7 +159,7 @@ func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceR
 // saying the check happened: the surfaces read the row, not the log, so a pass
 // that had stopped running entirely would otherwise be visible only as a page
 // that stopped changing.
-func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID, requested bool) error {
+func (w *assuranceSweepWorker) check(ctx context.Context, requested bool) error {
 	store := assurance.NewStore(InstallationDB(w.pool))
 	result, err := AssuranceScanner(w.pool, store).Scan(ctx, w.now())
 	if err != nil {
@@ -179,11 +179,11 @@ func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID, requested
 	}, result.RunID)
 	if bundleErr != nil {
 		w.log.ErrorContext(ctx, "the findings were recorded but not bundled into tasks",
-			"workspace_id", ws, "run_id", result.RunID, "error", bundleErr)
+			"run_id", result.RunID, "error", bundleErr)
 	}
 
 	w.log.InfoContext(ctx, "the forecast's inputs were checked",
-		"workspace_id", ws, "run_id", result.RunID,
+		"run_id", result.RunID,
 		"eligible_deals", result.EligibleDeals, "findings", result.Findings, "cleared", result.Cleared,
 		"readiness", result.Readiness, "status", result.Status, "tasks_minted", minted,
 		"requested", requested)

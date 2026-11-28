@@ -316,14 +316,11 @@ func readStoredRouting(ctx context.Context, pool *pgxpool.Pool) (ai.RoutingConfi
 // runs before this; taking the first here would be picking one of two answers
 // to a question that must not have two.
 func singletonWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, error) {
-	live, err := database.LiveWorkspaces(ctx, pool)
+	ws, _, err := database.LiveWorkspace(ctx, pool)
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: resolving the installation's workspace: %w", err)
 	}
-	if len(live) == 0 {
-		return ids.UUID{}, nil
-	}
-	return live[0], nil
+	return ws, nil
 }
 
 // RoutingFromDeployConfig reads a deployment config file's declared tier→model

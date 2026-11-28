@@ -81,8 +81,8 @@ func ObserveExtensionInventory(ctx context.Context, pool *pgxpool.Pool, log *slo
 			return nil
 		}
 		_, err = storekit.LogSystem(ctx, tx, extensionCompositionObserved, map[string]any{
-			"extensions":   current,
-			"installation": installationMarker(ctx),
+			"extensions":    current,
+			installationKey: installationMarker(ctx),
 		})
 		if err != nil {
 			return err

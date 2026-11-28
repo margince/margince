@@ -111,7 +111,7 @@ func readDirectoryPage(
 		        AND l.external_customer_id = c.external_customer_id
 		        AND l.archived_at IS NULL
 		  LEFT JOIN company o ON o.id = l.company_id AND o.archived_at IS NULL %s
-		 WHERE c.connection_id = $%d AND c.archived_at IS NULL %s
+		 WHERE c.connection_id = $%d %s
 		 ORDER BY c.display_name, c.external_customer_id
 		 LIMIT $%d`, visible, connPos, keyset, limitPos), args...)
 	if err != nil {
@@ -216,7 +216,7 @@ func (s *Store) lockDirectoryEntry(ctx context.Context, tx pgx.Tx, externalID st
 	var name string
 	err = tx.QueryRow(ctx, `
 		SELECT display_name FROM finance_external_customer
-		 WHERE connection_id = $1 AND external_customer_id = $2 AND archived_at IS NULL`,
+		 WHERE connection_id = $1 AND external_customer_id = $2`,
 		conn.id, externalID).Scan(&name)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, "", fmt.Errorf("%w: the source lists no customer %q", apperrors.ErrNotFound, externalID)

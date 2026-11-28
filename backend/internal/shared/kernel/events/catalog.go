@@ -24,6 +24,7 @@ var catalog = map[string]struct {
 	stream  string
 	version int
 }{
+	"identifier.spelling_changed":       {identityStreamEntity, 1},
 	"sdr_handoff.created":               {leadStreamEntity, 1},
 	"sdr_handoff.updated":               {leadStreamEntity, 1},
 	"record_assignment.created":         {identityStreamEntity, 1},

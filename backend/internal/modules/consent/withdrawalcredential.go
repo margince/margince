@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -294,7 +295,8 @@ func resolveWithdrawalTokenTx(ctx context.Context, tx pgx.Tx, token string) (Wit
 	err := tx.QueryRow(ctx, `
 		SELECT id, address, contact_id, lead_id, scope, purpose_id
 		  FROM withdrawal_credential
-		 WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()`,
+		 WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()
+		   FOR UPDATE`,
 		hashPublicToken(token)).Scan(
 		&ref.CredentialID, &ref.Address, &contactID, &leadID, &ref.Scope, &purposeID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -302,6 +304,12 @@ func resolveWithdrawalTokenTx(ctx context.Context, tx pgx.Tx, token string) (Wit
 	}
 	if err != nil {
 		return WithdrawalRef{}, fmt.Errorf("consent: resolving the withdrawal link: %w", err)
+	}
+	// Resolving is using: the stamp is what the subject's access export reports
+	// as the link's last use. Like a passport's, it is a read model with no audit.
+	if _, err := tx.Exec(ctx, `UPDATE withdrawal_credential SET last_used_at = now() WHERE id = $1`,
+		ref.CredentialID); err != nil {
+		return WithdrawalRef{}, fmt.Errorf("consent: stamping the withdrawal link's use: %w", err)
 	}
 	if contactID != nil {
 		ref.ContactID = ids.From[ids.ContactKind](*contactID)
@@ -414,7 +422,7 @@ func (s *Store) RevokeSubjectCredentialsTx(
 // purposes too. Consolidating them would change the cap's lock key, which does
 // not belong in a slice about withdrawal links.
 func normalizeAddress(address string) string {
-	return strings.ToLower(strings.TrimSpace(address))
+	return correspondence.Fold(address)
 }
 
 // purposeKeyByID reads the key a named-purpose credential was minted for, so

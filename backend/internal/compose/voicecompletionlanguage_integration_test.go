@@ -38,7 +38,7 @@ func TestStaleVoiceCompletionKeepsTheBuildLanguage(t *testing.T) {
 				return scripted.Complete(ctx, req)
 			})
 			worker := newVoiceBuildWorker(env.e.Pool, brain, slog.New(slog.DiscardHandler))
-			if err := worker.Work(t.Context(), voiceBuildJob(env, build)); err != nil {
+			if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 				t.Fatal(err)
 			}
 			versions, err := env.store.ListVersions(env.owner, env.profile.ID, nil, nil)

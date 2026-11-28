@@ -25,7 +25,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -168,7 +168,7 @@ type EnsureCounterpartyResult struct {
 // construction: the exact tier lands repeats on the same row, and the link
 // insert is conflict-free on replay.
 func (s *Store) EnsureCounterparty(ctx context.Context, in EnsureCounterpartyInput) (EnsureCounterpartyResult, error) {
-	in.Email = strings.ToLower(strings.TrimSpace(in.Email))
+	in.Email = correspondence.Fold(in.Email)
 	if in.Email == "" {
 		return EnsureCounterpartyResult{}, errors.New("contacts: a counterparty needs an email")
 	}
@@ -212,7 +212,7 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 }
 
 func (s *Store) ensureCapturedCounterparty(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput) (EnsureCounterpartyResult, error) {
-	in.Email = strings.ToLower(strings.TrimSpace(in.Email))
+	in.Email = correspondence.Fold(in.Email)
 	if in.Email == "" {
 		return EnsureCounterpartyResult{}, errors.New("contacts: a counterparty needs an email")
 	}

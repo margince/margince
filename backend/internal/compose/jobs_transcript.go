@@ -35,7 +35,6 @@ const (
 
 // TranscriptProposeArgs is one queued reading.
 type TranscriptProposeArgs struct {
-	Workspace        ids.UUID `json:"workspace_id"`
 	ActivityID       ids.UUID `json:"activity_id"`
 	TranscriptReadID ids.UUID `json:"transcript_read_id"`
 	// RequestedBy is the human who asked, so what the reading stages carries
@@ -46,11 +45,6 @@ type TranscriptProposeArgs struct {
 
 // Kind is the string River persists for this job.
 func (TranscriptProposeArgs) Kind() string { return "transcript_propose" }
-
-// WorkspaceID declares the one tenant this job's work belongs to, and is what
-// binds the worker's context — a worker that picked its own could claim one
-// workspace and work in another.
-func (a TranscriptProposeArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // transcriptProposeInsertOpts deduplicates the job by args, only while a job
 // is still active: the read id is unique per
@@ -121,10 +115,7 @@ type transcriptProposeWorker struct {
 
 func (w *transcriptProposeWorker) Work(ctx context.Context, job *river.Job[TranscriptProposeArgs]) error {
 	args := job.Args
-	wsCtx, err := workspaceJobCtx(ctx, args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	if w.proposer == nil {
 		return jobs.FaultContext(ctx, w.declineUnread(withTranscriptReader(wsCtx, args.RequestedBy, args.TranscriptReadID), args))
 	}

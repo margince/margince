@@ -76,7 +76,7 @@ func newLinkedInRematchWorker(pool *pgxpool.Pool, store *contacts.Store, authori
 // Work re-matches each workspace's unmatched ghosts, one workspace at a time so
 // a failure in one leaves the others swept.
 func (w *linkedInRematchWorker) Work(ctx context.Context, _ *river.Job[LinkedInRematchArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.rematchOneWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.rematchOneWorkspace))
 }
 
 func (w *linkedInRematchWorker) rematchOneWorkspace(ctx context.Context, workspace ids.UUID) error {

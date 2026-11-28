@@ -395,7 +395,7 @@ func lockReview(ctx context.Context, tx pgx.Tx, id ids.UUID) (reviewHead, storek
 		SELECT 1 FROM deal WHERE id = (SELECT deal_id FROM legal_review WHERE id = $1) FOR UPDATE`, id); err != nil {
 		return out, storekit.RowLock{}, fmt.Errorf("lock the legal review's deal: %w", err)
 	}
-	lock, err := storekit.LockRow(ctx, tx, legalReviewEntity, id, storekit.IncludeArchived)
+	lock, err := storekit.LockRow(ctx, tx, legalReviewEntity, id, storekit.NoArchiveColumn)
 	if err != nil {
 		return out, lock, err
 	}

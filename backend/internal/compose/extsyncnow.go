@@ -35,9 +35,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -59,10 +57,6 @@ func (r *callRuntime) SyncNow(ctx context.Context, job extension.JobName) error 
 	// installation through, rather than a second lookup that could answer
 	// differently.
 	pool := r.deps.pool
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return database.ErrNoWorkspace
-	}
 	inserter, err := extensionJobInserter(pool)
 	if err != nil {
 		return fmt.Errorf("compose: opening the queue to ask for %s: %w", job, err)
@@ -72,7 +66,7 @@ func (r *callRuntime) SyncNow(ctx context.Context, job extension.JobName) error 
 	if err != nil {
 		return err
 	}
-	return inserter.Enqueue(ctx, extJobWorkspaceArgs{JobKind: child, Workspace: ws}, opts)
+	return inserter.Enqueue(ctx, extJobWorkspaceArgs{JobKind: child}, opts)
 }
 
 // declaredJobFor answers the declaration of one unit's job, and whether the

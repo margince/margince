@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -147,7 +148,7 @@ func (h Handlers) SubmitConfirmDetails(w http.ResponseWriter, r *http.Request, t
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	receipts, err := h.store.SubmitConfirmation(r.Context(), token, submissionFromWire(req))
+	receipts, err := h.store.SubmitConfirmation(httpserver.WithRequestOrigin(r.Context(), r), token, submissionFromWire(req))
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

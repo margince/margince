@@ -158,17 +158,9 @@ jobs:
         with:
           filters: |
             # `backend_db` is every path that can change what a DATABASE-backed
-            # lane proves; `backend` is that set PLUS the agent rulebooks, which
-            # a Go unit test reads and no integration test does. The anchor makes
-            # the second derive from the first — two hand-maintained copies of
-            # one list is the shape this repo refuses everywhere else, and it
-            # would rot in the direction that silently under-tests.
-            #
-            # The split exists because one flag was driving two unrelated
-            # things: run the Go unit gates, and boot the Postgres shards.
-            # A rulebook edit needs the first and cannot affect the second, so
-            # it belongs in `backend` and not here — the same cut `docs/**`
-            # sits on, the prose documenting this classifier included.
+            # lane proves; `backend` is every path. One flag used to drive two
+            # things, the Go gates and the Postgres shards, and a docs or
+            # rulebook edit needs the first and cannot affect the second.
             backend_db: &backend_db
               - 'backend/**'
               # The MCP App admission vocabulary is AUTHORED under frontend/ and
@@ -207,70 +199,18 @@ jobs:
               # compile — the same claim on this scope that ci.yml itself has.
               - '.github/actions/**'
               - 'sonar-project.properties'
-            # The rulebooks and the catalog they point at. Go gates read all
-            # three: backend/gates/rulebookdelegation_test.go asserts every CLAUDE.md
-            # is nothing but its `@AGENTS.md` import,
-            # backend/gates/rulebookdirection_test.go that nothing under docs/ links
-            # back up to a rulebook, and backend/gates/rulebooktally_test.go that no
-            # rulebook spells out a tally the tree can be asked for — which it
-            # reads out of docs/reference/modules.md too.
-            #
-            # Each path here is listed because omitting it means an edit to that
-            # file alone runs no Go lane, and the gate that exists to refuse
-            # exactly that edit never executes. No integration test opens any of
-            # them, so the Postgres shards still do not.
+              # What integration tests read outside backend/. backend/gates/
+              # gatelanetrigger_test.go fails on a read missing here.
+              - 'config/presets/**'
+              - 'docs/reference/mcp-tool-roles/**'
+            # Every path, because many Go gates walk every tracked file
+            # (gitcontent, docsprose, the vocabulary and public-reference gates),
+            # so a change to any file can change a gate's verdict. It turns on
+            # deterministic-gates, craftsmanship and vuln; the Postgres shards
+            # follow backend_db. backend/gates/gatelanetrigger_test.go holds
+            # every tracked file inside it.
             backend:
-              - *backend_db
-              - 'AGENTS.md'
-              - 'CLAUDE.md'
-              - 'docs/**'
-              # The SPA, because 48 gates under backend/gates/ READ it: the
-              # vocabulary gate reads frontend comments and the design-system
-              # gates read its components. Listed as a whole tree rather than as
-              # the files those gates happen to name today — a scope that lists
-              # individual files stops covering the next one, which is how one
-              # frontend path came to sit in backend_db alone.
-              #
-              # A gate must RUN in a lane every path it reads can trigger. It
-              # did not: a frontend-only PR broke the vocabulary gate and merged
-              # green, and the red then surfaced on unrelated backend branches
-              # where it read as their fault — three sessions found and fixed it
-              # independently, two of them paying a full integration lane.
-              # backend/gates/gatelanetrigger_test.go fails when a gate reads a
-              # path this scope does not cover.
-              #
-              # In `backend` and NOT in backend_db: these gates are Go unit
-              # tests, so a frontend edit runs them and still boots no Postgres
-              # shard — the cut this split exists to make.
-              - 'frontend/**'
-              # And everything else a gate opens. This list is DERIVED, not
-              # remembered: gatelanetrigger_test.go resolves every path literal
-              # in the suite against the tree and fails on one no pattern here
-              # covers, so the next file a gate reaches for fails on the branch
-              # that added it. The first version of that census enumerated seven
-              # directory prefixes and missed `.github/labels.yml` and this
-              # `package.json`, which is why it derives now.
-              - '.github/**'
-              - '.coderabbit.yaml'
-              - '.env.example'
-              - '.tool-versions'
-              - 'config/**'
-              - 'e2e/**'
-              - 'tools/**'
-              - 'user-guide/**'
-              - 'Dockerfile*'
-              - 'docker-bake.hcl'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'renovate.json'
-              - 'README.md'
-              - 'CLA.md'
-              - 'LICENSING.md'
-              - 'MAINTAINERS.md'
-              - 'CODE_OF_CONDUCT.md'
-              - 'CONTRIBUTING.md'
-              - 'SECURITY.md'
-              - 'SUPPORT.md'
+              - '**'
             frontend:
               - 'third-party-files.txt'
               - 'frontend/**'
@@ -283,6 +223,7 @@ jobs:
               - '.github/actions/frontend-cache-key/**'
               - '.github/actions/upload-artifact-retried/**'
               - 'docs/reference/ui-copy-style*.md'
+              - 'docs/reference/mcp-info.json'
               - 'docs/handbook/**'
               - 'backend/gates/marketingquestion_test.go'
               - 'backend/gates/testdata/servertrim.json'
@@ -358,6 +299,8 @@ jobs:
             backend_lint:
               - *backend_db
               - 'tools/**'
+              # The image the job runs in.
+              - '.github/ci-image/**'
             e2e:
               - 'backend/**'
               - 'frontend/**'
@@ -379,6 +322,11 @@ jobs:
               # reason the backend scope carries 'scripts/**' too.
               - 'scripts/**'
               - 'Makefile'
+              # The workspace the composed build reads, and the job itself.
+              - 'go.mod'
+              - 'go.work'
+              - 'go.work.sum'
+              - '.github/workflows/ci.yml'
             images:
               - 'Dockerfile'
               - '.dockerignore'
@@ -392,6 +340,7 @@ jobs:
               - 'Makefile'
               - 'scripts/release*'
               - 'scripts/lib-git-fixture.sh'
+              - 'scripts/lib-dist-version.sh'
               - '.github/workflows/release.yml'
               - '.github/workflows/release-tag.yml'
               - '.github/workflows/_release-*.yml'

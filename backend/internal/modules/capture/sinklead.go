@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -47,7 +47,7 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 	// case collide with the same lead — `email = lower($1)` — so an identity
 	// carrying the raw spelling would read them as two questions and forget a
 	// refusal the first time a provider changed its capitalisation.
-	fields.Email = strings.ToLower(strings.TrimSpace(fields.Email))
+	fields.Email = correspondence.Fold(fields.Email)
 	fields = fittedLeadFields(fields)
 	// The A13 resurrection guard: an erased subject's address
 	// refuses re-capture — deletion sticks. The natural key, not

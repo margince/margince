@@ -13,7 +13,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/chatedge"
 	"github.com/margince/margince/backend/internal/modules/capture/zalo"
-	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -25,13 +24,12 @@ type IngestJob = chatedge.IngestJob
 // NewWorker is the shared chat worker for this network's ingest job. It files
 // through the live connection as the connector principal actor, and decodes a
 // stored item with decode. The client downloads the message's attachments.
-func NewWorker[T IngestJob](bind func(context.Context, jobs.WorkspaceScoped) (context.Context, error),
-	pool *pgxpool.Pool, sink connector.Sink, actor principal.Principal, log *slog.Logger, client *zalo.Client,
+func NewWorker[T IngestJob](pool *pgxpool.Pool, sink connector.Sink, actor principal.Principal, log *slog.Logger, client *zalo.Client,
 ) *chatedge.Worker[T] {
 	if client == nil {
 		client = zalo.NewClient(nil, "", "")
 	}
-	return &chatedge.Worker[T]{Name: "zalo_oa_ingest", Bind: bind, Pool: pool, Sink: sink, Actor: actor, Log: log, Decode: decoder{client}.decode}
+	return &chatedge.Worker[T]{Name: "zalo_oa_ingest", Pool: pool, Sink: sink, Actor: actor, Log: log, Decode: decoder{client}.decode}
 }
 
 type decoder struct{ client *zalo.Client }

@@ -82,7 +82,7 @@ type ratifiedFleetScan struct {
 var ratifiedFleetScans = map[string]ratifiedFleetScan{
 	"internal/platform/database/workspaces.go": {
 		2,
-		"the one fleet scan: LiveWorkspaces is what every dispatcher, per-workspace pass, due-scan and tenant resolution starts from, and EveryWorkspace is the archived-inclusive spelling BOTH retention passes need, because archiving a workspace does not un-store the data inside it. Both read the fleet and do no tenant work themselves",
+		"the scans of the workspace table: LiveWorkspace is what every pass over the installation, due-scan and tenant resolution starts from, and EveryWorkspace is what the privacy cleanups start from, because archiving a workspace does not un-store its data. Neither does tenant work itself",
 	},
 	"internal/modules/identity/installation.go": {
 		1,
@@ -191,7 +191,7 @@ func TestFleetEnumerationOnlyAtRatifiedSites(t *testing.T) {
 
 // TestModulesReadTheWorkspaceCollectionOnlyInIdentity has no waiver list.
 // A module other than identity, which owns the workspace table, takes the fleet
-// from database.LiveWorkspaces or database.EveryWorkspace and never spells the
+// from database.LiveWorkspace and never spells the
 // scan itself. The census check fails when few module files were read, so a
 // moved directory cannot turn this into a pass over nothing.
 func TestModulesReadTheWorkspaceCollectionOnlyInIdentity(t *testing.T) {
@@ -213,7 +213,7 @@ func TestModulesReadTheWorkspaceCollectionOnlyInIdentity(t *testing.T) {
 			t.Fatalf("reading %s: %v", path, err)
 		}
 		if n := countFleetScans(string(src)); n > 0 {
-			t.Errorf("%s reads the workspace collection %d time(s); call database.LiveWorkspaces or database.EveryWorkspace instead", slashed, n)
+			t.Errorf("%s reads the workspace collection %d time(s); call database.LiveWorkspace or database.EveryWorkspace instead", slashed, n)
 		}
 	}
 }

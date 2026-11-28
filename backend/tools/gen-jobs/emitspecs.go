@@ -137,7 +137,7 @@ func unitConst(unit string) string {
 	case unitBuild:
 		return "FanOutBuild"
 	default:
-		return "FanOutWorkspace"
+		return "FanOutInstallation"
 	}
 }
 

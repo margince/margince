@@ -24,7 +24,7 @@ func TestAVoiceBuildWorksAsItsRequestersAgentAndKeepsItsRowAsTheSystem(t *testin
 	env, build := seedVoiceBuild(t, quote, 6)
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{judgeScore: 0.9, quote: quote}, slog.New(slog.DiscardHandler))
 
-	if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+	if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 		t.Fatalf("Work: %v", err)
 	}
 	finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
@@ -62,7 +62,7 @@ func TestAVoiceBuildForARequesterWithoutTheGrantFailsAndNeverCallsTheModel(t *te
 		return model.Response{}, nil
 	}), slog.New(slog.DiscardHandler))
 
-	if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+	if err := worker.Work(boundBackground(t), voiceBuildJob(env, build)); err != nil {
 		t.Fatalf("Work: %v", err)
 	}
 	finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)

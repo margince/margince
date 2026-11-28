@@ -362,7 +362,7 @@ func TestARefoldWaitsForATransactionStillOpen(t *testing.T) {
 		t.Fatal(err)
 	}
 	worker := &pastActivityClockWorker{pool: later, identity: identity.NewService(later), log: slog.New(slog.DiscardHandler)}
-	if err := worker.Work(context.Background(), &river.Job[PastActivityClockRefoldArgs]{}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[PastActivityClockRefoldArgs]{}); err != nil {
 		t.Fatal(err)
 	}
 	f.assertClocks(t, mailed, "a run held at an open transaction leaves the meeting ahead")

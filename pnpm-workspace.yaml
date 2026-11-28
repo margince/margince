@@ -43,3 +43,9 @@ overrides:
   # API the consumer was never written against, and swapping a DoS advisory for
   # a broken type generator is not a trade.
   js-yaml: '^4.3.2'
+
+# openapi-typescript 7.13.0 declares a ^5 typescript peer; its generated output is
+# identical on 6. Drop this once its peer range admits 6.
+peerDependencyRules:
+  allowedVersions:
+    "openapi-typescript>typescript": "6"

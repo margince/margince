@@ -27,7 +27,7 @@ func (EmploymentImportSweepArgs) FleetWide() {}
 type employmentImportWorker struct{ pool *pgxpool.Pool }
 
 func (w *employmentImportWorker) Work(ctx context.Context, _ *river.Job[EmploymentImportSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.processWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.processWorkspace))
 }
 
 func (w *employmentImportWorker) processWorkspace(ctx context.Context, workspace ids.UUID) error {

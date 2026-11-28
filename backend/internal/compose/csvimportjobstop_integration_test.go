@@ -28,14 +28,14 @@ import (
 func committedUndo(t *testing.T, e *integration.Env) (importHandlers, ImportUndoArgs) {
 	t.Helper()
 	h, args := approvedLeadRun(t, e)
-	if err := commitWorkerFor(e, h).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
+	if err := commitWorkerFor(e, h).Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
 		t.Fatalf("committing the run: %v", err)
 	}
 	undoing, err := migration.NewRunStore(e.DB()).ClaimUndo(importAdmin(e), args.RunID, workedByHand)
 	if err != nil {
 		t.Fatalf("starting the undo: %v", err)
 	}
-	return h, ImportUndoArgs{Workspace: e.WS, RunID: args.RunID, Attempt: undoing.JobAttempt}
+	return h, ImportUndoArgs{RunID: args.RunID, Attempt: undoing.JobAttempt}
 }
 
 func runOf(t *testing.T, e *integration.Env, id migration.RunID) migration.Run {
@@ -66,7 +66,7 @@ func TestAnUndoSliceOfALockedRunWaitsForTheLock(t *testing.T) {
 	defer release()
 
 	worker := &importUndoWorker{slicer: commitWorkerFor(e, h).slicer}
-	if got := snoozeOf(t, worker.Work(context.Background(), &river.Job[ImportUndoArgs]{Args: undo})); got != importLockWait {
+	if got := snoozeOf(t, worker.Work(boundBackground(t), &river.Job[ImportUndoArgs]{Args: undo})); got != importLockWait {
 		t.Errorf("the undo slice snoozed %v, want %v while another slice holds the run", got, importLockWait)
 	}
 	if run := runOf(t, e, undo.RunID); run.Status != migration.StatusUndoing || run.UndoReport.ReversedCount != 0 {
@@ -86,7 +86,7 @@ func TestAnUndoSlicePastItsBudgetSnoozesAndTheNextOneFinishes(t *testing.T) {
 	}
 
 	worker := &importUndoWorker{slicer: late}
-	if got := snoozeOf(t, worker.Work(context.Background(), &river.Job[ImportUndoArgs]{Args: undo})); got != 0 {
+	if got := snoozeOf(t, worker.Work(boundBackground(t), &river.Job[ImportUndoArgs]{Args: undo})); got != 0 {
 		t.Errorf("the spent slice snoozed %v, want the next slice at once", got)
 	}
 	if run := runOf(t, e, undo.RunID); run.Status != migration.StatusUndoing || run.Checkpoint != 1 {
@@ -94,7 +94,7 @@ func TestAnUndoSlicePastItsBudgetSnoozesAndTheNextOneFinishes(t *testing.T) {
 	}
 
 	worker.slicer = commitWorkerFor(e, h).slicer
-	if err := worker.Work(context.Background(), &river.Job[ImportUndoArgs]{Args: undo}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[ImportUndoArgs]{Args: undo}); err != nil {
 		t.Fatalf("the next slice answered %v, want nil for a run it finished", err)
 	}
 	if run := runOf(t, e, undo.RunID); run.Status != migration.StatusUndone || run.UndoReport.ReversedCount != 1 {
@@ -111,7 +111,7 @@ func TestAnUndoWhoseApproverLostTheirSeatStaysUndoingWithTheCause(t *testing.T) 
 	slicer.log = slog.New(slog.NewTextHandler(&logged, nil))
 
 	worker := &importUndoWorker{slicer: slicer}
-	if err := worker.Work(context.Background(), &river.Job[ImportUndoArgs]{Args: undo}); err != nil {
+	if err := worker.Work(boundBackground(t), &river.Job[ImportUndoArgs]{Args: undo}); err != nil {
 		t.Fatalf("the refused undo answered %v, want nil: River retrying cannot bring a seat back", err)
 	}
 	run := runOf(t, e, undo.RunID)
@@ -147,7 +147,7 @@ func TestACommitWhoseApproverLostTheGrantFailsWithThatCause(t *testing.T) {
 	h, args := approvedLeadRun(t, e)
 	e.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, e.AdminUser)
 
-	if err := commitWorkerFor(e, h).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
+	if err := commitWorkerFor(e, h).Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
 		t.Fatalf("the refused commit answered %v, want nil: the run carries the cause", err)
 	}
 	if run := runOf(t, e, args.RunID); run.Status != migration.StatusFailed || run.Error != migration.CausePermission {
@@ -171,7 +171,7 @@ func TestACommitOfARunThatLostItsMappingOrItsFileFailsIt(t *testing.T) {
 			h, args := approvedLeadRun(t, e)
 			lose(t, e, h, runOf(t, e, args.RunID))
 
-			if err := commitWorkerFor(e, h).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
+			if err := commitWorkerFor(e, h).Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
 				t.Fatalf("the commit answered %v, want nil: the run carries the cause", err)
 			}
 			run := runOf(t, e, args.RunID)
@@ -188,7 +188,7 @@ func TestACommitStoppedInItsTagPhaseRunsItAgainAndCompletes(t *testing.T) {
 	e.WsExec(t, `UPDATE import_run SET phase = $2, progress = '{}'::jsonb WHERE id = $1`,
 		args.RunID, migration.PhaseCreatingTags)
 
-	if err := commitWorkerFor(e, h).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
+	if err := commitWorkerFor(e, h).Work(boundBackground(t), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
 		t.Fatalf("the resumed commit answered %v, want nil for a run it finished", err)
 	}
 	if run := runOf(t, e, args.RunID); run.Status != migration.StatusComplete || run.Report.Imported != 1 {

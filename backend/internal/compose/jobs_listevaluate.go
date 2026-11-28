@@ -52,7 +52,7 @@ func (w *listEvaluateWorker) Work(ctx context.Context, _ *river.Job[ListEvaluate
 	if !w.enabled {
 		return nil
 	}
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.checkWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.checkWorkspace))
 }
 
 func (w *listEvaluateWorker) checkWorkspace(ctx context.Context, workspace ids.UUID) error {

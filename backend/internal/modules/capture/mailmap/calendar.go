@@ -31,6 +31,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarevent"
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarmethod"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -89,7 +90,7 @@ func bareAddressOf(value string) string {
 		return ""
 	}
 	if parsed, err := mail.ParseAddress(value); err == nil {
-		return strings.ToLower(strings.TrimSpace(parsed.Address))
+		return correspondence.Fold(parsed.Address)
 	}
 	// A malformed Sender is not a calendar sender. Falling back to the raw
 	// string keeps the comparison total without inventing an address.
@@ -112,7 +113,7 @@ func (m Message) recordCounterparty() connector.Counterparty {
 		return connector.Counterparty{}
 	}
 	return connector.Counterparty{
-		Email:           strings.ToLower(strings.TrimSpace(m.counterparty)),
+		Email:           correspondence.Fold(m.counterparty),
 		DisplayName:     m.counterpartyName,
 		Domain:          domainOf(m.counterparty),
 		Direction:       m.direction,

@@ -13,27 +13,27 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
-// TestJobMetricsNameTheWorkspaceThatOwnsTheWorkAndLeaveItEmptyForADispatcher
-// — the empty label is the workspace invariant on the wire, and ADR-0080
-// admits the id and only the id.
-func TestJobMetricsNameTheWorkspaceThatOwnsTheWorkAndLeaveItEmptyForADispatcher(t *testing.T) {
-	ws := "6f1a0d64-9d3f-4d63-9c4a-2f0f3b8a1c77"
+// TestJobMetricsCarryNoWorkspaceLabel: an installation holds one company, so a
+// series is identified by its kind and queue alone.
+func TestJobMetricsCarryNoWorkspaceLabel(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "default", Kind: "tenant_pass", WorkspaceID: ws, State: "available", Count: 2},
-		{Queue: "default", Kind: "the_dispatcher", Untenanted: true, State: "available", Count: 1},
+		{Queue: "default", Kind: "a_pass", State: "available", Count: 2},
+		{Queue: "default", Kind: "a_pass", State: "discarded", Count: 1},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
 
-	want := []string{
-		`margince_job_queue_depth{kind="tenant_pass",queue="default",workspace_id="` + ws + `"} 2`,
-		`margince_job_queue_depth{kind="the_dispatcher",queue="default",workspace_id=""} 1`,
-	}
-	for _, line := range want {
+	for _, line := range []string{
+		`margince_job_queue_depth{kind="a_pass",queue="default"} 2`,
+		`margince_job_discarded{kind="a_pass"} 1`,
+	} {
 		if !strings.Contains(buf.String(), line) {
 			t.Errorf("exposition missing %q\ngot:\n%s", line, buf.String())
 		}
+	}
+	if strings.Contains(buf.String(), "workspace_id") {
+		t.Errorf("a series still carries a workspace label\ngot:\n%s", buf.String())
 	}
 }
 
@@ -45,18 +45,18 @@ func TestJobMetricsNameTheWorkspaceThatOwnsTheWorkAndLeaveItEmptyForADispatcher(
 func TestQueueDepthSumsEveryStateAJobCanBeWaitingIn(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "default", Kind: "k", Untenanted: true, State: "available", Count: 1},
-		{Queue: "default", Kind: "k", Untenanted: true, State: "scheduled", Count: 2},
-		{Queue: "default", Kind: "k", Untenanted: true, State: "retryable", Count: 4},
-		{Queue: "default", Kind: "k", Untenanted: true, State: "pending", Count: 16},
-		{Queue: "default", Kind: "k", Untenanted: true, State: "running", Count: 8},
+		{Queue: "default", Kind: "k", State: "available", Count: 1},
+		{Queue: "default", Kind: "k", State: "scheduled", Count: 2},
+		{Queue: "default", Kind: "k", State: "retryable", Count: 4},
+		{Queue: "default", Kind: "k", State: "pending", Count: 16},
+		{Queue: "default", Kind: "k", State: "running", Count: 8},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
-	if !strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="default",workspace_id=""} 23`) {
+	if !strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="default"} 23`) {
 		t.Errorf("queue depth did not sum available+scheduled+retryable+pending\ngot:\n%s", buf.String())
 	}
-	if !strings.Contains(buf.String(), `margince_job_running{kind="k",queue="default",workspace_id=""} 8`) {
+	if !strings.Contains(buf.String(), `margince_job_running{kind="k",queue="default"} 8`) {
 		t.Errorf("running is its own gauge, not part of depth\ngot:\n%s", buf.String())
 	}
 }
@@ -68,17 +68,17 @@ func TestQueueDepthSumsEveryStateAJobCanBeWaitingIn(t *testing.T) {
 func TestQueueDepthAndRunningAreKeyedByKindToo(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "default", Kind: "site_deep_read", Untenanted: true, State: "available", Count: 3},
-		{Queue: "default", Kind: "geocode_lookup", Untenanted: true, State: "available", Count: 5},
-		{Queue: "default", Kind: "site_deep_read", Untenanted: true, State: "running", Count: 1},
+		{Queue: "default", Kind: "site_deep_read", State: "available", Count: 3},
+		{Queue: "default", Kind: "geocode_lookup", State: "available", Count: 5},
+		{Queue: "default", Kind: "site_deep_read", State: "running", Count: 1},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
 	got := buf.String()
 	for _, want := range []string{
-		`margince_job_queue_depth{kind="site_deep_read",queue="default",workspace_id=""} 3`,
-		`margince_job_queue_depth{kind="geocode_lookup",queue="default",workspace_id=""} 5`,
-		`margince_job_running{kind="site_deep_read",queue="default",workspace_id=""} 1`,
+		`margince_job_queue_depth{kind="site_deep_read",queue="default"} 3`,
+		`margince_job_queue_depth{kind="geocode_lookup",queue="default"} 5`,
+		`margince_job_running{kind="site_deep_read",queue="default"} 1`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("exposition missing %q — two kinds sharing one queue must not collapse "+
@@ -94,18 +94,18 @@ func TestQueueDepthAndRunningAreKeyedByKindToo(t *testing.T) {
 func TestDiscardedAndCancelledAreReportedApartAndKeyedByKind(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "default", Kind: "retention", Untenanted: true, State: "discarded", Count: 3},
-		{Queue: "default", Kind: "retention", Untenanted: true, State: "cancelled", Count: 5},
+		{Queue: "default", Kind: "retention", State: "discarded", Count: 3},
+		{Queue: "default", Kind: "retention", State: "cancelled", Count: 5},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
-	if !strings.Contains(buf.String(), `margince_job_discarded{kind="retention",workspace_id=""} 3`) {
+	if !strings.Contains(buf.String(), `margince_job_discarded{kind="retention"} 3`) {
 		t.Errorf("discarded is missing or folded in with cancelled\ngot:\n%s", buf.String())
 	}
-	if !strings.Contains(buf.String(), `margince_job_cancelled{kind="retention",workspace_id=""} 5`) {
+	if !strings.Contains(buf.String(), `margince_job_cancelled{kind="retention"} 5`) {
 		t.Errorf("cancelled is missing or folded in with discarded\ngot:\n%s", buf.String())
 	}
-	if strings.Contains(buf.String(), `margince_job_discarded{kind="retention",workspace_id=""} 8`) {
+	if strings.Contains(buf.String(), `margince_job_discarded{kind="retention"} 8`) {
 		t.Error("cancelled was counted as discarded; a job stopped on purpose is not one " +
 			"that spent every attempt")
 	}
@@ -118,11 +118,11 @@ func TestDiscardedAndCancelledAreReportedApartAndKeyedByKind(t *testing.T) {
 func TestAStateTheRendererHasNeverHeardOfIsReportedRatherThanDropped(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "default", Kind: "k", Untenanted: true, State: "hibernating", Count: 7},
+		{Queue: "default", Kind: "k", State: "hibernating", Count: 7},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
-	if !strings.Contains(buf.String(), `margince_job_unrecognised_state{state="hibernating",queue="default",workspace_id=""} 7`) {
+	if !strings.Contains(buf.String(), `margince_job_unrecognised_state{state="hibernating",queue="default"} 7`) {
 		t.Errorf("a state the renderer does not know vanished from the exposition\ngot:\n%s", buf.String())
 	}
 }
@@ -133,12 +133,12 @@ func TestAStateTheRendererHasNeverHeardOfIsReportedRatherThanDropped(t *testing.
 func TestTheOldestQueuedAgeIsTheWorstCaseAcrossTheQueuesKinds(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "default", Kind: "slow", Untenanted: true, State: "available", Count: 1, OldestRunnableAgeSeconds: new(900.0)},
-		{Queue: "default", Kind: "fast", Untenanted: true, State: "available", Count: 1, OldestRunnableAgeSeconds: new(5.0)},
+		{Queue: "default", Kind: "slow", State: "available", Count: 1, OldestRunnableAgeSeconds: new(900.0)},
+		{Queue: "default", Kind: "fast", State: "available", Count: 1, OldestRunnableAgeSeconds: new(5.0)},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
-	if !strings.Contains(buf.String(), `margince_job_oldest_queued_age_seconds{queue="default",workspace_id=""} 900`) {
+	if !strings.Contains(buf.String(), `margince_job_oldest_queued_age_seconds{queue="default"} 900`) {
 		t.Errorf("the age gauge did not report the worst case for the queue\ngot:\n%s", buf.String())
 	}
 }
@@ -149,7 +149,7 @@ func TestTheOldestQueuedAgeIsTheWorstCaseAcrossTheQueuesKinds(t *testing.T) {
 func TestTheSweepPairIsRenderedPerFanOutKind(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Sweeps: []jobs.SweepPass{
-		{Kind: "privacy_retention_workspace", Workspaces: 42, Failed: 3},
+		{Kind: "privacy_retention_workspace", Passes: 42, Failed: 3},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
@@ -191,13 +191,13 @@ func TestTheSweepUnitPairIsRenderedAtTheDeclaredGrain(t *testing.T) {
 func TestEverySeriesIsWrittenInAStableOrder(t *testing.T) {
 	snap := jobs.Snapshot{
 		Rows: []jobs.StateRow{
-			{Queue: "zeta", Kind: "k", Untenanted: true, State: "available", Count: 1},
-			{Queue: "alpha", Kind: "k", Untenanted: true, State: "available", Count: 1},
-			{Queue: "mid", Kind: "k", Untenanted: true, State: "available", Count: 1},
+			{Queue: "zeta", Kind: "k", State: "available", Count: 1},
+			{Queue: "alpha", Kind: "k", State: "available", Count: 1},
+			{Queue: "mid", Kind: "k", State: "available", Count: 1},
 		},
 		Sweeps: []jobs.SweepPass{
-			{Kind: "zeta_sweep", Workspaces: 1},
-			{Kind: "alpha_sweep", Workspaces: 1},
+			{Kind: "zeta_sweep", Passes: 1},
+			{Kind: "alpha_sweep", Passes: 1},
 		},
 	}
 	var first bytes.Buffer
@@ -261,8 +261,8 @@ func TestAnEmptySnapshotWritesEveryFamilyHeaderAndNoSeries(t *testing.T) {
 func TestARefusedWriteSurfacesRatherThanBeingRenderedPast(t *testing.T) {
 	refused := errors.New("connection reset")
 	snap := jobs.Snapshot{
-		Rows:   []jobs.StateRow{{Queue: "default", Kind: "k", Untenanted: true, State: "available", Count: 1}},
-		Sweeps: []jobs.SweepPass{{Kind: "s", Workspaces: 1}},
+		Rows:   []jobs.StateRow{{Queue: "default", Kind: "k", State: "available", Count: 1}},
+		Sweeps: []jobs.SweepPass{{Kind: "s", Passes: 1}},
 		Units:  []jobs.SweepUnit{{Kind: "u", Unit: jobs.FanOutConnection, Units: 1}},
 	}
 
@@ -311,30 +311,31 @@ func (w *failingWriter) Write(p []byte) (int, error) {
 func TestAQueueHoldingOnlyDeadWorkReportsNoAgeAtAll(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "graveyard", Kind: "k", Untenanted: true, State: "discarded", Count: 50},
-		{Queue: "graveyard", Kind: "k", Untenanted: true, State: "cancelled", Count: 2},
+		{Queue: "graveyard", Kind: "k", State: "discarded", Count: 50},
+		{Queue: "graveyard", Kind: "k", State: "cancelled", Count: 2},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
 	if strings.Contains(buf.String(), `margince_job_oldest_queued_age_seconds{queue="graveyard"`) {
 		t.Errorf("a queue with nothing runnable reported an age\ngot:\n%s", buf.String())
 	}
-	if !strings.Contains(buf.String(), `margince_job_discarded{kind="k",workspace_id=""} 50`) {
+	if !strings.Contains(buf.String(), `margince_job_discarded{kind="k"} 50`) {
 		t.Errorf("the dead work itself went missing\ngot:\n%s", buf.String())
 	}
 }
 
-// TestALabelValueCannotBreakTheWholeExposition — workspace_id is
-// args->>'workspace_id' verbatim from a table with no constraint on it and
-// direct app-role CRUD. Go's %q would encode a tab as \t, which the
-// Prometheus text format does not define, and a parser meeting an undefined
-// escape rejects the ENTIRE scrape — every metric, not the one series.
+// TestALabelValueCannotBreakTheWholeExposition: kind is river_job.kind
+// verbatim, from a table with no constraint on it. Go's %q would encode a tab
+// as \t, which the Prometheus text format does not define. A parser meeting an
+// undefined escape rejects the whole scrape, not the one series.
 func TestALabelValueCannotBreakTheWholeExposition(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "default", Kind: "k", WorkspaceID: "a\tb\x00c", State: "available", Count: 1},
-		{Queue: `qu"ote`, Kind: "k", WorkspaceID: "x\ny", State: "available", Count: 1},
-		{Queue: "default", Kind: `back\slash`, WorkspaceID: "", State: "discarded", Count: 1},
+		{Queue: "default", Kind: "k", State: "available", Count: 1},
+		{Queue: `qu"ote`, Kind: "k", State: "available", Count: 1},
+		{Queue: "default", Kind: `back\slash`, State: "discarded", Count: 1},
+		{Queue: "default", Kind: "a\tb\x00c", State: "available", Count: 1},
+		{Queue: "default", Kind: "x\ny", State: "available", Count: 1},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
@@ -346,10 +347,10 @@ func TestALabelValueCannotBreakTheWholeExposition(t *testing.T) {
 				"\ngot:\n%s", forbidden, got)
 		}
 	}
-	if !strings.Contains(got, `workspace_id="a<0x09>b<0x00>c"`) {
+	if !strings.Contains(got, `kind="a<0x09>b<0x00>c"`) {
 		t.Errorf("control characters were not rewritten to a printable form\ngot:\n%s", got)
 	}
-	for _, want := range []string{`queue="qu\"ote"`, `kind="back\\slash"`, `workspace_id="x\ny"`} {
+	for _, want := range []string{`queue="qu\"ote"`, `kind="back\\slash"`, `kind="x\ny"`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("exposition missing %q — the three defined escapes must still be emitted"+
 				"\ngot:\n%s", want, got)
@@ -386,14 +387,14 @@ func TestTheJobSectionWritesNothingWhenTheReadFails(t *testing.T) {
 func TestAQueueHoldingOnlyRunningWorkReportsNoAgeEither(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "busy", Kind: "k", Untenanted: true, State: "running", Count: 4},
+		{Queue: "busy", Kind: "k", State: "running", Count: 4},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
 	if strings.Contains(buf.String(), `margince_job_oldest_queued_age_seconds{queue="busy"`) {
 		t.Errorf("a queue whose work is all claimed reported a waiting age\ngot:\n%s", buf.String())
 	}
-	if !strings.Contains(buf.String(), `margince_job_running{kind="k",queue="busy",workspace_id=""} 4`) {
+	if !strings.Contains(buf.String(), `margince_job_running{kind="k",queue="busy"} 4`) {
 		t.Errorf("the running work itself went missing\ngot:\n%s", buf.String())
 	}
 }
@@ -408,7 +409,7 @@ func TestAQueueOfFutureScheduledWorkReportsNoAgeSeries(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
 		{
-			Queue: "nightly", Kind: "k", Untenanted: true, State: "scheduled", Count: 4,
+			Queue: "nightly", Kind: "k", State: "scheduled", Count: 4,
 			OldestRunnableAgeSeconds: nil,
 		},
 	}}); err != nil {
@@ -417,34 +418,8 @@ func TestAQueueOfFutureScheduledWorkReportsNoAgeSeries(t *testing.T) {
 	if strings.Contains(buf.String(), `margince_job_oldest_queued_age_seconds{queue="nightly"`) {
 		t.Errorf("a queue whose work is all future-scheduled reported an age\ngot:\n%s", buf.String())
 	}
-	if !strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="nightly",workspace_id=""} 4`) {
+	if !strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="nightly"} 4`) {
 		t.Errorf("the queued work itself went missing\ngot:\n%s", buf.String())
-	}
-}
-
-// TestAPresentButEmptyWorkspaceIsNotCountedAsADispatcher — the empty label
-// means "dispatcher", exactly and in both directions, and that invariant is
-// what every reader of these gauges stands on. river_job has no constraint
-// forcing the key to be absent rather than empty, so a malformed row must
-// be visible AS malformed instead of silently joining the dispatcher series.
-func TestAPresentButEmptyWorkspaceIsNotCountedAsADispatcher(t *testing.T) {
-	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "default", Kind: "k", Untenanted: true, State: "available", Count: 1},
-		// Present but empty: NOT untenanted, and not a real workspace either.
-		{Queue: "default", Kind: "k", WorkspaceID: "", Untenanted: false, State: "available", Count: 9},
-	}}); err != nil {
-		t.Fatalf("writeJobMetrics: %v", err)
-	}
-	if !strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="default",workspace_id=""} 1`) {
-		t.Errorf("the real dispatcher row was disturbed\ngot:\n%s", buf.String())
-	}
-	if strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="default",workspace_id=""} 10`) {
-		t.Error("a malformed row was folded into the dispatcher series, which is the one " +
-			"invariant these gauges promise")
-	}
-	if !strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="default",workspace_id="malformed_workspace_id"} 9`) {
-		t.Errorf("the malformed row is invisible rather than flagged\ngot:\n%s", buf.String())
 	}
 }
 
@@ -455,8 +430,8 @@ func TestAPresentButEmptyWorkspaceIsNotCountedAsADispatcher(t *testing.T) {
 func TestTwoLabelsDifferingOnlyByAControlCharacterStayDistinct(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "q", Kind: "k", WorkspaceID: "ab", State: "available", Count: 1},
-		{Queue: "q", Kind: "k", WorkspaceID: "a\tb", State: "available", Count: 2},
+		{Queue: "q", Kind: "ab", State: "available", Count: 1},
+		{Queue: "q", Kind: "a\tb", State: "available", Count: 2},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
@@ -464,28 +439,24 @@ func TestTwoLabelsDifferingOnlyByAControlCharacterStayDistinct(t *testing.T) {
 	if strings.Contains(got, `\t`) {
 		t.Errorf("an escape the text format does not define reached the wire\ngot:\n%s", got)
 	}
-	if !strings.Contains(got, `workspace_id="ab"} 1`) {
+	if !strings.Contains(got, `kind="ab",queue="q"} 1`) {
 		t.Errorf("the clean label was rewritten\ngot:\n%s", got)
 	}
-	if !strings.Contains(got, `workspace_id="a<0x09>b"} 2`) {
-		t.Errorf("the control character was dropped, collapsing two distinct ids into one "+
+	if !strings.Contains(got, `kind="a<0x09>b",queue="q"} 2`) {
+		t.Errorf("the control character was dropped, collapsing two distinct kinds into one "+
 			"series\ngot:\n%s", got)
 	}
 }
 
-// TestALiteralEscapeSequenceDoesNotCollideWithTheCharacterItEncodes is the
-// direct test for the '<' branch, and the collision that branch exists to
-// close. Escape only control bytes and the two values below both render as
-// `<0x09>`: one row whose id contains the six literal characters, and one
-// whose id contains a real tab. Two distinct ids, one label set, and
-// Prometheus rejects the whole scrape — the third time this same failure
-// appeared in this change, so it gets an assertion of its own rather than
-// being implied by the control-character test next door.
+// TestALiteralEscapeSequenceDoesNotCollideWithTheCharacterItEncodes tests the
+// '<' branch. Escaping only control bytes would render both kinds below as
+// `<0x09>`: one holds the six literal characters, the other a real tab. Two
+// kinds with one label set make Prometheus reject the whole scrape.
 func TestALiteralEscapeSequenceDoesNotCollideWithTheCharacterItEncodes(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "q", Kind: "k", WorkspaceID: "<0x09>", State: "available", Count: 1},
-		{Queue: "q", Kind: "k", WorkspaceID: "\t", State: "available", Count: 2},
+		{Queue: "q", Kind: "<0x09>", State: "available", Count: 1},
+		{Queue: "q", Kind: "\t", State: "available", Count: 2},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
@@ -493,55 +464,15 @@ func TestALiteralEscapeSequenceDoesNotCollideWithTheCharacterItEncodes(t *testin
 
 	// The literal '<' is itself escaped, so the six-character id cannot
 	// render as the encoding of a tab.
-	if !strings.Contains(got, `workspace_id="<0x3c>0x09>"} 1`) {
+	if !strings.Contains(got, `kind="<0x3c>0x09>",queue="q"} 1`) {
 		t.Errorf("the literal escape sequence was not itself escaped\ngot:\n%s", got)
 	}
-	if !strings.Contains(got, `workspace_id="<0x09>"} 2`) {
+	if !strings.Contains(got, `kind="<0x09>",queue="q"} 2`) {
 		t.Errorf("the real tab did not render as its escape\ngot:\n%s", got)
 	}
-	// The load-bearing assertion: two distinct ids, two distinct series.
-	if strings.Count(got, `margince_job_queue_depth{kind="k",queue="q"`) != 2 {
-		t.Errorf("two distinct workspace ids collapsed into one series; a duplicate label "+
+	// Two distinct kinds must give two distinct series.
+	if strings.Count(got, `margince_job_queue_depth{kind=`) != 2 {
+		t.Errorf("two distinct kinds collapsed into one series; a duplicate label "+
 			"set makes Prometheus reject the entire scrape\ngot:\n%s", got)
-	}
-}
-
-// The workspace_id label discriminates, which is what earns it its ADR-0080
-// exception — and what earns it CHANGED when ADR-0103 collapsed the workspace
-// dispatchers.
-//
-// It was licensed to tell one workspace's share of a fleet pass from another's.
-// There are no such shares now: a collapsed pass walks the tenants inside one
-// row, so every scheduled pass reports an empty workspace_id. What the label
-// still separates is the kinds whose args NAME a workspace — a queued send, an
-// import, an ingest — from the ones that answer for the installation.
-//
-// So the exception rests on both populations existing. If the last
-// workspace-scoped kind were ever collapsed too, every row on these gauges
-// would carry the same empty label, and a label with one value is not a
-// dimension: it would be publishing a tenant id column that never varies, which
-// is exactly the trade ADR-0080 weighs. This says so out loud rather than
-// leaving the justification in a comment nobody re-reads.
-func TestTheWorkspaceLabelStillSeparatesTwoPopulations(t *testing.T) {
-	t.Parallel()
-
-	var tenanted, fleet int
-	for _, spec := range jobs.Declared() {
-		if spec.Fleet {
-			fleet++
-			continue
-		}
-		for _, arg := range spec.Args {
-			if arg.Name == "Workspace" {
-				tenanted++
-				break
-			}
-		}
-	}
-	if tenanted == 0 {
-		t.Error("no kind names a workspace in its args any more, so workspace_id is empty on every row — the label has stopped being a dimension and its ADR-0080 exception has stopped being earned")
-	}
-	if fleet == 0 {
-		t.Error("no kind is fleet-wide any more, so the empty workspace_id the gauges document never appears — the HELP text describes a value nothing produces")
 	}
 }

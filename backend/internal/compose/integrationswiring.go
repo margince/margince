@@ -68,11 +68,7 @@ func NewProviderRunService(pool *pgxpool.Pool, reg *integrations.Registry, vault
 // nothing.
 func providerSubmitEnqueue(inserter *jobs.Runner) integrations.EnqueueSubmitFunc {
 	return func(ctx context.Context, tx pgx.Tx, runID, workspaceID string) error {
-		ws, err := ids.Parse(workspaceID)
-		if err != nil {
-			return fmt.Errorf("compose: the submit job's workspace id does not parse: %w", err)
-		}
-		return inserter.EnqueueTx(ctx, tx, ProviderRunSubmitArgs{Workspace: ws, RunID: runID}, nil)
+		return inserter.EnqueueTx(ctx, tx, ProviderRunSubmitArgs{RunID: runID}, nil)
 	}
 }
 

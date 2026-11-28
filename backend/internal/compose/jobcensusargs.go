@@ -157,10 +157,8 @@ func (c *JobCensus) everyArgsFieldIsDeclaredAndBack() []string {
 // the column holds connection_id, so a name-level check would pass on a type
 // whose rows the query cannot see.
 //
-// Every unit is held, workspace included, even though the workspace-unit kinds
-// are not published in this pair: their key is what the per-workspace pair and
-// the whole scoped read group on, so a child that stopped writing it would be
-// invisible to those too.
+// The installation unit is the one exception: its child stands for the whole
+// installation, so it has no key to carry.
 func (c *JobCensus) everyFanOutChildCarriesItsUnitKey() []string {
 	var findings []string
 	units := jobs.FanOutUnits()
@@ -169,7 +167,11 @@ func (c *JobCensus) everyFanOutChildCarriesItsUnitKey() []string {
 		if !registered {
 			continue // already reported by the wired-and-back check.
 		}
-		key := units[kind].ArgsKey()
+		unit := units[kind]
+		if unit == jobs.FanOutInstallation {
+			continue // one child stands for the whole installation: no key to carry.
+		}
+		key := unit.ArgsKey()
 		if key == "" {
 			findings = append(findings, fmt.Sprintf(
 				"%s is fanned out to but its dispatcher declares no fan_out_unit, so nothing says what one of its rows stands for", kind))

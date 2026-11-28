@@ -107,13 +107,12 @@ func dealRefileScope(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, env eve
 }
 
 func dealRefilePassArgs(ctx context.Context, tx pgx.Tx, scope capture.DealRefileScope, asOf time.Time, event ids.UUID) (CapturedDealRefileArgs, error) {
-	ws, ok := principal.WorkspaceID(ctx)
 	correlation, traced := principal.CorrelationID(ctx)
-	if !ok || !traced {
+	if !traced {
 		return CapturedDealRefileArgs{}, apperrors.ErrPermissionDenied
 	}
 	ceiling, err := capture.DealRefileCeilingTx(ctx, tx)
-	return CapturedDealRefileArgs{Workspace: ws, Event: event, Correlation: correlation, Scope: scope, AsOf: asOf, Ceiling: ceiling}, err
+	return CapturedDealRefileArgs{Event: event, Correlation: correlation, Scope: scope, AsOf: asOf, Ceiling: ceiling}, err
 }
 
 func activityRefileScope(env events.Envelope) (capture.DealRefileScope, error) {

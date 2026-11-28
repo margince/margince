@@ -234,7 +234,7 @@ func (s sweepSeed) asRoles(keys ...string) func() {
 	user := apptest.SessionUserID(s.t, s.e)
 	email := s.ownerScalar(`SELECT email FROM app_user WHERE id = $1`, user)
 	held := s.ownerScalar(`SELECT coalesce(string_agg(r.key, ','), '') FROM role r JOIN role_assignment a ON a.role_id = r.id
-		WHERE a.team_id IS NULL AND a.user_id = $1`, user)
+		WHERE a.user_id = $1`, user)
 	apptest.AssignRoleTo(s.t, s.e, email, keys...)
 	return func() { apptest.AssignRoleTo(s.t, s.e, email, strings.Split(held, ",")...) }
 }

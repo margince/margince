@@ -20,16 +20,12 @@ import (
 // WhatsAppIngestArgs names one webhook item the edge stored. The worker reads
 // the item back by RawCaptureID.
 type WhatsAppIngestArgs struct {
-	Workspace    ids.UUID `json:"workspace_id"`
 	ConnectionID ids.UUID `json:"connection_id"`
 	RawCaptureID ids.UUID `json:"raw_capture_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (WhatsAppIngestArgs) Kind() string { return "whatsapp_ingest" }
-
-// WorkspaceID binds the ingest to its tenant (jobs.WorkspaceScoped).
-func (a WhatsAppIngestArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // RawCapture names the stored item.
 func (a WhatsAppIngestArgs) RawCapture() ids.UUID { return a.RawCaptureID }
@@ -48,7 +44,7 @@ func WithWhatsAppEdge(inserter *jobs.Runner) Option {
 			DB:        db,
 			Inserter:  inserter,
 			Job: func(workspace, connection, rawCapture ids.UUID) river.JobArgs {
-				return WhatsAppIngestArgs{Workspace: workspace, ConnectionID: connection, RawCaptureID: rawCapture}
+				return WhatsAppIngestArgs{ConnectionID: connection, RawCaptureID: rawCapture}
 			},
 			MaxAttempts: oneOffJobMaxAttempts,
 			Log:         s.log,

@@ -20,6 +20,7 @@ package integrations
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -685,5 +686,30 @@ func TestASubjectThatLosesItsIdentifiersIsNeverSubmitted(t *testing.T) {
 	if spend != 0 {
 		t.Errorf("%d reservation(s) still count against the ceiling for a run that never left the "+
 			"building, so the customer's monthly budget is spent on nothing", spend)
+	}
+}
+
+// Two submit jobs for one run can both be queued: a row an earlier release
+// queued carries a different unique key from a new one. The claim under the
+// run's row lock is what keeps it to one purchase.
+func TestTwoSubmitJobsForOneRunBuyItOnce(t *testing.T) {
+	e := setupRuns(t, runsConfig{})
+	sealCredential(t, e)
+	run := queueFor(t, e, e.mine.String())
+
+	before := e.fake.Calls()
+	var wg sync.WaitGroup
+	errs := make([]error, 2)
+	for i := range errs {
+		wg.Go(func() { errs[i] = e.store.ExecuteSubmit(e.ctx, run.ID) })
+	}
+	wg.Wait()
+	for _, err := range errs {
+		if err != nil {
+			t.Fatalf("a submit job failed: %v", err)
+		}
+	}
+	if got := e.fake.Calls() - before; got != 1 {
+		t.Fatalf("the provider was called %d times for one run, want 1", got)
 	}
 }

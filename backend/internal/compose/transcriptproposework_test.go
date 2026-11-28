@@ -80,7 +80,7 @@ func TestAWorkerWithNoModelLaneFailsTheReadingInsteadOfLeavingItQueued(t *testin
 	worker := &transcriptProposeWorker{activities: store, log: slog.New(slog.DiscardHandler)}
 
 	err := worker.Work(context.Background(), transcriptJob(TranscriptProposeArgs{
-		Workspace: ids.NewV7(), ActivityID: ids.NewV7(), TranscriptReadID: ids.NewV7(),
+		ActivityID: ids.NewV7(), TranscriptReadID: ids.NewV7(),
 	}))
 	if err != nil {
 		t.Fatalf("declining a reading is an outcome, not a job fault: %v", err)
@@ -102,7 +102,7 @@ func TestAWorkerClaimsWithTheLeaseTheDoorReArmsWith(t *testing.T) {
 	worker := &transcriptProposeWorker{activities: store, log: slog.New(slog.DiscardHandler)}
 
 	if err := worker.Work(context.Background(), transcriptJob(TranscriptProposeArgs{
-		Workspace: ids.NewV7(), TranscriptReadID: ids.NewV7(),
+		TranscriptReadID: ids.NewV7(),
 	})); err != nil {
 		t.Fatalf("working the job: %v", err)
 	}
@@ -117,26 +117,13 @@ func TestAReadingAnotherWorkerHoldsIsLeftAlone(t *testing.T) {
 	worker := &transcriptProposeWorker{activities: store, log: slog.New(slog.DiscardHandler)}
 
 	err := worker.Work(context.Background(), transcriptJob(TranscriptProposeArgs{
-		Workspace: ids.NewV7(), TranscriptReadID: ids.NewV7(),
+		TranscriptReadID: ids.NewV7(),
 	}))
 	if err != nil {
 		t.Fatalf("losing the claim is not a fault — the holder is working it: %v", err)
 	}
 	if len(store.finished) != 0 {
 		t.Errorf("a reading somebody else holds must not be closed from here, got %d finishes", len(store.finished))
-	}
-}
-
-func TestAWorkerRefusesArgsThatNameNoWorkspace(t *testing.T) {
-	store := &recordingReadStore{}
-	worker := &transcriptProposeWorker{activities: store, log: slog.New(slog.DiscardHandler)}
-
-	err := worker.Work(context.Background(), transcriptJob(TranscriptProposeArgs{TranscriptReadID: ids.NewV7()}))
-	if err == nil {
-		t.Fatal("an empty workspace binds the GUC to nothing and reads whatever the connection carries")
-	}
-	if len(store.finished) != 0 {
-		t.Error("the guard must refuse before touching the store")
 	}
 }
 

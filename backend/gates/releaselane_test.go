@@ -92,8 +92,9 @@ func TestEveryReleaseScriptTestRunsInCheckReleaseAndNotInCheck(t *testing.T) {
 }
 
 // releaseLaneInputs lists the paths that must trigger `make check-release`.
-// These are the scripts the Makefile names, the files each test opens next to
-// itself, and the workflows that call a release script.
+// They are the scripts the Makefile names, the files each test opens next to
+// itself and the helpers those source. The workflows that call a release
+// script count too.
 func releaseLaneInputs(t *testing.T, lane filteredLane) []string {
 	t.Helper()
 	inputs := map[string]bool{}
@@ -116,7 +117,7 @@ func releaseLaneInputs(t *testing.T, lane filteredLane) []string {
 	for _, workflow := range releaseWorkflows(t) {
 		inputs[workflow] = true
 	}
-	return sorted(inputs)
+	return withSourcedHelpers(t, sorted(inputs))
 }
 
 // releaseWorkflows lists the workflows whose text calls a release script.

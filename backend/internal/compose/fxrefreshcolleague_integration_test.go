@@ -11,7 +11,6 @@ package compose
 // the same agent, acting for the admin who approved it.
 
 import (
-	"context"
 	"testing"
 
 	"github.com/riverqueue/river"
@@ -27,7 +26,7 @@ import (
 func fxRefreshJobFor(e *integration.Env, requester ids.UUID) *river.Job[FxRateRefreshArgs] {
 	return &river.Job[FxRateRefreshArgs]{
 		JobRow: &rivertype.JobRow{},
-		Args:   FxRateRefreshArgs{Workspace: e.WS, RequestedBy: principal.HumanIDPrefix + requester.String()},
+		Args:   FxRateRefreshArgs{RequestedBy: principal.HumanIDPrefix + requester.String()},
 	}
 }
 
@@ -39,7 +38,7 @@ func TestAnFxRefreshStagesItsProposalAsTheAdminsAgent(t *testing.T) {
 		users:   identity.NewService(e.Pool),
 	}
 
-	if err := worker.Work(context.Background(), fxRefreshJobFor(e, e.Rep1)); err != nil {
+	if err := worker.Work(boundBackground(t), fxRefreshJobFor(e, e.Rep1)); err != nil {
 		t.Fatalf("Work: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'fx_rate_proposal'
@@ -55,7 +54,7 @@ func TestAnFxRefreshForAnAdminWithoutTheGrantFailsAndStagesNothing(t *testing.T)
 		users:   identity.NewService(e.Pool),
 	}
 
-	if err := worker.Work(context.Background(), fxRefreshJobFor(e, e.Rep1)); err == nil {
+	if err := worker.Work(boundBackground(t), fxRefreshJobFor(e, e.Rep1)); err == nil {
 		t.Fatal("a refresh for a seat with no grant on the rate sheet succeeded, want the job to fail where it can be seen")
 	}
 	if n := fxPending(t, e); n != 0 {

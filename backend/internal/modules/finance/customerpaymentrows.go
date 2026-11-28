@@ -49,7 +49,7 @@ func customerPaymentRows(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) 
          AND l.connection_id = $%d AND l.archived_at IS NULL
     LEFT JOIN finance_invoice i ON i.customer_link_id = l.id
          AND i.company_id = c.id AND i.connection_id = l.connection_id
-         AND i.archived_at IS NULL AND i.open_minor > 0
+         AND i.open_minor > 0
    WHERE c.archived_at IS NULL %s
    ORDER BY i.due_at DESC NULLS LAST, i.currency ASC, i.open_minor DESC, i.id ASC`, connPos, visible), args...)
 	if err != nil {

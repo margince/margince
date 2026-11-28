@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -20,18 +21,15 @@ import (
 
 // CaptureBackfillArgs identifies one durable history page execution.
 type CaptureBackfillArgs struct {
-	Workspace           ids.UUID `json:"workspace_id"`
-	BackfillID          string   `json:"backfill_id"`
-	ExecutionGeneration int64    `json:"execution_generation,omitempty"`
+	BackfillID          string `json:"backfill_id"`
+	ExecutionGeneration int64  `json:"execution_generation,omitempty"`
 }
 
 // Kind is the persisted River job identifier.
 func (CaptureBackfillArgs) Kind() string { return "capture_backfill" }
 
-// WorkspaceID binds the execution to its workspace.
-func (a CaptureBackfillArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
 type captureBackfillWorker struct {
+	pool     *pgxpool.Pool
 	registry *capture.Registry
 	log      *slog.Logger
 }
@@ -46,13 +44,10 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("capture_backfill: backfill id: %w", err))
 	}
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	wsCtx = capturemetrics.WithRun(wsCtx)
 	for range backfillPagesPerTick {
-		done, _, retryAfter, err := w.registry.RunBackfillExecution(wsCtx, bfID, job.Args.ExecutionGeneration, backfillScheduler(job.Args.Workspace))
+		done, _, retryAfter, err := w.registry.RunBackfillExecution(wsCtx, bfID, job.Args.ExecutionGeneration, backfillScheduler())
 		if _, snoozed := errors.AsType[*river.JobSnoozeError](err); snoozed {
 			return jobs.FaultContext(ctx, err)
 		}

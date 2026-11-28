@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -163,7 +164,7 @@ func (s *Store) applySiteContactFieldsTx(ctx context.Context, tx pgx.Tx, company
 // unique. Ambiguity is not a tie to break — it is the answer "not identifiable",
 // and it stages a lead like any stranger.
 func matchSiteContact(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, in SiteContactFields) (ids.ContactID, bool, error) {
-	if email := strings.ToLower(strings.TrimSpace(in.PublishedEmail)); email != "" {
+	if email := correspondence.Fold(in.PublishedEmail); email != "" {
 		var id ids.ContactID
 		err := tx.QueryRow(ctx, `
 			SELECT p.id

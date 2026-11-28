@@ -64,7 +64,7 @@ func (w *graphEdgeReconcileWorker) Work(ctx context.Context, job *river.Job[Grap
 	if job.Args.Pending {
 		return jobs.FaultContext(ctx, runPendingPass(ctx, w.pool, w.drainWorkspace))
 	}
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.reconcileWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.reconcileWorkspace))
 }
 
 func (w *graphEdgeReconcileWorker) reconcileWorkspace(ctx context.Context, ws ids.UUID) error {

@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // technicalEnqueuer is the slice of *jobs.Runner the start handler needs;
@@ -95,13 +94,8 @@ func (h technicalHandlers) startTechnicalEnrich(
 	}
 	// A job row without a workspace is one River would never dequeue, so the
 	// write refuses when none is bound.
-	ws, bound := principal.WorkspaceID(ctx)
-	if !bound {
-		return crmcontracts.TechnicalEnrichStarted{}, database.ErrNoWorkspace
-	}
 	err = database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		return h.enqueue.EnqueueTx(ctx, tx, TechnicalEnrichCompanyArgs{
-			Workspace: ws,
 			CompanyID: id,
 		}, technicalInsertOpts())
 	})

@@ -433,7 +433,7 @@ func (c *telegramEnv) arrive(t *testing.T, sub <-chan *river.Event, u telegramUp
 func (c *telegramEnv) pollNow(t *testing.T, sub <-chan *river.Event, wantOffset int64) {
 	t.Helper()
 	if err := c.inserter.Enqueue(context.Background(), compose.TelegramPollArgs{
-		Workspace: c.workspaceID(t), ConnectionID: c.conn.ID.String(),
+		ConnectionID: c.conn.ID.String(),
 	}, nil); err != nil {
 		t.Fatalf("enqueueing a poll: %v", err)
 	}

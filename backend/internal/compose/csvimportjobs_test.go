@@ -47,10 +47,10 @@ func TestASliceBudgetEndsBySlicedRowsOrTime(t *testing.T) {
 
 func TestEachImportAttemptIsItsOwnJob(t *testing.T) {
 	t.Parallel()
-	ws, run := ids.NewV7(), ids.NewV7()
+	run := ids.NewV7()
 	for _, args := range []importJobArgs{
-		ImportCommitArgs{Workspace: ws, RunID: run, Attempt: 3},
-		ImportUndoArgs{Workspace: ws, RunID: run, Attempt: 3},
+		ImportCommitArgs{RunID: run, Attempt: 3},
+		ImportUndoArgs{RunID: run, Attempt: 3},
 	} {
 		encoded, err := json.Marshal(args)
 		if err != nil {
@@ -60,7 +60,7 @@ func TestEachImportAttemptIsItsOwnJob(t *testing.T) {
 		if err := json.Unmarshal(encoded, &keys); err != nil {
 			t.Fatal(err)
 		}
-		for _, key := range []string{"workspace_id", "run_id", "attempt"} {
+		for _, key := range []string{"run_id", "attempt"} {
 			if _, ok := keys[key]; !ok {
 				t.Errorf("%s args carry no %q key: %s", args.Kind(), key, encoded)
 			}

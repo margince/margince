@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -113,9 +114,9 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		           SELECT 1 FROM jsonb_array_elements(refusals) AS refusal
 		            WHERE (refusal->>'subject_kind' = 'lead'
 		                   AND refusal->>'subject_id' IN (SELECT id::text FROM wiped))
-		               OR lower(refusal->>'address') = ANY($2))
+		               OR %s = ANY($2))
 		)
-		SELECT id FROM wiped`, nullColumnAssignments(leadCustom), leadTwinOf(bind[0], bind[1]), recordedRequestAddressScope(bind[1])),
+		SELECT id FROM wiped`, nullColumnAssignments(leadCustom), leadTwinOf(bind[0], bind[1]), recordedRequestAddressScope(bind[1]), correspondence.FoldSQL("refusal->>'address'")),
 		args...)
 	if err != nil {
 		return nil, err

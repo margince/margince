@@ -19,7 +19,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/dealcoverage"
+	"github.com/margince/margince/backend/internal/compose/reportjoin"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -158,6 +161,7 @@ type reportSpec struct {
 	// extensionKind is the `ext:<unit>:<kind>` whose rows table holds, empty
 	// for a core population. It selects the kind's row scope.
 	extensionKind string
+	extensionJoin *reportjoin.Join
 	// joins widen the FROM side with fixed lookup tables (e.g. the
 	// deal's stage for win_probability); the row grain stays the base
 	// table's — a spec must never join a to-many side, or aggregates
@@ -421,7 +425,7 @@ func buildSelectList(spec reportSpec, groupBy []string, aggregates []reportAggre
 		if !ok {
 			return nil, nil, &FieldNotAllowedError{Field: dim, Slot: slotGroupBy, Allowed: allowedReportNames(spec.dimensions)}
 		}
-		selects = append(selects, fmt.Sprintf("%s AS %s", expr, dim))
+		selects = append(selects, fmt.Sprintf("%s AS %s", expr, pgx.Identifier{dim}.Sanitize()))
 		columns = append(columns, dim)
 	}
 	for _, agg := range aggregates {

@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -98,7 +99,7 @@ func usableAddress(typed, bounced string) (string, error) {
 		return "", &bounceAddressFault{code: "invalid_email", message: "Enter one email address, such as name@example.com."}
 	}
 	corrected := strings.ToLower(parsed.Address)
-	if corrected == strings.ToLower(strings.TrimSpace(bounced)) {
+	if corrected == correspondence.Fold(bounced) {
 		return "", &bounceAddressFault{code: "same_address", message: "That is the address that refused the message. Enter a different one."}
 	}
 	return corrected, nil
@@ -158,7 +159,7 @@ func heldAddresses(contact crmcontracts.Contact) []contacts.ContactEmailInput {
 
 func replaceAddress(contact crmcontracts.Contact, bounced, corrected string) ([]contacts.ContactEmailInput, bool) {
 	held := heldAddresses(contact)
-	bounced = strings.ToLower(strings.TrimSpace(bounced))
+	bounced = correspondence.Fold(bounced)
 	replaced := false
 	for i, email := range held {
 		if email.Email == corrected {
