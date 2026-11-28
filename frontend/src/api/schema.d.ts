@@ -46234,6 +46234,8 @@ export interface components {
              */
             channel_provider?: components["schemas"]["ProviderRef"] | null;
             subject?: string | null;
+            /** @description Internal meeting notes, separate from the calendar description and from any transcript. Visible only with the meeting content. An empty string clears earlier notes. */
+            meeting_notes?: string | null;
             body?: string | null;
             /** @description Whether an AI model rewrote the subject or body before it was saved, so a reader sees the words as AI-assisted. Set when the activity is logged and kept through later edits: a human who tidies model words still saved model words. Absent means false. Withheld with the content. */
             readonly ai_assisted?: boolean;
@@ -46757,7 +46759,7 @@ export interface components {
             source_activity_id?: string;
             /**
              * Format: uuid
-             * @description A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
+             * @description A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open or held meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting marked canceled or no-show is refused with 422 on `records_meeting_id`. A held meeting keeps its existing outcome. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
              */
             records_meeting_id?: string;
             /** @description Meeting, call or note only. Create this task and its source activity in one transaction. The task inherits the source links and audience. Replaying a source identity returns the original activity without adding another task. */
@@ -47170,6 +47172,8 @@ export interface components {
             /** @description Optional next step when marking a meeting held. Creates the task in the same transaction, with the meeting as its source and its links and audience inherited. Requires activity create authority. A meeting already held cannot add another task through this outcome write. */
             follow_up_task?: components["schemas"]["ActivityFollowUpTask"];
             subject?: string | null;
+            /** @description Internal meeting notes, separate from the calendar description and from any transcript. Visible only with the meeting content. An empty string clears earlier notes. */
+            meeting_notes?: string | null;
             body?: string | null;
             /** Format: date-time */
             occurred_at?: string;
@@ -78216,7 +78220,7 @@ export interface operations {
                 project_id?: string;
                 /** @description Accepted website submission notes for this form, with readable content only. */
                 website_form_id?: string;
-                /** @description Tasks derived from this readable source activity, under current task visibility. */
+                /** @description Tasks derived from this readable source activity, under current task visibility. With kind=meeting, returns the transcripts recording that readable meeting. */
                 source_activity_id?: string;
                 /** @description One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread. */
                 thread_key?: string;

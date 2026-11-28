@@ -29,6 +29,7 @@ import {
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { OpenSourceProvider } from "../../lib/opensource";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { day, row, stub } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
@@ -284,7 +285,7 @@ describe("a meeting that owes an answer", () => {
     expect(sent).toEqual([{ meeting_status: "canceled" }]);
   });
 
-  it("opens the composer on THIS meeting, seeded from what was captured", async () => {
+  it("opens this calendar meeting with internal notes separate from the invitation", async () => {
     stubWithMeetingRead([]);
     const user = userEvent.setup();
     renderUnderAToastRegion();
@@ -292,17 +293,12 @@ describe("a meeting that owes an answer", () => {
     await user.click(
       await screen.findByRole("button", { name: /^add notes/i }),
     );
-    // Seeded rather than blank: the reader is amending what the calendar
-    // already knew, and an empty form invites them to save nothing over it.
+    // The calendar description is not the rep's internal notes.
     const subject = await screen.findByDisplayValue(
       "Discovery call with Turbinenbau",
     );
     expect(subject).not.toBeNull();
-    await waitFor(() =>
-      expect(messageText("Details")).toMatch(
-        /Organizer: greta@turbinenbau\.example/,
-      ),
-    );
+    await waitFor(() => expect(messageText("Details")).toBe(""));
   });
 
   it("patches the meeting with the outcome rather than logging a second one", async () => {
@@ -325,13 +321,11 @@ describe("a meeting that owes an answer", () => {
     expect(sent[0]).toMatchObject({
       meeting_status: "held",
       subject: "Discovery call with Turbinenbau",
-      body: "They want a pilot in Q1.",
+      meeting_notes: "They want a pilot in Q1.",
     });
   });
 
-  // A transcript's lines are what a citation points at, so the save sends it
-  // byte for byte, leading blank line and indentation included.
-  it("sends a transcript's text untrimmed", async () => {
+  it("records notes independently of an existing transcript", async () => {
     const sent: unknown[] = [];
     const transcript = "\n  Anna: hello\nBen: hi";
     stubWithMeetingRead(sent, 200, {
@@ -341,23 +335,25 @@ describe("a meeting that owes an answer", () => {
     });
     const user = userEvent.setup();
     renderUnderAToastRegion();
-
     await user.click(
       await screen.findByRole("button", { name: /^add notes/i }),
     );
-    expect(
-      (await screen.findByLabelText<HTMLTextAreaElement>("Details")).value,
-    ).toBe(transcript);
+    await waitFor(() => expect(messageText("Details")).toBe(""));
+    await writeMessage("Details", "Rep summary");
     await user.click(screen.getByRole("button", { name: /^log$/i }));
-
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
-    expect(sent[0]).toMatchObject({ body: transcript });
+    expect(sent[0]).toMatchObject({ meeting_notes: "Rep summary" });
+    expect(sent[0]).not.toHaveProperty("body");
   });
 
   it("saves a body nobody edited exactly as it was read", async () => {
     const sent: unknown[] = [];
     const body = "Notes on snake_case naming\n\n5. Fifth\n6. Sixth";
-    stubWithMeetingRead(sent, 200, { ...CAPTURED_MEETING, body });
+    stubWithMeetingRead(sent, 200, {
+      ...CAPTURED_MEETING,
+      body,
+      meeting_notes: body,
+    });
     const user = userEvent.setup();
     renderUnderAToastRegion();
 
@@ -370,7 +366,54 @@ describe("a meeting that owes an answer", () => {
     await user.click(screen.getByRole("button", { name: /^log$/i }));
 
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
-    expect(sent[0]).toMatchObject({ body });
+    expect(sent[0]).toMatchObject({ meeting_notes: body });
+  });
+
+  it("edits internal notes on a calendar-managed meeting without sending invitation text", async () => {
+    const sent: unknown[] = [];
+    stubWithMeetingRead(sent, 200, {
+      ...CAPTURED_MEETING,
+      calendar_managed: true,
+    });
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+    await user.click(
+      await screen.findByRole("button", { name: /^add notes/i }),
+    );
+    const subject = await screen.findByDisplayValue<HTMLInputElement>(
+      CAPTURED_MEETING.subject,
+    );
+    expect(subject.readOnly).toBe(true);
+    await writeMessage("Details", "Approved budget");
+    await user.click(screen.getByRole("button", { name: en["log.save"] }));
+    await screen.findByText(en["worklist.verb.meetingOutcomeRecorded"]);
+    expect(sent).toEqual([
+      { meeting_status: "held", meeting_notes: "Approved budget" },
+    ]);
+  });
+
+  it("opens the same meeting from the confirmation after recording its outcome", async () => {
+    const sent: unknown[] = [];
+    stubWithMeetingRead(sent);
+    const open = vi.fn();
+    const user = userEvent.setup();
+    renderUnderAToastRegion("Asia/Bangkok", undefined, open);
+    await user.click(
+      await screen.findByRole("button", { name: /^it happened:/i }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.click(
+      dialog.getByRole("button", {
+        name: en["worklist.verb.meetingSkipNextStep"],
+      }),
+    );
+    await screen.findByText(en["worklist.verb.meetingOutcomeRecorded"]);
+    await user.click(
+      within(screen.getByRole("status")).getByRole("button", {
+        name: en["create.addedOpen"],
+      }),
+    );
+    expect(open).toHaveBeenCalledWith(MEETING_ID);
   });
 
   it("says so when the write is refused, rather than falling silent", async () => {
@@ -457,13 +500,20 @@ function renderUnderAToastRegion(
   client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   }),
+  openSource?: (id: string) => void,
 ) {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ViewerZoneProvider zone={zone}>
           <ToastProvider>
-            <WorklistScreen />
+            {openSource ? (
+              <OpenSourceProvider openSource={openSource}>
+                <WorklistScreen />
+              </OpenSourceProvider>
+            ) : (
+              <WorklistScreen />
+            )}
             <ToastRegion />
           </ToastProvider>
         </ViewerZoneProvider>

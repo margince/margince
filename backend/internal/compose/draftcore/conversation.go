@@ -98,8 +98,8 @@ func Conversation(rows []crmcontracts.Activity, anchor *crmcontracts.Activity, n
 		if activity.Subject != nil {
 			turn.Subject = *activity.Subject
 		}
-		if activity.Body != nil && (logged || activity.Kind == crmcontracts.ActivityKindEmail) {
-			turn.Text = TurnText(*activity.Body)
+		if record := activities.MeetingRecordBody(activity); record != nil && (logged || activity.Kind == crmcontracts.ActivityKindEmail) {
+			turn.Text = TurnText(*record)
 		}
 		turns = append(turns, turn)
 	}

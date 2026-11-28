@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -41,6 +42,11 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	if err := requireFoldActor(ctx, "retires a meeting copy"); err != nil {
 		return err
 	}
+	if notes, err := MeetingCopyHasInternalNotesTx(ctx, tx, duplicate); err != nil {
+		return err
+	} else if notes {
+		return fmt.Errorf("meeting copy has internal notes: %w", apperrors.ErrConflict)
+	}
 	if err := TransferIdentities(ctx, tx, duplicate, survivor); err != nil {
 		return err
 	}
@@ -73,6 +79,20 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	archived := crmcontracts.PublicEventActivityArchived{}
 	archived.Imported, archived.ImportRunId = storekit.ImportMark(ctx)
 	return storekit.EmitEvent(ctx, tx, auditID, duplicate.UUID, archived)
+}
+
+// MeetingCopyHasInternalNotesTx protects notes from every automatic copy retirement.
+// A cleared note is a recorded choice too, so every non-null value stays.
+func MeetingCopyHasInternalNotesTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool, error) {
+	if err := requireFoldActor(ctx, "checks a meeting copy"); err != nil {
+		return false, err
+	}
+	var notes bool
+	err := tx.QueryRow(ctx, `SELECT meeting_notes IS NOT NULL FROM activity WHERE id=$1 FOR UPDATE`, id.UUID).Scan(&notes)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, apperrors.ErrNotFound
+	}
+	return notes, err
 }
 
 // requireFoldActor admits a system job or any connector sync to a write on a

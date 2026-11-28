@@ -373,3 +373,4 @@
 1795847790_proof_history_parent_keys_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 
 1795856759_one_team_messaging_service.up.sql | chat_service | the new singleton table accepts at most one row through UNIQUE/CHECK on singleton; INSERT selects at most one incumbent with LIMIT 1
+1795848595_meeting_note_shape_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

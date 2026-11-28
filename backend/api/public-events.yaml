@@ -2422,6 +2422,9 @@ components:
         subject:
           type: string
           description: The activity's new subject (absent when this update did not touch it).
+        meeting_notes:
+          type: boolean
+          description: Internal meeting notes changed; the text is available only through the meeting's content access gate.
         body:
           type: boolean
           description: >-

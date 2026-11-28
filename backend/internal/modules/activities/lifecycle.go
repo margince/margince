@@ -42,6 +42,7 @@ func updateActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput,
 ) (crmcontracts.Activity, error) {
 	in.spellClearedBody()
+	in.spellClearedMeetingNotes()
 	current, held, err := admitActivityPatch(ctx, tx, id, &in)
 	if err == nil {
 		err = checkCustomValues(string(current.Kind), in.customColumns, in.CustomFields)
@@ -68,6 +69,10 @@ func updateActivityInTx(
 		if err != nil {
 			return crmcontracts.Activity{}, err
 		}
+	}
+	readyBefore, err := meetingReadyForRecapTx(ctx, tx, current)
+	if err != nil {
+		return crmcontracts.Activity{}, err
 	}
 	if err := applyActivityPatch(ctx, tx, id, in, current); err != nil {
 		return crmcontracts.Activity{}, err
@@ -111,7 +116,11 @@ func updateActivityInTx(
 		return crmcontracts.Activity{}, err
 	}
 	updated := crmcontracts.PublicEventActivityUpdated{ChangedFields: activityUpdatedChangedFields(in, current)}
-	if !meetingReadyForRecap(current) && meetingReadyForRecap(out) {
+	readyAfter, err := meetingReadyForRecapTx(ctx, tx, out)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if !readyBefore && readyAfter {
 		updated.ChangedFields.MeetingRecapBecameReady = new(true)
 	}
 	updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
@@ -183,7 +192,10 @@ func admitActivityPatch(
 		}
 		in.Subject = &subject
 	}
-	if !held && (in.Subject != nil || in.Body != nil) {
+	if !held && (in.Subject != nil || in.Body != nil || in.MeetingNotes != nil) {
+		if err := in.alignMeetingNotes(current); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
 		if err := CheckEntryHasContent(string(current.Kind), firstSet(in.Subject, current.Subject), firstSet(in.Body, current.Body), in.patchedCallOutcome(current)); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
@@ -447,7 +459,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt), arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
 		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
-		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)), arg(in.sourceActivityID),
+		customAssignments(in.customColumns, in.CustomFields, arg)+in.meetingNotesAssignment(arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)), arg(in.sourceActivityID),
 		arg(pickedWall(in.DueIntent)), arg(pickedZone(in.DueIntent)), arg(pickedWall(in.RemindIntent)), arg(pickedZone(in.RemindIntent)), arg(pickedWall(in.MeetingIntent)), arg(pickedZone(in.MeetingIntent)),
 		arg(in.TaskType), arg(in.AIAssisted), arg(in.clears(auditFieldMeetingStatus)), arg(patchedOwnEnd(current, in)))
 	query += fmt.Sprintf(" AND version = $%d", arg(current.Version))

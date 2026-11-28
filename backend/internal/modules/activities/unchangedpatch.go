@@ -34,6 +34,9 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	if in.Subject != nil {
 		p.Set(fieldSubject, current.Subject, *in.Subject)
 	}
+	if in.MeetingNotes != nil {
+		p.Set(fieldMeetingNotes, current.MeetingNotes, *in.MeetingNotes)
+	}
 	if in.Body != nil {
 		p.Set("body", current.Body, *in.Body)
 	}

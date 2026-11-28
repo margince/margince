@@ -35,6 +35,9 @@ func foldMeetingDuplicateTx(
 	if err != nil || !live {
 		return false, err
 	}
+	if notes, err := activities.MeetingCopyHasInternalNotesTx(ctx, tx, duplicate); err != nil || notes {
+		return false, err
+	}
 	retirable, err := copyRetiresCleanly(ctx, tx, duplicate, survivor, seat, calendar)
 	if err != nil || !retirable {
 		return false, err

@@ -2903,6 +2903,7 @@ export const en = {
   "history.field.invitation_status": "Invitation status",
   "history.field.attendees": "Invited attendees",
   "history.field.proposal_status": "Meeting proposal status",
+  "history.field.meeting_notes": "Internal meeting notes",
   "history.field.meeting_status": "Meeting outcome",
   "history.field.meeting_intent": "Meeting start (local time)",
   "history.field.candidate_company_key": "Matched company",
@@ -8599,7 +8600,7 @@ export const en = {
   "log.recordOfMeetingRecorded":
     "{subject} is already recorded as held. Saving again adds only what did not save.",
   "log.recordOfMeetingManaged":
-    "The calendar invitation keeps the subject and notes of that meeting. Your notes are saved as a note here, and the meeting is marked held.",
+    "The calendar invitation keeps its title and description. Your internal notes are saved on this meeting, and the meeting is marked held.",
   "log.recordOfMeetingTranscript":
     "The transcript is saved as its own entry, and the meeting is marked held.",
   "log.asTranscript": "This text is a transcript",
@@ -23036,8 +23037,17 @@ export const en = {
   "worklist.verb.meetingCanceledFor": "Did not happen: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "The calendar invitation keeps this meeting. Cancel it through the invitation.",
+  "meeting.transcripts": "Notes and transcripts",
+  "meeting.readOnly":
+    "You can read this meeting, but your access does not allow editing it.",
+  "meeting.transcriptText": "Transcript text",
+  "meeting.transcriptFileRetry":
+    "The transcript is saved. The original file was not attached. Save again to retry the file upload.",
+  "meeting.internalNotes": "Internal meeting notes",
+  "meeting.internalNotesHelp":
+    "Visible to people who can read this meeting’s content. Not added to the calendar invitation.",
   "worklist.verb.meetingCalendarManaged":
-    "The calendar invitation keeps the subject, notes and date. Only the outcome is saved here.",
+    "The title and date follow the calendar invitation. Notes stay inside Margince.",
   "worklist.verb.retry": "Run again",
   "worklist.verb.retryStarted": "Rerunning rule…",
   "worklist.verb.retryFailed": "Rule was not rerun. Retry.",

@@ -34832,6 +34832,9 @@ type Activity struct {
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
 
+	// MeetingNotes Internal meeting notes, separate from the calendar description and from any transcript. Visible only with the meeting content. An empty string clears earlier notes.
+	MeetingNotes *string `json:"meeting_notes,omitempty"`
+
 	// MeetingNotesConnection A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
 	MeetingNotesConnection *ActivityMeetingNotesConnection `json:"meeting_notes_connection,omitempty"`
 
@@ -48809,7 +48812,7 @@ type CreateActivityRequest struct {
 	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 
-	// RecordsMeetingId A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
+	// RecordsMeetingId A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open or held meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting marked canceled or no-show is refused with 422 on `records_meeting_id`. A held meeting keeps its existing outcome. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
 	RecordsMeetingId *openapi_types.UUID `json:"records_meeting_id,omitempty"`
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
@@ -73262,6 +73265,9 @@ type UpdateActivityRequest struct {
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
 
+	// MeetingNotes Internal meeting notes, separate from the calendar description and from any transcript. Visible only with the meeting content. An empty string clears earlier notes.
+	MeetingNotes *string `json:"meeting_notes,omitempty"`
+
 	// MeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
 	// `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
 	// gives, held against the kind the row already carries rather than one the
@@ -79044,7 +79050,7 @@ type ListActivitiesParams struct {
 	// WebsiteFormId Accepted website submission notes for this form, with readable content only.
 	WebsiteFormId *openapi_types.UUID `form:"website_form_id,omitempty" json:"website_form_id,omitempty"`
 
-	// SourceActivityId Tasks derived from this readable source activity, under current task visibility.
+	// SourceActivityId Tasks derived from this readable source activity, under current task visibility. With kind=meeting, returns the transcripts recording that readable meeting.
 	SourceActivityId *openapi_types.UUID `form:"source_activity_id,omitempty" json:"source_activity_id,omitempty"`
 
 	// ThreadKey One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread.
@@ -90690,6 +90696,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "meeting_intent")
 	}
 
+	if raw, found := object["meeting_notes"]; found {
+		err = json.Unmarshal(raw, &a.MeetingNotes)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_notes': %w", err)
+		}
+		delete(object, "meeting_notes")
+	}
+
 	if raw, found := object["meeting_notes_connection"]; found {
 		err = json.Unmarshal(raw, &a.MeetingNotesConnection)
 		if err != nil {
@@ -91241,6 +91255,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
+		}
+	}
+
+	if a.MeetingNotes != nil {
+		object["meeting_notes"], err = json.Marshal(a.MeetingNotes)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_notes': %w", err)
 		}
 	}
 
@@ -101655,6 +101676,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "meeting_intent")
 	}
 
+	if raw, found := object["meeting_notes"]; found {
+		err = json.Unmarshal(raw, &a.MeetingNotes)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_notes': %w", err)
+		}
+		delete(object, "meeting_notes")
+	}
+
 	if raw, found := object["meeting_status"]; found {
 		err = json.Unmarshal(raw, &a.MeetingStatus)
 		if err != nil {
@@ -101804,6 +101833,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
+		}
+	}
+
+	if a.MeetingNotes != nil {
+		object["meeting_notes"], err = json.Marshal(a.MeetingNotes)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_notes': %w", err)
 		}
 	}
 

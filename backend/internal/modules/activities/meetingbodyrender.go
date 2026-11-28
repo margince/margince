@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -23,7 +24,7 @@ import (
 // rendered again, so a replay cannot render text that merely looks like HTML.
 const MeetingDescriptionRenderedFlag = "description_rendered"
 
-const meetingBodyAuthoredSQL = `(edit.actor_type IN ('human','agent') AND (edit.after ? 'body' OR edit.before ? 'body'))`
+const meetingBodyAuthoredSQL = meetingoutcome.BodyAuthoredSQL
 
 // MeetingBodyRender is a calendar meeting body rendered from its stored HTML
 // description, and the row it was rendered from as it was read.

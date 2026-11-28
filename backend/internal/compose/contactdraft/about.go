@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -67,8 +68,8 @@ func foldAbout(activity crmcontracts.Activity, now time.Time, zone *time.Locatio
 	if activity.Subject != nil {
 		folded.Subject = *activity.Subject
 	}
-	if activity.Body != nil && occurredday.Happened(string(activity.Kind), activitywhen.MomentOf(activity), now, zone) {
-		folded.Record = draftcore.TurnText(*activity.Body)
+	if record := activities.MeetingRecordBody(activity); record != nil && occurredday.Happened(string(activity.Kind), activitywhen.MomentOf(activity), now, zone) {
+		folded.Record = draftcore.TurnText(*record)
 	}
 	if activity.Links != nil {
 		for _, link := range *activity.Links {

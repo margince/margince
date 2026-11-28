@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -194,7 +195,11 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 		where = append(where, ContactIsPartySQL(sprintf("$%d", arg(*in.PartyContactID))))
 	}
 	if in.SourceActivityID != nil {
-		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
+		kind := "task"
+		if in.Kind != nil && *in.Kind == "meeting" {
+			kind = "meeting"
+		}
+		where = append(where, sprintf("a.kind = $%d AND a.source_activity_id = $%d", arg(kind), arg(*in.SourceActivityID)))
 	}
 	if in.Kind != nil {
 		where = append(where, kindPredicate([]string{*in.Kind}, arg))
@@ -337,7 +342,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		// recognize an item by. The wildcard is escaped, so a caller typing %
 		// searches for a percent sign rather than matching everything.
 		pos := arg("%" + storekit.EscapeLike(*in.Query) + "%")
-		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\')", pos, pos))
+		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\' OR ("+meetingoutcome.ReadNotesSQL("a")+") ILIKE $%d ESCAPE '\\')", pos, pos, pos))
 	}
 	where = append(where, occurredWindowClauses(in, arg)...)
 	if in.OpenStatusOnly {

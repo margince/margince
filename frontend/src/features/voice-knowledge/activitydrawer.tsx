@@ -1,4 +1,6 @@
+import { RecordMeetingOutcome } from "../../components/meetingoutcome";
 import { GeneratedText } from "../../design-system/generatedtext";
+import { MeetingNotesText } from "../../design-system/timelinetext";
 import { displayedBody, displayedSubject } from "../../lib/systemdisplay";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
@@ -185,6 +187,28 @@ function ActivityDetail({
   );
 }
 
+function MeetingRecordDetails({ activity }: Readonly<{ activity: Activity }>) {
+  if (activity.kind !== "meeting" || activity.content_state === "withheld")
+    return null;
+  return (
+    <>
+      {activity.meeting_notes && activity.meeting_notes !== activity.body && (
+        <MeetingNotesText notes={activity.meeting_notes} />
+      )}
+      <div className="actions">
+        <RecordMeetingOutcome
+          activity={activity}
+          invalidateKeys={[
+            ["activity", activity.id],
+            ["activities"],
+            worklistKey,
+          ]}
+        />
+      </div>
+    </>
+  );
+}
+
 function ActivityBody({
   activity,
   zone,
@@ -264,6 +288,7 @@ function ActivityBody({
         <CustomFieldLines activity={activity} />
       </div>
       {withheldOrBody(activity, filed, t)}
+      <MeetingRecordDetails activity={activity} />
       {activity.content_state !== "withheld" && (
         <>
           <Panel title={t("files.title")}>

@@ -29,6 +29,8 @@ import { useT } from "../i18n";
 import { outgoingBody, taskRequestFields } from "../lib/activitybody";
 import { activityFollowUpsKey } from "../lib/activitykeys";
 import { useActivity } from "../lib/activityread";
+import { meetingNotesText } from "../lib/meetingrecord";
+import { useOpenSource } from "../lib/opensource";
 import { useViewerZone } from "../lib/viewerzone";
 import { ActivityBodyField } from "./activitybodyfield";
 import { FollowUpTaskFields } from "./followuptaskfields";
@@ -80,24 +82,18 @@ type OutcomeSeed = {
 function changedNotes(
   draft: OutcomeDraft,
   seed: OutcomeSeed,
-  transcript: boolean,
-): { body?: string | null } {
+): { meeting_notes?: string | null } {
   return draft.body === seed.body
     ? {}
-    : { body: outgoingBody(draft.body, transcript) };
+    : { meeting_notes: outgoingBody(draft.body, false) ?? "" };
 }
 
 /** The meeting's subject, notes and start, which only the edit mode rewrites. */
-function editedWords(
-  draft: OutcomeDraft,
-  transcript: boolean,
-  moved: MovedStart | undefined,
-) {
+function editedWords(draft: OutcomeDraft, moved: MovedStart | undefined) {
   return {
     subject: draft.subject.trim(),
-    // An emptied box clears the note rather than storing "": null
-    // is what the column holds for a meeting nobody wrote about.
-    body: outgoingBody(draft.body, transcript),
+    // Empty text records that a legacy note was cleared rather than left untouched.
+    meeting_notes: outgoingBody(draft.body, false) ?? "",
     start: moved,
   };
 }
@@ -167,27 +163,22 @@ async function saveMeeting(
   input: SaveInput,
   t: ReturnType<typeof useT>,
 ): Promise<void> {
-  const { mode, draft, seed, transcript } = input;
+  const { mode, draft, seed } = input;
   if (mode === "notes") {
     await writeMeetingNotes(
       {
         id,
         version: seed.version,
-        body: outgoingBody(draft.body, transcript),
+        meeting_notes: outgoingBody(draft.body, false) ?? "",
       },
       t,
     );
     return;
   }
-  // A calendar-managed meeting keeps the calendar's subject, notes and
-  // start; only its outcome is written.
-  let words = {};
-  if (!input.managed) {
-    words =
-      mode === "edit"
-        ? editedWords(draft, transcript, input.moved)
-        : changedNotes(draft, seed, transcript);
-  }
+  const words =
+    !input.managed && mode === "edit"
+      ? editedWords(draft, input.moved)
+      : changedNotes(draft, seed);
   await writeMeetingOutcome(
     {
       id,
@@ -251,6 +242,7 @@ export function MeetingOutcomeDialog({
 }>) {
   const t = useT();
   const toast = useToast();
+  const openSource = useOpenSource();
   const titleId = useId();
   const formId = useId();
   const readerZone = useViewerZone();
@@ -273,7 +265,7 @@ export function MeetingOutcomeDialog({
       meeting.data.occurred_precision,
       readerZone,
     );
-    const body = meeting.data.body ?? "";
+    const body = meetingNotesText(meeting.data);
     setDraft({
       status: "held",
       subject: meeting.data.subject ?? "",
@@ -306,6 +298,15 @@ export function MeetingOutcomeDialog({
             ? "worklist.verb.meetingNotesSaved"
             : "worklist.verb.meetingOutcomeRecorded",
         ),
+        {
+          action: openSource
+            ? {
+                kind: "open",
+                label: t("create.addedOpen"),
+                onAct: () => openSource(id),
+              }
+            : undefined,
+        },
       );
       onClose();
     },
@@ -363,7 +364,7 @@ export function MeetingOutcomeDialog({
               <OutcomeEditFields
                 draft={draft}
                 managed={managed}
-                transcript={transcript}
+                transcript={false}
                 days={days}
                 onChange={setDraft}
                 onDateChange={() => setDayRefused(false)}
@@ -371,19 +372,15 @@ export function MeetingOutcomeDialog({
                 {custom.controls}
               </OutcomeEditFields>
             )}
-            {mode !== "edit" &&
-              (managed ? (
-                <p className="t-caption">
-                  {t("worklist.verb.meetingCalendarManaged")}
-                </p>
-              ) : (
-                <MeetingNotesField
-                  draft={draft}
-                  transcript={transcript}
-                  saving={save.isPending}
-                  onChange={setDraft}
-                />
-              ))}
+            {mode !== "edit" && (
+              <MeetingNotesField
+                draft={draft}
+                transcript={false}
+                saving={save.isPending}
+                onChange={setDraft}
+              />
+            )}
+            <p className="t-caption">{t("meeting.internalNotesHelp")}</p>
             {mode !== "notes" && draft.status === "held" && (
               <FollowUpTaskFields
                 value={draft.followUp}

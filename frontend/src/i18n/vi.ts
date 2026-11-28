@@ -2927,6 +2927,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.invitation_status": "Trạng thái lời mời",
   "history.field.attendees": "Khách được mời",
   "history.field.proposal_status": "Trạng thái đề xuất cuộc họp",
+  "history.field.meeting_notes": "Ghi chú nội bộ của cuộc họp",
   "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.meeting_intent": "Giờ bắt đầu cuộc họp (giờ địa phương)",
   "history.field.candidate_company_key": "Công ty khớp",
@@ -8396,7 +8397,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.recordOfMeetingRecorded":
     "{subject} đã được ghi là đã diễn ra. Lưu lại chỉ thêm phần chưa được lưu.",
   "log.recordOfMeetingManaged":
-    "Lời mời trên lịch giữ tiêu đề và ghi chú của cuộc họp đó. Ghi chú của bạn được lưu thành một ghi chú ở đây, và cuộc họp được đánh dấu đã diễn ra.",
+    "Lời mời trên lịch giữ nguyên tiêu đề và mô tả. Ghi chú nội bộ được lưu vào cuộc họp này và cuộc họp được đánh dấu đã diễn ra.",
   "log.recordOfMeetingTranscript":
     "Bản chép lời được lưu thành một mục riêng, và cuộc họp được đánh dấu đã diễn ra.",
   "log.asTranscript": "Văn bản này là bản chép lời",
@@ -22797,8 +22798,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingCanceledFor": "Không diễn ra: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "Lời mời trên lịch quản lý cuộc họp này. Hủy cuộc họp qua lời mời.",
+  "meeting.transcripts": "Ghi chú và bản chép lời",
+  "meeting.readOnly":
+    "Bạn có thể xem cuộc họp này nhưng quyền truy cập của bạn không cho phép chỉnh sửa.",
+  "meeting.transcriptText": "Nội dung bản chép lời",
+  "meeting.transcriptFileRetry":
+    "Đã lưu bản chép lời nhưng chưa đính kèm tệp gốc. Lưu lại để thử tải tệp lên lần nữa.",
+  "meeting.internalNotes": "Ghi chú nội bộ của cuộc họp",
+  "meeting.internalNotesHelp":
+    "Người có quyền đọc nội dung cuộc họp có thể xem ghi chú này. Ghi chú không được thêm vào thư mời trên lịch.",
   "worklist.verb.meetingCalendarManaged":
-    "Lời mời trên lịch giữ tiêu đề, ghi chú và ngày. Tại đây chỉ lưu kết quả cuộc họp.",
+    "Tiêu đề và ngày theo lời mời trên lịch. Ghi chú chỉ được lưu trong Margince.",
   "worklist.verb.retry": "Chạy lại",
   "worklist.verb.retryStarted": "Đang chạy lại quy tắc…",
   "worklist.verb.retryFailed": "Không thể chạy lại quy tắc. Thử lại.",
