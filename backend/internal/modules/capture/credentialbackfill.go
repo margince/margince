@@ -57,7 +57,7 @@ const (
 const actionCredentialRelocated = "capture_credential_relocated"
 
 // BackfillCredentials migrates every legacy capture_connection row whose
-// credential still lives in the auth bytea column onto the vault: it seals the
+// credential still lives in the auth bytea column onto the vault. It seals the
 // bytes, records the credential_ref, and clears auth. It is idempotent. A row
 // that already carries a ref is skipped, so a re-run or a crash-retry is safe
 // and it can run on every boot. It runs under the installation workspace's own

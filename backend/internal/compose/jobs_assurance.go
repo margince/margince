@@ -98,11 +98,10 @@ func (w *assuranceSweepWorker) assureWorkspace(ctx context.Context, workspace id
 	return w.check(wsCtx, false)
 }
 
-// AssuranceRunArgs is one pass a human asked for, on one workspace.
+// AssuranceRunArgs is one pass a human asked for.
 //
-// Uniqueness is keyed on Workspace alone (river:"unique"), so two managers
-// pressing recheck at once collapse to one pass rather than racing two;
-// RequestedBy is provenance and stays outside the hash.
+// The insert is unique by kind alone (assuranceRunInsertOpts), so two managers
+// pressing recheck at once collapse to one pass. RequestedBy is provenance.
 type AssuranceRunArgs struct {
 	RequestedBy string `json:"requested_by"`
 }

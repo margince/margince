@@ -113,17 +113,17 @@ func (h assuranceRunHandlers) StartForecastAssuranceRun(w http.ResponseWriter, r
 
 // assuranceRunInsertOpts makes the in-flight job the lock.
 //
-// Unique on the workspace alone (AssuranceRunArgs tags it; RequestedBy is
-// provenance and stays out of the hash), so two managers pressing at once get
-// one pass and the second is told so — rather than two walks of one pipeline
-// racing to upsert the same findings.
+// Unique by kind alone, so RequestedBy, which is provenance, stays out of the
+// key. Two managers pressing at once get one pass and the second is told so.
+// The alternative is two walks of one pipeline racing to upsert the same
+// findings.
 //
 // One-off attempts: somebody pressed a button and nothing re-presses it. A pass
 // that gives up records the run it opened and the next press starts over.
 func assuranceRunInsertOpts() *river.InsertOpts {
 	return &river.InsertOpts{
 		MaxAttempts: oneOffJobMaxAttempts,
-		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
 	}
 }
 
