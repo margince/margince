@@ -281,7 +281,9 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 		body := fn
 		fn = func(tx pgx.Tx) error {
 			started := d.clock().UnixNano()
-			live, err := InstallationWorkspaceTx(ctx, tx)
+			live, err := Remember(tx, "database:installation-workspace", func() (ids.UUID, error) {
+				return InstallationWorkspaceTx(ctx, tx)
+			})
 			if err != nil {
 				stampProof(d.proven, proof{at: -d.clock().UnixNano()})
 				return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
