@@ -128,7 +128,6 @@ Also called: update a lead, rename a lead, correct a prospect.
 
 ### How do I change a lead's owner?
 To change or set the owner of a lead in Margince, open the lead. Press **Edit** in the **Ownership** section of its **Details** panel. Search under **Search colleagues** and pick a colleague. The pick saves at once, with no **Save** button, and confirms "Assigned to {name}".
-
 Pick yourself on a lead with no owner to claim it, or anyone else to hand it over. **Unassigned**, first in the list, puts the lead back in the queue and confirms "Returned to the unassigned queue". The current owner is marked; picking them changes nothing.
 
 For many leads, tick them on the **Leads** table and use **Choose owner** → **Assign**. The list starts with **Unassigned**, then you, then every colleague by name. A message says how many leads went to the new owner, or back to the queue.
