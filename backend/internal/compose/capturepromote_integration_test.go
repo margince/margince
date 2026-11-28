@@ -539,7 +539,7 @@ func seedClassifiedGmail(t *testing.T, e *integration.Env, user ids.UUID) {
 			       (user_id, provider, status, credential_ref, mail_posture, account_label)
 			VALUES ($1, 'gmail', 'connected', 'vault:test', 'classified', 'a@authz.test')
 			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL
-			DO UPDATE SET mail_posture = 'classified', archived_at = NULL,
+			DO UPDATE SET mail_posture = 'classified',
 			              account_label = 'a@authz.test'`, user)
 		return err
 	}); err != nil {

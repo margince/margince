@@ -63,7 +63,7 @@ func TestAnAgentIsRefusedEvenWhenTheTeamsSharedMailboxIsDisconnected(t *testing.
 	e := integration.Setup(t)
 	service := readerTeamService(t, e)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(),
-		`UPDATE capture_connection SET status = 'disconnected', archived_at = now() WHERE account_label = $1`, opsMailbox); err != nil {
+		`UPDATE capture_connection SET status = 'disconnected' WHERE account_label = $1`, opsMailbox); err != nil {
 		t.Fatal(err)
 	}
 	err := service.SetTeamMember(agentOfAdmin(e), adminIdentity(e), e.Team1, e.Rep3, true)

@@ -206,7 +206,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-36 columns · primary key `(id)` · referenced by 6 foreign keys
+35 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -244,7 +244,6 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `user_id` | `uuid` |  | Points at `app_user.id`. |
 | `watch_expires_at` | `timestamp with time zone` |  | Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null. |
 | `watch_ref` | `text` |  |  |
-| `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -274,7 +273,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_connection_one_default_sender`: `unique, btree (user_id) WHERE default_sender`
 - `capture_connection_shared_mailbox`: `unique, btree (provider, lower(account_label)) WHERE (user_id IS NULL)`
 - `connector_connection_pkey`: `unique, btree (id)`
-- `idx_capture_connection`: `btree (provider, status) WHERE (archived_at IS NULL)`
+- `idx_capture_connection`: `btree (provider, status)`
 - `idx_capture_watch_renew`: `btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'))`
 
 **Triggers**

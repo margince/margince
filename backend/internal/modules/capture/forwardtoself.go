@@ -122,7 +122,7 @@ func sentToConnectedMailboxTx(ctx context.Context, tx pgx.Tx, fields ActivityFie
 	}
 	match := memberConnection(actor.UserID, connection)
 	var label string
-	err = tx.QueryRow(ctx, `SELECT coalesce(account_label, '') FROM capture_connection WHERE `+match.where+` AND archived_at IS NULL`,
+	err = tx.QueryRow(ctx, `SELECT coalesce(account_label, '') FROM capture_connection WHERE `+match.where,
 		match.args...).Scan(&label)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil

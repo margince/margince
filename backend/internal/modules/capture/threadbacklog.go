@@ -28,7 +28,6 @@ var threadOwedAnswerSQL = `status = 'pending'
 	               AND a.restricted_at IS NULL)
 	AND EXISTS (SELECT 1 FROM capture_connection c
 	             WHERE c.user_id = capture_thread_verdict.user_id
-	               AND c.archived_at IS NULL
 	               AND c.mail_posture = 'classified')`
 
 // ThreadBacklog is the held threads a confidentiality pass still owes an

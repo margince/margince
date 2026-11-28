@@ -70,7 +70,7 @@ func (r *Registry) SetHistoryBaseline(ctx context.Context, mb Mailbox, date *tim
 			UPDATE capture_connection
 			   SET history_baseline_date = $3, history_baseline_tz = $4,
 			       history_baseline_set_by = $5, history_baseline_set_at = $6
-			 WHERE `+match.where+` AND archived_at IS NULL
+			 WHERE `+match.where+`
 			RETURNING (SELECT c.history_baseline_date FROM capture_connection c WHERE c.id = capture_connection.id),
 			          (SELECT c.history_baseline_tz FROM capture_connection c WHERE c.id = capture_connection.id)`,
 			append(append([]any{}, match.args...), historyBaselineArgs(after)...)...).Scan(&before.date, &before.timezone)

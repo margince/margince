@@ -41,7 +41,7 @@ var captureFacts = []captureFact{
 	{table: "capture_owner_identity"},
 	{table: "workspace_email_domain"},
 	{table: "company_domain", columns: []string{"domain", "domain_folded", "archived_at", "company_id"}},
-	{table: "capture_connection", columns: []string{"account_label", "mail_posture", "status", "archived_at", "user_id"}},
+	{table: "capture_connection", columns: []string{"account_label", "mail_posture", "status", "user_id"}},
 	{table: "app_user", columns: []string{"email", "status", "archived_at", "removed_at"}},
 }
 
