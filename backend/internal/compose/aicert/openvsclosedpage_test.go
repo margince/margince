@@ -38,15 +38,22 @@ const openVsClosedDescribes = "backend/internal/compose/aicert/openvsclosedpage_
 
 // openVsClosedSetup is one setup the page compares, keyed by its preset file.
 // A renamed preset then fails loudly instead of dropping off the page.
-type openVsClosedSetup struct{ file, weights string }
+type openVsClosedSetup struct {
+	file, weights string
+	open          bool
+}
 
 var openVsClosedSetups = []openVsClosedSetup{
-	{openVsClosedBase, "closed"},
-	{"anthropic_cloud.yaml", "closed"},
-	{"openrouter_openai.yaml", "closed"},
-	{"consumer_class_brokered.yaml", "open (Gemma 4)"},
-	{"openrouter_cloud.yaml", "open (gpt-oss) with Mistral on the upper tiers"},
+	{openVsClosedBase, "closed", false},
+	{"anthropic_cloud.yaml", "closed", false},
+	{"openrouter_openai.yaml", "closed", false},
+	{"consumer_class_brokered.yaml", "open (Gemma 4)", true},
+	{"openrouter_cloud.yaml", "open (gpt-oss) with Mistral on the upper tiers", true},
 }
+
+// openVsClosedPricedOn is the day whose price rows the page uses. A rate row
+// takes effect on its own date, so a later row would move every cost here.
+var openVsClosedPricedOn = time.Date(2026, 11, 28, 0, 0, 0, 0, time.UTC)
 
 var openVsClosedGrade = map[string]string{
 	"certified": "Ready", "supported_degraded": "Usable with care", "not_supported": "Not reliable yet",
@@ -79,7 +86,7 @@ func TestTheOpenVsClosedPageIsPublished(t *testing.T) {
 		t.Fatal(err)
 	}
 	rates := map[string]ai.ModelRate{}
-	for _, r := range ai.SeedModelRates(time.Date(2026, 11, 28, 0, 0, 0, 0, time.UTC)) {
+	for _, r := range ai.SeedModelRates(openVsClosedPricedOn) {
 		rates[r.Provider+"/"+r.ModelID] = r
 	}
 	byKey := map[string]aicert.Record{}
@@ -124,7 +131,10 @@ func TestTheOpenVsClosedPageIsPublished(t *testing.T) {
 		return
 	}
 	got, err := os.ReadFile(path)
-	if err != nil || !bytes.Equal(got, page) {
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	if !bytes.Equal(got, page) {
 		t.Errorf("%s is out of date with the records; run `cd backend && %s`", path, openVsClosedCommand)
 	}
 }
@@ -190,8 +200,10 @@ func renderOpenVsClosed(setups map[string]map[string]openVsClosedRow, titles map
 		"It compares models on equal work. It is not a forecast of a bill, because a real workspace calls the " +
 		"features in a different mix.\n\n")
 
-	for _, s := range openVsClosedSetups[3:] {
-		writeOpenVsClosedFeatures(&p, titles[s.file], setups[s.file], base, titles[openVsClosedBase])
+	for _, s := range openVsClosedSetups {
+		if s.open {
+			writeOpenVsClosedFeatures(&p, titles[s.file], setups[s.file], base, titles[openVsClosedBase])
+		}
 	}
 
 	p.WriteString("## How to read the comparison\n\n")
@@ -210,7 +222,7 @@ func writeOpenVsClosedFeatures(p *strings.Builder, open whichAISetup, rows, base
 	p.WriteString("| Feature | Gemini | Open setup | Cost of one run: Gemini | Cost of one run: open |\n|---|---|---|---:|---:|\n")
 	var behind []string
 	for _, t := range std.Tasks {
-		b, o := base[t.Task], rows[t.Task]
+		b, o := rowOrNotMeasured(base, t.Task), rowOrNotMeasured(rows, t.Task)
 		fmt.Fprintf(p, "| %s | %s (`%s`) | %s (`%s`) | %s | %s |\n", t.Label,
 			b.grade, b.model, o.grade, o.model, costCell(b), costCell(o))
 		if b.grade == "Ready" && o.grade != "Ready" {
@@ -218,6 +230,15 @@ func writeOpenVsClosedFeatures(p *strings.Builder, open whichAISetup, rows, base
 		}
 	}
 	fmt.Fprintf(p, "\n**Where Gemini is Ready and this setup is not (%d):** %s.\n\n", len(behind), strings.Join(behind, ", "))
+}
+
+// rowOrNotMeasured reads a feature a setup does not bind as the grade the page
+// promises for it, and not as a zero row that prints an empty cell.
+func rowOrNotMeasured(rows map[string]openVsClosedRow, task string) openVsClosedRow {
+	if r, ok := rows[task]; ok {
+		return r
+	}
+	return openVsClosedRow{grade: "Not measured", model: "no model bound"}
 }
 
 func costCell(r openVsClosedRow) string {
