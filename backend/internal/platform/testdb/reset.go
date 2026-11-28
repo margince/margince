@@ -46,6 +46,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/platform/database"
+
 	"github.com/margince/margince/backend/internal/platform/sweepreach"
 )
 
@@ -182,6 +184,7 @@ func Reset(ctx context.Context, owner *pgx.Conn) error {
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("committing reset: %w", err)
 	}
+	database.ForgetInstallationProofs()
 	return nil
 }
 

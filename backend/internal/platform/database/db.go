@@ -85,6 +85,18 @@ func provenFor(pool *pgxpool.Pool) *atomic.Pointer[proof] {
 	return held
 }
 
+// ForgetInstallationProofs clears every pool's proof of a live company. A test
+// harness that empties the database calls it, because the proofs then describe a
+// company that no longer exists. Nothing in a running server replaces the
+// company, so nothing else calls it.
+func ForgetInstallationProofs() {
+	provenMu.Lock()
+	defer provenMu.Unlock()
+	for _, held := range provenByPool {
+		held.Store(nil)
+	}
+}
+
 func (d *DB) clock() time.Time {
 	if d.now == nil {
 		return time.Now()
@@ -288,11 +300,12 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 				stampProof(d.proven, proof{at: -d.clock().UnixNano()})
 				return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
 			}
-			// A joined snapshot can be older than this check, so its answer
-			// would stamp a moment it does not describe.
-			if !joined {
-				stampProof(d.proven, proof{at: started, company: ids.From[ids.WorkspaceKind](live)})
+			// A joined snapshot can be older than this check. Its answer
+			// describes the snapshot's start, so that is the moment it claims.
+			if opened, ok := snapshotStart(ctx); joined && ok && opened.UnixNano() < started {
+				started = opened.UnixNano()
 			}
+			stampProof(d.proven, proof{at: started, company: ids.From[ids.WorkspaceKind](live)})
 			return body(tx)
 		}
 	}
