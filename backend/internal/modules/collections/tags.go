@@ -131,9 +131,6 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 
 // insertTagTx coins a validated name and audits it.
 func insertTagTx(ctx context.Context, tx pgx.Tx, name string, color, description *string) (tagRow, error) {
-	if err := tagColorError(color); err != nil {
-		return tagRow{}, err
-	}
 	row := tx.QueryRow(ctx, `
 		INSERT INTO tag (name, color, description)
 		VALUES ($1, $2, $3)

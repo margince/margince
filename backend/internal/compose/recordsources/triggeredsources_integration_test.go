@@ -62,9 +62,8 @@ func TestOrdinaryEditsPublishTheSourceTheTriggerStored(t *testing.T) {
 				id = integration.SeedBeforeSourceCheck(t, o.owner, "project", `INSERT INTO project(id,name,key,phase,company_id,source,captured_by) VALUES($1,'Older project','SOURCE1','delivering',$2,$3,'human:old')`, company, old)
 				_, err = o.e.Projects.UpdateProject(ctx, ids.From[ids.ProjectKind](id), projects.UpdateProjectInput{Name: new("Changed project")})
 			case "lead":
-				old, want = "legacy-producer", "legacy-producer"
-				id = ids.NewV7()
-				o.e.WsExec(t, `INSERT INTO lead(id,full_name,source,captured_by) VALUES($1,'Older Lead',$2,'human:old')`, id, old)
+				old, want = "legacy-producer", "api"
+				id = integration.SeedBeforeSourceCheck(t, o.owner, "lead", `INSERT INTO lead(id,full_name,source,captured_by) VALUES($1,'Older Lead',$2,'human:old')`, old)
 				_, err = o.e.Contacts.UpdateLead(ctx, ids.From[ids.LeadKind](id), contacts.UpdateLeadInput{FullName: new("Changed lead")})
 			}
 			if err != nil {

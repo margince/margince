@@ -314,7 +314,7 @@ func TestMissingRestoreEvidenceLeavesHealthIncomplete(t *testing.T) {
 	}
 }
 
-func TestHistoryExcludesAnotherWorkspacesRetainedRuns(t *testing.T) {
+func TestHistoryReadsEveryRetainedRunWhateverWorkspaceIdItsArgsCarry(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 1)
@@ -324,8 +324,8 @@ func TestHistoryExcludesAnotherWorkspacesRetainedRuns(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/admin/job-health/history", nil, nil, &report); status != http.StatusOK {
 		t.Fatalf("history: %d", status)
 	}
-	if len(report.Runs) != 1 || len(report.Groups) != 1 || report.Groups[0].Count != 1 || !report.Groups[0].FleetWide {
-		t.Fatalf("history crossed its scope: %+v", report)
+	if len(report.Runs) != 2 || len(report.Groups) != 1 || report.Groups[0].Count != 2 || !report.Groups[0].FleetWide {
+		t.Fatalf("history dropped a run whose args name another workspace id: %+v", report)
 	}
 }
 
