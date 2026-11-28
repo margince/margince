@@ -88,7 +88,7 @@ func (h Handlers) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, ratelimit.Refused(h.mfaAttempts))
 		return
 	}
-	id, token, err := h.svc.CompleteMFAChallenge(withUserAgent(r.Context(), r.UserAgent()), userID, challenge, req.Code)
+	id, token, err := h.svc.CompleteMFAChallenge(httpserver.WithRequestOrigin(r.Context(), r), userID, challenge, req.Code)
 	if err != nil {
 		if errors.Is(err, errBadMFACode) || errors.Is(err, errMFANotEnrolled) || errors.Is(err, errAccountLocked) {
 			httperr.Unauthorized(w, r, "the code, or the challenge, is not valid")

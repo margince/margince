@@ -55,7 +55,7 @@ var ErrConnectorNotConfigured = errors.New("capture: no connector for this provi
 // 'reauth_required' mean there is nothing to send through.
 const sendableConnection = `
 	 WHERE user_id = $1 AND provider = $2
-	   AND status IN ('connected','error') AND archived_at IS NULL AND ($3::uuid IS NULL OR id = $3)
+	   AND status IN ('connected','error') AND ($3::uuid IS NULL OR id = $3)
 	 ORDER BY default_sender DESC, created_at, id LIMIT 1`
 
 // GrantedScopesFor reports the scopes the PROVIDER says one user's live
@@ -171,7 +171,7 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 			-- that quietly stopped filing with no way to see why is exactly
 			-- what saying so here prevents.
 			LEFT JOIN tag t ON t.id = c.context_tag_id
-			WHERE c.user_id = $1 AND c.archived_at IS NULL
+			WHERE c.user_id = $1
 			ORDER BY c.provider, c.created_at, c.id`, actor.UserID)
 		if err != nil {
 			return err
@@ -429,7 +429,7 @@ func (r *Registry) DueConnections(ctx context.Context, name string) ([]DueConnec
 			-- so the poll asks the question too. Same condition
 			-- seatLoginAddressTx reads one file over.
 			LEFT JOIN app_user u ON u.id = c.user_id AND `+workforce.LiveMemberSQL("u")+`
-			WHERE c.provider = $1 AND c.status IN ('connected','error') AND c.archived_at IS NULL
+			WHERE c.provider = $1 AND c.status IN ('connected','error')
 			  AND (u.id IS NOT NULL OR `+sharedMailboxLiveSQL+`)
 			  AND COALESCE(s.next_sync_at, now()) <= now()`, name)
 		if err != nil {

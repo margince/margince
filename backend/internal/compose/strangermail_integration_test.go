@@ -126,7 +126,7 @@ func (o *owedEnv) connectColleague(t *testing.T, seat ids.UUID) string {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label, mail_posture)
 			VALUES ($1, 'gmail', 'connected', 'vault:test', $2, 'shared')
-			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO UPDATE SET account_label = $2, mail_posture = 'shared', archived_at = NULL`,
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO UPDATE SET account_label = $2, mail_posture = 'shared'`,
 			seat, address)
 		return err
 	}); err != nil {

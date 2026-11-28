@@ -60,7 +60,7 @@ func withdrawCaptureConnections(ctx context.Context, tx pgx.Tx, userID ids.UserI
 	// racing it.
 	rows, err := tx.Query(ctx, `
 		SELECT id, provider, status, account_label FROM capture_connection
-		 WHERE user_id = $1 AND archived_at IS NULL AND status <> 'disconnected'
+		 WHERE user_id = $1 AND status <> 'disconnected'
 		 FOR UPDATE`, userID)
 	if err != nil {
 		return err

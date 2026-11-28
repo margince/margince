@@ -216,7 +216,8 @@ declare_lane_budget "$JOBS"
 
 # The coverage flags of a sharded run, one string because run_one reads it in
 # the child shell xargs starts, and an array does not cross that boundary.
-export LANE_COVER_FLAGS="-cover -coverpkg=./... -covermode=atomic"
+# backend/Makefile's COVER_FLAGS owns them, so the unit pods share their mode.
+export LANE_COVER_FLAGS="${LANE_COVER_FLAGS:?run the lane through make test-integration, which passes COVER_FLAGS}"
 
 # Compile the lane once before fanning out, with the flags every package's
 # `go test` uses. Concurrent `go` processes do not share a compile still in

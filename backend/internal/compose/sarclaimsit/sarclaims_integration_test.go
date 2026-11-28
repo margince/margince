@@ -70,7 +70,7 @@ func TestTheAccessExportReturnsAClaimsReadingBesideTheWordsAndNotItsAuthor(t *te
 	if claim["reading"] != "Sends the signed order by Friday" || claim["quote"] != quote || claim["derived"] != true {
 		t.Errorf("the export must hand back the reading, marked derived, beside the quoted words: %+v", claim)
 	}
-	for _, author := range []string{"captured_by", "corrected_by_user_id", "taken_by_user_id"} {
+	for _, author := range []string{"captured_by", "taken_by_user_id"} {
 		if _, ok := claim[author]; ok {
 			t.Errorf("the export names the colleague who wrote the reading through %s: %+v", author, claim)
 		}

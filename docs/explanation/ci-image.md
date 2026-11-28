@@ -123,7 +123,7 @@ pulled, again in it. `lint-cache.yml` lints in the image when it can, so its gol
 - The integration shards and `live-boot` start Docker Compose, which needs the Docker of the runner.
 - `craftsmanship`, `craft-residue`, `secret-scan`, `license gate` and `sonarcloud` install no
   toolchain, or only Go for one small module. A pull would cost more than they save.
-- `vuln` reads the `plain` cache of the runner. So do the integration build and unit coverage jobs,
-  which stay on the runner with the rest of their lane.
+- `vuln` reads the `plain` cache of the runner. So does the integration build job, which stays on the
+  runner with the rest of its lane.
 - `ci` reads the verdict and the `deterministic-gates` logs for the test budget, so a pull would cost
   more than the job.

@@ -56,7 +56,7 @@ func (r *Registry) ReapWithdrawnCredentials(ctx context.Context, userID ids.User
 		cursor, err := tx.Query(ctx, `
 			SELECT provider, credential_ref FROM capture_connection
 			 WHERE user_id = $1 AND status = 'disconnected'
-			   AND credential_ref IS NOT NULL AND archived_at IS NULL`, userID)
+			   AND credential_ref IS NOT NULL`, userID)
 		if err != nil {
 			return err
 		}

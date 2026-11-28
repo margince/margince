@@ -41,7 +41,7 @@ func SelectRemovedPurgeTx(
         WHERE i.user_id = `+seatParam+` AND i.provider_message_ids @> `+keys+`
           AND cardinality(`+keys+`) > 0
  AND EXISTS (SELECT 1 FROM unnest(i.provider_message_ids) alias
- JOIN capture_connection c ON c.user_id = i.user_id AND c.archived_at IS NULL
+ JOIN capture_connection c ON c.user_id = i.user_id
  AND c.status IN ('connected','error')
  AND starts_with(alias, `+storekit.MailboxMarkSQL("c")+` || ':')
  WHERE alias <> (`+keys+`)[1])`, args...)

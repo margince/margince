@@ -85,7 +85,7 @@ func (r *Registry) syncStart(
 		// decide where to start, and a disconnected row holds no anchor.
 		if err := tx.QueryRow(ctx, `
 			SELECT sync_anchor FROM capture_connection
-			 WHERE id = $1 AND archived_at IS NULL
+			 WHERE id = $1
 			   FOR UPDATE`,
 			connectionID).Scan(&held); err != nil {
 			return fmt.Errorf("capture: reading the sync anchor: %w", err)
@@ -108,7 +108,7 @@ func (r *Registry) syncStart(
 		// connection that is gone, whose anchor is not worth holding.
 		tag, err := tx.Exec(ctx, `
 			UPDATE capture_connection SET sync_anchor = $2
-			 WHERE id = $1 AND generation = $3 AND archived_at IS NULL`,
+			 WHERE id = $1 AND generation = $3`,
 			connectionID, from, generation)
 		if err != nil {
 			return fmt.Errorf("capture: holding the sync anchor: %w", err)
@@ -145,7 +145,7 @@ func recordUnreadPeriod(
 		UPDATE capture_connection
 		   SET unread_from = LEAST(COALESCE(unread_from, $2), $2),
 		       unread_to   = GREATEST(COALESCE(unread_to, $3), $3)
-		 WHERE id = $1 AND generation = $4 AND archived_at IS NULL`,
+		 WHERE id = $1 AND generation = $4`,
 		connectionID, from, to, generation)
 	if err != nil {
 		return false, fmt.Errorf("capture: recording the unread period: %w", err)
@@ -228,7 +228,7 @@ func settleUnreadPeriodTx(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) e
 		       unread_to   = CASE WHEN run.since <= c.unread_from THEN NULL ELSE LEAST(c.unread_to, run.since) END
 		  FROM (SELECT connection_id, after_date::timestamp AT TIME ZONE 'UTC' AS since, created_at, failed
 		          FROM capture_backfill WHERE id = $1) run
-		 WHERE c.id = run.connection_id AND c.archived_at IS NULL
+		 WHERE c.id = run.connection_id
 		   AND c.unread_from IS NOT NULL AND run.created_at >= c.unread_to
 		   AND run.failed = 0`,
 		backfillID)

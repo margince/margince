@@ -608,7 +608,6 @@ public.consent_qualifying_event.source_entity_type document
 public.consent_text_version.body exempt complete captured or authored source content must retain its original text
 public.consent_text_version.channel document
 public.consent_text_version.content_hash document
-public.consent_text_version.jurisdiction document
 public.consent_text_version.key document
 public.consent_text_version.locale document
 public.consent_text_version.subject_line document
@@ -643,7 +642,6 @@ public.contact.visibility document
 public.contact_acquisition_evidence.captured_by document
 public.contact_acquisition_evidence.kind document
 public.contact_acquisition_evidence.note note
-public.contact_acquisition_evidence.purpose_claimed document
 public.contact_acquisition_evidence.recorded_for_addresses document
 public.contact_acquisition_evidence.request_retracted_by document
 public.contact_acquisition_evidence.source_entity_type document

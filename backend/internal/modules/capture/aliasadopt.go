@@ -342,7 +342,7 @@ func (s *PendingStore) strandedSeats(ctx context.Context, limit int) ([]Stranded
 		rows, err := tx.Query(ctx, `
 			SELECT DISTINCT oi.user_id, c.provider, oi.value
 			  FROM capture_owner_identity oi
-			  JOIN capture_connection c ON c.user_id = oi.user_id AND c.archived_at IS NULL
+			  JOIN capture_connection c ON c.user_id = oi.user_id
 			  JOIN activity_participant p ON p.address = oi.value
 			  JOIN activity a ON a.id = p.activity_id
 			 WHERE oi.kind = $1

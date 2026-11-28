@@ -85,12 +85,12 @@ func seatAddress(t *testing.T, e *integration.Env, seat ids.UUID) string {
 	addr := "seat-" + seat.String() + "@ws.example"
 	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			WITH adopted AS (UPDATE capture_connection SET account_label = $2, archived_at = NULL
+			WITH adopted AS (UPDATE capture_connection SET account_label = $2
 			   WHERE user_id = $1 AND provider = 'gmail' AND account_label IS NULL AND NOT EXISTS (SELECT 1 FROM capture_connection
 			     WHERE user_id = $1 AND provider = 'gmail' AND lower(account_label) = lower($2)) RETURNING id)
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
 			SELECT $1, 'gmail', 'connected', 'vault:test', $2 WHERE NOT EXISTS (SELECT 1 FROM adopted)
-			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO UPDATE SET account_label = $2, archived_at = NULL`, seat, addr)
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO UPDATE SET account_label = $2`, seat, addr)
 		return err
 	}); err != nil {
 		t.Fatalf("connecting the seat's mailbox: %v", err)
