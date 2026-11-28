@@ -100,13 +100,12 @@ func (GmailWatchRenewArgs) Kind() string { return "gmail_watch_renew_connection"
 // watch_expires_at. A revoked mailbox fails its OWN row now, where before it
 // was logged and skipped inside a pass River recorded as completed.
 type gmailWatchRenewWorker struct {
-	pool     *pgxpool.Pool
 	registry *capture.Registry
 	topic    string
 }
 
 func (w *gmailWatchRenewWorker) Work(ctx context.Context, job *river.Job[GmailWatchRenewArgs]) error {
-	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.pool, w.registry, job.Args, job.Args.ConnectionID, w.topic))
+	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.registry, job.Args, job.Args.ConnectionID, w.topic))
 }
 
 // renewOneWatch is the body both providers' renewal workers run. It binds the
@@ -118,7 +117,7 @@ func (w *gmailWatchRenewWorker) Work(ctx context.Context, job *river.Job[GmailWa
 //
 // Returns the bare cause, for the reason dispatchDueWatches does.
 func renewOneWatch(
-	ctx context.Context, pool *pgxpool.Pool, reg *capture.Registry, args river.JobArgs, connectionID, topic string,
+	ctx context.Context, reg *capture.Registry, args river.JobArgs, connectionID, topic string,
 ) error {
 	wsCtx := ctx
 	connID, err := ids.Parse(connectionID)
@@ -180,13 +179,12 @@ func (GraphWatchRenewArgs) Kind() string { return "graph_watch_renew_connection"
 // watch_expires_at. A revoked mailbox fails its OWN row, where a pass that
 // logged and skipped would be recorded as completed.
 type graphWatchRenewWorker struct {
-	pool            *pgxpool.Pool
 	registry        *capture.Registry
 	notificationURL string
 }
 
 func (w *graphWatchRenewWorker) Work(ctx context.Context, job *river.Job[GraphWatchRenewArgs]) error {
-	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.pool, w.registry, job.Args, job.Args.ConnectionID, w.notificationURL))
+	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.registry, job.Args, job.Args.ConnectionID, w.notificationURL))
 }
 
 // renewWithinOf reads how far ahead of expiry a watch scan renews, at the

@@ -65,7 +65,7 @@ func TestEveryWorkerClientRunsTheBindingMiddleware(t *testing.T) {
 	t.Parallel()
 	const owner = "jobs.go"
 	var clients, configs int
-	for _, dir := range []string{filepath.Join("internal"), "cmd"} {
+	for _, dir := range []string{"internal", "cmd"} {
 		fset, files := parseGoFilesUnder(t, dir)
 		for _, file := range files {
 			path := fset.Position(file.Pos()).Filename

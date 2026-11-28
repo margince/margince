@@ -15,14 +15,14 @@ import (
 // workspaces, where no company is live, can opt out.
 type BindWorkspace func(ctx context.Context, job *rivertype.JobRow) (context.Context, error)
 
-// workerBinding is the River worker middleware that runs the binding.
-type workerBinding struct {
+// WorkerBindingPlugin is the River worker middleware that runs the binding.
+type WorkerBindingPlugin struct {
 	river.MiddlewareDefaults
 	bind BindWorkspace
 }
 
 // Work binds the job's context, or fails the job without running it.
-func (w *workerBinding) Work(ctx context.Context, job *rivertype.JobRow, doInner func(context.Context) error) error {
+func (w *WorkerBindingPlugin) Work(ctx context.Context, job *rivertype.JobRow, doInner func(context.Context) error) error {
 	bound, err := w.bind(ctx, job)
 	if err != nil {
 		return FaultContext(ctx, err)
@@ -32,6 +32,6 @@ func (w *workerBinding) Work(ctx context.Context, job *rivertype.JobRow, doInner
 
 // WorkerBinding is the River plugin that runs the binding. A test that works a
 // job through River's test worker installs it the same way.
-func WorkerBinding(bind BindWorkspace) rivertype.Plugin {
-	return &workerBinding{bind: bind}
+func WorkerBinding(bind BindWorkspace) *WorkerBindingPlugin {
+	return &WorkerBindingPlugin{bind: bind}
 }

@@ -65,7 +65,7 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 		registry: cfg.GmailRegistry, pool: pool, log: log,
 	})
 	addDeclaredWorker[GmailWatchRenewArgs](reg, &gmailWatchRenewWorker{
-		pool: pool, registry: cfg.GmailRegistry, topic: cfg.GmailWatch.Topic,
+		registry: cfg.GmailRegistry, topic: cfg.GmailWatch.Topic,
 	})
 }
 

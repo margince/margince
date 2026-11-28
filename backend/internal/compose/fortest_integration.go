@@ -15,7 +15,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/loopfault"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -65,6 +64,6 @@ func WithRunnerReadFailureForTest(fail loopfault.Failure) RunnerOption {
 
 // InstallationBindingForTest is the worker middleware the production client
 // runs, for a test that works a job through River's test worker.
-func InstallationBindingForTest(pool *pgxpool.Pool) rivertype.Plugin {
+func InstallationBindingForTest(pool *pgxpool.Pool) *jobs.WorkerBindingPlugin {
 	return jobs.WorkerBinding(installationBinding(pool))
 }
