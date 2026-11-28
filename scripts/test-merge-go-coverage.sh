@@ -11,19 +11,46 @@ trap 'rm -rf "$work"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
 # One real program, built with coverage, so every pod below is one go tool
-# covdata reads. It names the backend's Go version, so the toolchain that
-# builds it is the one the merge then runs.
+# covdata reads. Each producer runs its own function, so a pod the merge drops
+# leaves that function uncovered. It names the backend's Go version, so the
+# toolchain that builds it is the one the merge then runs.
 mkdir -p "$work/prog"
 printf 'module example.test/covered\n\n%s\n' "$(grep -m1 '^go ' "$ROOT_DIR/backend/go.mod")" > "$work/prog/go.mod"
 cat > "$work/prog/main.go" <<'EOF'
 package main
 
-func covered() int { return 1 }
+import "os"
 
-func main() { _ = covered() }
+func shard1() int { return 1 }
+
+func shard2() int { return 2 }
+
+func unit() int { return 3 }
+
+func solo() int { return 4 }
+
+func main() {
+	switch os.Args[1] {
+	case "shard1":
+		_ = shard1()
+	case "shard2":
+		_ = shard2()
+	case "unit":
+		_ = unit()
+	case "solo":
+		_ = solo()
+	}
+}
 EOF
 (cd "$work/prog" && GOWORK=off GOFLAGS= go build -cover -covermode=atomic -o "$work/prog/bin" .)
-pod() { mkdir -p "$1" && GOCOVERDIR="$1" "$work/prog/bin"; }
+pod() { mkdir -p "$1" && GOCOVERDIR="$1" "$work/prog/bin" "$2"; }
+
+# covers PROFILE FUNC: the profile counts the body of FUNC as run.
+covers() {
+  local line
+  line="$(grep -n "^func $2(" "$work/prog/main.go" | cut -d: -f1)"
+  grep -qE "/main\.go:$line\.[0-9]+,[0-9.]+ [0-9]+ [1-9]" "$1"
+}
 
 # artifacts ROOT SHARDS LEGS... lays out what download-artifact leaves: a shard
 # artifact with its meta.txt and pods, and a pod directory per unit leg.
@@ -33,10 +60,10 @@ artifacts() {
   for k in $(seq 1 "$shards"); do
     mkdir -p "$root/integration-shard-$k-attempt-1"
     printf 'total=%s\n' "$shards" > "$root/integration-shard-$k-attempt-1/meta.txt"
-    pod "$root/integration-shard-$k-attempt-1/covdata/part-1"
+    pod "$root/integration-shard-$k-attempt-1/covdata/part-1" "shard$k"
   done
   for leg in "$@"; do
-    pod "$root/unit-covdata-$leg-attempt-1"
+    pod "$root/unit-covdata-$leg-attempt-1" "$leg"
   done
 }
 
@@ -49,17 +76,19 @@ expect_fail() {
   [[ "$out" == *"$want"* ]] || fail "$name: the merge said '$out', want it to name '$want'"
 }
 
-# 1. Every producer sent its pods: one profile, holding the program's block.
+# 1. Every producer sent its pods: one profile, holding each producer's function.
 artifacts "$work/whole" 2 unit solo
 "$MERGE" "$work/whole" "$work/whole.out" > "$work/whole.log" || fail "a complete set did not merge: $(cat "$work/whole.log")"
 [[ "$(head -1 "$work/whole.out")" == 'mode: atomic' ]] || fail "the profile does not start with its mode line"
-grep -q 'example.test/covered/main.go' "$work/whole.out" || fail "the profile holds no block of the covered program"
+for producer in shard1 shard2 unit solo; do
+  covers "$work/whole.out" "$producer" || fail "the merged profile does not count $producer as run, so its pod was dropped"
+done
 grep -q '4 pod dirs (2 from 2 shards' "$work/whole.log" || fail "the merge did not count every pod: $(cat "$work/whole.log")"
 grep -qE '^coverage: [0-9]+ of [0-9]+ statements covered' "$work/whole.log" || fail "the merge printed no covered share: $(cat "$work/whole.log")"
 
 # 2. No shard artifact at all.
 mkdir -p "$work/none"
-pod "$work/none/unit-covdata-unit-attempt-1"
+pod "$work/none/unit-covdata-unit-attempt-1" unit
 expect_fail none "no shard artifact was downloaded" "$work/none"
 
 # 3. One shard of two sent nothing.
