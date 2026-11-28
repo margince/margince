@@ -276,7 +276,19 @@ export function TelegramBusinessPanel() {
       )}
       {changing && (
         <BusinessVisibilityDialog
-          connection={changing}
+          owner={changing.ownerLabel}
+          mailVisibility={changing.mailVisibility}
+          patch={async (mail_visibility) =>
+            unwrap(
+              await api.PATCH(
+                "/channel-connections/telegram-business/{id}/visibility",
+                {
+                  params: { path: { id: changing.id } },
+                  body: { mail_visibility, confirm: true },
+                },
+              ),
+            )
+          }
           onClose={() => setChanging(null)}
           onDone={() => {
             setChanging(null);

@@ -11,7 +11,7 @@ import { build } from "vite";
 import { describe, expect, it } from "vitest";
 import { MIN_BYTES, PRECOMPRESSED_TYPES } from "../../scripts/vite-precompress";
 import { BOOKING_HOST_IDS, BOOKING_ID_PREFIXES } from "../lib/bookingaddress";
-import { CONSENT_PATH } from "../lib/recordaddress";
+import { CONSENT_PATH, EMBED_PATH } from "../lib/recordaddress";
 
 // What nginx.conf answers for a path, worked out from the file the image ships
 // by nginx's own location rules: an exact match first, then the longest
@@ -221,6 +221,25 @@ describe("every response the web tier sends carries the whole security set", () 
           expect(own.get(name), "the icon's own CORP").toBe("cross-origin");
           continue;
         }
+        if (where.pattern === EMBED_PATH && name === "X-Frame-Options") {
+          expect(
+            own.get(name),
+            "the embed path's frame-ancestors decides",
+          ).toBe(undefined);
+          continue;
+        }
+        if (
+          where.pattern === EMBED_PATH &&
+          name === "Content-Security-Policy"
+        ) {
+          expect(own.get(name), "the embed path's own frame-ancestors").toBe(
+            value.replace(
+              "frame-ancestors 'none'",
+              "frame-ancestors $embed_ancestors",
+            ),
+          );
+          continue;
+        }
         if (
           name === "Cross-Origin-Opener-Policy" &&
           where.pattern === CONSENT_PATH
@@ -236,6 +255,28 @@ describe("every response the web tier sends carries the whole security set", () 
       }
     }
   });
+});
+
+// The embed path is the one page another origin may frame, and only an origin
+// the operator names in /etc/nginx/margince/. With no such file it refuses
+// every frame, as every other page does.
+it("lets only the embed path name frame ancestors, and none until an operator does", () => {
+  const where = locate(EMBED_PATH);
+  expect(where.modifier).toBe("=");
+  expect(where.body).toContain("try_files /index.html =404;");
+  const defaulted = where.body.indexOf(`set $embed_ancestors "'none'";`);
+  const included = where.body.indexOf("include /etc/nginx/margince/*.conf;");
+  expect(defaulted, "the default").toBeGreaterThan(-1);
+  expect(
+    included,
+    "the operator's file, read after the default",
+  ).toBeGreaterThan(defaulted);
+  for (const other of locations().filter((l) => l.pattern !== EMBED_PATH)) {
+    expect(other.body, other.pattern).not.toContain("$embed_ancestors");
+  }
+  for (const path of ["/", "/embed", "/embed/x", "/index.html", "/consent"]) {
+    expect(locate(path).pattern, path).not.toBe(EMBED_PATH);
+  }
 });
 
 // Another origin's page shows the icon in an <img>, which a same-origin CORP

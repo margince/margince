@@ -1,12 +1,23 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/channelwhatsapp.go backend/internal/modules/capture/channelzalo.go backend/internal/modules/capture/chatseat.go backend/internal/modules/capture/chatmessage.go backend/internal/modules/capture/chatchange.go -->
+<!-- describes: frontend/src/features/capture/connectors.business.tsx frontend/src/features/capture/connectors.businessdialogs.tsx backend/internal/modules/contacts/channelphone.go backend/internal/modules/capture/channelwhatsapp.go backend/internal/modules/capture/channelzalo.go backend/internal/modules/capture/chatseat.go backend/internal/modules/capture/chatmessage.go backend/internal/modules/capture/chatchange.go -->
 # Connecting WhatsApp and Zalo
 
 A company can connect one WhatsApp Business number or one Zalo account. What customers write to it shows in the
 **History** of the customer. So does what your team writes back in the WhatsApp Business app or in Zalo.
 
-There is no settings card for these two yet. An administrator connects them with the steps in
-[connect-whatsapp.md](../how-to/connect-whatsapp.md) and [connect-zalo-oa.md](../how-to/connect-zalo-oa.md).
+An administrator opens **Settings → Integrations → Messaging accounts**. Each provider has its own panel.
+Press **Connect account**, enter the account credentials and choose the team that reads its messages.
+Credentials stay hidden after connecting. Both accounts start **Held**.
+
+For WhatsApp, enter the WhatsApp Business Account ID, phone number ID, display number, access token and app secret.
+After connecting, copy the **Webhook verification token** into the provider's webhook settings before closing the dialog.
+It appears only once.
+
+For Zalo, enter the OA ID, app ID, account name, access token, refresh token, app secret and OA secret key. An account whose access expired says **Needs reconnection**. Disconnect it and connect it again
+with new credentials.
+
+The setup steps cover provider webhook events in [connect-whatsapp.md](../how-to/connect-whatsapp.md)
+and [connect-zalo-oa.md](../how-to/connect-zalo-oa.md).
 
 ### Who can read the messages?
 At first, only the team the administrator chose when connecting. That is **Held**. A member outside that team does not
@@ -34,6 +45,13 @@ message text. A reaction, a delivery tick and a "seen" mark add nothing.
 When a customer edits a WhatsApp message, the text in **History** changes to the new text. When a message is deleted
 on a company number, Margince keeps the copy, because the whole team may delete there. Zalo has no edits.
 Also called: edited WhatsApp message, deleted message.
+
+### Where is the customer's WhatsApp number?
+A phone-based WhatsApp account fills the customer's **Phone** field and gives the number for its **WhatsApp** chat link. Existing numbers stay, and a
+number already archived on the contact stays archived. A business-scoped user ID is not a phone number and fills
+no phone field. The background task also fills older accounts whose retained provider originals name the number.
+A number given only by a colleague in an answer does not prove a WhatsApp phone. Phone numbers follow the
+contact's visibility; holding a message limits its readers, not the contact's phone fields.
 
 ### What if two numbers have the same customer?
 Each number or account has its own threads. A customer who writes to two of your numbers has two threads, and

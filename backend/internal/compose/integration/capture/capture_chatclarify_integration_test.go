@@ -366,7 +366,9 @@ func (c *clarifyCase) held(a ids.UUID) bool {
 func (c *clarifyCase) filedOnCustomer(a ids.UUID) bool {
 	c.t.Helper()
 	return wsCount(c.t, c.e, `SELECT count(*) FROM activity_link l JOIN contact_channel_identity i ON i.contact_id = l.contact_id
-		WHERE l.activity_id = $1 AND i.provider = $2 AND i.channel_user_id = $3`, a, c.n.provider, c.n.customerID) == 1
+		JOIN activity_participant p ON p.activity_id = l.activity_id AND p.contact_id = l.contact_id
+		WHERE l.activity_id = $1 AND i.provider = $2 AND i.channel_user_id = $3
+		  AND p.role = 'from' AND p.channel_user_id = i.channel_user_id`, a, c.n.provider, c.n.customerID) == 1
 }
 
 func (c *clarifyCase) requireNoColleagueContact() {
@@ -417,6 +419,9 @@ func TestAColleaguesForwardsWithoutAnAuthorAreAskedAboutOnceAndFiledOnTheCustome
 			if !c.filedOnCustomer(id) {
 				t.Fatalf("activity %s is not filed on the customer", id)
 			}
+		}
+		if n := wsCount(t, c.e, `SELECT count(*) FROM contact_phone p JOIN contact_channel_identity i ON i.contact_id=p.contact_id WHERE i.provider=@provider AND i.channel_user_id=@user AND p.archived_at IS NULL`, pgx.NamedArgs{"provider": c.n.provider, "user": c.n.customerID}); n != 0 {
+			t.Fatal("a colleague's author answer was treated as a provider-proven phone")
 		}
 		if n := wsCount(t, c.e, `SELECT count(*) FROM activity WHERE kind = 'message' AND captured_by LIKE '%' || $1::text`, c.e.Rep1); n != 3 {
 			t.Fatalf("messages submitted by the colleague = %d, want the 3 forwards", n)
@@ -828,7 +833,7 @@ func TestAHeldForwardThatWentAwayWhileTheAnswerWasFilingIsLeftAlone(t *testing.T
 			t.Fatalf("the sink is a %T", c.sink)
 		}
 		c.sink = sink.WithChannelEnsurer(ensurer)
-		participantsBefore := wsCount(t, c.e, `SELECT count(*) FROM activity_participant WHERE activity_id = ANY($1)`, []ids.UUID{a, b})
+		participantsBefore := wsCount(t, c.e, `SELECT count(*) FROM activity_participant WHERE activity_id = $1`, a)
 		if err := c.reply("r1", c.n.askID(1), "[contacts]", c.n.card); !errors.Is(err, capturemod.ErrChatMessageConsumed) {
 			t.Fatalf("filing the answer = %v, want it consumed", err)
 		}
@@ -839,11 +844,14 @@ func TestAHeldForwardThatWentAwayWhileTheAnswerWasFilingIsLeftAlone(t *testing.T
 		if n := wsCount(t, c.e, `SELECT count(*) FROM activity_link WHERE activity_id = $1`, gone); n != 0 {
 			t.Fatalf("the archived forward was linked %d times", n)
 		}
-		if n := wsCount(t, c.e, `SELECT count(*) FROM activity_participant WHERE activity_id = ANY($1)`, []ids.UUID{a, b}); n != participantsBefore {
-			t.Fatalf("participants went from %d to %d, want none written", participantsBefore, n)
+		if n := wsCount(t, c.e, `SELECT count(*) FROM activity_participant WHERE activity_id = $1`, gone); n != participantsBefore {
+			t.Fatalf("archived forward participants went from %d to %d, want none written", participantsBefore, n)
 		}
 		if n := wsCount(t, c.e, `SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = $1`, c.n.customerID); n != 1 {
 			t.Fatalf("customer identities = %d, want the one the still-held forward made", n)
+		}
+		if n := wsCount(t, c.e, `SELECT count(*) FROM activity_participant WHERE activity_id = ANY($1) AND role = 'from' AND channel_user_id = $2`, []ids.UUID{a, b}, c.n.customerID); n != 1 {
+			t.Fatalf("customer authors = %d, want only the still-held forward stamped", n)
 		}
 	})
 }

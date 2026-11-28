@@ -22,6 +22,7 @@ import {
 } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { BOT_COPY, type BotProvider } from "./botcopy";
+import { channelConnectionsNotConfigured } from "./channelconfiguration";
 import { BotConnectForm } from "./telegram-connect-form";
 
 // The workspace's messaging bots: one per provider for the whole company, read
@@ -50,9 +51,7 @@ export function useChannelConnections() {
     queryFn: async (): Promise<ChannelConnectionsResult> => {
       const { data, error, response } = await api.GET("/channel-connections");
       if (
-        response.status === 503 &&
-        (problemCode(error) === "channel_connections_not_configured" ||
-          problemCode(error) === "channel_credentials_not_configured")
+        channelConnectionsNotConfigured(response.status, problemCode(error))
       ) {
         return { notConfigured: true, data: [] };
       }

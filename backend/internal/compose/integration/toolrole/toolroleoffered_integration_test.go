@@ -44,6 +44,39 @@ func TestToolsListOffersEachSeededRoleItsAllowedCells(t *testing.T) {
 	holdCellsAreOffered(t, d, "tool-role-cells@fable.test")
 }
 
+func TestImportLifecycleIsOfferedWithoutContactCreate(t *testing.T) {
+	d := toolRoleApp(t, "import-without-create")
+	email := "import-without-create@fable.test"
+	createRole(t, d.E, "rep_without_contact_create", `jsonb_set(permissions, '{objects,contact,create}', 'false')`)
+	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
+	var calls []toolRoleCall
+	for _, call := range toolRoleCalls(specs, routeShapes()) {
+		if call.verb == "commit_import" || call.verb == "undo_import_run" {
+			calls = append(calls, call)
+		}
+	}
+	if len(calls) != 2 {
+		t.Fatalf("expected both import lifecycle calls, got %d", len(calls))
+	}
+	pool := seedToolRoleRecords(t, d.E, calls, "")
+	pool.caller = d.MCP.Bearer()
+	for _, call := range calls {
+		t.Run(call.verb, func(t *testing.T) {
+			apptest.AssignRoleTo(t, d.E, email, "admin")
+			args := call.args(pool)
+			apptest.AssignRoleTo(t, d.E, email, "rep_without_contact_create")
+			offered := offeredCalls(t, d.MCP.ListedTools(t), specs)
+			if !offered[baseRow(call.row)] {
+				t.Errorf("%s is hidden without an optional create grant", call.verb)
+			}
+			got, _ := callThroughApproval(t, d.E, d.MCP, call.verb, args)
+			if got.IsError {
+				t.Fatalf("%s refused the import owner: %s", call.verb, got.Text)
+			}
+		})
+	}
+}
+
 // operatorListings are the holdings the test above checks, one pass each.
 func operatorListings(t *testing.T, d *apptest.TwoDoors, recorded *toolCheckRecorder) []listingPass {
 	t.Helper()

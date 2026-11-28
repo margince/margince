@@ -20,25 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// MergeContact returns the survivor of a version-checked contact merge.
-// The store owns collision handling and consent; route admission governs agents.
-func (h Handlers) MergeContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.MergeContactParams) {
-	var req crmcontracts.MergeContactJSONBody
-	if !httperr.Decode(w, r, &req) {
-		return
-	}
-	ifVersion, ok := httperr.IfMatchVersion(w, r)
-	if !ok {
-		return
-	}
-	survivor, err := h.store.MergeContact(r.Context(), pathID[ids.ContactKind](id), ids.From[ids.ContactKind](ids.UUID(req.TargetId)), ifVersion)
-	if err != nil {
-		writeStoreErr(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, survivor)
-}
-
 // uuidArgs widens a repeated uuid query parameter to the store's own shape.
 // An absent parameter and an empty list are the same thing here: no filter.
 func uuidArgs(in *[]openapi_types.UUID) []ids.UUID {

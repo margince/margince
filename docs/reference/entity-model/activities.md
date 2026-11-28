@@ -615,6 +615,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_aparticipant_contact`: `btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)`
 - `idx_aparticipant_one_roster_seat`: `btree (id) WHERE (roster_seat IS NOT NULL)`
 - `idx_aparticipant_sender_domain_reversed`: `btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from') AND (address_domain_folded IS NOT NULL))`
+- `idx_aparticipant_unresolved_channel`: `btree (channel_user_id, activity_id, id) WHERE ((channel_user_id IS NOT NULL) AND (contact_id IS NULL) AND (user_id IS NULL) AND (NOT past_party_cap))`
 - `idx_aparticipant_user`: `btree (user_id, activity_id) WHERE (user_id IS NOT NULL)`
 - `idx_aparticipant_waiting_address_time`: `btree (lower(address), domain_evidence_at DESC) WHERE ((role = 'to') AND (address IS NOT NULL))`
 - `idx_participant_domain_evidence_incomplete`: `btree (id) WHERE ((domain_evidence_parent_version IS NULL) OR (domain_evidence_at IS NULL) OR (domain_evidence_precision IS NULL) OR (domain_evidence_visible IS NULL))`
