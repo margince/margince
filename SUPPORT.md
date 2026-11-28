@@ -26,6 +26,6 @@ Two things must **not** go in a public issue:
 - **A Code of Conduct report.** Mail `conduct@gradion.com`; see the
   [Code of Conduct](CODE_OF_CONDUCT.md).
 
-Margince has the BUSL-1.1 license, and you may run it in production for free for up to 3
-seats. Questions about a license past that limit, or about support you buy, go to
-[gradion.com](https://gradion.com) and not to this repository.
+Margince is under BUSL-1.1. Production use after the initial trial needs a commercial subscription; see
+[LICENSING.md](LICENSING.md) for the terms. Questions about a license or paid support go to
+[gradion.com](https://gradion.com).

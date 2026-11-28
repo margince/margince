@@ -473,6 +473,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `preferencecentrewriters_test.go` | H2 | The public preference centre answers in one shape, and resolves "which address is theirs" in one place. |
 | `prefixindex_test.go` | H2 | A plain index does not hold a prefix of another index's columns. |
 | `presetcertdisclosure_test.go` | H2 | A shipped preset binds a model to every task, and the certification records grade each of those bindings. |
+| `productiongrant_test.go` | H2 | Pages cannot promise indefinite free production seats. |
 | `profilefieldreaders_test.go` | H2 | contact\_profile\_field holds what a machine asserted about a contact, and ai\_feedback holds what a human then decided about that assertion. |
 | `projectionedgereaders_test.go` | H2 | The projection tier's read census. |
 | `projectkeyshape_test.go` | H1 | A project key has one shape, projectkey.CheckPattern, and Go reads it through projectkey.Shaped. |
