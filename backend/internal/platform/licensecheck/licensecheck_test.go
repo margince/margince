@@ -103,11 +103,10 @@ func TestResolveReportsAbsentForNoToken(t *testing.T) {
 	}
 }
 
-// A module this build cannot execute is a packaging fault, not an absence:
-// reading either failure below as "unlicensed" would turn one into a silent
-// downgrade. Both are errors, and each names its own stage — a blob that never
-// unwrapped and one that unwrapped into something wazero refused are different
-// things to go and fix.
+// A module this build cannot execute is a packaging fault, not an absence.
+// Reading either failure below as "unlicensed" would turn one into a silent
+// downgrade. Both are errors, and each names its own stage. A blob that never
+// unwrapped and one wazero would not compile are different things to fix.
 func TestAModuleThatCannotRunIsRejectedRatherThanTreatedAsUnlicensed(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
@@ -125,20 +124,45 @@ func TestAModuleThatCannotRunIsRejectedRatherThanTreatedAsUnlicensed(t *testing.
 		{
 			name:   "a well-formed archive of something that is not wasm",
 			module: gzipped(t, []byte("still not webassembly")),
-			stage:  "run module",
+			stage:  "compile module",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := check(context.Background(), tc.module, issuer, product, generation, "any-token")
+			_, err := compile(tc.module)
 			if err == nil {
-				t.Fatal("check accepted a module that is not WebAssembly")
+				t.Fatal("compile accepted a module that is not WebAssembly")
 			}
 			if !strings.Contains(err.Error(), tc.stage) {
 				t.Errorf("error = %q, want it to name the %q stage so the fault is placeable", err, tc.stage)
 			}
 		})
 	}
+}
+
+// bundledValidator is the compiled module every Resolve in this process shares.
+func bundledValidator(t *testing.T) *validator {
+	t.Helper()
+	module, err := bundled()
+	if err != nil {
+		t.Fatalf("compiling the bundled module: %v", err)
+	}
+	return module
+}
+
+// compiled readies module for one test alone and releases it when the test ends.
+func compiled(t *testing.T, module []byte) *validator {
+	t.Helper()
+	ready, err := compile(module)
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := ready.runtime.Close(context.Background()); err != nil {
+			t.Errorf("closing the test's runtime: %v", err)
+		}
+	})
+	return ready
 }
 
 // gzipped frames payload the way the older published artifact was framed, which
@@ -308,7 +332,7 @@ func TestARejectionReasonCannotForgeALogLine(t *testing.T) {
 
 	// The premise first: without this, the assertions below would hold for a
 	// token the module never quoted, and the test would prove nothing.
-	_, raw := check(context.Background(), bundledModule, issuer, product, generation, token)
+	_, raw := bundledValidator(t).check(context.Background(), issuer, product, generation, token)
 	if raw == nil {
 		t.Fatal("the bundled module accepted an unsigned token")
 	}
@@ -362,16 +386,16 @@ func TestARejectionReasonIsBounded(t *testing.T) {
 // refused, or a genuinely refused license reads as a machine problem.
 func TestAVerdictAndAModuleFaultAreDistinguishableByType(t *testing.T) {
 	t.Parallel()
-	_, verdict := check(context.Background(), bundledModule, issuer, product, generation, "not-a-license")
+	_, verdict := bundledValidator(t).check(context.Background(), issuer, product, generation, "not-a-license")
 	if verdict == nil {
 		t.Fatal("the bundled module accepted a token that is not a license")
 	}
 	if !errors.Is(verdict, ErrVerdict) {
 		t.Fatalf("a refused license is not an ErrVerdict, so Resolve would report it as a module fault: %v", verdict)
 	}
-	_, fault := check(context.Background(), gzipped(t, []byte("not webassembly")), issuer, product, generation, "t")
+	_, fault := compile(gzipped(t, []byte("not webassembly")))
 	if fault == nil {
-		t.Fatal("check accepted a module that is not WebAssembly")
+		t.Fatal("compile accepted a module that is not WebAssembly")
 	}
 	if errors.Is(fault, ErrVerdict) {
 		t.Errorf("a module that could not run reads as a verdict about the license: %v", fault)

@@ -28,9 +28,9 @@
 // here in about a millisecond, and a bomb that did get past the parser would
 // exhaust the module's memory rather than the process's.
 //
-// Unlike licensecheck, which builds a wazero runtime per verdict, the module is
-// compiled ONCE and pooled: it is 5 MB and costs about a second to compile,
-// against about two milliseconds to read a document.
+// As in licensecheck, the module is compiled once, and here its instances are
+// pooled too. It is 5 MB and costs about a second to compile, against about two
+// milliseconds to read a document.
 package pdftext
 
 import (
