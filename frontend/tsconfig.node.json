@@ -24,7 +24,6 @@
     "allowImportingTsExtensions": true,
     "types": ["node", "vite/client"],
     "resolveJsonModule": true,
-    "baseUrl": ".",
     // This project is what typechecks vite.config.ts AND the test tree (the
     // app project excludes *.test.*), so it needs the composition alias too —
     // otherwise the vanilla lane's registry import resolves in the app project
