@@ -210,3 +210,26 @@ describe("the tick-spelling rule", () => {
     ).toEqual(['src/features/planted.tsx:1: role="menuitemradio" on <li>']);
   });
 });
+
+describe("the tick prefilter", () => {
+  it("reads a native tick however its type is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.tsx"),
+          area: "src",
+          text: 'export const A = () => <input type={"checkbox"} />;\n',
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.tsx"),
+          area: "src",
+          text: 'export const B = () => <input type={"\\x63heckbox"} />;\n',
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

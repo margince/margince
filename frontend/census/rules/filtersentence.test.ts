@@ -79,3 +79,18 @@ describe("the filtersentence rule", () => {
     ]);
   });
 });
+
+describe("the operator prefilter", () => {
+  it("reads a filters.op. message however its key is spelled", () => {
+    const at = (text: string) =>
+      plantedFindings(rule, [
+        { path: join(srcDir, "features", "plant", "k.ts"), area: "src", text },
+      ]);
+    expect(at('export const k = "filters.op.eq";\n')).toContain(
+      "frontend/src/features/plant/k.ts: spells a filters.op. message",
+    );
+    expect(at('export const k = "filters\\x2eop.eq";\n')).toContain(
+      "frontend/src/features/plant/k.ts: spells a filters.op. message",
+    );
+  });
+});

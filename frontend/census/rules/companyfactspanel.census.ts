@@ -7,6 +7,7 @@
 // facts a finished read has staged.
 
 import { join } from "node:path";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { type CensusFile, type CensusRule, srcDir } from "../tree";
 
 // Assembled rather than written, so this file and its test are no hit.
@@ -22,8 +23,9 @@ const inCorpus = (file: CensusFile) =>
 export const rule: CensusRule = {
   name: "companyfactspanel",
   corpus: (tree) => tree.files.filter(inCorpus),
+  // Cooked, so `"\"company-facts\""` in a string counts too: an over-count, never a miss.
   visit: (file) =>
-    file.text.includes(KEY_LITERAL)
+    mayHoldLiteral(file, KEY_LITERAL)
       ? [`${file.rel}: spells the company-facts key itself`]
       : [],
   advice:

@@ -53,3 +53,14 @@ describe("the Ctrl cap is copy", () => {
     ).toEqual(["src/app/p.ts:1"]);
   });
 });
+
+describe("the Ctrl prefilter", () => {
+  it("reads a cap only an escape spells", () => {
+    const text = 'export const cap = "\\x43trl";\n';
+    expect(
+      plantedFindings(rule, [
+        { path: join(srcDir, "app", "p.ts"), area: "src", text },
+      ]),
+    ).toEqual(["src/app/p.ts:1"]);
+  });
+});

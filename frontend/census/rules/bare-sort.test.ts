@@ -3,7 +3,7 @@
 
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { srcDir, treeOf } from "../tree";
+import { plantedFindings, srcDir, treeOf } from "../tree";
 import { rule } from "./bare-sort.census";
 
 const planted = (text: string) => {
@@ -51,5 +51,28 @@ describe("the bare-sort rule", () => {
     expect(
       corpus.some((file) => file.rel === "census/rules/bare-sort.census.ts"),
     ).toBe(true);
+  });
+});
+
+describe("the sort prefilter", () => {
+  it("reads a bare sort however it is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.ts"),
+          area: "src",
+          text: "rows.sort();\n",
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.ts"),
+          area: "src",
+          text: "rows.\\u0073ort();\n",
+        },
+      ]),
+    ).toHaveLength(1);
   });
 });

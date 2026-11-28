@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusRule } from "../tree";
 import { reachedInTree } from "./bundle-reach.census";
 
@@ -115,7 +116,7 @@ export const rule: CensusRule = {
   floors: (corpus) =>
     corpus.length > 500 ? [] : ["the bundle reaches 500 screens or fewer"],
   visit: (file) =>
-    file.source
+    file.source && mayHoldLiteral(file, /status/)
       ? rawStatusRenders(file.source).map((found) => `${file.rel}: ${found}`)
       : [],
   advice:

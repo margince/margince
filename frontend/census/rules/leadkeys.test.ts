@@ -3,6 +3,7 @@
 
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 import { plantedFindings, srcDir } from "../tree";
 import { rule, spelledIn } from "./leadkeys.census";
 
@@ -73,7 +74,9 @@ const planted: ReadonlyArray<readonly [string, string, number]> = [
 describe("the leadkeys rule", () => {
   for (const [name, source, expected] of planted) {
     it(`sees ${name}`, () => {
-      expect(spelledIn("planted.tsx", source)).toHaveLength(expected);
+      expect(
+        spelledIn("planted.tsx", parseSource("planted.tsx", source)),
+      ).toHaveLength(expected);
     });
   }
 
@@ -84,5 +87,28 @@ describe("the leadkeys rule", () => {
       { path: join(srcDir, "lib", "leadkeys.ts"), area: "src", text },
     ]);
     expect(findings).toEqual(['src/features/planted.tsx:1 ["lead", id]']);
+  });
+});
+
+describe("the lead prefilter", () => {
+  it("reads a lead key however its root is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.ts"),
+          area: "src",
+          text: 'q({ queryKey: ["lead", id] });\n',
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.ts"),
+          area: "src",
+          text: 'q({ queryKey: ["\\x6cead", id] });\n',
+        },
+      ]),
+    ).toHaveLength(1);
   });
 });

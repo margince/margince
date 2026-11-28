@@ -126,3 +126,17 @@ describe("the overflowmenu-icons rule", () => {
     ]);
   });
 });
+
+describe("the menu prefilter", () => {
+  it("reads a glyph in a menu, whose tag no escape can spell", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.tsx"),
+          area: "src",
+          text: 'import { Trash2 } from "lucide-react";\nexport const A = () => <OverflowMenu><Trash2 /></OverflowMenu>;\n',
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

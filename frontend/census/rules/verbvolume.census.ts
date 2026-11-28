@@ -5,6 +5,7 @@
 // the Sparkles mark itself. A caller that hands it one more draws two.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 
 // A computed variant counts as AI, since a lookup can come out as "ai".
@@ -66,7 +67,7 @@ export const rule: CensusRule = {
   floors: (corpus) =>
     corpus.length > 100 ? [] : ["fewer than 100 files were read"],
   visit: (file) =>
-    file.source
+    file.source && mayHoldLiteral(file, /Sparkles/)
       ? secondMarks(file.source).map((line) => `${file.rel}:${line}`)
       : [],
   advice:

@@ -163,8 +163,7 @@ function htmlViolations(file: string, html: string): string[] {
 
 // Strings only. A comment discussing the rule is not breaking it. JSX text
 // is words on the screen, which cannot carry a class or set a face.
-function scriptViolations(file: string, source: string): string[] {
-  const parsed = parseSource(file, source);
+function scriptViolations(file: string, parsed: ts.SourceFile): string[] {
   const found: string[] = [];
   const visit = (node: ts.Node) => {
     if (
@@ -199,10 +198,14 @@ function scriptViolations(file: string, source: string): string[] {
 }
 
 /** Every reintroduction of mono outside code in one source text. */
-export function monoViolations(file: string, text: string): string[] {
+export function monoViolations(
+  file: string,
+  text: string,
+  source?: ts.SourceFile,
+): string[] {
   if (file.endsWith(".css")) return stylesheetViolations(file, text, 0);
   if (file.endsWith(".html")) return htmlViolations(file, text);
-  return scriptViolations(file, text);
+  return scriptViolations(file, source ?? parseSource(file, text));
 }
 
 // Every source a bundler, Storybook or Playwright reads. A test naming the
@@ -251,7 +254,7 @@ export const rule: CensusRule = {
         : ["the census reached no Storybook config"]),
     ];
   },
-  visit: (file) => monoViolations(file.rel, file.text),
+  visit: (file) => monoViolations(file.rel, file.text, file.source),
   advice:
     "Mono is for code, pre, samp and .code-block only; a figure that must line up uses t-num.",
 };

@@ -18,8 +18,10 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { stable } from "../src/format/collate";
 import { reachedModules } from "./lib/bundle-reach.ts";
+import { mayHoldLiteral } from "./lib/literal-text.ts";
 import {
   filesMatching,
+  isModuleOnDisk,
   MODULE_FILE,
   moduleAt,
   moduleSpecifiers,
@@ -134,37 +136,73 @@ function isFile(path: string): boolean {
   return existsSync(path) && statSync(path).isFile();
 }
 
-// importsOf resolves what one file imports, stylesheets and assets included:
-// a feature that pulls in another feature's CSS depends on its class names.
-function importsOf(file: string): string[] {
+/** Where readGraph reads a file and asks whether a path is one. */
+export type GraphReader = Readonly<{
+  text(path: string): string;
+  source(path: string): ts.SourceFile;
+  isModule(path: string): boolean;
+  isFile(path: string): boolean;
+}>;
+
+export const DISK: GraphReader = {
+  text: (path) => readFileSync(path, "utf8"),
+  source: sourceFileAt,
+  isModule: isModuleOnDisk,
+  isFile,
+};
+
+// Stylesheets and assets count: a feature that pulls in another feature's CSS
+// depends on its class names.
+function importTargets(
+  file: string,
+  read: GraphReader,
+): { path: string; hit: string | null }[] {
   let specifiers: string[];
   if (file.endsWith(".css")) {
-    specifiers = [...readFileSync(file, "utf8").matchAll(CSS_IMPORT)].map(
+    specifiers = [...read.text(file).matchAll(CSS_IMPORT)].map(
       (match) => match[1],
     );
   } else {
-    const source = sourceFileAt(file);
-    specifiers = [...moduleSpecifiers(source, "all"), ...mockedPaths(source)];
+    const source = read.source(file);
+    specifiers = [
+      ...moduleSpecifiers(source, "all"),
+      ...(mayHoldLiteral(source, /\bvi\b/) ? mockedPaths(source) : []),
+    ];
   }
   return specifiers.flatMap((specifier) => {
     if (!specifier.startsWith(".")) return [];
     const path = join(dirname(file), specifier.replace(/\?.*$/, ""));
-    const hit = moduleAt(path) ?? (isFile(path) ? path : null);
-    return hit === null ? [] : [hit];
+    const hit =
+      moduleAt(path, read.isModule) ?? (read.isFile(path) ? path : null);
+    return [{ path, hit }];
   });
 }
 
 const READ = new RegExp(`${MODULE_FILE.source}|\\.css$`);
 
+/** The graph over `files`, and each relative import `read` resolves to nothing. */
+export function readGraphWithMisses(
+  root: string,
+  files: readonly string[],
+  read: GraphReader,
+): { graph: ImportGraph; unresolved: { file: string; path: string }[] } {
+  const key = (path: string) => relative(root, path).split(sep).join("/");
+  const unresolved: { file: string; path: string }[] = [];
+  const graph = new Map(
+    files.map((file) => {
+      const hits = importTargets(file, read).flatMap(({ path, hit }) => {
+        if (hit === null) unresolved.push({ file, path });
+        return hit === null ? [] : [key(hit)];
+      });
+      return [key(file), [...new Set(hits)]];
+    }),
+  );
+  return { graph, unresolved };
+}
+
 // readGraph reads the import graph of every module and stylesheet under `root`.
 export function readGraph(root = SRC): ImportGraph {
-  const key = (path: string) => relative(root, path).split(sep).join("/");
-  return new Map(
-    filesMatching(root, READ).map((file) => [
-      key(file),
-      [...new Set(importsOf(file).map(key))],
-    ]),
-  );
+  return readGraphWithMisses(root, filesMatching(root, READ), DISK).graph;
 }
 
 // parseLedger reads the waiver lines, skipping comments and blank lines. A

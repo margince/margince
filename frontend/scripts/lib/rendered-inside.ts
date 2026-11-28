@@ -260,6 +260,15 @@ function alternativeLandsOn(
   });
 }
 
+// Each chip asks this of every rule, once per rule beneath it.
+const inked = new WeakMap<Rule, boolean>();
+
+function setsInk(rule: Rule): boolean {
+  const known = inked.get(rule) ?? inks(rule.body).length > 0;
+  inked.set(rule, known);
+  return known;
+}
+
 // overriddenInside answers whether some rule sets this element's ink with the
 // chip named in its own selector, which is what the cascade then shows.
 export function overriddenInside(
@@ -275,7 +284,7 @@ export function overriddenInside(
   );
   return all.some((other) => {
     if (other === rule || other === chip) return false;
-    if (inks(other.body).length === 0) return false;
+    if (!setsInk(other)) return false;
     return alternativesOf(other.selector).some((selector) =>
       alternativeOverrides(selector, host, painted),
     );

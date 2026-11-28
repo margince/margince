@@ -12,6 +12,7 @@
 // (`const writer = navigator.clipboard`) is the same offence.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 
 // The files allowed to name it: the one implementation, and the helper that
@@ -24,11 +25,11 @@ const OWNERS: ReadonlySet<string> = new Set([
 /**
  * Whether a file can carry the offence, decided without walking its tree. The
  * matcher fires on a property the source names, and every such name appears in
- * the text. So the filter is wider than the matcher, and spares the walk of
+ * the text, raw or cooked. So the filter is wider than the matcher, and spares the walk of
  * every file that never says the word.
  */
 export function mayReachForTheClipboard(text: string): boolean {
-  return text.includes("clipboard");
+  return mayHoldLiteral(text, "clipboard");
 }
 
 /**

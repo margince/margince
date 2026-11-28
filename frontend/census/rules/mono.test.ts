@@ -148,3 +148,26 @@ describe("mono is for code", () => {
     ]);
   });
 });
+
+describe("the mono rule over the parsed tree", () => {
+  it("reads a mono family however its string is spelled", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.tsx"),
+          area: "src",
+          text: 'export const s = "Geist Mono";\n',
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.tsx"),
+          area: "src",
+          text: 'export const s = "G\\x65ist Mono";\n',
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

@@ -5,37 +5,80 @@
 // shared file is not one feature's code. The rules and their ratchet live in
 // scripts/feature-boundaries.ts; this runs them over the tree.
 //
-// `readGraph` walks src/ itself and takes no file list. The floors hold its
-// walk to the tree's own files, so a walk that stops short fails here.
+// The graph is read from the tree. An import the tree cannot resolve and the
+// disk can is an edge the graph lost, so the floors fail it.
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import {
+  DISK,
+  type GraphReader,
   type ImportGraph,
   judge,
   LEDGER,
   ownedFindings,
-  ownerOf,
   parseLedger,
   reachFindings,
-  readGraph,
+  readGraphWithMisses,
   SRC,
 } from "../../scripts/feature-boundaries";
-import { MODULE_FILE } from "../../scripts/lib/source-tree";
+import { MODULE_FILE, moduleAt } from "../../scripts/lib/source-tree";
 import { stable } from "../../src/format/collate";
-import type { CensusFile, CensusRule, CensusTree } from "../tree";
+import {
+  type CensusFile,
+  type CensusRule,
+  type CensusTree,
+  TREE_FILE,
+} from "../tree";
 import { reachedInTree } from "./bundle-reach.census";
 
 const fromSrc = (file: CensusFile) => file.rel.replace(/^src\//, "");
 
-const graphs = new WeakMap<CensusTree, ImportGraph>();
-const walkedGraph = (tree: CensusTree): ImportGraph => {
-  const known = graphs.get(tree);
-  if (known) return known;
-  const graph = readGraph();
-  graphs.set(tree, graph);
-  return graph;
+const inGraph = (file: CensusFile) =>
+  file.area === "src" &&
+  (MODULE_FILE.test(file.path) || file.path.endsWith(".css"));
+
+// The walk equals git under src/, so the tree answers there for every kind of
+// file it walks; the disk answers only for an asset the walk does not read.
+const treeReader = (tree: CensusTree): GraphReader => {
+  const fromTree = (path: string) =>
+    path.startsWith(`${SRC}${sep}`) && TREE_FILE.test(path);
+  return {
+    text: (path) => tree.at(path)?.text ?? DISK.text(path),
+    source: (path) => tree.at(path)?.source ?? DISK.source(path),
+    isModule: (path) =>
+      fromTree(path)
+        ? MODULE_FILE.test(path) && tree.at(path) !== undefined
+        : DISK.isModule(path),
+    isFile: (path) =>
+      fromTree(path) ? tree.at(path) !== undefined : DISK.isFile(path),
+  };
 };
+
+const reads = new WeakMap<CensusTree, ReturnType<typeof readGraphWithMisses>>();
+const treeRead = (tree: CensusTree) => {
+  const known = reads.get(tree);
+  if (known) return known;
+  const files = tree.files.filter(inGraph).map((file) => file.path);
+  const read = readGraphWithMisses(SRC, files, treeReader(tree));
+  reads.set(tree, read);
+  return read;
+};
+
+const treeGraph = (tree: CensusTree): ImportGraph => treeRead(tree).graph;
+
+/** Each import the tree resolves to nothing and the disk resolves. */
+function lostEdges(tree: CensusTree): string[] {
+  const fromRepo = (path: string) => relative(join(SRC, ".."), path);
+  return treeRead(tree)
+    .unresolved.filter(
+      ({ path }) => moduleAt(path, DISK.isModule) !== null || DISK.isFile(path),
+    )
+    .map(
+      ({ file, path }) =>
+        `${fromRepo(file)} imports ${fromRepo(path)}, which is on disk and not in the tree`,
+    );
+}
 
 /** The feature folders the tree holds, as `features/<name>`. */
 export function featureFolders(corpus: readonly CensusFile[]): string[] {
@@ -46,62 +89,30 @@ export function featureFolders(corpus: readonly CensusFile[]): string[] {
   return [...new Set(folders)].sort(stable);
 }
 
-/** Each way the walked graph differs from the tree's own files. */
-export function graphDrift(
-  corpus: readonly CensusFile[],
-  graph: ImportGraph,
-): string[] {
-  const read = new Set(corpus.map(fromSrc));
-  const seen = new Set([...graph.keys()].map(ownerOf));
-  return [
-    ...[...read]
-      .filter((path) => !graph.has(path))
-      .map((path) => `src/${path} is in the tree and not in the import graph`),
-    ...[...graph.keys()]
-      .filter((path) => !read.has(path))
-      .map((path) => `src/${path} is in the import graph and not in the tree`),
-    ...featureFolders(corpus)
-      .filter((feature) => !seen.has(feature))
-      .map((feature) => `src/${feature} was not read`),
-  ];
-}
-
-/** The rule over an import graph; the tree's rule reads it with `readGraph`. */
-export function boundariesRule(
-  graphOf: (tree: CensusTree) => ImportGraph,
-): CensusRule {
-  return {
-    name: "feature-boundaries",
-    corpus: (tree) =>
-      tree.files.filter(
-        (file) =>
-          file.area === "src" &&
-          (MODULE_FILE.test(file.path) || file.path.endsWith(".css")),
-      ),
-    floors: (corpus, tree) => [
-      ...(featureFolders(corpus).length > 10
-        ? []
-        : ["10 feature folders or fewer were read"]),
-      ...graphDrift(corpus, graphOf(tree)),
-    ],
-    // Rule 2 counts only importers that ship. A stylesheet ships with the
-    // module importing it.
-    across: (_corpus, tree) => {
-      const graph = graphOf(tree);
-      const reached = reachedInTree(tree);
-      const ships = (path: string) =>
-        path.endsWith(".css") || reached.has(join(SRC, path));
-      return judge(
-        [...reachFindings(graph), ...ownedFindings(graph, ships)],
-        parseLedger(readFileSync(LEDGER, "utf8")),
-      );
-    },
-    advice:
-      "A feature imports another feature or the shell, or a shared file " +
-      "serves one feature alone. Each line says where the file goes; move it " +
-      "with node scripts/move-modules.ts. Never add a line to " +
-      "scripts/feature-boundaries-waivers.txt.",
-  };
-}
-
-export const rule = boundariesRule(walkedGraph);
+export const rule: CensusRule = {
+  name: "feature-boundaries",
+  corpus: (tree) => tree.files.filter(inGraph),
+  floors: (corpus, tree) => [
+    ...(featureFolders(corpus).length > 10
+      ? []
+      : ["10 feature folders or fewer were read"]),
+    ...lostEdges(tree),
+  ],
+  // Rule 2 counts only importers that ship. A stylesheet ships with the
+  // module importing it.
+  across: (_corpus, tree) => {
+    const graph = treeGraph(tree);
+    const reached = reachedInTree(tree);
+    const ships = (path: string) =>
+      path.endsWith(".css") || reached.has(join(SRC, path));
+    return judge(
+      [...reachFindings(graph), ...ownedFindings(graph, ships)],
+      parseLedger(readFileSync(LEDGER, "utf8")),
+    );
+  },
+  advice:
+    "A feature imports another feature or the shell, or a shared file " +
+    "serves one feature alone. Each line says where the file goes; move it " +
+    "with node scripts/move-modules.ts. Never add a line to " +
+    "scripts/feature-boundaries-waivers.txt.",
+};

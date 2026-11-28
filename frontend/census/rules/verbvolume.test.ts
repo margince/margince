@@ -40,3 +40,17 @@ describe("an AI verb is handed no second mark", () => {
     ).toEqual(["src/features/planted.tsx:2"]);
   });
 });
+
+describe("the Sparkles prefilter", () => {
+  it("reads a second mark, whose tag no escape can spell", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.tsx"),
+          area: "src",
+          text: 'export const A = () => <Button variant="ai"><Sparkles /></Button>;\n',
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

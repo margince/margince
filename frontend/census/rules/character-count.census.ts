@@ -15,6 +15,7 @@
 // A spread prop reaching a bare element is past what a syntax tree can see.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 
 const OWNER = "src/lib/charactercount.ts";
@@ -113,7 +114,7 @@ export const rule: CensusRule = {
       : ["field.tsx no longer holds maxLength in characters"]),
   ],
   visit: (file) =>
-    file.source
+    file.source && mayHoldLiteral(file, /length|maxLength/)
       ? characterCountsIn(file.source).map((line) => `${file.rel}:${line}`)
       : [],
   advice:

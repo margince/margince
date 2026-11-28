@@ -6,6 +6,7 @@
 // a `.ts` file as TSX and reported a pass over code it had not parsed. A
 // program parses every file it reads, so it counts as a parser too.
 
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 
 const OWNER = "scripts/lib/source-tree.ts";
@@ -31,7 +32,7 @@ export const rule: CensusRule = {
       : [`${OWNER} was not read`]),
   ],
   visit: (file) =>
-    file.rel !== OWNER && CALLS.some((call) => file.text.includes(call))
+    file.rel !== OWNER && CALLS.some((call) => mayHoldLiteral(file, call))
       ? [`${file.rel} calls the compiler's parser`]
       : [],
   advice:

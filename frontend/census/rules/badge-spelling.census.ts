@@ -23,6 +23,7 @@
 import { join } from "node:path";
 import ts from "typescript";
 import { resolveNesting, subjectOf } from "../../scripts/lib/css-rules";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { parseSource } from "../../scripts/lib/source-tree";
 import { type CssRule, rulesIn, withoutComments } from "../../src/testing/css";
 import { type CensusFile, type CensusRule, frontendRoot } from "../tree";
@@ -424,7 +425,7 @@ const rulesOf = (sheets: readonly CensusFile[]) =>
 
 /** The markup arm over one module, as finding lines. */
 const markupOf = (file: CensusFile) =>
-  file.source
+  file.source && mayHoldLiteral(file, /badge/i)
     ? markupIn(file.source, !/\.(test|spec)\.[jt]sx?$/.test(file.rel)).map(
         (finding) => `${file.rel}:${finding.line}  ${finding.says}`,
       )

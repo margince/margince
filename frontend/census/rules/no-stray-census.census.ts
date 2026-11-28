@@ -8,8 +8,9 @@
 // counts. A walk the file writes itself counts too, and so does a walk a
 // helper module does for it. The rule has no waiver list.
 
-import { join, relative, sep } from "node:path";
+import { basename, join, relative, sep } from "node:path";
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { isModuleOnDisk, resolveRelative } from "../../scripts/lib/source-tree";
 import {
   type CensusFile,
@@ -56,6 +57,10 @@ export const WALKERS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ),
 ]);
 
+const WALKER_NAMES = new RegExp(
+  [...WALKERS.keys()].map((module) => basename(module, ".ts")).join("|"),
+);
+
 // Tests of a walker itself: each walks a temporary directory it plants, not
 // the tree, so it costs no parse of the tree. `findsTheTree` holds that.
 const WALKER_TESTS: ReadonlySet<string> = new Set([
@@ -91,6 +96,9 @@ function importedWalkers(
  * `import()` of a walker module reaches every walker in it, so it counts.
  */
 export function strayImports(path: string, source: ts.SourceFile): string[] {
+  // A walker resolves from a name in the specifier, or from a folder on `path`.
+  if (!mayHoldLiteral(source, WALKER_NAMES) && !WALKER_NAMES.test(path))
+    return [];
   const found: string[] = [];
   const walkerAt = (specifier: string) => {
     const module = resolveRelative(path, specifier);
@@ -198,6 +206,8 @@ export function ownWalks(
   root: ts.Node,
   { outsideFunctions = false } = {},
 ): string[] {
+  // Every own walk calls readdirSync, or an alias imported by that name, or a glob.
+  if (!mayHoldLiteral(root.getSourceFile(), /readdirSync|glob/)) return [];
   const readdir = readdirNames(root.getSourceFile());
   const found: string[] = [];
   const visit = (node: ts.Node) => {
@@ -433,14 +443,13 @@ function classify(
   if (!source) return NONE;
   const imported = walkingImports(module, tree, known);
   const walking = new Map(imported.names);
-  const functions = [...descendantsOf(source)].flatMap(
-    (node) => functionOf(node) ?? [],
-  );
+  const nodes = [...descendantsOf(source)];
+  const functions = nodes.flatMap((node) => functionOf(node) ?? []);
   for (const fn of functions) {
     const own = ownWalks(fn.body)[0];
     if (own) walking.set(fn.name, `${module.rel} ${own}`);
   }
-  for (let grew = true; grew; ) {
+  for (let grew = walking.size > 0; grew; ) {
     grew = false;
     for (const fn of functions) {
       if (walking.has(fn.name)) continue;
@@ -454,7 +463,7 @@ function classify(
       }
     }
   }
-  const loading = [...descendantsOf(source)].find(
+  const loading = nodes.find(
     (node) =>
       ts.isCallExpression(node) &&
       enclosingFunction(node) === undefined &&

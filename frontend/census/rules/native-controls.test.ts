@@ -196,10 +196,8 @@ describe("the native-control detector sees what it claims to", () => {
     {
       name: "an escape that spells the NAME, not just the bracket",
       fires: true,
-      // The pre-filter reads raw text and the scan reads cooked, so escaping
-      // the name is a way past a filter that only looks for the name. Nothing
-      // here is exotic: `\e` cooks to `e` too, which is why the filter treats
-      // any backslash as reason enough to parse.
+      // The scan reads cooked text, so escaping the name is a way past a
+      // filter that reads raw text alone. The filter reads both.
       src: "const html = `<sel\\u0065ct>`;",
       expect: ["1: <select> inside a string"],
     },
@@ -585,12 +583,9 @@ describe("the native-control detector sees what it claims to", () => {
   // DERIVE what is a restatement of the rule, HAND-WRITE what is a property of
   // the language.
   //
-  // The names are the rule, so the pre-filter derives them. The backslash is
-  // not: it is a property of ESCAPES. `'<sel\u0065ct>'` holds no verbatim
-  // `select` in its raw text but cooks to one, and every escape begins with a
-  // backslash — so a file with neither a name nor a backslash cannot spell one.
-  // Deriving that arm from the set would be a second bug wearing the fix's
-  // clothes.
+  // The names are the rule, so the pre-filter derives them. Escapes are a
+  // property of the language: `'<sel\u0065ct>'` holds no verbatim `select`
+  // in its raw text but cooks to one, so the filter reads the cooked text too.
   it("admits an escaped spelling, and does not admit an unrelated element", () => {
     expect(
       findNativeControls("probe.tsx", "const a = '<sel\\u0065ct>';"),
@@ -605,6 +600,8 @@ describe("the native-control detector sees what it claims to", () => {
       false,
     );
     expect(worthParsing("const html = `<input type=\n date>`;")).toBe(true);
+    expect(worthParsing("const a = '<sel\\u0065ct>';")).toBe(true);
+    expect(worthParsing('const a = "\\n";')).toBe(false);
   });
 });
 

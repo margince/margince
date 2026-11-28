@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { moduleSpecifiers } from "../../scripts/lib/source-tree";
 import type { CensusRule } from "../tree";
 
@@ -98,7 +99,9 @@ export const rule: CensusRule = {
       : ["statusbadge.stories.tsx was not read as a user of the palette"]),
   ],
   visit: (file) =>
-    file.source && usesPalette(file.source)
+    file.source &&
+    mayHoldLiteral(file, /statusbadge/) &&
+    usesPalette(file.source)
       ? blueStatusLines(file.source).map((line) => `${file.rel}:${line}`)
       : [],
   advice:

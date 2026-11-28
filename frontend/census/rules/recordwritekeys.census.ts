@@ -6,6 +6,7 @@
 // onRestored goes through invalidateRecord in src/lib/recordwritekeys.ts.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 
 /** Every onRestored in one file whose callback invalidates by hand. */
@@ -36,7 +37,7 @@ export const rule: CensusRule = {
   name: "recordwritekeys",
   corpus: (tree) => tree.files.filter(inCorpus),
   visit: (file) =>
-    file.source
+    file.source && mayHoldLiteral(file, /onRestored/)
       ? handInvalidations(file.source).map((text) => `${file.rel}: ${text}`)
       : [],
   advice:

@@ -100,3 +100,26 @@ describe("the panelhead rule", () => {
     ]);
   });
 });
+
+describe("the head prefilter", () => {
+  it("reads a head description and card-sub, whose names no escape can spell", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.tsx"),
+          area: "src",
+          text: 'export const A = () => <Panel sub="x" />;\n',
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "b.tsx"),
+          area: "src",
+          text: 'export const B = () => <p className="card-sub" />;\n',
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

@@ -254,25 +254,47 @@ export function resolveRelative(
     : null;
 }
 
+type Specifier = Readonly<{
+  text: string;
+  typeOnly: boolean;
+  dynamic: boolean;
+}>;
+
+// Each node's imports are read once a run, whichever edges a caller asks for.
+const specifiersOf = new WeakMap<ts.Node, readonly Specifier[]>();
+
 // moduleSpecifiers lists what `source` imports, statically or by `import()`.
 // "values" drops only `import type` and `export type … from`, the forms erased.
 export function moduleSpecifiers(
   source: ts.Node,
   edges: "all" | "values" | "static",
 ): string[] {
-  const found: string[] = [];
+  let specifiers = specifiersOf.get(source);
+  if (specifiers === undefined) {
+    specifiers = specifiersIn(source);
+    specifiersOf.set(source, specifiers);
+  }
+  return specifiers
+    .filter(
+      ({ typeOnly, dynamic }) =>
+        (edges === "all" || !typeOnly) && (edges !== "static" || !dynamic),
+    )
+    .map(({ text }) => text);
+}
+
+function specifiersIn(source: ts.Node): Specifier[] {
+  const found: Specifier[] = [];
   const visit = (node: ts.Node): void => {
-    const declared = declaredSpecifier(node, edges);
+    const declared = declaredSpecifier(node);
     if (declared !== null) found.push(declared);
     const specifier = ts.isCallExpression(node) ? node.arguments[0] : undefined;
     if (
-      edges !== "static" &&
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword &&
       specifier !== undefined &&
       ts.isStringLiteralLike(specifier)
     ) {
-      found.push(specifier.text);
+      found.push({ text: specifier.text, typeOnly: false, dynamic: true });
     }
     ts.forEachChild(node, visit);
   };
@@ -280,10 +302,7 @@ export function moduleSpecifiers(
   return found;
 }
 
-function declaredSpecifier(
-  node: ts.Node,
-  edges: "all" | "values" | "static",
-): string | null {
+function declaredSpecifier(node: ts.Node): Specifier | null {
   if (!ts.isImportDeclaration(node) && !ts.isExportDeclaration(node)) {
     return null;
   }
@@ -294,7 +313,7 @@ function declaredSpecifier(
   const typeOnly = ts.isImportDeclaration(node)
     ? node.importClause?.phaseModifier === ts.SyntaxKind.TypeKeyword
     : node.isTypeOnly;
-  return edges !== "all" && typeOnly ? null : specifier.text;
+  return { text: specifier.text, typeOnly, dynamic: false };
 }
 
 // Every literal piece of a JSX `className`, however the caller composed it. A
@@ -348,6 +367,30 @@ export function programOver(files: string[], frontendRoot: string): ts.Program {
   return ts.createProgram(files, appCompilerOptions(frontendRoot));
 }
 
+// Every planted program reads the same lib, contract and React declarations,
+// and a declaration file does not change during a run.
+const declarations = new Map<string, ts.SourceFile>();
+
+/** The host's own read, with each declaration file parsed once a run. */
+export function sharedDeclarations(
+  host: ts.CompilerHost,
+): ts.CompilerHost["getSourceFile"] {
+  const read = host.getSourceFile.bind(host);
+  return (name, version, onError, create) => {
+    if (create === true || !name.endsWith(".d.ts")) {
+      return read(name, version, onError, create);
+    }
+    const { languageVersion, impliedNodeFormat, jsDocParsingMode } =
+      typeof version === "object" ? version : { languageVersion: version };
+    const key = [languageVersion, impliedNodeFormat, jsDocParsingMode, name];
+    const known = declarations.get(key.join(":"));
+    if (known !== undefined) return known;
+    const parsed = read(name, version, onError, create);
+    if (parsed !== undefined) declarations.set(key.join(":"), parsed);
+    return parsed;
+  };
+}
+
 // A program over one virtual file of planted cases, typed against the real
 // tree. A gate shows with it that each shape it claims to see fails.
 export function plantedProgram(
@@ -357,7 +400,7 @@ export function plantedProgram(
 ): ts.Program {
   const options = appCompilerOptions(frontendRoot);
   const host = ts.createCompilerHost(options, true);
-  const readReal = host.getSourceFile.bind(host);
+  const readReal = sharedDeclarations(host);
   host.getSourceFile = (name, version, onError, shouldCreate) =>
     name === fixture
       ? parseSource(name, source)

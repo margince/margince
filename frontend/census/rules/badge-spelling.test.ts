@@ -212,3 +212,23 @@ describe("the badge-spelling rule", () => {
     ]);
   });
 });
+
+describe("the badge prefilter", () => {
+  it("reads the badge class however it is spelled", () => {
+    const at = (text: string) =>
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "design-system", "tokens.css"),
+          area: "src",
+          text: ":root { --r-full: 999px; }\n",
+        },
+        { path: join(srcDir, "features", "plant", "a.tsx"), area: "src", text },
+      ]);
+    expect(
+      at('export const A = () => <span className="badge" />;\n'),
+    ).toHaveLength(1);
+    expect(
+      at('export const A = () => <span className={"b\\x61dge"} />;\n'),
+    ).toHaveLength(1);
+  });
+});

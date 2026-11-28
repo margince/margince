@@ -5,6 +5,7 @@
 // Only ContactLink may build one, for a reader with no mailbox. Every product
 // source file is read, so a new surface cannot slip by.
 
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 
 export const BUILDS_MAILTO = /mailto:\$\{/;
@@ -27,8 +28,11 @@ export const rule: CensusRule = {
   name: "contactlink",
   corpus: (tree) => tree.files.filter(isProductSource),
   across: (corpus) => {
+    // Cooked, so an escaped `mailto:\${` reads as a builder too: an over-count, never a miss.
     const builders = new Set(
-      corpus.filter((file) => BUILDS_MAILTO.test(file.text)).map((f) => f.rel),
+      corpus
+        .filter((file) => mayHoldLiteral(file, BUILDS_MAILTO))
+        .map((f) => f.rel),
     );
     return [
       ...[...builders]

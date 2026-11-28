@@ -20,3 +20,20 @@ describe("the companyfactspanel rule", () => {
     ]);
   });
 });
+
+describe("an escaped key", () => {
+  it("fails as the key it spells", () => {
+    const text = 'useQuery({ queryKey: ["company\\x2dfacts", id] });\n';
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "companies", "crawl.ts"),
+          area: "src",
+          text,
+        },
+      ]),
+    ).toEqual([
+      "src/features/companies/crawl.ts: spells the company-facts key itself",
+    ]);
+  });
+});

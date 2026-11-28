@@ -9,6 +9,7 @@
 // not an item's own component (`<ArchiveAction />`), which its story covers.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { parseSource } from "../../scripts/lib/source-tree";
 import type { CensusFile, CensusRule } from "../tree";
 
@@ -162,26 +163,46 @@ function rendersChildrenInto(
 /** The menu's tag and every component that renders its children into it,
  *  wrappers of wrappers included, read from the modules so none is missed. */
 export function menuTags(modules: readonly ModuleText[]): Set<string> {
-  const components = modules.flatMap((module) => {
+  const read = new Map<
+    ModuleText,
+    { component: Component; source: ts.SourceFile }[]
+  >();
+  const componentsIn = (module: ModuleText) => {
+    const known = read.get(module);
+    if (known) return known;
     const source = parseSource(module.path, module.text);
-    return componentsOf(source).map((component) => ({ component, source }));
-  });
+    const found = componentsOf(source).map((component) => ({
+      component,
+      source,
+    }));
+    read.set(module, found);
+    return found;
+  };
   const menus = new Set([MENU]);
   let grew = true;
   while (grew) {
     grew = false;
-    for (const { component, source } of components) {
-      if (
-        !menus.has(component.name) &&
-        rendersChildrenInto(component, source, menus)
-      ) {
-        menus.add(component.name);
-        grew = true;
+    // A component renders into a menu only where its module spells that menu.
+    const spelled = spellingOf(menus);
+    for (const module of modules.filter((each) =>
+      mayHoldLiteral(each, spelled),
+    )) {
+      for (const { component, source } of componentsIn(module)) {
+        if (
+          !menus.has(component.name) &&
+          rendersChildrenInto(component, source, menus)
+        ) {
+          menus.add(component.name);
+          grew = true;
+        }
       }
     }
   }
   return menus;
 }
+
+const spellingOf = (menus: ReadonlySet<string>) =>
+  new RegExp([...menus].map((name) => name.replaceAll("$", "\\$")).join("|"));
 
 /**
  * Every glyph written inside an overflow menu in one file.
@@ -194,6 +215,7 @@ export function glyphsInMenus(
   text: string,
   menus: ReadonlySet<string> = new Set([MENU]),
 ): Finding[] {
+  if (!mayHoldLiteral({ text }, spellingOf(menus))) return [];
   const source = parseSource(file, text);
   const glyphs = glyphImports(source);
   const findings: Finding[] = [];
@@ -225,7 +247,7 @@ export function glyphsInMenus(
   return findings;
 }
 
-// Stories and tests included, and no prefilter. A menu in a story is a menu a
+// Stories and tests included. A menu in a story is a menu a
 // reader is shown. A unit's screen is shipped UI in the same bundle, so the
 // extension layers are read too.
 const surfaces = (file: CensusFile) =>

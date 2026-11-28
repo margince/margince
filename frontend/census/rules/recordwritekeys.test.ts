@@ -25,3 +25,18 @@ describe("the recordwritekeys rule", () => {
     ]);
   });
 });
+
+describe("the onRestored prefilter", () => {
+  it("reads a hand invalidation however the callback is spelled", () => {
+    const at = (name: string) =>
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "plant", "a.ts"),
+          area: "src",
+          text: `const o = { ${name}: () => qc.invalidateQueries({ queryKey: ["x"] }) };\n`,
+        },
+      ]);
+    expect(at("onRestored")).toHaveLength(1);
+    expect(at("on\\u0052estored")).toHaveLength(1);
+  });
+});

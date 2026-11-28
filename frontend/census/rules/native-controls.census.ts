@@ -42,6 +42,7 @@ import {
   typeInObject,
   typeValues,
 } from "../../scripts/lib/input-type";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import {
   extensionPackageLayers,
   filesUnder,
@@ -57,16 +58,14 @@ export const nativeControls = new Set(["select", "option", "optgroup"]);
 // list would miss an element added to the set. A file that spells only the new
 // name would be skipped before it is parsed.
 //
-// The backslash arm is written by hand. It belongs to escapes, not to any
-// element name. `'<sel\u0065ct>'` has no `select` in its raw text but cooks to
-// one. Every escape starts with a backslash, so a file with neither a name nor
-// a backslash cannot spell one.
+// The filter reads cooked text as well as raw, so `'<sel\u0065ct>'`, whose
+// raw text holds no `select`, is a hit.
 //
 // A name counts only where no word character follows it, in a JSX tag, a
 // literal equal to the name, and the string scan. So `options` and `selected`
 // are not hits.
 export const prefilter = new RegExp(
-  `(?:${[...nativeControls].join("|")})(?![A-Za-z0-9_])|\\\\`,
+  `(?:${[...nativeControls].join("|")})(?![A-Za-z0-9_])`,
 );
 
 // The tags whose `type` reaches a native input as written, derived from the
@@ -97,13 +96,18 @@ const elementFactories = new Set(["createElement", "jsx", "jsxs", "jsxDEV"]);
 // Sound for the same reason as `prefilter`. A hit spells `type`, and its value
 // is a literal equal to a clock type, between quotes or backticks.
 // Only the string scan reads one unquoted, after `=` and before a non-word
-// character. Any other spelling goes through a backslash escape.
+// character.
 const dateValueStart = new RegExp(
   `["'\`](?:${clockAlternation})["'\`]|=\\s*(?:${clockAlternation})(?![\\w-])`,
   "i",
 );
-export const worthParsing = (text: string) =>
-  prefilter.test(text) || (text.includes("type") && dateValueStart.test(text));
+export const worthParsing = (text: string) => {
+  const file = { text };
+  return (
+    mayHoldLiteral(file, prefilter) ||
+    (mayHoldLiteral(file, "type") && mayHoldLiteral(file, dateValueStart))
+  );
+};
 
 // Each native element as a string scan reads it, built once rather than per
 // string node.
@@ -128,9 +132,8 @@ const dateMarkup = new RegExp(
 export function findNativeControls(path: string, text: string): string[] {
   // A file that cannot spell any of the names is not parsed: the parse is the
   // census's cost. The filter is sound. A name needs no angle bracket, since
-  // `\u003cselect>` has no `<` in its raw text. A backslash alone admits a file,
-  // since the string scan reads cooked text. A character reaches cooked text raw
-  // or through an escape, and every escape starts with a backslash.
+  // `\u003cselect>` has no `<` in its raw text, and the filter reads the cooked
+  // text the string scan reads.
   if (!worthParsing(text)) return [];
   const source = parseSource(path, text);
   const found: string[] = [];

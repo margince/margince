@@ -30,3 +30,15 @@ describe("the contactlink rule", () => {
     ]);
   });
 });
+
+describe("an escaped mailto", () => {
+  it("is read as the builder it is", () => {
+    const text =
+      "export const F = (a: string) => <a href={`m\\x61ilto:${a}`} />;\n";
+    expect(
+      plantedFindings(rule, [
+        { path: join(srcDir, "features", "p.tsx"), area: "src", text },
+      ]),
+    ).toContain("src/features/p.tsx builds a mailto from an address");
+  });
+});

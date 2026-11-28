@@ -27,3 +27,14 @@ describe("the ai-activity-lines rule", () => {
     ]);
   });
 });
+
+describe("an escaped key", () => {
+  it("counts as the key it spells", () => {
+    const text =
+      'useMutation({ mutationKey: ["email", id] });\n' +
+      'useMutation({ mutationKey: ["em\\x61il", id] });\n';
+    expect(plantedFindings(rule, [screen(text)])).toEqual([
+      'src/features/planted.tsx spells ["email", …] 2 times',
+    ]);
+  });
+});

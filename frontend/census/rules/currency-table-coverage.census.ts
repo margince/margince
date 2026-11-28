@@ -16,6 +16,7 @@
 // offered currencies (`format/currencychoices.ts`), and a computed key.
 
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { parseSource } from "../../scripts/lib/source-tree";
 import type { CensusFile, CensusRule } from "../tree";
 
@@ -173,13 +174,13 @@ const CURRENCY_TABLE_OWNERS: ReadonlySet<string> = new Set([
 
 // Whether a file is worth parsing. A table needs two codes, and an escape can
 // spell a code the characters do not show.
-export function mayHoldTable(text: string): boolean {
-  if (text.includes("\\u") || text.includes("\\x")) {
-    return true;
-  }
+export function mayHoldTable(
+  source: string | Readonly<{ text: string }>,
+): boolean {
+  const file = typeof source === "string" ? { text: source } : source;
   let seen = 0;
   for (const code of CURRENCY_CODES) {
-    if (text.includes(code) && ++seen === 2) {
+    if (mayHoldLiteral(file, code) && ++seen === 2) {
       return true;
     }
   }
@@ -196,13 +197,11 @@ export const rule: CensusRule = {
   corpus: (tree) => tree.files.filter(judged),
   // A prefilter that admits nothing reads the same as a clean tree.
   floors: (corpus) =>
-    corpus.some((file) => mayHoldTable(file.text))
+    corpus.some((file) => mayHoldTable(file))
       ? []
       : ["the prefilter admitted no file to parse"],
   visit: (file) =>
-    file.source && mayHoldTable(file.text)
-      ? tablesOf(file.source, file.rel)
-      : [],
+    file.source && mayHoldTable(file) ? tablesOf(file.source, file.rel) : [],
   advice:
     "A currency is described in one place. Ask format/minorunits.ts for its " +
     "minor units and format/format.ts (Intl) for how it is written, instead " +

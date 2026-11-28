@@ -24,6 +24,11 @@ describe("a currency", () => {
       1,
     ],
     [
+      "a record whose codes only escapes spell",
+      'const D = { "\\x45UR": 2, "\\x4aPY": 0 };',
+      1,
+    ],
+    [
       "a scale table, which is the same question asked the other way",
       "const DIGITS = { JPY: 0, VND: 0 };",
       1,

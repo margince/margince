@@ -17,6 +17,7 @@ import {
   filesMatching,
   MODULE_FILE,
   parseSource,
+  sharedDeclarations,
   sourceTextAt,
 } from "../scripts/lib/source-tree";
 
@@ -29,7 +30,7 @@ export const e2eDir = join(frontendRoot, "e2e");
 export const storybookDir = join(frontendRoot, ".storybook");
 
 // Modules, stylesheets, and the HTML and MDX pages a bundler or Storybook reads.
-const TREE_FILE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|css|html|mdx)$/;
+export const TREE_FILE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|css|html|mdx)$/;
 
 /** Where a file sits. It is the core source, the build scripts or an
  * extension layer. It can also be the top of frontend/ (the vite and vitest
@@ -170,7 +171,7 @@ function checkedOver(
     incremental: false,
   };
   const host = ts.createCompilerHost(options, true);
-  const read = host.getSourceFile.bind(host);
+  const read = sharedDeclarations(host);
   host.getSourceFile = (name, version, onError, create) =>
     at(name)?.source ?? read(name, version, onError, create);
   return ts.createProgram(

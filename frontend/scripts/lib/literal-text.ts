@@ -38,8 +38,29 @@ function cooked(source: string): string {
   );
 }
 
-// A literal's text is a slice of its source, cooked or raw (a JSX attribute), so a miss in both rules out a parse.
+const cookedFiles = new WeakMap<object, string>();
+
+/** The file's text with every escape decoded, read once a run. */
+export function cookedText(file: Readonly<{ text: string }>): string {
+  const known = cookedFiles.get(file);
+  if (known !== undefined) return known;
+  const text = cooked(file.text);
+  cookedFiles.set(file, text);
+  return text;
+}
+
+// A token's text (a literal, an identifier) is a slice of its source, cooked or raw (a JSX attribute), so a miss in both rules out a parse.
 // It holds for a pattern that does not anchor to a literal's ends.
-export function mayHoldLiteral(source: string, pattern: RegExp): boolean {
-  return source.search(pattern) !== -1 || cooked(source).search(pattern) !== -1;
+export function mayHoldLiteral(
+  source: string | Readonly<{ text: string }>,
+  pattern: RegExp | string,
+): boolean {
+  const file = typeof source === "string" ? { text: source } : source;
+  const holds = (text: string) =>
+    typeof pattern === "string"
+      ? text.includes(pattern)
+      : text.search(pattern) !== -1;
+  return (
+    holds(file.text) || (file.text.includes("\\") && holds(cookedText(file)))
+  );
 }

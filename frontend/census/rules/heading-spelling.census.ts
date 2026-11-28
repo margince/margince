@@ -17,6 +17,7 @@
 
 import { join } from "node:path";
 import ts from "typescript";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import { parseSource } from "../../scripts/lib/source-tree";
 import { type CensusFile, type CensusRule, srcDir } from "../tree";
 
@@ -44,6 +45,8 @@ function calleeName(expression: ts.Expression): string {
 
 /** Every raw heading in one module; `where` is how a finding names the file. */
 export function findingsIn(path: string, text: string, where = path): string[] {
+  // Each finding names a tag h1 to h6, so a file without one holds none.
+  if (!mayHoldLiteral({ text }, /h[1-6]/)) return [];
   const source = parseSource(path, text);
   const findings: string[] = [];
   const at = (node: ts.Node) =>

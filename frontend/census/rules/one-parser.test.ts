@@ -27,3 +27,17 @@ describe("the one-parser rule", () => {
     ).toEqual(["src/features/planted.ts calls the compiler's parser"]);
   });
 });
+
+describe("an escaped parser call", () => {
+  it("fails as the call it spells", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "features", "planted.ts"),
+          area: "src",
+          text: 'ts.create\\u0050rogram(["a.ts"], {});\n',
+        },
+      ]),
+    ).toEqual(["src/features/planted.ts calls the compiler's parser"]);
+  });
+});

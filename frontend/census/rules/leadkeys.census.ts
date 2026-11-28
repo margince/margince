@@ -14,7 +14,7 @@
 // last feeds read sites of the list, not per-lead writes.
 
 import ts from "typescript";
-import { parseSource } from "../../scripts/lib/source-tree";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import type { CensusFile, CensusRule } from "../tree";
 
 // `record-history` is the shared history key of every record kind. Only a
@@ -66,8 +66,7 @@ function isQueryKeyPosition(node: ts.ArrayLiteralExpression): boolean {
 }
 
 /** `<file>:<line> <literal>` for every hand-spelled lead query key in one file. */
-export function spelledIn(fileName: string, text: string): string[] {
-  const source = parseSource(fileName, text);
+export function spelledIn(fileName: string, source: ts.SourceFile): string[] {
   const found: string[] = [];
   const visit = (node: ts.Node) => {
     if (ts.isArrayLiteralExpression(node) && node.elements.length > 0) {
@@ -99,12 +98,12 @@ const inCorpus = (file: CensusFile) =>
   file.area === "src" &&
   /\.tsx?$/.test(file.path) &&
   !OWNERS.includes(file.rel) &&
-  file.text.includes("lead");
+  mayHoldLiteral(file, /lead/);
 
 export const rule: CensusRule = {
   name: "leadkeys",
   corpus: (tree) => tree.files.filter(inCorpus),
-  visit: (file) => spelledIn(file.rel, file.text),
+  visit: (file) => (file.source ? spelledIn(file.rel, file.source) : []),
   advice:
     "A lead's query key is spelled by hand here. Use the helpers in " +
     "src/lib/leadkeys.ts (leadKey, LEAD_LIST_KEY, leadWriteKeys) so a write " +
