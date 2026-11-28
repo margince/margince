@@ -36,6 +36,7 @@ case "$endpoint" in
 	body="${!attempt_var:?unexpected read of attempt ${BASH_REMATCH[1]}}"
 	;;
 */jobs\?*) body="$STUB_JOBS" ;;
+*/runs/*/artifacts\?*) body="$STUB_RUN_ARTIFACTS" ;;
 */actions/runs/*) body="$STUB_RUN" ;;
 *) echo "unexpected gh call: $endpoint" >&2; exit 1 ;;
 esac
@@ -101,8 +102,10 @@ expect "a failed job read runs the lane" proven=false STUB_JOBS=FAIL
 expect "a ref without a pull request runs the lane" proven=false \
 	MERGE_GROUP_REF=refs/heads/gh-readonly-queue/main/unexpected
 
-# A pull request re-run: the proof is an earlier attempt of the same run.
-rerun=(MERGE_GROUP_SHA= RUN_ID=9)
+# A pull request re-run: the proof is an earlier attempt of the same run, while
+# its shards' coverage pods are still there for Sonar to merge.
+pod() { printf '{"name":"integration-shard-1-attempt-%s","expired":%s}' "$1" "$2"; }
+rerun=(MERGE_GROUP_SHA= RUN_ID=9 STUB_RUN_ARTIFACTS="$(artifacts "$(pod 1 false)")")
 skipped_lane="$(jobs "$(job 'integration / integration build' '"skipped"')")"
 red_lane="$(jobs "$(job 'integration / integration shard (2/8)' '"failure"')")"
 expect "a re-run whose first attempt passed the lane skips it" proven=true \
@@ -114,6 +117,13 @@ expect "an attempt that skipped the lane proves nothing, an older green one does
 expect "a first attempt has nothing earlier to reuse" proven=false "${rerun[@]}" RUN_ATTEMPT=1
 expect "a failed attempt read runs the lane" proven=false \
 	"${rerun[@]}" RUN_ATTEMPT=2 STUB_ATTEMPT_1=FAIL
+expect "a passed attempt whose shard coverage expired runs the lane" proven=false \
+	"${rerun[@]}" RUN_ATTEMPT=2 STUB_ATTEMPT_1="$green_lane" STUB_RUN_ARTIFACTS="$(artifacts "$(pod 1 true)")"
+expect "coverage of another attempt does not stand in for the proving one" proven=false \
+	"${rerun[@]}" RUN_ATTEMPT=3 STUB_ATTEMPT_2="$red_lane" STUB_ATTEMPT_1="$green_lane" \
+	STUB_RUN_ARTIFACTS="$(artifacts "$(pod 2 false)")"
+expect "a failed artifact list runs the lane" proven=false \
+	"${rerun[@]}" RUN_ATTEMPT=2 STUB_ATTEMPT_1="$green_lane" STUB_RUN_ARTIFACTS=FAIL
 
 if [[ "$failures" -ne 0 ]]; then
 	echo "FAIL: $failures case(s) failed" >&2

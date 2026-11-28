@@ -143,13 +143,19 @@ jobs:
       # attempt of this run did. Either way the lane is skipped.
       integration_proven: ${{ steps.proven.outputs.proven == 'true' }}
       # backend_db && full_lane && !integration_proven, spelled from the steps
-      # because an output cannot read another. The integration lane runs on it,
-      # and the unit legs instrument on it, since Sonar merges their pods with
-      # the lane's (scripts/merge-go-coverage.sh); the two cannot disagree.
+      # because an output cannot read another. The integration lane runs on it.
       integration_runs: >-
         ${{ (steps.filter.outputs.backend_db == 'true' || github.event_name == 'merge_group')
         && (github.event_name != 'pull_request' || github.base_ref != 'develop')
         && steps.proven.outputs.proven != 'true' }}
+      # The unit legs instrument on it, since Sonar merges their pods with the
+      # lane's (scripts/merge-go-coverage.sh): when the lane runs, and on a pull
+      # request re-run that reuses the lane, whose unit leg may have failed
+      # before it uploaded. The merge queue is not scanned.
+      unit_coverage: >-
+        ${{ (steps.filter.outputs.backend_db == 'true' || github.event_name == 'merge_group')
+        && (github.event_name != 'pull_request' || github.base_ref != 'develop')
+        && (steps.proven.outputs.proven != 'true' || github.event_name == 'pull_request') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -567,9 +573,9 @@ jobs:
           # hold the package to the limit a laptop running every leg wants.
           GATES_GOMEMLIMIT: 6GiB
           # The unit coverage the integration lane used to run as a job of its
-          # own, from the run that decides the verdict. Empty when no lane runs,
-          # since then nothing merges the pods.
-          UNIT_COVERDIR: ${{ matrix.unit-cover == 'on' && needs.changes.outputs.integration_runs == 'true' && format('{0}/unit-covdata', runner.temp) || '' }}
+          # own, from the run that decides the verdict. Empty when Sonar merges
+          # no Go coverage on this run (`unit_coverage`).
+          UNIT_COVERDIR: ${{ matrix.unit-cover == 'on' && needs.changes.outputs.unit_coverage == 'true' && format('{0}/unit-covdata', runner.temp) || '' }}
         # pipefail, because the default shell lacks it and tee would turn a red
         # gate green.
         # TEST_LEGS only: backend-lint runs the static legs on its own runner,
@@ -623,7 +629,7 @@ jobs:
           if-no-files-found: error
       # For the sonarcloud job, which merges them with the integration shards'.
       - name: Upload the unit coverage pods
-        if: ${{ matrix.unit-cover == 'on' && needs.changes.outputs.integration_runs == 'true' }}
+        if: ${{ matrix.unit-cover == 'on' && needs.changes.outputs.unit_coverage == 'true' }}
         uses: ./.github/actions/upload-artifact-retried
         with:
           name: unit-covdata-${{ matrix.part }}-attempt-${{ github.run_attempt }}
@@ -1102,10 +1108,10 @@ jobs:
       # The Go profile is merged here from binary pods: the integration shards'
       # and the unit legs' of deterministic-gates. This is the first job that
       # needs both, since a job of the integration lane cannot wait for one of
-      # this workflow's. A green lane implies the unit legs ran instrumented
-      # (`integration_runs`), so a missing pod set fails the merge. A lane an
-      # earlier attempt proved left its pods, and the legs', in that attempt's
-      # artifacts, which this run still lists.
+      # this workflow's. A green or proven lane implies the unit legs ran
+      # instrumented (`unit_coverage`), so a missing pod set fails the merge. A
+      # lane an earlier attempt proved left its pods in that attempt's artifacts,
+      # which this run still lists while they last.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         if: ${{ env.SONAR_TOKEN != '' && (needs.integration.result == 'success' || needs.changes.outputs.integration_proven == 'true') }}
         with:
