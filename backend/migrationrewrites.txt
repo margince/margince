@@ -360,3 +360,5 @@
 1795810217_messaging_text_guards.down.sql | * | restores or removes text-limit trigger declarations without scanning or rewriting their rows
 1795807780_the_identifier_spelling_checks_are_validated.up.sql | * | the procedural body only counts rows and validates or drops eleven named CHECKs; it changes no row
 1795807780_the_identifier_spelling_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795831840_the_text_limits_follow_the_dropped_consent_columns.up.sql | * | replaces the text-bound triggers on consent_text_version and contact_acquisition_evidence; they act on later writes only, and no existing row is changed
+1795831840_the_text_limits_follow_the_dropped_consent_columns.down.sql | * | restores those text-bound triggers as they stood before; no existing row is changed

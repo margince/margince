@@ -81,7 +81,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_external_customer
 
-11 columns · primary key `(id)` · referenced by 1 foreign key
+10 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -90,7 +90,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `display_name` | `text` | yes |  |
 | `external_customer_id` | `text` | yes |  |
 | `sync_hash` | `text` | yes |  |
-| `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |

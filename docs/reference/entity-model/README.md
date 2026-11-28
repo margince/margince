@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 367 |
-| Columns | 4497 |
-| Foreign keys | 648 |
+| Columns | 4485 |
+| Foreign keys | 642 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -41,18 +41,18 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 52 | 155 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 52 | 154 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 93 | 52 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 50 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 50 | 50 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 53 | 31 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 51 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
-| [`team`](identity.md#team) | [identity](identity.md) | 6 | 11 |
 | [`language`](compose.md#language) | [compose](compose.md) | 3 | 9 |
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 30 | 9 |
-| [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 9 |
+| [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 8 | 8 |
+| [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 7 |
 
 ```mermaid
 erDiagram
@@ -177,7 +177,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 24 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 7 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 14 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 52 | 155 |
+| [`app_user`](identity.md#app_user) | identity | 52 | 154 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 6 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 10 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -244,7 +244,7 @@ erDiagram
 | [`communication_decision`](consent.md#communication_decision) | consent | 32 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 21 | 2 |
 | [`communication_override`](consent.md#communication_override) | consent | 12 | 1 |
-| [`communication_review`](consent.md#communication_review) | consent | 9 | 2 |
+| [`communication_review`](consent.md#communication_review) | consent | 8 | 1 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 18 | 1 |
 | [`company`](contacts.md#company) | contacts | 46 | 50 |
 | [`company_address_country`](contacts.md#company_address_country) | contacts | 3 | 0 |
@@ -264,9 +264,9 @@ erDiagram
 | [`consent_event`](consent.md#consent_event) | consent | 18 | 0 |
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 8 | 8 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 17 | 2 |
-| [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
+| [`consent_text_version`](consent.md#consent_text_version) | consent | 11 | 1 |
 | [`contact`](contacts.md#contact) | contacts | 50 | 50 |
-| [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 15 | 1 |
+| [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 14 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 15 | 0 |
 | [`contact_confirm_submission`](consent.md#contact_confirm_submission) | consent | 11 | 0 |
@@ -279,7 +279,7 @@ erDiagram
 | [`contact_signature_enrich_state`](contacts.md#contact_signature_enrich_state) | contacts | 13 | 0 |
 | [`contact_social`](contacts.md#contact_social) | contacts | 5 | 0 |
 | [`contract`](contracts.md#contract) | contracts | 29 | 3 |
-| [`conversation_claim`](contacts.md#conversation_claim) | contacts | 20 | 0 |
+| [`conversation_claim`](contacts.md#conversation_claim) | contacts | 19 | 0 |
 | [`currency_minor_digits`](platform.md#currency_minor_digits) | platform | 2 | 0 |
 | [`custom_field`](customfields.md#custom_field) | customfields | 20 | 0 |
 | [`data_subject_request`](consent.md#data_subject_request) | consent | 17 | 1 |
@@ -326,7 +326,7 @@ erDiagram
 | [`field_provenance`](contacts.md#field_provenance) | contacts | 24 | 0 |
 | [`finance_connection`](finance.md#finance_connection) | finance | 10 | 4 |
 | [`finance_customer_link`](finance.md#finance_customer_link) | finance | 9 | 2 |
-| [`finance_external_customer`](finance.md#finance_external_customer) | finance | 11 | 1 |
+| [`finance_external_customer`](finance.md#finance_external_customer) | finance | 10 | 1 |
 | [`finance_invoice`](finance.md#finance_invoice) | finance | 29 | 4 |
 | [`finance_payment`](finance.md#finance_payment) | finance | 17 | 0 |
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 12 | 2 |
@@ -382,9 +382,9 @@ erDiagram
 | [`notice`](notices.md#notice) | notices | 17 | 0 |
 | [`notification_digest_run`](notices.md#notification_digest_run) | notices | 4 | 0 |
 | [`notification_preference`](notices.md#notification_preference) | notices | 5 | 0 |
-| [`oauth_authorization_code`](identity.md#oauth_authorization_code) | identity | 13 | 0 |
-| [`oauth_client`](identity.md#oauth_client) | identity | 11 | 1 |
-| [`oauth_grant`](identity.md#oauth_grant) | identity | 10 | 4 |
+| [`oauth_authorization_code`](identity.md#oauth_authorization_code) | identity | 12 | 0 |
+| [`oauth_client`](identity.md#oauth_client) | identity | 10 | 1 |
+| [`oauth_grant`](identity.md#oauth_grant) | identity | 9 | 4 |
 | [`oauth_refresh_token`](identity.md#oauth_refresh_token) | identity | 7 | 0 |
 | [`offer`](deals.md#offer) | deals | 29 | 3 |
 | [`offer_line_item`](deals.md#offer_line_item) | deals | 21 | 0 |
@@ -392,7 +392,7 @@ erDiagram
 | [`onboarding_wizard_state`](identity.md#onboarding_wizard_state) | identity | 15 | 0 |
 | [`partner`](contacts.md#partner) | contacts | 21 | 0 |
 | [`partner_stage`](contacts.md#partner_stage) | contacts | 13 | 1 |
-| [`passport`](identity.md#passport) | identity | 14 | 9 |
+| [`passport`](identity.md#passport) | identity | 14 | 7 |
 | [`pipeline`](deals.md#pipeline) | deals | 8 | 5 |
 | [`preference_token`](consent.md#preference_token) | consent | 9 | 0 |
 | [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 23 | 0 |
@@ -431,7 +431,7 @@ erDiagram
 | [`restore_drill`](continuity.md#restore_drill) | continuity | 7 | 0 |
 | [`retention_policy`](privacy.md#retention_policy) | privacy | 7 | 0 |
 | [`role`](identity.md#role) | identity | 9 | 1 |
-| [`role_assignment`](identity.md#role_assignment) | identity | 5 | 0 |
+| [`role_assignment`](identity.md#role_assignment) | identity | 4 | 0 |
 | [`runner_job`](agents.md#runner_job) | agents | 7 | 0 |
 | [`sales_goal_plan`](reporting.md#sales_goal_plan) | reporting | 10 | 1 |
 | [`sales_goal_plan_revision`](reporting.md#sales_goal_plan_revision) | reporting | 10 | 0 |
@@ -468,7 +468,7 @@ erDiagram
 | [`taggable`](collections.md#taggable) | collections | 8 | 0 |
 | [`task_explanation`](platform.md#task_explanation) | platform | 6 | 0 |
 | [`tax_rate`](deals.md#tax_rate) | deals | 7 | 0 |
-| [`team`](identity.md#team) | identity | 6 | 11 |
+| [`team`](identity.md#team) | identity | 6 | 9 |
 | [`team_membership`](identity.md#team_membership) | identity | 4 | 0 |
 | [`team_weekly_review`](compose.md#team_weekly_review) | compose | 30 | 4 |
 | [`team_weekly_review_coverage`](compose.md#team_weekly_review_coverage) | compose | 13 | 0 |
@@ -486,7 +486,7 @@ erDiagram
 | [`voice_build`](ai.md#voice_build) | ai | 21 | 0 |
 | [`voice_corpus_source`](ai.md#voice_corpus_source) | ai | 23 | 0 |
 | [`voice_learning_signal`](ai.md#voice_learning_signal) | ai | 15 | 0 |
-| [`voice_profile`](ai.md#voice_profile) | ai | 17 | 5 |
+| [`voice_profile`](ai.md#voice_profile) | ai | 16 | 5 |
 | [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 10 | 0 |
 | [`voice_profile_version`](ai.md#voice_profile_version) | ai | 24 | 5 |
 | [`web_form`](webforms.md#web_form) | webforms | 26 | 1 |

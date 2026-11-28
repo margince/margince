@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-52 columns · primary key `(id)` · referenced by 155 foreign keys
+52 columns · primary key `(id)` · referenced by 154 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -319,7 +319,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_authorization_code
 
-13 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -329,7 +329,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `code_hash` | `text` | yes |  |
 | `consumed_at` | `timestamp with time zone` |  |  |
 | `expires_at` | `timestamp with time zone` | yes |  |
-| `lent_passport_id` | `uuid` |  | Points at `passport.id`. |
 | `redirect_uri` | `text` | yes |  |
 | `resource` | `text` |  |  |
 | `scopes` | `text[]` | yes |  |
@@ -341,7 +340,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `lent_passport_id` | `passport` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
@@ -357,7 +355,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `idx_oauth_authorization_code_user`: `btree (user_id)`
 - `oauth_authorization_code_pkey`: `unique, btree (id)`
-- `oauth_code_lent_passport_ix`: `btree (lent_passport_id)`
 - `oauth_code_unique`: `unique, btree (code_hash)`
 
 **Triggers**
@@ -367,7 +364,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_client
 
-11 columns · primary key `(id)` · referenced by 1 foreign key
+10 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -378,7 +375,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `created_via` | `text`, default `'dcr'::text` | yes | One of `dcr`, `admin`, `cimd`. |
 | `deleted_at` | `timestamp with time zone` |  |  |
 | `disabled_at` | `timestamp with time zone` |  |  |
-| `last_used_at` | `timestamp with time zone` |  |  |
 | `metadata_expires_at` | `timestamp with time zone` |  |  |
 | `redirect_uris` | `text[]` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -402,13 +398,12 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_grant
 
-10 columns · primary key `(id)` · referenced by 4 foreign keys
+9 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `client_id` | `text` | yes | Points at `oauth_client.client_id`. |
-| `lent_passport_id` | `uuid` |  | Points at `passport.id`. |
 | `refresh_allowed` | `boolean`, default `false` | yes |  |
 | `resource` | `text` |  |  |
 | `revoked_at` | `timestamp with time zone` |  |  |
@@ -422,7 +417,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `client_id` | `oauth_client` | the parent cannot be deleted while this row points at it |
-| `lent_passport_id` | `passport` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
@@ -435,7 +429,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `idx_oauth_grant_client`: `btree (client_id)`
 - `idx_oauth_grant_user`: `btree (user_id)`
-- `oauth_grant_lent_passport_ix`: `btree (lent_passport_id)`
 - `oauth_grant_pkey`: `unique, btree (id)`
 - `oauth_grant_user_live_ix`: `btree (user_id, id) WHERE (revoked_at IS NULL)`
 
@@ -532,7 +525,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## passport
 
-14 columns · primary key `(id)` · referenced by 9 foreign keys
+14 columns · primary key `(id)` · referenced by 7 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -680,13 +673,12 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## role_assignment
 
-5 columns · primary key `(id)` · referenced by 0 foreign keys
+4 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `role_id` | `uuid` | yes | Points at `role.id`. |
-| `team_id` | `uuid` |  | Points at `team.id`. |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -695,15 +687,13 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `role_id` | `role` | deleting the parent deletes this row |
-| `team_id` | `team` | deleting the parent deletes this row |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Indexes**
 
-- `idx_role_assignment_team`: `btree (team_id)`
 - `idx_role_assignment_user`: `btree (user_id)`
 - `role_assignment_pkey`: `unique, btree (id)`
-- `uq_role_assignment`: `unique, btree (role_id, user_id, team_id) NULLS NOT DISTINCT`
+- `uq_role_assignment`: `unique, btree (role_id, user_id)`
 
 **Triggers**
 
@@ -779,7 +769,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team
 
-6 columns · primary key `(id)` · referenced by 11 foreign keys
+6 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
