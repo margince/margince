@@ -147,6 +147,19 @@ GATES_GOMEMLIMIT ?= 4GiB
 # the census over the same packages the cached pass replays.
 TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
+# The flags of every instrumented `go test`: the integration lane's and
+# UNIT_COVERDIR's. One spelling, because pods of two modes do not merge.
+COVER_FLAGS := -cover -coverpkg=./... -covermode=atomic
+
+# UNIT_COVERDIR=<dir> runs test-cached's ./... pass and test-solo with
+# COVER_FLAGS and writes their binary coverage pods into <dir>, for Sonar to
+# merge with the integration lane's. CI sets it only when that lane runs (ci.yml
+# `integration_runs`). Unset, nothing changes: -test.gocoverdir defeats the test
+# cache, which a local run replays from.
+UNIT_COVER_FLAGS = $(if $(UNIT_COVERDIR),$(COVER_FLAGS))
+UNIT_COVER_ARGS = $(if $(UNIT_COVERDIR),-args -test.gocoverdir=$(abspath $(UNIT_COVERDIR)))
+UNIT_COVER_MKDIR = $(if $(UNIT_COVERDIR),mkdir -p "$(abspath $(UNIT_COVERDIR))",:)
+
 # TEST_SHUFFLE_SEED=<n> runs the tests of every package in the order
 # -shuffle=<n> gives, so a test that needs the state an earlier one left fails.
 # CI passes its run number. Unset, the tests run in source order. Go caches no
@@ -161,6 +174,11 @@ TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(T
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
 
+# `go build ./...` compiles the same tree on every leg, so it is a tree gate:
+# CHECK_TREE_GATES=off leaves it out, and TestOneBackendLegRunsTheTreeGates
+# fails if no CI leg keeps it. A leg without it compiles only what its own
+# tests import.
+#
 # build runs ALONE first: it compiles the dependency graph into the build
 # cache exactly once. Fanning it out with the others makes every pass
 # compile that graph concurrently — the cache does not block a second
@@ -200,9 +218,13 @@ CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
 
 check: ## The merge gate: everything a PR must pass
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh reset
+ifneq ($(CHECK_TREE_GATES),off)
 	@bash ../scripts/phase-timer.sh start "backend: build"
 	$(MAKE) build
 	@bash ../scripts/phase-timer.sh stop
+else
+	@echo "backend: build skipped (CHECK_TREE_GATES=off): the leg that runs the tree gates builds ./..."
+endif
 	@bash ../scripts/phase-timer.sh start "backend: $(CHECK_LEGS) (-j4)"
 	# -k: one red leg does not stop the others, so a run names every finding.
 	$(MAKE) -k -j4 $(CHECK_LEGS)
@@ -326,7 +348,8 @@ test-cached: composition
 	    exit 1; \
 	  fi; \
 	  echo "go test: $$(printf '%s\n' "$$cached" | wc -l | tr -d ' ') cached packages + $$want run by test-uncached and test-solo"; \
-	  $(GOWORK_COMPOSED) $(TREE_DIGESTS) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) $$cached
+	  $(UNIT_COVER_MKDIR); \
+	  $(GOWORK_COMPOSED) $(TREE_DIGESTS) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) $(UNIT_COVER_FLAGS) $$cached $(UNIT_COVER_ARGS)
 	# The tool chain is its own module, so ./... above never reaches it —
 	# its tests (generator determinism, scaffold behavior) run here or
 	# nowhere.
@@ -354,7 +377,8 @@ test-input-census-changed: composition
 
 test-solo: composition
 	$(TEST_SHUFFLE_NOTE)
-	$(GOWORK_COMPOSED) $(TREE_DIGESTS) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) $(SOLO_TEST_PKGS)
+	@$(UNIT_COVER_MKDIR)
+	$(GOWORK_COMPOSED) $(TREE_DIGESTS) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) $(UNIT_COVER_FLAGS) $(SOLO_TEST_PKGS) $(UNIT_COVER_ARGS)
 
 test-uncached: composition
 	$(TEST_SHUFFLE_NOTE)
@@ -386,7 +410,7 @@ preflight-gates: composition ## The size gates a small diff trips, in seconds; `
 # read as red, never as green.
 test-integration: composition ## Integration lane: real Postgres, fails loudly without it (never skips). Parallel — each package on its own throwaway clone db.
 	@bash ../scripts/gate-slot.sh acquire $@
-	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-parallel.sh
+	@$(GOWORK_COMPOSED) LANE_COVER_FLAGS="$(COVER_FLAGS)" bash ../scripts/test-integration-parallel.sh
 
 # The paid BYOK e2e targets below (e2e-siteread, e2e-ai) call a real cloud model,
 # so they need the provider key (GEMINI_API_KEY, ANTHROPIC_API_KEY, …). `make dev`

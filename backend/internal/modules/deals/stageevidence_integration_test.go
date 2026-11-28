@@ -188,6 +188,51 @@ func TestRefutingAClaimKeepsItAndMarksIt(t *testing.T) {
 	}
 }
 
+// A reading that disagrees with a live one marks it contradicted; a refuted
+// reading is already set aside, and one that agrees contradicts nothing.
+func TestADisagreeingReadingMarksTheLiveOnesItContradicts(t *testing.T) {
+	e := setupConfigEnv(t)
+	ctx := e.asDealWriter()
+	dealID, criterionID := evidenceFixture(t, e, CriterionRoleIdentified)
+	record := func(met bool) ids.UUID {
+		t.Helper()
+		in := claim(dealID, criterionID, AuthorSeller)
+		in.Met = met
+		written, err := e.store.RecordStageEvidence(ctx, in)
+		if err != nil {
+			t.Fatalf("recording met=%v: %v", met, err)
+		}
+		return ids.UUID(written.Id)
+	}
+	refuted := record(true)
+	if _, err := e.store.RefuteStageEvidence(ctx, dealID, refuted); err != nil {
+		t.Fatalf("refuting: %v", err)
+	}
+	live, agreeing := record(true), record(true)
+	unmet := record(false)
+
+	contradictedBy := func(id ids.UUID) string {
+		t.Helper()
+		var by string
+		if err := e.owner.QueryRow(t.Context(),
+			`SELECT coalesce(contradicted_by::text, '') FROM deal_stage_evidence WHERE id = $1`, id).Scan(&by); err != nil {
+			t.Fatal(err)
+		}
+		return by
+	}
+	for _, id := range []ids.UUID{live, agreeing} {
+		if got := contradictedBy(id); got != unmet.String() {
+			t.Errorf("live reading %s is contradicted by %q, want the unmet reading %s", id, got, unmet)
+		}
+	}
+	if got := contradictedBy(refuted); got != "" {
+		t.Errorf("a refuted reading was marked contradicted by %s", got)
+	}
+	if got := contradictedBy(unmet); got != "" {
+		t.Errorf("the newest reading is marked contradicted by %s", got)
+	}
+}
+
 // The first word on a refutation is the one worth keeping: re-refuting would
 // overwrite who first said the claim was wrong.
 func TestASecondRefutationLeavesTheFirstStanding(t *testing.T) {
