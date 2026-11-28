@@ -27,11 +27,13 @@ func TestUntoldLeadErasureScrubsFilesBeforeItsParentCascades(t *testing.T) {
  VALUES($1,$2,'operator_relay','notice@test','["buyer@example.test"]','[]','Notice','Privacy notice','[]','controller','privacy_notice',1)`, delivery, activity)
 	mustExec(ctx, t, env.owner, `INSERT INTO lead_privacy_notice(lead_id,delivery_id,template_key,template_version,state,failure,failed_at)
  VALUES($1,$2,'site_lead',1,'failed','bounced',now())`, lead, delivery)
+	var fileIDs []ids.UUID
 	for _, file := range []struct {
 		kind  string
 		owner ids.UUID
 	}{{"lead", lead}, {"activity", activity}} {
 		id := ids.NewV7()
+		fileIDs = append(fileIDs, id)
 		mustExec(ctx, t, env.owner, `INSERT INTO attachment(id,entity_type,entity_id,filename,storage_key,source,captured_by)
  VALUES($1,$2,$3,'private-buyer-file.txt','untold/'||$1::uuid::text,'manual','human:test')`, id, file.kind, file.owner)
 		mustExec(ctx, t, env.owner, `INSERT INTO audit_log(actor_type,actor_id,action,entity_type,entity_id,after,occurred_at)
@@ -60,7 +62,7 @@ func TestUntoldLeadErasureScrubsFilesBeforeItsParentCascades(t *testing.T) {
 			t.Fatalf("%s survived: %d, %v", what, count, err)
 		}
 	}
-	if err := env.owner.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE entity_type='attachment' AND action='erase'`).Scan(&count); err != nil || count != 2 {
+	if err := env.owner.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE entity_type='attachment' AND action='erase' AND entity_id=ANY($1)`, fileIDs).Scan(&count); err != nil || count != 2 {
 		t.Fatalf("file tombstones=%d, %v", count, err)
 	}
 	if err := env.owner.QueryRow(ctx, `SELECT count(*) FROM stored_object_intent WHERE storage_key LIKE 'untold/%'`).Scan(&count); err != nil || count != 2 {
