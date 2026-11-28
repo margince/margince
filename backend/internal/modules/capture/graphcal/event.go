@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -273,7 +275,7 @@ func OwnCalendar(raw []byte, connected []string) (string, error) {
 	if err := json.Unmarshal(raw, &ev); err != nil {
 		return "", fmt.Errorf("graphcal: parsing calendar event: %w", err)
 	}
-	fold := func(address string) string { return strings.ToLower(strings.TrimSpace(address)) }
+	fold := func(address string) string { return correspondence.Fold(address) }
 	if ev.IsOrganizer {
 		return fold(ev.Organizer.EmailAddress.Address), nil
 	}

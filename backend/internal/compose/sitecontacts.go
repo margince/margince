@@ -20,6 +20,8 @@ import (
 	"encoding/hex"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -88,7 +90,7 @@ func verbatimOrEmpty(claimed, pageText string) string {
 // and drop the other before the address was ever consulted.
 func siteContactIdentity(name, publishedEmail string) string {
 	key := contacts.NormalizeContactName(name)
-	if e := strings.ToLower(strings.TrimSpace(publishedEmail)); e != "" {
+	if e := correspondence.Fold(publishedEmail); e != "" {
 		key += "|" + e
 	}
 	return key

@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -288,7 +290,7 @@ func vcardCandidate(entry VCardEntry) ContactCandidate {
 	// Every address the card states, not just the first: the exact tier checks
 	// them all, and a contact reachable two ways matches on either.
 	for _, email := range entry.Emails {
-		if v := strings.ToLower(strings.TrimSpace(email.Value)); v != "" {
+		if v := correspondence.Fold(email.Value); v != "" {
 			candidate.Emails = append(candidate.Emails, v)
 		}
 	}

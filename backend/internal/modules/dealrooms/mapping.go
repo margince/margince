@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -213,7 +215,7 @@ func listInput(params crmcontracts.ListDealRoomsParams) ListRoomsInput {
 		in.State = &s
 	}
 	if params.ParticipantEmail != nil {
-		email := strings.ToLower(strings.TrimSpace(string(*params.ParticipantEmail)))
+		email := correspondence.Fold(string(*params.ParticipantEmail))
 		in.ParticipantEmail = &email
 	}
 	return in

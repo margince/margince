@@ -5382,7 +5382,7 @@ public.custom_field.custom_field_created_by_fkey FOREIGN KEY (created_by) REFERE
 public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
 public.custom_field.custom_field_pipeline_ids_check CHECK (((pipeline_ids IS NULL) OR ((object = 'deal'::text) AND (cardinality(pipeline_ids) > 0))))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
-public.custom_field.custom_field_reportable_type_check CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal'::text, 'company'::text])) AND (type = ANY (ARRAY['picklist'::text, 'boolean'::text])))))
+public.custom_field.custom_field_reportable_type_check CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal'::text, 'company'::text])) AND (type = ANY (ARRAY['picklist'::text, 'boolean'::text]))) OR ((object = 'deal'::text) AND (type = 'record'::text))))
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
 public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text, 'record'::text, 'url'::text])))
 public.custom_field.custom_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -6664,6 +6664,7 @@ public.finance_payment_customer_owner_idx CREATE INDEX finance_payment_customer_
 public.finance_payment_invoice_ix CREATE INDEX finance_payment_invoice_ix ON public.finance_payment USING btree (invoice_id) WHERE (invoice_id IS NOT NULL)
 public.finance_payment_invoice_owner_idx CREATE INDEX finance_payment_invoice_owner_idx ON public.finance_payment USING btree (invoice_id, connection_id, company_id)
 public.finance_payment_pkey CREATE UNIQUE INDEX finance_payment_pkey ON public.finance_payment USING btree (id)
+public.fold_identifier(value text) secdef=false cfg=- acl=- 
 public.forecast_call acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.forecast_call.amount_minor bigint NOT NULL gen=- def=-
 public.forecast_call.author_id uuid NOT NULL gen=- def=-
@@ -7024,6 +7025,8 @@ public.idempotency_key.response_status integer gen=- def=-
 public.idempotency_key.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.idempotency_key FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "endpoint": 20000, "principal_id": 20000, "request_digest": 20000, "response_content_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"endpoint":20000,"key":20000,"principal_id":20000,"request_digest":20000,"response_content_type":20000}')
 public.idempotency_key.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.idempotency_key FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "endpoint": 20000, "principal_id": 20000, "request_digest": 20000, "response_content_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"endpoint":20000,"key":20000,"principal_id":20000,"request_digest":20000,"response_content_type":20000}')
 public.idempotency_key_pkey CREATE UNIQUE INDEX idempotency_key_pkey ON public.idempotency_key USING btree (principal_id, key, endpoint)
+public.identifier_spelling(value text) secdef=false cfg=- acl=- 
+public.identifier_spelling_row_id(value text) secdef=false cfg=- acl=- 
 public.idx_aam_subject CREATE INDEX idx_aam_subject ON public.activity_audience_member USING btree (subject_type, subject_id)
 public.idx_activity_answer_mail_subject CREATE INDEX idx_activity_answer_mail_subject ON public.activity USING btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''::text), '^(\s*(re|aw|antw)\s*:)+\s*'::text, ''::text, 'i'::text), '\s+'::text, ' '::text, 'g'::text))), occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
 public.idx_activity_answer_touch CREATE INDEX idx_activity_answer_touch ON public.activity USING btree (id, occurred_at) WHERE (((kind = 'call'::text) OR ((kind = 'meeting'::text) AND (meeting_status = 'held'::text))) AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
@@ -7369,6 +7372,7 @@ public.idx_offer_legal_entity CREATE INDEX idx_offer_legal_entity ON public.offe
 public.idx_offer_status CREATE INDEX idx_offer_status ON public.offer USING btree (status) WHERE (archived_at IS NULL)
 public.idx_offer_template_fk CREATE INDEX idx_offer_template_fk ON public.offer USING btree (template_id) WHERE (template_id IS NOT NULL)
 public.idx_offer_template_search CREATE INDEX idx_offer_template_search ON public.offer_template USING gin (search_tsv)
+public.idx_own_domain_spelling_cursor CREATE INDEX idx_own_domain_spelling_cursor ON public.workspace_email_domain USING btree (identifier_spelling_row_id(domain))
 public.idx_participant_domain_evidence_incomplete CREATE INDEX idx_participant_domain_evidence_incomplete ON public.activity_participant USING btree (id) WHERE ((domain_evidence_parent_version IS NULL) OR (domain_evidence_at IS NULL) OR (domain_evidence_precision IS NULL) OR (domain_evidence_visible IS NULL))
 public.idx_participant_domain_evidence_latest CREATE INDEX idx_participant_domain_evidence_latest ON public.activity_participant USING gist (reverse(address_domain_folded) COLLATE "C", domain_evidence_precision, domain_evidence_at) WHERE (domain_evidence_visible AND (NOT past_party_cap) AND (address_domain_folded IS NOT NULL))
 public.idx_partner_kinds CREATE INDEX idx_partner_kinds ON public.partner USING gin (partner_kinds)

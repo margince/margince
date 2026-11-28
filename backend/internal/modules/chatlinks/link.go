@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
@@ -459,7 +461,7 @@ func invitees(viewers []Viewer, owner *ids.UUID, actor ids.UUID) ([]string, int)
 	seen := map[string]bool{}
 	skipped := 0
 	for _, v := range ordered {
-		key := strings.ToLower(strings.TrimSpace(v.Email))
+		key := correspondence.Fold(v.Email)
 		switch {
 		case key == "" || seen[key]:
 		case len(emails) == inviteCap:

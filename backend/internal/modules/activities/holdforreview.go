@@ -67,6 +67,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -374,7 +376,7 @@ func loweredRecipients(in SendEmailInput) []string {
 	for _, group := range [][]string{in.Recipients, in.Cc, in.Bcc} {
 		for _, address := range group {
 			if trimmed := strings.TrimSpace(address); trimmed != "" {
-				out = append(out, strings.ToLower(trimmed))
+				out = append(out, correspondence.Fold(trimmed))
 			}
 		}
 	}

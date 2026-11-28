@@ -57,7 +57,9 @@ const REPORTED_OBJECTS: ReadonlySet<CfObject> = new Set(["deal", "company"]);
 function reportableField(object: CfObject, field: CustomField): boolean {
   return (
     REPORTED_OBJECTS.has(object) &&
-    (field.type === "picklist" || field.type === "boolean")
+    (field.type === "picklist" ||
+      field.type === "boolean" ||
+      (object === "deal" && field.type === "record"))
   );
 }
 

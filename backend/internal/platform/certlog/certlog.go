@@ -32,6 +32,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
@@ -157,7 +159,7 @@ type crtShEntry struct {
 // company whose subdomains vanished from the record is how a working webshop
 // signal disappears).
 func (c *CrtSh) Hostnames(ctx context.Context, domain string) ([]string, bool, error) {
-	domain = strings.ToLower(strings.TrimSpace(domain))
+	domain = owndomain.Fold(domain)
 	if domain == "" {
 		return nil, false, nil
 	}

@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -179,7 +181,7 @@ func loweredCardEmails(entry contacts.VCardEntry) string {
 	seen := map[string]bool{}
 	emails := make([]string, 0, len(entry.Emails))
 	for _, email := range entry.Emails {
-		v := strings.ToLower(strings.TrimSpace(email.Value))
+		v := correspondence.Fold(email.Value)
 		if v == "" || seen[v] {
 			continue
 		}

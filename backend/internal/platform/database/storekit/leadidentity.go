@@ -22,8 +22,9 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 
 	"github.com/jackc/pgx/v5"
 
@@ -278,7 +279,7 @@ func IdentityHoldersOf(ctx context.Context, tx pgx.Tx, keys IdentityKeys) (Ident
 	defer rows.Close()
 	asked := map[string]bool{}
 	for _, email := range keys.Emails {
-		asked[strings.ToLower(strings.TrimSpace(email))] = true
+		asked[correspondence.Fold(email)] = true
 	}
 	for rows.Next() {
 		var found heldKey

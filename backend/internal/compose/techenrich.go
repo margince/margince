@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/certlog"
 	"github.com/margince/margince/backend/internal/platform/dnsread"
@@ -123,7 +125,7 @@ type laneOutcome struct {
 func (e *TechnicalEnricher) Read(
 	ctx context.Context, companyID ids.CompanyID, domain string, lang textlang.Lang,
 ) (contacts.TechnicalEnrichment, []laneOutcome) {
-	domain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(domain, ".")))
+	domain = owndomain.Fold(strings.TrimSuffix(domain, "."))
 	result := contacts.TechnicalEnrichment{
 		CompanyID:  companyID,
 		ObservedAt: e.now().UTC(),

@@ -21,8 +21,9 @@ package contacts
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 
 	"github.com/jackc/pgx/v5"
 
@@ -70,7 +71,7 @@ import (
 // far better outcome than refusing to create the contact. A capture that failed
 // because a timestamp could not be read would drop the record entirely.
 func acquisitionTimeFor(ctx context.Context, tx pgx.Tx, email string, activityID ids.ActivityID) *time.Time {
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = correspondence.Fold(email)
 	if email == "" {
 		return nil
 	}

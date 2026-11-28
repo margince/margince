@@ -4,8 +4,7 @@
 package consent
 
 import (
-	"strings"
-
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -83,7 +82,7 @@ func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
 		// Normalized on the way in, because the erasure sweeps match on it.
 		// A lowercased, trimmed comparison walks past an address stored as
 		// typed. What it walks past is an erased subject's mailbox.
-		Address:       strings.ToLower(strings.TrimSpace(d.Recipient.Email)),
+		Address:       correspondence.Fold(d.Recipient.Email),
 		SubjectKind:   d.SubjectKind,
 		ReasonCode:    d.ReasonCode,
 		Provision:     d.ProvisionFor(d.ReasonCode),

@@ -1,0 +1,62 @@
+import type { Translator } from "../../i18n";
+import type { MessageKey } from "../i18n/en";
+
+const toolTitles = new Map<string, MessageKey>([
+  ["annotate_brief", "tools.name.annotate_brief"],
+  ["archive_record", "tools.name.archive_record"],
+  ["bulk_update_records", "tools.name.bulk_update_records"],
+  ["change_access", "tools.name.change_access"],
+  ["change_activities", "tools.name.change_activities"],
+  ["change_attention", "tools.name.change_attention"],
+  ["change_capture", "tools.name.change_capture"],
+  ["change_compliance", "tools.name.change_compliance"],
+  ["change_lists", "tools.name.change_lists"],
+  ["change_my_settings", "tools.name.change_my_settings"],
+  ["change_offers", "tools.name.change_offers"],
+  ["change_record_parts", "tools.name.change_record_parts"],
+  ["change_relationships", "tools.name.change_relationships"],
+  ["change_reports", "tools.name.change_reports"],
+  ["change_settings", "tools.name.change_settings"],
+  ["change_state", "tools.name.change_state"],
+  ["change_tags", "tools.name.change_tags"],
+  ["check_availability", "tools.name.check_availability"],
+  ["commit_import", "tools.name.commit_import"],
+  ["create_record", "tools.name.create_record"],
+  ["decide_approvals", "tools.name.decide_approvals"],
+  ["draft_outbound", "tools.name.draft_outbound"],
+  ["enrich", "tools.name.enrich"],
+  ["find_records", "tools.name.find_records"],
+  ["list_approvals", "tools.name.list_approvals"],
+  ["list_documents", "tools.name.list_documents"],
+  ["preview_import", "tools.name.preview_import"],
+  ["read_analytics", "tools.name.read_analytics"],
+  ["read_approval", "tools.name.read_approval"],
+  ["read_attention", "tools.name.read_attention"],
+  ["read_context", "tools.name.read_context"],
+  ["read_details", "tools.name.read_details"],
+  ["read_forecast", "tools.name.read_forecast"],
+  ["read_import", "tools.name.read_import"],
+  ["read_lists", "tools.name.read_lists"],
+  ["read_project", "tools.name.read_project"],
+  ["read_record", "tools.name.read_record"],
+  ["read_relationships", "tools.name.read_relationships"],
+  ["read_reports", "tools.name.read_reports"],
+  ["read_tags", "tools.name.read_tags"],
+  ["read_view", "tools.name.read_view"],
+  ["read_workspace", "tools.name.read_workspace"],
+  ["resolve_duplicates", "tools.name.resolve_duplicates"],
+  ["run_research", "tools.name.run_research"],
+  ["schedule_meeting", "tools.name.schedule_meeting"],
+  ["send_outbound", "tools.name.send_outbound"],
+  ["update_record", "tools.name.update_record"],
+  ["whoami", "tools.name.whoami"],
+]);
+
+export function agentToolTitle(
+  t: Translator,
+  name: string,
+  source: string,
+): string {
+  const key = toolTitles.get(name);
+  return key ? t(key) : source;
+}

@@ -15,6 +15,8 @@ import (
 	"mime/quotedprintable"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/emersion/go-message"
 	"github.com/emersion/go-message/mail"
 
@@ -190,7 +192,7 @@ func (w *partWalker) forwardedOriginal() *connector.ForwardedOriginal {
 	}
 	messageID, _ := header.MessageID()
 	return &connector.ForwardedOriginal{
-		From:        strings.ToLower(strings.TrimSpace(from[0].Address)),
+		From:        correspondence.Fold(from[0].Address),
 		DisplayName: from[0].Name,
 		Subject:     strings.TrimSpace(headerText(header, "Subject")),
 		MessageID:   strings.TrimSpace(messageID),

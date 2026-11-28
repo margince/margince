@@ -19,9 +19,9 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
@@ -143,7 +143,7 @@ func senderWasSeen(rec connector.NormalizedRecord, seen []string) bool {
 //
 // Held by: TestTheSeenSenderRuleIsSpelledOnce (backend/gates/seenaddressrule_test.go)
 func addressWasSeen(address string, seen []string) bool {
-	from := strings.ToLower(strings.TrimSpace(address))
+	from := correspondence.Fold(address)
 	if from == "" {
 		return false
 	}

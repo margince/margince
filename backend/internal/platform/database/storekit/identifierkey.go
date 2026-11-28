@@ -9,8 +9,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"strings"
 	"sync/atomic"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -63,7 +64,7 @@ func currentIdentifierKey() (identifierKey, bool) {
 // without a key hold it. The keyed form is a MAC over it, so a stored digest
 // can be re-keyed without the value it came from.
 func identifierDigest(value string) string {
-	digest := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(value))))
+	digest := sha256.Sum256([]byte(values.LegacyIdentifierKey(value)))
 	return hex.EncodeToString(digest[:])
 }
 

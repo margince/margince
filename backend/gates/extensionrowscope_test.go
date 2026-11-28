@@ -30,6 +30,7 @@ var extensionScopeCalls = []string{"ExtensionScopeClause", "ExtensionTableScopeC
 // Each reason says where the scope is applied instead, or why no reader is
 // served a row.
 var unscopedExtensionReaders = gatekit.Waive(map[string]string{
+	"compose/reportjoin.Resolve":                "builds reportSpec.extensionJoin; specScopeClauses always calls Join.Scope before executing the joined report",
 	"collections.extensionEngine":               "builds a storekit.Query with Object set; Query.rowScope renders the kind's scope on every execution",
 	"compose.extensionKindSpec":                 "builds a reportSpec with extensionKind set; specScopeClauses renders the kind's scope for every report",
 	"compose.extensionHistoryQuery":             "its one caller, extensionRecordEntries, renders the kind's scope and passes it in",
@@ -46,7 +47,7 @@ var unscopedExtensionReaders = gatekit.Waive(map[string]string{
 
 // extensionSchemaReaders is how many functions name the ext schema. The census
 // fails on fewer as well as more, so a reader that stops being found is seen.
-const extensionSchemaReaders = 16
+const extensionSchemaReaders = 17
 
 func TestEveryReadOfAnExtensionKindCarriesItsRowScope(t *testing.T) {
 	t.Parallel()

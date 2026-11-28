@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -157,7 +159,7 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 // restating it writes nothing new, so it passes as stored.
 func parseContactHandles(emails []ContactEmailInput, phones []ContactPhoneInput, held map[string]bool) error {
 	for i, e := range emails {
-		if stored := strings.ToLower(strings.TrimSpace(e.Email)); held[stored] {
+		if stored := correspondence.Fold(e.Email); held[stored] {
 			emails[i].Email = stored
 			continue
 		}

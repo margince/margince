@@ -28,6 +28,8 @@ package capture
 import (
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 )
@@ -152,7 +154,7 @@ func isMachineLocalpart(localpart string) bool { return mailidentity.IsMachineLo
 // domain — the "sender lane" a prefix rule keys on. "event.gitex.com" over base
 // "gitex.com" → "event"; a bare registrable domain has no prefix.
 func senderPrefix(domain, base string) (string, bool) {
-	domain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(domain, ".")))
+	domain = owndomain.Fold(strings.TrimSuffix(domain, "."))
 	sub := strings.TrimSuffix(domain, "."+base)
 	if sub == "" || sub == domain {
 		return "", false

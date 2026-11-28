@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -79,9 +81,9 @@ type Meeting struct {
 // owner (whose domain marks "internal"). Pure — the caller has already decoded
 // the bytes — so the whole mapping is fixture-provable.
 func Classify(ev Event, owner string) Meeting {
-	ownerAddress := strings.ToLower(strings.TrimSpace(ev.OwnerAddress))
+	ownerAddress := correspondence.Fold(ev.OwnerAddress)
 	if ownerAddress == "" {
-		ownerAddress = strings.ToLower(strings.TrimSpace(owner))
+		ownerAddress = correspondence.Fold(owner)
 	}
 
 	ownerDom := domainOf(owner)
@@ -145,7 +147,7 @@ func meetingParties(ev Event, owner string) connector.Parties {
 
 	var out []connector.MessageParticipant
 	add := func(actor Actor, role string) {
-		address := strings.ToLower(strings.TrimSpace(actor.Email))
+		address := correspondence.Fold(actor.Email)
 		if at, listed := seen[address]; listed {
 			// An organizer listed again as an attendee answers there.
 			if out[at].Response == "" {
@@ -169,7 +171,7 @@ func meetingParties(ev Event, owner string) connector.Parties {
 		add(a, connector.ParticipantRoleAttendee)
 	}
 
-	if address := strings.ToLower(strings.TrimSpace(owner)); address != "" && ev.OwnerResponse != "" {
+	if address := correspondence.Fold(owner); address != "" && ev.OwnerResponse != "" {
 		if at, listed := seen[address]; listed {
 			out[at].Response = ev.OwnerResponse
 		}
@@ -301,7 +303,7 @@ func buildBody(ev Event, attendeeEmails []string) (body string, masked bool) {
 // carries no "@". It splits at the LAST "@" so a quoted local part containing
 // one still yields the domain.
 func domainOf(addr string) string {
-	addr = strings.ToLower(strings.TrimSpace(addr))
+	addr = correspondence.Fold(addr)
 	if idx := strings.LastIndex(addr, "@"); idx >= 0 {
 		return addr[idx+1:]
 	}
@@ -325,7 +327,7 @@ func eventAddresses(ev Event, owner string) []string {
 	seen := make(map[string]bool)
 	var out []string
 	add := func(address string) {
-		address = strings.ToLower(strings.TrimSpace(address))
+		address = correspondence.Fold(address)
 		if address == "" || seen[address] {
 			return
 		}

@@ -12,6 +12,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -142,7 +144,7 @@ func updatedReport(entry VCardEntry, st cardStatement, heldEmails map[string]boo
 	// A matched contact's name is never written by a card.
 	r.add(reportFieldName, strings.TrimSpace(entry.FullName), VCardFieldKept)
 	for _, email := range entry.Emails {
-		v := strings.ToLower(strings.TrimSpace(email.Value))
+		v := correspondence.Fold(email.Value)
 		if v == "" {
 			continue
 		}

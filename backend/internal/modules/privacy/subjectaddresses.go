@@ -3,14 +3,10 @@
 
 package privacy
 
-import "strings"
+import "github.com/margince/margince/backend/internal/platform/database/storekit"
 
 func lowercased(values []string) []string {
-	out := make([]string, len(values))
-	for i, v := range values {
-		out[i] = strings.ToLower(strings.TrimSpace(v))
-	}
-	return out
+	return storekit.EmailLookups(values...)
 }
 
 func recordedRequestAddressScope(emails string) string {

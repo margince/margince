@@ -43,7 +43,8 @@ type ReportBreakdown struct {
 	// custom field as the population's vocabulary spells it: `cf_<name>` for the
 	// deal's own, `company_cf_<name>` for its company's. A multi-select field
 	// splits by the combination of values a record holds. One record is then in
-	// one group, and the groups add up to the whole.
+	// one group, and the groups add up to the whole. A deal record picker may name
+	// `cf_<name>.<field>` to group by a Reportable field of the kind it names.
 	By string
 }
 
@@ -83,6 +84,19 @@ func (b ReportBreakdown) Validate(kinds []RecordKindDeclaration) error {
 	}
 	kind, _ := ValidatePopulation(b.Population, kinds)
 	if kind == "" {
+		if picker, field, joined := strings.Cut(b.By, "."); joined {
+			if !strings.HasPrefix(picker, "cf_") || !shortNameGrammar.MatchString(picker) || !shortNameGrammar.MatchString(field) {
+				return fmt.Errorf("report breakdown %q has an invalid record-picker field %q", b.Name, b.By)
+			}
+			for _, k := range kinds {
+				for _, f := range k.Fields {
+					if f.Name == field && f.Reportable {
+						return nil
+					}
+				}
+			}
+			return fmt.Errorf("report breakdown %q needs a declared reportable kind field %q", b.Name, field)
+		}
 		if !shortNameGrammar.MatchString(b.By) {
 			return fmt.Errorf("report breakdown %q splits by %q, which is not a field name", b.Name, b.By)
 		}

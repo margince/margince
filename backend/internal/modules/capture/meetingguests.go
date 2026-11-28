@@ -13,9 +13,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -233,7 +233,7 @@ func addFromTheRoster(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	offer := func(parties []connector.MessageParticipant) []connector.MessageParticipant {
 		var out []connector.MessageParticipant
 		for _, p := range parties {
-			bare, known := held[strings.ToLower(strings.TrimSpace(p.Email))]
+			bare, known := held[correspondence.Fold(p.Email)]
 			switch {
 			case !known && budget > 0:
 				budget--

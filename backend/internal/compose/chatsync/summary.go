@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -176,7 +178,7 @@ func (p placing) sideOf(email string) chatsummary.Side {
 // lowercased, empty when the chat named none. authorOf keeps its own rule for
 // what a reader sees; this is only for the match.
 func authorEmail(m chatwire.Message) string {
-	return strings.ToLower(strings.TrimSpace(m.UserEmail))
+	return correspondence.Fold(m.UserEmail)
 }
 
 // authorEmails returns the match addresses the messages carry, lowercased and

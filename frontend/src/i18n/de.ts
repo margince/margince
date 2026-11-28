@@ -5,6 +5,67 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "tools.name.annotate_brief": "Erkenntnisse im Morgenbrief festhalten",
+  "tools.name.archive_record": "Einen Datensatz archivieren",
+  "tools.name.bulk_update_records": "Mehrere Datensätze zugleich ändern",
+  "tools.name.change_access":
+    "Datensätze teilen und Mitglieder und Teams einrichten",
+  "tools.name.change_activities": "Aktivitäten erfassen, planen und zuordnen",
+  "tools.name.change_attention":
+    "Vorschläge, Hinweise und den Wochenplan bearbeiten",
+  "tools.name.change_capture": "Entscheiden, was ins CRM kommt",
+  "tools.name.change_compliance":
+    "Einwilligungen, Kontaktsperren, Aufbewahrungssperren und Datenschutzarbeit erfassen",
+  "tools.name.change_lists": "Listen erstellen und ändern",
+  "tools.name.change_my_settings":
+    "Eigene Einstellungen und Schreibstil ändern",
+  "tools.name.change_offers": "Angebote, Verträge und Deal Rooms bearbeiten",
+  "tools.name.change_record_parts": "Teile eines Datensatzes ändern",
+  "tools.name.change_relationships":
+    "Beziehungen und Zusammenfassungen eines Unternehmens bearbeiten",
+  "tools.name.change_reports":
+    "Gespeicherte Berichte und die Prognose bearbeiten",
+  "tools.name.change_settings": "Unternehmenseinstellungen ändern",
+  "tools.name.change_state":
+    "Den Status eines Leads, Deals, Projekts oder Partners ändern",
+  "tools.name.change_tags": "Tags ändern",
+  "tools.name.check_availability": "Freie Kalenderzeiten prüfen",
+  "tools.name.commit_import": "Einen Import bestätigen",
+  "tools.name.create_record": "Einen Datensatz erstellen",
+  "tools.name.decide_approvals":
+    "Vorgemerkte Aktionen genehmigen oder ablehnen",
+  "tools.name.draft_outbound": "Eine E-Mail oder Folge-E-Mails entwerfen",
+  "tools.name.enrich": "Unternehmensdaten von der Website ergänzen",
+  "tools.name.find_records": "Datensätze finden",
+  "tools.name.list_approvals": "Ausstehende Entscheidungen auflisten",
+  "tools.name.list_documents":
+    "Dokumente eines Datensatzes auflisten oder lesen",
+  "tools.name.preview_import": "Einen Import vorab prüfen",
+  "tools.name.read_analytics": "Einen Bericht erstellen oder Daten abfragen",
+  "tools.name.read_approval": "Eine vorgemerkte Aktion vollständig lesen",
+  "tools.name.read_attention": "Anstehende Aufgaben ansehen",
+  "tools.name.read_context": "Den bisherigen Verlauf lesen",
+  "tools.name.read_details": "Datensatzbereiche und Tageslisten lesen",
+  "tools.name.read_forecast": "Prognose und Änderungen lesen",
+  "tools.name.read_import": "Einen Importlauf oder das Importformat lesen",
+  "tools.name.read_lists": "Listen finden und lesen",
+  "tools.name.read_project": "Ein Projekt oder seine Übergabe lesen",
+  "tools.name.read_record": "Einen Datensatz lesen",
+  "tools.name.read_relationships":
+    "Kontakte und Beziehungsstärke deines Teams lesen",
+  "tools.name.read_reports": "Vertriebsberichte lesen",
+  "tools.name.read_tags": "Tags lesen",
+  "tools.name.read_view": "Eine Ansicht lesen",
+  "tools.name.read_workspace": "Die Unternehmenseinstellungen lesen",
+  "tools.name.resolve_duplicates":
+    "Zwei Datensätze zusammenführen oder ein markiertes Paar verwerfen",
+  "tools.name.run_research": "KI-Aufgaben für deinen Benutzer ausführen",
+  "tools.name.schedule_meeting": "Zu einem Termin einladen",
+  "tools.name.send_outbound": "Eine Nachricht senden",
+  "tools.name.update_record": "Einen Datensatz aktualisieren",
+  "tools.name.whoami": "Für wen dieser Passport handelt",
+  "tools.sourceTitle": "Titel für die KI",
+
   "history.field.chat_source_changed": "Gesprächsquelle geändert",
   "history.field.chat_source_deleted": "Gesprächsquelle entfernt",
   "history.field.kind": "Art",

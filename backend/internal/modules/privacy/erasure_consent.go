@@ -198,11 +198,7 @@ func deleteConsentCapabilities(
 // records the address as the caller typed it and a contact who writes their own
 // mail in mixed case must still be erased from it.
 func lowerAll(values []string) []string {
-	out := make([]string, 0, len(values))
-	for _, v := range values {
-		out = append(out, strings.ToLower(strings.TrimSpace(v)))
-	}
-	return out
+	return storekit.EmailLookups(values...)
 }
 
 // clearRefusedSendReviews empties what a refused-send review recorded about one

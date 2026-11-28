@@ -7,6 +7,8 @@ import (
 	netmail "net/mail"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -24,7 +26,7 @@ func inlineForward(text string) *connector.ForwardedOriginal {
 		return nil
 	}
 	return &connector.ForwardedOriginal{
-		From:        strings.ToLower(strings.TrimSpace(address.Address)),
+		From:        correspondence.Fold(address.Address),
 		DisplayName: address.Name,
 		Subject:     header.Subject,
 		Date:        header.Date,

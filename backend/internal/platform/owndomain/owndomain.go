@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/net/idna"
 	"golang.org/x/net/publicsuffix"
@@ -21,7 +23,7 @@ import (
 // A domain IDNA cannot read stays lowercased rather than dropped, so a parse
 // failure never reads as "ours", the answer that loses correspondence.
 func Fold(domain string) string {
-	domain = strings.ToLower(strings.TrimSpace(domain))
+	domain = correspondence.Fold(domain)
 	domain = strings.TrimSuffix(domain, ".")
 	if domain == "" {
 		return ""

@@ -3,26 +3,23 @@
 
 package compose
 
-// The counts and breakdowns extensions add to Reports and Home.
-//
-// A declaration is data. It becomes a reportSpec and runs through
-// reportEngine.runSpec, so the engine's row scope and field masks apply. The
-// group floor is analyticsquery's own Apply. A unit supplies only a column name
-// its kind declared or a custom field this installation defines. Both are
-// quoted as identifiers, so no SQL comes from a declaration.
+// Extension reports run through reportEngine with the same scopes, masks and
+// group floor as core reports. Declarations name fields, never arbitrary SQL.
 
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/margince/margince/backend/internal/compose/reportjoin"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -128,24 +125,17 @@ func registerReports(exts []extension.Extension) {
 		for _, c := range e.ReportCounts {
 			extReports = append(extReports, registeredReport{
 				name: extension.ReportName(e.Name, c.Name), label: c.Label, kind: extReportCount,
-				unit: e.Name, population: resolvedPopulation(e.Name, c.Population),
+				unit: e.Name, population: reportjoin.ResolvedPopulation(e.Name, c.Population),
 			})
 		}
 		for _, b := range e.ReportBreakdowns {
 			extReports = append(extReports, registeredReport{
 				name: extension.ReportName(e.Name, b.Name), label: b.Label, kind: extReportBreakdown,
-				unit: e.Name, population: resolvedPopulation(e.Name, b.Population), by: b.By,
+				unit: e.Name, population: reportjoin.ResolvedPopulation(e.Name, b.Population), by: b.By,
 			})
 		}
 	}
 	slices.SortFunc(extReports, func(a, b registeredReport) int { return strings.Compare(a.name, b.name) })
-}
-
-func resolvedPopulation(unit extension.Name, population string) string {
-	if strings.Contains(population, "-") {
-		return population
-	}
-	return extension.RecordKindName(unit, population)
 }
 
 func registeredReports() []registeredReport {
@@ -191,36 +181,14 @@ func extensionKindSpec(d recordkinds.Declared, by string) reportSpec {
 // One record then falls in one group and the groups add up to the whole.
 // The field is not a filter, because an array has no single value to equal.
 func multiselectDimensions(spec reportSpec, deal, company []fieldcatalog.Column) reportSpec {
-	toReportable := func(cols []fieldcatalog.Column) []fieldcatalog.ReportableColumn {
-		out := make([]fieldcatalog.ReportableColumn, 0, len(cols))
-		for _, c := range cols {
-			out = append(out, fieldcatalog.ReportableColumn{Column: c, Label: c.Name})
-		}
-		return out
-	}
-	spec = withCustomDimensions(spec, reportableColumns{deal: toReportable(deal), company: toReportable(company)})
+	spec = withCustomDimensions(spec, reportableColumns{deal: reportjoin.ReportableColumns(deal), company: reportjoin.ReportableColumns(company)})
 	for name, expr := range spec.dimensions {
 		if _, custom := spec.customFields[expr]; custom {
-			spec.dimensions[name] = sortedCombination(expr)
+			spec.dimensions[name] = reportjoin.SortedCombination(expr)
 			delete(spec.filters, name)
 		}
 	}
 	return spec
-}
-
-// sortedCombination renders an array column as its values in one fixed order,
-// so {a,b} and {b,a} are one group.
-func sortedCombination(expr string) string {
-	return "(SELECT string_agg(v, ',' ORDER BY v) FROM unnest(" + expr + ") v)"
-}
-
-// multiselectColumns reads the active multi-select custom fields of one object.
-func multiselectColumns(ctx context.Context, tx pgx.Tx, object datasource.EntityType) ([]fieldcatalog.Column, error) {
-	cols, err := customfields.ActiveColumnsIn(ctx, tx, string(object))
-	if err != nil {
-		return nil, err
-	}
-	return slices.DeleteFunc(cols, func(c fieldcatalog.Column) bool { return c.Type != fieldcatalog.TypeMultiselect }), nil
 }
 
 // specFor builds the spec one registered report runs over, and says false for a
@@ -237,13 +205,16 @@ func (r registeredReport) specFor(ctx context.Context, pool *pgxpool.Pool) (repo
 		spec.defaultBy = nil
 		return spec, true, nil
 	}
+	if strings.Contains(r.by, ".") {
+		return r.joinedSpecFor(ctx, pool, spec)
+	}
 	var deal, company []fieldcatalog.Column
 	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
-		if deal, err = multiselectColumns(ctx, tx, datasource.EntityDeal); err != nil {
+		if deal, err = reportjoin.MultiselectColumns(ctx, tx, datasource.EntityDeal); err != nil {
 			return err
 		}
-		company, err = multiselectColumns(ctx, tx, datasource.EntityCompany)
+		company, err = reportjoin.MultiselectColumns(ctx, tx, datasource.EntityCompany)
 		return err
 	})
 	if err != nil {
@@ -276,6 +247,17 @@ type extensionReportGroup struct {
 // ok is false when the report does not apply here: a custom field this
 // installation does not define.
 func (e *reportEngine) runRegistered(ctx context.Context, r registeredReport, floor analyticsquery.Floor) (extensionReportAnswer, bool, error) {
+	var answer extensionReportAnswer
+	var offered bool
+	err := database.WithSnapshot(ctx, e.pool, func(ctx context.Context) error {
+		var err error
+		answer, offered, err = e.runRegisteredSnapshot(ctx, r, floor)
+		return err
+	})
+	return answer, offered, err
+}
+
+func (e *reportEngine) runRegisteredSnapshot(ctx context.Context, r registeredReport, floor analyticsquery.Floor) (extensionReportAnswer, bool, error) {
 	spec, ok, err := r.specFor(ctx, e.pool)
 	if err != nil || !ok {
 		return extensionReportAnswer{}, false, err
@@ -310,4 +292,22 @@ func (e *reportEngine) runRegistered(ctx context.Context, r registeredReport, fl
 		answer.Total = &sum
 	}
 	return answer, true, nil
+}
+
+func (r registeredReport) joinedSpecFor(ctx context.Context, pool *pgxpool.Pool, spec reportSpec) (reportSpec, bool, error) {
+	join, err := reportjoin.Resolve(ctx, pool, r.unit, r.by)
+	if err != nil || join == nil {
+		return reportSpec{}, false, err
+	}
+	spec.joins = append(slices.Clone(spec.joins), join.SQL)
+	spec.dimensions = maps.Clone(spec.dimensions)
+	spec.dimensions[r.by] = join.Dimension
+	spec.grants = maps.Clone(spec.grants)
+	if spec.grants == nil {
+		spec.grants = map[string]string{}
+	}
+	spec.grants[r.by] = join.Kind
+	spec.extensionJoin = join
+	spec.defaultBy = nil
+	return spec, true, nil
 }

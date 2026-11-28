@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
 import { en as englishCopy } from "../../i18n/en";
+import { vi as vietnameseCopy } from "../../i18n/vi";
 import {
   expectFoldedRowsUnderSummary,
   installFetchStub,
@@ -52,11 +53,15 @@ const SCOUT = {
   revoked_at: null,
 };
 
-function story(passports: readonly Record<string, unknown>[] = []) {
+function story(
+  passports: readonly Record<string, unknown>[] = [],
+  locale: "en" | "vi" = "en",
+  tools = TOOLS,
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /agent-tools": () => jsonResponse({ data: TOOLS }),
+      "GET /agent-tools": () => jsonResponse({ data: tools }),
       "GET /passports": () =>
         jsonResponse({
           data: passports,
@@ -64,7 +69,7 @@ function story(passports: readonly Record<string, unknown>[] = []) {
         }),
     });
     return (
-      <StoryProviders>
+      <StoryProviders locale={locale}>
         <AgentToolsCard />
       </StoryProviders>
     );
@@ -173,5 +178,121 @@ export const ScopedToPassport: Story = {
       "Reachable by Scout",
     );
     await openSendGroup(context);
+  },
+};
+
+const VI_TOOLS = [
+  {
+    name: "annotate_brief",
+    title: "Write findings onto the morning brief",
+    description: "Source description supplied to the AI client.",
+    required_scope: "read",
+    tier: "auto_execute",
+    egress: false,
+  },
+  {
+    name: "archive_record",
+    title: "Archive a record",
+    description: "Source description supplied to the AI client.",
+    required_scope: "read",
+    tier: "auto_execute",
+    egress: false,
+  },
+  {
+    name: "bulk_update_records",
+    title: "Change many records at once",
+    description: "Source description supplied to the AI client.",
+    required_scope: "read",
+    tier: "auto_execute",
+    egress: false,
+  },
+  {
+    name: "change_access",
+    title: "Share records and set up members and teams",
+    description: "Source description supplied to the AI client.",
+    required_scope: "read",
+    tier: "auto_execute",
+    egress: false,
+  },
+  {
+    name: "change_activities",
+    title: "Log, plan and file activities",
+    description: "Source description supplied to the AI client.",
+    required_scope: "read",
+    tier: "auto_execute",
+    egress: false,
+  },
+  {
+    name: "change_attention",
+    title: "Act on proposals, notices and the weekly plan",
+    description: "Source description supplied to the AI client.",
+    required_scope: "read",
+    tier: "auto_execute",
+    egress: false,
+  },
+  {
+    name: "change_capture",
+    title: "Decide what comes into the CRM",
+    description: "Source description supplied to the AI client.",
+    required_scope: "read",
+    tier: "auto_execute",
+    egress: false,
+  },
+  {
+    name: "change_compliance",
+    title: "Record consent, stops, holds and privacy work",
+    description: "Source description supplied to the AI client.",
+    required_scope: "read",
+    tier: "auto_execute",
+    egress: false,
+  },
+  {
+    name: "change_lists",
+    title: "Make and change lists",
+    description: "Source description supplied to the AI client.",
+    required_scope: "read",
+    tier: "auto_execute",
+    egress: false,
+  },
+  {
+    name: "change_my_settings",
+    title: "Change the user's own preferences and voice",
+    description: "Source description supplied to the AI client.",
+    required_scope: "read",
+    tier: "auto_execute",
+    egress: false,
+  },
+];
+export const VietnameseTools: Story = {
+  render: story([], "vi", VI_TOOLS),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByText(vietnameseCopy["passport.scope.read"]),
+    );
+    await canvas.findByText(vietnameseCopy["tools.name.annotate_brief"]);
+    await canvas.findByText(vietnameseCopy["tools.name.archive_record"]);
+    await canvas.findByText(vietnameseCopy["tools.name.bulk_update_records"]);
+    await canvas.findByText(vietnameseCopy["tools.name.change_access"]);
+    await canvas.findByText(vietnameseCopy["tools.name.change_activities"]);
+    await canvas.findByText(vietnameseCopy["tools.name.change_attention"]);
+    await canvas.findByText(vietnameseCopy["tools.name.change_capture"]);
+    await canvas.findByText(vietnameseCopy["tools.name.change_compliance"]);
+    await canvas.findByText(vietnameseCopy["tools.name.change_lists"]);
+    await canvas.findByText(vietnameseCopy["tools.name.change_my_settings"]);
+  },
+};
+export const VietnameseSearch: Story = {
+  render: story([], "vi"),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(
+      await canvas.findByRole("searchbox"),
+      "search_records",
+    );
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /Tìm kiếm/ }),
+    );
+    await canvas.findByText(/Search records/);
   },
 };

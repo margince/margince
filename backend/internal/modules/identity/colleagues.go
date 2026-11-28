@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -149,7 +151,7 @@ func (s *Service) ResolveColleague(ctx context.Context, name string) (Colleague,
 			continue
 		}
 		if strings.ToLower(strings.TrimSpace(c.DisplayName)) == wanted ||
-			strings.ToLower(strings.TrimSpace(c.Email)) == wanted {
+			correspondence.Fold(c.Email) == wanted {
 			found, matches = c, matches+1
 		}
 	}

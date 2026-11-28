@@ -7,7 +7,8 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 
 	"github.com/jackc/pgx/v5"
 
@@ -32,10 +33,10 @@ func StopOnAddressesSQL(alias, lowered, hashes string) string {
 func StopAddressArgs(addresses ...string) (lowered, hashes []string) {
 	lowered = make([]string, 0, 2*len(addresses))
 	for _, address := range addresses {
-		if trimmed := strings.ToLower(strings.TrimSpace(address)); trimmed != "" {
+		if trimmed := values.LegacyIdentifierKey(address); trimmed != "" {
 			lowered = append(lowered, trimmed)
 		}
-		if folded := correspondence.Fold(address); folded != "" && folded != strings.ToLower(strings.TrimSpace(address)) {
+		if folded := correspondence.Fold(address); folded != "" && folded != values.LegacyIdentifierKey(address) {
 			lowered = append(lowered, folded)
 		}
 	}

@@ -6,9 +6,9 @@ package capture
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -73,7 +73,7 @@ func listedAndDeclined(listed []connector.MessageParticipant) (addresses, declin
 	addresses = make([]string, 0, len(listed))
 	declined = make([]string, 0, len(listed))
 	for _, p := range listed {
-		address := strings.ToLower(strings.TrimSpace(p.Email))
+		address := correspondence.Fold(p.Email)
 		addresses = append(addresses, address)
 		if p.Declined() {
 			declined = append(declined, address)

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
@@ -44,7 +46,7 @@ type quotaPacing struct {
 }
 
 func quotaOwner(ctx context.Context, owner string) context.Context {
-	return context.WithValue(ctx, quotaOwnerKey{}, strings.ToLower(strings.TrimSpace(owner)))
+	return context.WithValue(ctx, quotaOwnerKey{}, correspondence.Fold(owner))
 }
 
 func (c *Connector) authorize(ctx context.Context, st authState) (context.Context, string, error) {

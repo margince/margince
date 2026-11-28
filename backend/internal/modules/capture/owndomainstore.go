@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/net/idna"
 
@@ -334,7 +336,7 @@ const ownDomainWriteIdentity = "workspace_email_domain"
 // what to do about it rather than folded into something that silently matches
 // nothing.
 func ValidOwnDomain(raw string) (string, error) {
-	domain := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(raw), "@")))
+	domain := correspondence.Fold(strings.TrimPrefix(strings.TrimSpace(raw), "@"))
 	domain = strings.TrimSuffix(domain, ".")
 	switch {
 	case domain == "":

@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/reportjoin"
+
 	"github.com/margince/margince/backend/internal/compose/dealcoverage"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
@@ -158,6 +160,7 @@ type reportSpec struct {
 	// extensionKind is the `ext:<unit>:<kind>` whose rows table holds, empty
 	// for a core population. It selects the kind's row scope.
 	extensionKind string
+	extensionJoin *reportjoin.Join
 	// joins widen the FROM side with fixed lookup tables (e.g. the
 	// deal's stage for win_probability); the row grain stays the base
 	// table's — a spec must never join a to-many side, or aggregates

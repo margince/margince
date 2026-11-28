@@ -6,9 +6,9 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -58,7 +58,7 @@ func (s *Store) EmailAlreadyOnFileTx(ctx context.Context, tx pgx.Tx, email strin
 	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
 		return false, err
 	}
-	normalized := strings.ToLower(strings.TrimSpace(email))
+	normalized := correspondence.Fold(email)
 	if normalized == "" {
 		return false, nil
 	}

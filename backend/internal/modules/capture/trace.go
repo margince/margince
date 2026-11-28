@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
@@ -307,7 +309,7 @@ func Trace(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) error {
 // is now the steady state rather than an opt-in, so the cost is paid on every
 // traced message an ordinary installation writes.
 func tracePayload(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) (*string, *string, error) {
-	address := strings.ToLower(strings.TrimSpace(in.Counterparty))
+	address := correspondence.Fold(in.Counterparty)
 	// An unattributable row carries no content, whatever the posture.
 	//
 	// A zero UserID means one of two things: a workspace-owned channel binding,

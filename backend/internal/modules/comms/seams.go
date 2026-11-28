@@ -12,8 +12,9 @@ import (
 	"context"
 	"errors"
 	"sort"
-	"strings"
 	"sync"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 
 	"github.com/jackc/pgx/v5"
 
@@ -292,7 +293,7 @@ func addressees(del Delivery) []string {
 	seen := make(map[string]bool, size)
 	for _, list := range [][]string{del.Recipients, del.Cc, del.Bcc} {
 		for _, addr := range list {
-			key := strings.ToLower(strings.TrimSpace(addr))
+			key := correspondence.Fold(addr)
 			if key == "" || seen[key] {
 				continue
 			}

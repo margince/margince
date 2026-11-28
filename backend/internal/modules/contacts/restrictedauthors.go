@@ -10,9 +10,9 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
 // restrictedAuthorsSQL answers which of the asked addresses belong to a
@@ -37,7 +37,7 @@ const restrictedAuthorsSQL = `SELECT DISTINCT lower(contact_address.email)
 func (s *Store) RestrictedEmailsTx(ctx context.Context, tx pgx.Tx, emails []string) (map[string]bool, error) {
 	lowered := make([]string, 0, len(emails))
 	for _, email := range emails {
-		lowered = append(lowered, strings.ToLower(strings.TrimSpace(email)))
+		lowered = append(lowered, correspondence.Fold(email))
 	}
 	rows, err := tx.Query(ctx, restrictedAuthorsSQL, lowered)
 	if err != nil {

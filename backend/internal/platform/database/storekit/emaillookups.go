@@ -4,7 +4,7 @@
 package storekit
 
 import (
-	"strings"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
@@ -18,7 +18,7 @@ func EmailLookups(emails ...string) []string {
 	out := make([]string, 0, 2*len(emails))
 	seen := map[string]bool{}
 	for _, email := range emails {
-		typed := strings.ToLower(strings.TrimSpace(email))
+		typed := values.LegacyIdentifierKey(email)
 		if typed == "" {
 			continue
 		}

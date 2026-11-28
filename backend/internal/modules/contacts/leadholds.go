@@ -15,6 +15,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -284,7 +286,7 @@ func freshEditKeys(current crmcontracts.Contact, in UpdateContactInput) storekit
 	}
 	var keys storekit.IdentityKeys
 	for _, e := range in.Emails {
-		if !held[strings.ToLower(strings.TrimSpace(e.Email))] {
+		if !held[correspondence.Fold(e.Email)] {
 			keys.Emails = append(keys.Emails, e.Email)
 		}
 	}

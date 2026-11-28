@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -61,7 +63,7 @@ func seatsByEmail(ctx context.Context, tx pgx.Tx, emails []string) (map[string]i
 }
 
 func foldedEmail(email string) string {
-	return strings.ToLower(strings.TrimSpace(email))
+	return correspondence.Fold(email)
 }
 
 // ownerResolver holds the seat of every owner address a run names, read once.

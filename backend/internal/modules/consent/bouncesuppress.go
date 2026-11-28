@@ -29,6 +29,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -101,7 +103,7 @@ type HardBounceFact struct {
 // delivery report that rolled back would refuse mail on the strength of a
 // failure that never happened.
 func RecordHardBounceTx(ctx context.Context, tx pgx.Tx, fact HardBounceFact) error {
-	address := strings.ToLower(strings.TrimSpace(fact.Address))
+	address := correspondence.Fold(fact.Address)
 	if address == "" {
 		return errors.New("consent: a hard bounce names no address")
 	}
@@ -251,7 +253,7 @@ func bounceSource(deliveryID ids.UUID) string {
 // and it is narrower than the level check Lift makes — this cannot touch a
 // marketing_objection even if one somehow carried the machine level.
 func (s *Store) LiftAddressStop(ctx context.Context, address, reason string) error {
-	address = strings.ToLower(strings.TrimSpace(address))
+	address = correspondence.Fold(address)
 	if address == "" {
 		return &ValidationError{Field: fieldAddress, Reason: "lifting a stop names the address"}
 	}
