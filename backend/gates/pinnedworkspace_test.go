@@ -41,6 +41,19 @@ var acrossWorkspacesSites = []string{
 	"internal/compose/tracesweep/tracesweep.go",
 }
 
+// installationHandleSites may build a ForInstallation handle from a pool.
+// They are the compose wiring and the programs under cmd, which inject it into
+// stores, and identity's constructor from a pool. Anything deeper takes the
+// handle it was given, so a test that pins its handle gets the same pin
+// everywhere.
+var installationHandleSites = []string{"internal/compose/", "cmd/", "internal/modules/identity/service.go"}
+
+func mayBuildInstallationHandle(rel string) bool {
+	return slices.ContainsFunc(installationHandleSites, func(site string) bool {
+		return rel == site || (strings.HasSuffix(site, "/") && strings.HasPrefix(rel, site))
+	})
+}
+
 // databaseUses lists every reference a file makes to name from the database
 // package. It covers a call, a method value, and a use through an aliased or
 // dot import.
@@ -91,6 +104,11 @@ func workspaceHandleFindings(fset *token.FileSet, file *ast.File, rel string) []
 	var findings []string
 	for _, pos := range databaseUses(file, "BindTo") {
 		findings = append(findings, fset.Position(pos).String()+": production code uses database.BindTo. Use database.ForInstallation, or database.NewAcrossWorkspaces for cleanup that sends nothing out.")
+	}
+	if !mayBuildInstallationHandle(rel) {
+		for _, pos := range databaseUses(file, "ForInstallation") {
+			findings = append(findings, fset.Position(pos).String()+": database.ForInstallation below the compose wiring. Take the *database.DB the wiring injects, so a pinned handle stays pinned.")
+		}
 	}
 	if !slices.Contains(acrossWorkspacesSites, rel) {
 		for _, pos := range databaseUses(file, "NewAcrossWorkspaces") {
@@ -150,7 +168,9 @@ func TestTheWorkspaceHandleGateSeesTheSpellingsItMustRefuse(t *testing.T) {
 		{"a name that only ends in a support directory", `"` + databasePackage + `"`, "var _ = database.BindTo(nil, ws)", "internal/compose/notintegration/x.go", 1},
 		{"a cleanup handle outside its sites", `"` + databasePackage + `"`, "var _ = database.NewAcrossWorkspaces(nil)", "internal/compose/chatclarify/x.go", 1},
 		{"a cleanup handle at its site", `"` + databasePackage + `"`, "var _ = database.NewAcrossWorkspaces(nil)", "internal/compose/jobs_storedobject.go", 0},
-		{"an installation handle anywhere", `"` + databasePackage + `"`, "var _ = database.ForInstallation(nil)", "internal/compose/x.go", 0},
+		{"an installation handle in the compose wiring", `"` + databasePackage + `"`, "var _ = database.ForInstallation(nil)", "internal/compose/x.go", 0},
+		{"an installation handle inside a store", `"` + databasePackage + `"`, "var _ = database.ForInstallation(nil)", "internal/modules/activities/x.go", 1},
+		{"an installation handle through an alias inside a platform package", `db "` + databasePackage + `"`, "var _ = db.ForInstallation(nil)", "internal/platform/originalstore/x.go", 1},
 	}
 	for _, tc := range cases {
 		fset := token.NewFileSet()

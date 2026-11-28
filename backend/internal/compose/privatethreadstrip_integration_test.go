@@ -31,7 +31,7 @@ import (
 // judged yet, so the file is stored, and answers the object's key.
 func captureBeforeTheVerdict(ctx context.Context, t *testing.T, db *database.DB, blob blobstore.Store, sourceID, thread, address string) string {
 	t.Helper()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 	rec := withAttachedOriginal(withFiles(fromAddress(mailRecord(sourceID), address), onePDF()))
 	rec.ThreadKey = thread
 	if _, err := sink.Upsert(ctx, rec); err != nil {
@@ -295,7 +295,7 @@ func TestASlimmedOriginalIsRestoredThenWithheld(t *testing.T) {
 	// the restore.
 	big := onePDF()
 	big.Body = bytes.Repeat([]byte("%PDF-1.4 scanned page "), 400)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 	rec := withAttachedOriginal(withFiles(fromAddress(mailRecord(source), address), big))
 	rec.ThreadKey = thread
 	if _, err := sink.Upsert(ctx, rec); err != nil {

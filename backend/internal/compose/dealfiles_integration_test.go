@@ -78,7 +78,7 @@ func inlineLogo() connector.Part {
 
 func TestAnEmailedFileIsListedOnTheDealItIsLinkedToAndCanBeHidden(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 	dealID := seedDealForFiles(ctx, t, db)
 
 	rec := withFiles(mailRecord("msg-deal-"+tag), onePDF(), inlineLogo())
@@ -137,7 +137,7 @@ func TestAnEmailedFileIsListedOnTheDealItIsLinkedToAndCanBeHidden(t *testing.T) 
 
 func TestAColleagueOutsideTheMessagesAudienceSeesNoFileOnTheDeal(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 	dealID := seedDealForFiles(ctx, t, db)
 
 	rec := withFiles(mailRecord("msg-private-"+tag), onePDF())

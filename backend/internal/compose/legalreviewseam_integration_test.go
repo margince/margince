@@ -25,7 +25,7 @@ import (
 
 func TestTheReviewPackCarriesTheContractsTheRequesterCanRead(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 	dealID := seedDealForFiles(ctx, t, db)
 	rec := withFiles(mailRecord("msg-review-"+tag), onePDF())
 	rec.Links = []datasource.EntityRef{{Type: datasource.EntityDeal, ID: dealID}}

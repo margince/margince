@@ -105,7 +105,7 @@ func TestAnOlderProofNeverOverwritesANewerCheck(t *testing.T) {
 		t.Fatalf("an older success displaced a newer one: stamp %d, want 300", got)
 	}
 	db := &DB{installation: true, provenAt: &proof, recheck: time.Hour}
-	proof.Store(-time.Now().UnixNano())
+	proof.Store(-1)
 	if db.recentlyProven() {
 		t.Fatal("a handle whose last check failed counted as proven")
 	}

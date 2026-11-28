@@ -87,7 +87,7 @@ func storedOriginal(ctx context.Context, t *testing.T, db *database.DB, sourceID
 func TestAPersonalSendersFilesAreKeptNowhere(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 
 	address := "personal-" + tag + "@example.com"
 	if _, err := sink.Upsert(ctx, fromAddress(mailRecord("msg-first-"+tag), address)); err != nil {
@@ -127,7 +127,7 @@ func TestAPersonalSendersFilesAreKeptNowhere(t *testing.T) {
 func TestABusinessOverrideKeepsAPersonalSendersFiles(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 	address := "override-" + tag + "@example.com"
 
 	if _, err := sink.Upsert(ctx, fromAddress(mailRecord("msg-first-"+tag), address)); err != nil {
@@ -161,7 +161,7 @@ func TestABusinessOverrideKeepsAPersonalSendersFiles(t *testing.T) {
 func TestACorrespondenceContactsFilesSurviveAPersonalVerdict(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blob))
 	address := "contact-" + tag + "@example.com"
 	from := func(rec connector.NormalizedRecord) connector.NormalizedRecord { return fromAddress(rec, address) }
 
@@ -210,7 +210,7 @@ func TestAuthenticatedGoogleNotesKeepTheirFilesUnderAPersonalVerdict(t *testing.
 func notesFilesUnderPersonalVerdict(t *testing.T, byOwner bool) {
 	ctx, db, tag := captureWorkspace(t)
 	ctx = asConnectorFor(ctx, "connector:gmail", captureSeatID)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 	const address = "gemini-notes@google.com"
 	// The address is fixed and the seat is shared. A verdict that another case
 	// or an earlier run left for this pair would decide this case instead.
@@ -249,7 +249,7 @@ func notesFilesUnderPersonalVerdict(t *testing.T, byOwner bool) {
 // personal sender's original keeps only its headers.
 func TestAPersonalSendersRefusedFileLeavesNoBytesInTheOriginal(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db, blobstore.NewMemory()))
 
 	address := "dropped-" + tag + "@example.com"
 	if _, err := sink.Upsert(ctx, fromAddress(mailRecord("msg-first-"+tag), address)); err != nil {
