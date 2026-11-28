@@ -37,8 +37,8 @@ seeds:
     # No thinking_level: that field is Gemini's. The Anthropic adapter picks its
     # own effort per request, and a tier cannot set one.
     #
-    # The same three tasks gemini_cloud.yaml walks premium first, so the two
-    # setups are compared on the same ladders.
+    # The scheduled agents, search planning and the voice profile walk premium
+    # first, as they do on gemini_cloud.yaml.
     task_ladders:
       agent_loop: [premium, cheap_cloud]
       nl_search: [premium, cheap_cloud]
