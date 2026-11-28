@@ -82,8 +82,8 @@ function isFrequency(value: string): value is Frequency {
   return Object.hasOwn(FREQUENCY_LABEL, value);
 }
 
-// The key as the server stores and compares it: trimmed, and lowered a letter at
-// a time as Go's strings.ToLower does, so İ is i and a closing Σ is σ.
+// The key as the server stores and compares it. It is trimmed and lowered a
+// letter at a time, as Go's strings.ToLower does: İ is i, a closing Σ is σ.
 function purposeKey(typed: string): string {
   const lower = (c: string) => (c === "\u0130" ? "i" : c.toLowerCase());
   return serverTrim(Array.from(typed, lower).join(""));
@@ -93,8 +93,8 @@ function purposeKey(typed: string): string {
 // which frontendlimits_test.go holds equal.
 const PURPOSE_KEY_PATTERN = /^[a-z0-9_]+$/;
 
-// The key a label suggests: accents dropped, and each run a key may not hold made
-// one underscore, so the trim takes one from each end.
+// The key a label suggests: accents dropped, each run a key may not hold made
+// one underscore. The trim then takes one from each end.
 function keyFromLabel(label: string): string {
   return label
     .normalize("NFD")
