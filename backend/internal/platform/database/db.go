@@ -113,7 +113,9 @@ func (d *DB) Bounded(budget time.Duration) *DB {
 	if d == nil {
 		return nil
 	}
-	return &DB{pool: d.pool, workspace: d.workspace, budget: budget, admitted: d.admitted}
+	bounded := *d
+	bounded.budget = budget
+	return &bounded
 }
 
 // Budget is the per-statement ceiling Bounded armed, or zero on a handle

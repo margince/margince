@@ -130,3 +130,14 @@ func TestTheProvenCompanyIsTrustedOnlyInsideTheWindow(t *testing.T) {
 		t.Fatal("a handle whose last check failed counted as proven")
 	}
 }
+
+// A bounded handle is the same handle with a ceiling. It keeps checking the
+// installation and shares its proof.
+func TestABoundedHandleKeepsItsInstallationCheck(t *testing.T) {
+	t.Parallel()
+	base := ForInstallation(nil)
+	bounded := base.Bounded(time.Second)
+	if !bounded.installation || bounded.proven != base.proven {
+		t.Fatalf("Bounded dropped the installation check: installation=%v, shared proof=%v", bounded.installation, bounded.proven == base.proven)
+	}
+}
