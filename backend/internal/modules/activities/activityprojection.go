@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -379,7 +378,7 @@ func (s *activityScan) record(ctx context.Context) crmcontracts.Activity {
 		evidence.BulkMail = s.bulkMailAttested
 	}
 	a.AutomaticKind = automaticKindToWire(evidence)
-	a.RecordedByAgent = new(recordedByAgent(s.origin, deref(s.a.CapturedBy)))
+	a.RecordedByAgent = new(relstrength.RecordedByAgent(s.origin, deref(s.a.CapturedBy)))
 	version := s.version
 	a.Version = &version
 	// What a canonical email row draws, composed here so every reader of an
@@ -411,12 +410,6 @@ func (s *activityScan) projectStatuses(a *crmcontracts.Activity) {
 		outcome := crmcontracts.ActivityCallOutcome(*s.callOutcome)
 		a.CallOutcome = &outcome
 	}
-}
-
-// recordedByAgent answers whether an assistant wrote the row. The origin counts
-// too, because an agent can cause a row under another principal's captured_by.
-func recordedByAgent(origin, capturedBy string) bool {
-	return origin == OriginAgent || strings.HasPrefix(capturedBy, string(principal.PrincipalAgent)+":")
 }
 
 // automaticKindToWire renders what sent a row no human wrote, nil when a

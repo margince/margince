@@ -125,25 +125,14 @@ func LastActivityKindSQL(alias string) string {
 	return alias + ".kind IN (" + sqlList(lastActivityKinds) + ")"
 }
 
-// scheduledRunOrigin is the activity origin of a row a scheduled agent run
-// wrote. The activities provider stamps it on every row such a run creates.
-const scheduledRunOrigin = "agent"
-
-// scheduledRunNoteSQL is a note a scheduled agent run wrote. It is the
-// product's comment on a record, so it moves no last-activity clock. A risk
-// note about a quiet deal must not make the deal look active.
-func scheduledRunNoteSQL(alias string) string {
-	return "(" + alias + ".kind = 'note' AND " + alias + ".origin = '" + scheduledRunOrigin + "')"
-}
-
 // LastActivityCountsSQL admits an activity row to a record's last-activity
 // clock. It needs a kind that moves it, contact we had (HadContactSQL), no
-// scheduled run's note and no newsletter (BulkMailSQL). It must also have
+// agent-written note and no newsletter (BulkMailSQL). It must also have
 // happened at now (occurredday.HappenedSQL). The last_activity_of_* functions
 // carry its text rendered with now().
 func LastActivityCountsSQL(alias, now string) string {
 	return "(" + LastActivityKindSQL(alias) + " AND " + HadContactSQL(alias, now) + " AND NOT " +
-		scheduledRunNoteSQL(alias) + " AND NOT " + BulkMailSQL(alias) + " AND " + occurredday.HappenedSQL(alias, now) + ")"
+		"(" + alias + ".kind = 'note' AND " + RecordedByAgentSQL(alias) + ")" + " AND NOT " + BulkMailSQL(alias) + " AND " + occurredday.HappenedSQL(alias, now) + ")"
 }
 
 // InteractionCountsSQL is the whole test for an activity row that counts as an

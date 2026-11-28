@@ -24,6 +24,7 @@
 import { useEffect, useState } from "react";
 import type { components } from "../../api/schema";
 import { BundleUndo } from "../../components/marginchanges";
+import { ReceiptNote } from "../../components/receiptnote";
 import { ReceiptDetail } from "../../components/receiptdetail";
 import { ReceiptsMore } from "../../components/receiptsmore";
 import { ReceiptVerbs } from "../../components/receiptverbs";
@@ -236,11 +237,17 @@ function ReceiptRecord({ receipt }: { readonly receipt: Receipt }) {
   if (!subject) return <>{t("worklist.handled.noRecord")}</>;
   if (!subject.label) return <>{t("worklist.handled.hiddenRecord")}</>;
   const href = subjectHref(receipt);
-  if (!href) return <>{subject.label}</>;
-  return (
+  const link = href ? (
     <AppLink className="entity-link" href={href}>
       {subject.label}
     </AppLink>
+  ) : (
+    subject.label
+  );
+  return subject.type === "activity" ? (
+    <ReceiptNote activityId={subject.id}>{link}</ReceiptNote>
+  ) : (
+    link
   );
 }
 

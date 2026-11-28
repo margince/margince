@@ -190,7 +190,7 @@ func TestTheDataTaskTakesATaskOutOfAStoredClockOnce(t *testing.T) {
 	f.stampOldRule(t, tasked)
 	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")
 
-	task := taskActivityClocksDataTask()
+	task := ActivityClocksTask()
 	for i := range task.Steps {
 		task.Steps[i].Limit, task.Steps[i].MinLimit = 1, 1
 	}
@@ -253,7 +253,7 @@ func TestTheDataTaskRollsItsClocksBackWithItsProgress(t *testing.T) {
 	f.stampOldRule(t, tasked)
 	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")
 
-	task := taskActivityClocksDataTask()
+	task := ActivityClocksTask()
 	for i := range task.Steps {
 		original := task.Steps[i].Batch
 		task.Steps[i].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {

@@ -9,14 +9,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// taskActivityClocksDataTask refolds every stored clock the rule of 1792846717
-// would fold otherwise. That is a clock a task set, and a project clock a
-// called-off or future meeting set.
-func taskActivityClocksDataTask() datatask.Task {
+// ActivityClocksTask repairs stored clocks under the current admission rule.
+func ActivityClocksTask() datatask.Task {
 	audit := datatask.AuditPolicy{Reason: clockRefoldAuditReason}
 	return datatask.Task{
-		ID: "core/1792846717_task_activity_clocks", Version: 1,
-		Title: systemtext.Literal("datatask.title.core.1792846717_task_activity_clocks"), Requires: []string{"core/1792846717"},
+		ID: "core/1792846717_task_activity_clocks", Version: 2,
+		Title: systemtext.Literal("datatask.title.core.1792846717_task_activity_clocks"), Requires: []string{"core/1795832146"},
 		Steps: []datatask.Step{
 			clockRefoldStep("contacts", storekit.ClockContacts, storekit.ClockNotFolded, audit),
 			clockRefoldStep("companies", storekit.ClockCompanies, storekit.ClockNotFolded, audit),
