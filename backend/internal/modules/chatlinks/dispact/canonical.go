@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	canonicalPageLimit = "1000"
 	channelKind        = "channel"
 	cursorKey          = "cursor"
 	limitKey           = "limit"
@@ -234,7 +235,7 @@ func appendCanonicalMembers(members []messaging.Member, page canonicalMemberPage
 
 func (c *CanonicalClient) canonicalMembersPage(ctx context.Context, channel, cursor, revision string) (canonicalMemberPage, error) {
 	var page canonicalMemberPage
-	path := "/api/bot/channels/" + url.PathEscape(immutableChannelRef(channel)) + "/members?" + url.Values{limitKey: {"100"}, cursorKey: {cursor}}.Encode()
+	path := "/api/bot/channels/" + url.PathEscape(immutableChannelRef(channel)) + "/members?" + url.Values{limitKey: {canonicalPageLimit}, cursorKey: {cursor}}.Encode()
 	if err := c.call(ctx, http.MethodGet, path, nil, &page); err != nil {
 		var refusal *CodeError
 		if errors.As(err, &refusal) && refusal.Code == "missing_scope" {

@@ -67,7 +67,7 @@ func (c *CanonicalClient) Thread(ctx context.Context, channel, root, cursor stri
 		More     bool   `json:"has_more"`
 		Deleted  bool   `json:"deleted"`
 	}
-	path := "/api/bot/channels/" + url.PathEscape(immutableChannelRef(room.NativeID)) + "/threads/" + url.PathEscape(root) + "?" + url.Values{limitKey: {"100"}, cursorKey: {cursor}}.Encode()
+	path := "/api/bot/channels/" + url.PathEscape(immutableChannelRef(room.NativeID)) + "/threads/" + url.PathEscape(root) + "?" + url.Values{limitKey: {canonicalPageLimit}, cursorKey: {cursor}}.Encode()
 	if err := c.call(ctx, http.MethodGet, path, nil, &page); err != nil {
 		return chatwire.ThreadPage{}, err
 	}
