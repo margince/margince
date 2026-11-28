@@ -140,6 +140,28 @@ func TestAModuleThatCannotRunIsRejectedRatherThanTreatedAsUnlicensed(t *testing.
 	}
 }
 
+// A module that fails to compile reaches Resolve as the same "could not run"
+// fault a failed run gives, never as a posture.
+func TestResolveReportsAModuleThatWillNotCompileAsAFault(t *testing.T) {
+	t.Parallel()
+	broken := func() (*validator, error) { return compile(gzipped(t, []byte("not webassembly"))) }
+	posture, err := resolveWith(context.Background(), broken, "not-a-license", checkedAt, runtimeenv.Production)
+	if err == nil {
+		t.Fatalf("a module that will not compile resolved to %+v", posture)
+	}
+	if errors.Is(err, ErrVerdict) {
+		t.Errorf("error = %v, a module fault must not read as a verdict", err)
+	}
+	for _, want := range []string{"could not run", "compile module"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error = %q, want it to say %q", err, want)
+		}
+	}
+	if posture.State != "" {
+		t.Errorf("state = %q, want no posture beside the fault", posture.State)
+	}
+}
+
 // bundledValidator is the compiled module every Resolve in this process shares.
 func bundledValidator(t *testing.T) *validator {
 	t.Helper()
