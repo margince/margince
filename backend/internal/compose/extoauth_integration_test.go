@@ -106,11 +106,11 @@ func TestTheAppListNamesAUnitAppWithItsTitleUnitAndCallback(t *testing.T) {
 	for _, app := range list.Data {
 		providers = append(providers, app.Provider)
 	}
-	if want := []string{"google", "microsoft", "books"}; !slices.Equal(providers, want) {
+	if want := []string{"google", "microsoft", "slack", "books"}; !slices.Equal(providers, want) {
 		t.Fatalf("listed providers = %v, want the core vendors then the unit's app %v", providers, want)
 	}
 
-	books := list.Data[2]
+	books := list.Data[len(list.Data)-1]
 	if books.Title == nil || *books.Title != "Books ledger" || books.Unit == nil || *books.Unit != "ledger" {
 		t.Fatalf("the unit app's title and unit = %v, %v; want the declaration's", books.Title, books.Unit)
 	}
