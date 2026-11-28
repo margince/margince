@@ -60,13 +60,15 @@ moved to today at an hour still to come is filed a minute before you save. **It 
 wait for the meeting to start. A meeting with a date but no time waits until that day is over.
 
 Press **Did not happen** on the row for a meeting that did not take place; it is recorded as canceled.
-A meeting with a Margince invitation takes only **It happened** or **No-show**. Its title and date follow the invitation. Internal notes stay in Margince and do not change the invitation or email attendees.
+A meeting with a Margince invitation takes only **It happened** or **No-show**. Its title and date follow the invitation. Internal notes stay in Margince and do not change the invitation or send email.
 
 A held meeting shows **Add notes** on the timeline and the **Meetings** tab, or **Edit notes** when it has some.
 Write the notes the next day if you need to, then press **Log**. Anyone who may change the meeting can do this.
-The same notes controls work on calendar meetings. Before saving, the editor explains that the notes are visible to people who can read the meeting’s content.
+The same notes controls work on calendar meetings. Before saving, the editor explains that the notes are visible to readers who may read the content of the meeting.
 
-Choose **Notes and transcripts** on the meeting row in the timeline or **Meetings** tab to read the outcome, internal notes and linked transcripts together. Paste a transcript or choose a `.txt` file, then press **Log**. The original file attaches to this meeting. If its upload fails after the text was saved, the dialog keeps the draft and lets you retry the file without creating another transcript. Notes can be edited without changing a transcript. Read-only participants can read this material and see why they cannot edit it. Google Meet transcripts remain linked separately.
+Choose **Notes and transcripts** on the meeting row in the timeline or **Meetings** tab to read the outcome, internal notes and linked transcripts together. Paste a transcript or choose a `.txt` file, then press **Log**. The original file attaches to this meeting.
+
+If its upload fails after the text was saved, the dialog keeps the draft and lets you retry the file without creating another transcript. Notes can be edited without changing a transcript. Read-only participants can read this material and see why they cannot edit it. Google Meet transcripts remain linked separately.
 
 A meeting whose subject only arranges how you get somewhere, such as "Airport drop-off" or "Flug nach Hamburg", does not ask for an outcome. It still asks when it is on a deal, lead or project.
 

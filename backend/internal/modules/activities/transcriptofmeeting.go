@@ -91,7 +91,7 @@ func admitRecordedMeeting(ctx context.Context, tx pgx.Tx, in *LogActivityInput) 
 		}
 	}
 	if held && in.FollowUpTask != nil {
-		return crmcontracts.Activity{}, &followUpFieldError{Field: "follow_up_task", Message: "This meeting is already held. Add the next step on the meeting instead."}
+		return crmcontracts.Activity{}, &followUpFieldError{Field: fieldFollowUpTask, Message: "This meeting is already held. Add the next step on the meeting instead."}
 	}
 	in.keepRecordedOutcome = in.keepRecordedOutcome || held
 	in.OccurredAt, in.OccurredPrecision, in.MeetingIntent = &meeting.OccurredAt, string(meeting.OccurredPrecision), nil

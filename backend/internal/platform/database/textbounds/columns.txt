@@ -16,6 +16,7 @@ public.activity.direction document
 public.activity.due_zone document
 public.activity.kind document
 public.activity.language document
+public.activity.meeting_notes document
 public.activity.meeting_status document
 public.activity.meeting_zone document
 public.activity.occurred_precision document

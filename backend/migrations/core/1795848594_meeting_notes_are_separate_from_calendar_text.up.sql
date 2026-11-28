@@ -1,7 +1,7 @@
 SET LOCAL lock_timeout = '5s';
 
 ALTER TABLE activity ADD COLUMN meeting_notes text;
-ALTER TABLE activity ADD CONSTRAINT activity_meeting_notes_kind CHECK (meeting_notes IS NULL OR (kind = 'meeting' AND char_length(meeting_notes) <= 20000)) NOT VALID;
+ALTER TABLE activity ADD CONSTRAINT activity_meeting_notes_kind CHECK (meeting_notes IS NULL OR kind = 'meeting') NOT VALID;
 
 CREATE OR REPLACE FUNCTION activity_refuse_restricted_mutation() RETURNS trigger
     LANGUAGE plpgsql

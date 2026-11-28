@@ -13,7 +13,7 @@ import {
 } from "./logactivity.openmeeting";
 
 // The question the Log form asks when a booked meeting on the record still owes
-// its outcome. A calendar meeting adds why its notes become a note.
+// its outcome. Calendar descriptions stay separate from internal notes.
 
 const meta: Meta = {
   title: "Patterns/Record of meeting question",
@@ -28,6 +28,7 @@ const MEETING: OpenMeeting = {
   occurred_at: "2026-07-06T09:00:00Z",
   occurred_precision: "instant",
   calendar_managed: false,
+  captured_by: "human:demo",
   version: 4,
   body: null,
 };

@@ -17,6 +17,9 @@ import { RecordMeetingOutcome } from "./meetingoutcome";
 const meeting: components["schemas"]["Activity"] = {
   id: "01a05500-0000-7000-8000-0000000000b1",
   kind: "meeting",
+  occurred_precision: "instant",
+  is_done: false,
+  offers_email: false,
   subject: "Renewal review",
   body: "Calendar agenda: renewal options",
   meeting_notes: "Buyer approved the renewal. Send the final proposal.",

@@ -196,8 +196,8 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	}
 	if in.SourceActivityID != nil {
 		kind := "task"
-		if in.Kind != nil && *in.Kind == "meeting" {
-			kind = "meeting"
+		if in.Kind != nil && *in.Kind == KindMeeting {
+			kind = KindMeeting
 		}
 		where = append(where, sprintf("a.kind = $%d AND a.source_activity_id = $%d", arg(kind), arg(*in.SourceActivityID)))
 	}
@@ -338,9 +338,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 			arg(*in.ConversationOf), SameCorrespondenceSQL("a", "conversation_anchor", sprintf("$%d::text", arg(in.conversationDomain)), deliveredToSQL(in.ConversationDeliveredTo, arg))))
 	}
 	if in.Query != nil && *in.Query != "" {
-		// subject + body are the two human-readable columns a human would
-		// recognize an item by. The wildcard is escaped, so a caller typing %
-		// searches for a percent sign rather than matching everything.
+		// Escape wildcards so a typed percent sign searches literally.
 		pos := arg("%" + storekit.EscapeLike(*in.Query) + "%")
 		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\' OR (%s) ILIKE $%d ESCAPE '\\')", pos, pos, meetingoutcome.ReadNotesSQL("a"), pos))
 	}

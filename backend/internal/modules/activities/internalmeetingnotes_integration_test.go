@@ -7,13 +7,18 @@ package activities
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func (e *sendEnv) exec(t *testing.T, sql string, args ...any) {
@@ -121,5 +126,25 @@ func TestEarlierCalendarBodyNotesResolveThroughTheirRepEdit(t *testing.T) {
 	rows, _, err := store.ListActivities(ctx, ListActivitiesInput{Query: new("New internal detail")})
 	if err != nil || len(rows) != 1 || ids.UUID(rows[0].Id) != id.UUID {
 		t.Fatalf("notes search returned %d rows, %v", len(rows), err)
+	}
+}
+
+func TestMeetingNotesKeepTheSharedTextBoundAndMeetingKind(t *testing.T) {
+	e := setupSend(t)
+	id := capturedMeetingForNotes(t, e, seedCustomer(t, e))
+	e.exec(t, `UPDATE activity SET meeting_notes=$2 WHERE id=$1`, id.UUID, strings.Repeat("n", values.TextDocumentCharacters))
+	for _, attempt := range []struct {
+		sql  string
+		args []any
+		code string
+	}{
+		{`UPDATE activity SET meeting_notes=$2 WHERE id=$1`, []any{id.UUID, strings.Repeat("n", values.TextDocumentCharacters+1)}, "22001"},
+		{`UPDATE activity SET kind='note' WHERE id=$1`, []any{id.UUID}, "23514"},
+	} {
+		_, err := e.owner.Exec(context.Background(), attempt.sql, attempt.args...)
+		fault, ok := errors.AsType[*pgconn.PgError](err)
+		if !ok || fault.Code != attempt.code {
+			t.Fatalf("notes shape: %v, want %s", err, attempt.code)
+		}
 	}
 }

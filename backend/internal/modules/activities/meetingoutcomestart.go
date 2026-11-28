@@ -138,3 +138,19 @@ func (s *Store) ProbeOutcome(ctx context.Context, id ids.ActivityID, in UpdateAc
 		return refuseOutcomeBeforeStart(ctx, tx, current, in)
 	})
 }
+
+// A replay that changes meeting status takes the ordinary audited update path.
+func replayMovedTheMeeting(
+	ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, in LogActivityInput,
+) (crmcontracts.Activity, error) {
+	if in.MeetingStatus == nil || *in.MeetingStatus == meetingStatusString(replay.MeetingStatus) {
+		return replay, nil
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	return updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(replay.Id)), UpdateActivityInput{
+		recordedAt:    in.recordedAt,
+		MeetingStatus: in.MeetingStatus,
+	})
+}

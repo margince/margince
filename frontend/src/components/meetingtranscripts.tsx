@@ -127,7 +127,7 @@ function MeetingTranscriptContents({
           params: {
             query: {
               source_activity_id: activity.id,
-              kind: "meeting",
+              kind: ["meeting"],
               limit: 50,
               cursor: pageParam,
             },
