@@ -41,7 +41,11 @@ package offlinedemo
 // companies are on a `.com`, fpt-is.com and vuletech.com among them, and every
 // one of them was written to in German.
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+)
 
 // docLocale is the language one account's correspondence is written in.
 type docLocale string
@@ -93,7 +97,7 @@ func localeFor(account Account) docLocale {
 // it is right for the German majority and wrong for every Vietnamese or Korean
 // company on a generic TLD, which is why localeFor consults the dataset first.
 func localeOf(domain string) docLocale {
-	domain = strings.ToLower(strings.TrimSpace(domain))
+	domain = owndomain.Fold(domain)
 	switch {
 	case strings.HasSuffix(domain, ".vn"), strings.HasSuffix(domain, ".com.vn"):
 		return localeVI

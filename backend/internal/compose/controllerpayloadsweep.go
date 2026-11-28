@@ -162,10 +162,6 @@ func (w *controllerPayloadSweepWorker) destroyErasedMeetingLinks(ctx context.Con
 }
 
 func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[ControllerPayloadSweepArgs]) error {
-	ctx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, fmt.Errorf("comms_controller_payload_sweep: resolving the installation: %w", err))
-	}
 	ctx = sendWorkerScope(ctx)
 
 	if err := w.alarmMissedReceipts(ctx); err != nil {

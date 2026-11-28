@@ -117,7 +117,7 @@ func setup(t *testing.T) *env {
 		DB:        e.db,
 		Inserter:  inserter,
 		Job: func(ws, connection, raw ids.UUID) river.JobArgs {
-			return compose.ZaloOAIngestArgs{Workspace: ws, ConnectionID: connection, RawCaptureID: raw}
+			return compose.ZaloOAIngestArgs{ConnectionID: connection, RawCaptureID: raw}
 		},
 		MaxAttempts: 3,
 		Log:         slog.Default(),
@@ -159,7 +159,7 @@ func (e *env) rawRows(t *testing.T) int {
 }
 
 func (e *env) ingestJobs(t *testing.T) int {
-	return e.count(t, `SELECT count(*) FROM river_job WHERE kind = 'zalo_oa_ingest' AND args->>'workspace_id' = $1`, e.ws.String())
+	return e.count(t, `SELECT count(*) FROM river_job WHERE kind = 'zalo_oa_ingest'`)
 }
 
 func sign(secret string, body []byte) string { return signFor(appID, secret, body) }

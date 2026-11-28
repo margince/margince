@@ -27,6 +27,10 @@ func DriveImportRunSweepForTest(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 	worker := &importRunSweepWorker{identity: identity.NewService(pool), pool: pool, log: slog.New(slog.DiscardHandler)}
-	return worker.Work(rivertest.WorkContext(ctx, client),
+	bound, err := bindInstallation(ctx, pool)
+	if err != nil {
+		return err
+	}
+	return worker.Work(rivertest.WorkContext(bound, client),
 		&river.Job[ImportRunSweepArgs]{JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 1}})
 }

@@ -86,7 +86,7 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 	// No principal.WithWorkspaceID on the context: the worker itself must resolve
 	// the tenant from job.Args, not from whatever the caller had bound.
 	workIngestArgs(t, newTelegramIngestWorker(e.Pool, CaptureConfig{}, quietTestLogger()),
-		TelegramIngestArgs{Workspace: e.WS, ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
+		TelegramIngestArgs{ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
 
 	// Read back under the SAME workspace the args named — if the worker had
 	// resolved the wrong tenant (or none), this activity would not be here.
@@ -134,7 +134,7 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 
 	// A redelivery of the same raw update lands nothing new.
 	workIngestArgs(t, newTelegramIngestWorker(e.Pool, CaptureConfig{}, quietTestLogger()),
-		TelegramIngestArgs{Workspace: e.WS, ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
+		TelegramIngestArgs{ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'telegram'`); n != 1 {
 		t.Errorf("%d telegram activities after a redelivery, want 1", n)
 	}
@@ -169,8 +169,8 @@ func TestIngestWorkerTreatsAUniqueViolationAsRetryable(t *testing.T) {
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 
 	worker := &telegramIngestWorker{pool: e.Pool, sink: uniqueViolationSink{}, log: quiet}
-	err := worker.Work(context.Background(), &river.Job[TelegramIngestArgs]{
-		Args: TelegramIngestArgs{Workspace: e.WS, ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()},
+	err := worker.Work(boundBackground(t), &river.Job[TelegramIngestArgs]{
+		Args: TelegramIngestArgs{ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()},
 	})
 	if err == nil {
 		t.Fatal("Work returned nil — a unique violation must propagate so River redelivers, not be swallowed")
@@ -205,7 +205,7 @@ func TestIngestWorkerAppliesMembershipWithoutCapturingAnActivity(t *testing.T) {
 
 	rawID := e.SeedRawCapture(t, "telegram", "200", []byte(telegramIngestKickedJSON))
 	workIngestArgs(t, newTelegramIngestWorker(e.Pool, CaptureConfig{}, quietTestLogger()),
-		TelegramIngestArgs{Workspace: e.WS, ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
+		TelegramIngestArgs{ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
 
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'telegram'`); n != 0 {
 		t.Errorf("%d activity rows after a my_chat_member update, want 0 — it is a reachability signal, never a message", n)
@@ -242,7 +242,7 @@ func TestIngestWorkerCapturesNothingFromAGroupChat(t *testing.T) {
 	// nil, not an error: a scope exclusion is a deliberate skip, and River
 	// retrying it forever would be a fault report for working as designed.
 	workIngestArgs(t, newTelegramIngestWorker(e.Pool, CaptureConfig{}, quietTestLogger()),
-		TelegramIngestArgs{Workspace: e.WS, ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
+		TelegramIngestArgs{ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
 
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'telegram'`); n != 0 {
 		t.Errorf("%d activity rows after a group-chat message, want 0", n)

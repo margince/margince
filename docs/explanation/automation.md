@@ -234,9 +234,9 @@ database:
 
 **The workspace goes with the context.** Every statement runs inside one transaction. The reads and writes
 of a firing all open through `database.WithTx` (see [write-backbone.md](write-backbone.md)).
-The row, its audit row and its outbox row commit together. The clock scan is the one place that reads
-across the installation (`database.LiveWorkspaces`, a pool query marked `pool-exempt` over the `workspace`
-table). It binds a context per workspace again before any work per record.
+The row, its audit row and its outbox row commit together. The clock scan starts from the installation's one
+live workspace (`database.LiveWorkspace`, a pool query marked `pool-exempt` over the `workspace`
+table). It binds a context to that workspace before any work per record.
 
 **A firing acts *as the system*, with the rights *of its owner*.** These are two different identities:
 

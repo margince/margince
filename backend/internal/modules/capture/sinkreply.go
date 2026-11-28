@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -25,6 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -185,7 +185,7 @@ func withContact(origin replyOrigin, contact ids.ContactID, found bool) replyOri
 // transaction commits, so the normal first-contact reply simply has no contact
 // to name yet.
 func mailReplyContact(ctx context.Context, tx pgx.Tx, email string) (ids.ContactID, bool, error) {
-	normalized := strings.ToLower(strings.TrimSpace(email))
+	normalized := correspondence.Fold(email)
 	// A technical address names no contact, even one stored before the rule.
 	if normalized == "" || mailidentity.HasMachineLocalpart(normalized) {
 		return ids.ContactID{}, false, nil

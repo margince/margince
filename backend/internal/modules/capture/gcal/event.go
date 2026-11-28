@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -214,7 +215,7 @@ func ownerAttendee(attendees []eventActor, owner string) (eventActor, bool) {
 			return a, true
 		}
 	}
-	ownerAddress := strings.ToLower(strings.TrimSpace(owner))
+	ownerAddress := correspondence.Fold(owner)
 	if ownerAddress == "" {
 		return eventActor{}, false
 	}
@@ -257,11 +258,11 @@ func SelfAddress(raw []byte) (string, error) {
 		return "", fmt.Errorf("gcal: parsing calendar event: %w", err)
 	}
 	if ev.Organizer.Self {
-		return strings.ToLower(strings.TrimSpace(ev.Organizer.Email)), nil
+		return correspondence.Fold(ev.Organizer.Email), nil
 	}
 	for _, a := range ev.Attendees {
 		if a.Self {
-			return strings.ToLower(strings.TrimSpace(a.Email)), nil
+			return correspondence.Fold(a.Email), nil
 		}
 	}
 	return "", nil
@@ -303,7 +304,7 @@ func isAllDay(start eventDateTime) bool {
 // carries no "@". It splits at the LAST "@" so a quoted local part containing
 // one still yields the domain.
 func domainOf(addr string) string {
-	addr = strings.ToLower(strings.TrimSpace(addr))
+	addr = correspondence.Fold(addr)
 	if idx := strings.LastIndex(addr, "@"); idx >= 0 {
 		return addr[idx+1:]
 	}

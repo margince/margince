@@ -149,7 +149,7 @@ func runNoticeReconcileJob(t *testing.T, a approvalNotifyEnv, row *rivertype.Job
 	if !ok {
 		t.Fatal("reconciliation job is not declared")
 	}
-	worker := rivertest.NewWorker(t, riverpgxv5.New(a.e.Pool), &river.Config{},
+	worker := rivertest.NewWorker(t, riverpgxv5.New(a.e.Pool), bindingConfig(a.e.Pool),
 		jobs.Govern(newApprovalNoticeReconcileWorker(a.e.Pool), spec))
 	tx, err := a.e.Pool.Begin(t.Context())
 	if err != nil {
@@ -162,7 +162,7 @@ func runNoticeReconcileJob(t *testing.T, a approvalNotifyEnv, row *rivertype.Job
 	}()
 	var result *rivertest.WorkResult
 	if row == nil {
-		result, err = worker.Work(t.Context(), t, tx, ApprovalNoticeReconcileArgs{}, nil)
+		result, err = worker.Work(boundBackground(t), t, tx, ApprovalNoticeReconcileArgs{}, nil)
 	} else {
 		result, err = worker.WorkJob(t.Context(), t, tx, row)
 	}

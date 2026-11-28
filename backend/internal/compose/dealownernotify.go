@@ -48,10 +48,6 @@ func followDealOwnerAndTell(ctx context.Context, tx pgx.Tx, dealID ids.UUID, fro
 	if to == nil || len(done.Moved) == 0 {
 		return nil
 	}
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("compose: a deal's owner changed outside a bound workspace")
-	}
 	queue, err := callerTxJobs()
 	if err != nil {
 		return err
@@ -60,7 +56,7 @@ func followDealOwnerAndTell(ctx context.Context, tx pgx.Tx, dealID ids.UUID, fro
 		if _, err := store.Retract(ctx, tx, approvalNoticeDedupeKey(request.ID.UUID)); err != nil {
 			return err
 		}
-		if err := queue.EnqueueTx(ctx, tx, ApprovalOwnerNoticeArgs{Workspace: wsID, ApprovalID: request.ID.UUID, DeciderID: *to}, nil); err != nil {
+		if err := queue.EnqueueTx(ctx, tx, ApprovalOwnerNoticeArgs{ApprovalID: request.ID.UUID, DeciderID: *to}, nil); err != nil {
 			return err
 		}
 	}

@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -149,7 +150,7 @@ func (s *Service) ResolveColleague(ctx context.Context, name string) (Colleague,
 			continue
 		}
 		if strings.ToLower(strings.TrimSpace(c.DisplayName)) == wanted ||
-			strings.ToLower(strings.TrimSpace(c.Email)) == wanted {
+			correspondence.Fold(c.Email) == wanted {
 			found, matches = c, matches+1
 		}
 	}

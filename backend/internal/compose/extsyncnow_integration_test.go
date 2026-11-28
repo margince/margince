@@ -91,7 +91,7 @@ func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
 	if err := rt.SyncNow(ctx, syncNowJob); err != nil {
 		t.Fatalf("asking for this unit's own tick: %v", err)
 	}
-	if n := queuedTicks(t, owner, decl.ChildKind(), ws); n != 1 {
+	if n := queuedTicks(t, owner, decl.ChildKind()); n != 1 {
 		t.Fatalf("queued %d tick(s) of %s, want 1 — the ask enqueued nothing River kept", n, decl.ChildKind())
 	}
 
@@ -101,20 +101,20 @@ func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
 	if err := rt.SyncNow(ctx, syncNowJob); err != nil {
 		t.Fatalf("asking a second time: %v", err)
 	}
-	if n := queuedTicks(t, owner, decl.ChildKind(), ws); n != 1 {
+	if n := queuedTicks(t, owner, decl.ChildKind()); n != 1 {
 		t.Errorf("queued %d tick(s) after a second ask, want still 1 — a member holding down save "+
 			"enqueues a run per press", n)
 	}
 }
 
-// queuedTicks counts the rows River is holding for one kind and workspace.
-func queuedTicks(t *testing.T, owner *pgx.Conn, kind string, ws ids.UUID) int {
+// queuedTicks counts the rows River is holding for one kind.
+func queuedTicks(t *testing.T, owner *pgx.Conn, kind string) int {
 	t.Helper()
 	var n int
 	if err := owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM river_job
-		  WHERE kind = $1 AND args->>'workspace_id' = $2 AND state IN ('available','scheduled','running','retryable')`,
-		kind, ws.String()).Scan(&n); err != nil {
+		  WHERE kind = $1 AND state IN ('available','scheduled','running','retryable')`,
+		kind).Scan(&n); err != nil {
 		t.Fatalf("counting queued ticks: %v", err)
 	}
 	return n

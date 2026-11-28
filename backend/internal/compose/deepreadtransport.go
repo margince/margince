@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -139,7 +138,6 @@ func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, overrid
 	read, joined, err := e.contacts.StartSiteReadQueued(ctx, companyID, seedURL, requestedBy(ctx),
 		func(ctx context.Context, tx pgx.Tx, read contacts.SiteRead) error {
 			return e.enqueue.EnqueueTx(ctx, tx, SiteDeepReadArgs{
-				Workspace:   storekit.MustWorkspace(ctx),
 				CompanyID:   companyID.UUID,
 				SiteReadID:  read.ID,
 				RequestedBy: read.RequestedBy,

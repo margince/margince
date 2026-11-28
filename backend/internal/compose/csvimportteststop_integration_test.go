@@ -78,7 +78,7 @@ func queuedLeadTest(t *testing.T, e *integration.Env, h importHandlers, profile 
 	if err != nil {
 		t.Fatalf("reading the queued run: %v", err)
 	}
-	return ImportValidateArgs{Workspace: e.WS, RunID: run.ID, Attempt: run.JobAttempt}
+	return ImportValidateArgs{RunID: run.ID, Attempt: run.JobAttempt}
 }
 
 func validateWorkerFor(e *integration.Env, h importHandlers) *importValidateWorker {
@@ -96,7 +96,7 @@ func TestARefusedTestRunReturnsToDraftWithItsReason(t *testing.T) {
 		t.Fatalf("losing the stored file: %v", err)
 	}
 
-	if err := validateWorkerFor(e, h).Work(context.Background(), &river.Job[ImportValidateArgs]{Args: args}); err != nil {
+	if err := validateWorkerFor(e, h).Work(boundBackground(t), &river.Job[ImportValidateArgs]{Args: args}); err != nil {
 		t.Fatalf("the test run answered %v, want nil once its run says why it stopped", err)
 	}
 	run, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), args.RunID)

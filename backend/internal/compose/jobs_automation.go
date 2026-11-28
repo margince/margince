@@ -44,7 +44,7 @@ type timeScanWorker struct {
 }
 
 func (w *timeScanWorker) Work(ctx context.Context, _ *river.Job[TimeScanArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.scanWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.scanWorkspace))
 }
 
 func (w *timeScanWorker) scanWorkspace(ctx context.Context, workspace ids.UUID) error {

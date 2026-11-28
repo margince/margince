@@ -748,16 +748,6 @@ func TestTheReadingIsQueuedForEveryActivityOnADeal(t *testing.T) {
 		t.Errorf("the reading names deal %s, want %s",
 			queue.queued[0].DealID, e.dealID.UUID)
 	}
-	// THE WORKSPACE, asserted because it is the field that was wrong: a bus
-	// envelope carries none and the subscriber binds none, so reading it off
-	// the context answered the zero id — and the worker refuses those before
-	// doing anything. Every reading was silently discarded and every other
-	// assertion here still passed.
-	if queue.queued[0].Workspace != e.WS {
-		t.Errorf("the reading names workspace %s, want %s; a zero id is refused "+
-			"by the worker and the activity is never read",
-			queue.queued[0].Workspace, e.WS)
-	}
 }
 
 // An activity reaching no deal has no criteria to be read against, so nothing

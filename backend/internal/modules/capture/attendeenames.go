@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -36,7 +37,7 @@ func RecordAttendeeNames(
 	addresses := make([]string, 0, len(participants))
 	names := make([]string, 0, len(participants))
 	for _, p := range participants {
-		address := strings.ToLower(strings.TrimSpace(p.Email))
+		address := correspondence.Fold(p.Email)
 		name := strings.TrimSpace(p.DisplayName)
 		if address == "" || name == "" {
 			continue

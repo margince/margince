@@ -49,10 +49,7 @@ func addUnusedClientSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunner
 }
 
 func (w *unusedClientSweepWorker) Work(ctx context.Context, _ *river.Job[OAuthClientUnusedSweepArgs]) error {
-	wsCtx, err := installationJobCtx(ctx, w.identity)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	wsCtx = principal.SystemActing(wsCtx, "system:oauth_client_unused_sweep")
 	purged, err := w.identity.PurgeUnusedDynamicClients(wsCtx, w.retention, unusedClientSweepBatch)
 	if err != nil {

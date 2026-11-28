@@ -372,6 +372,7 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 		PeriodicJobs:    periodic,
 		SoftStopTimeout: cfg.DrainWindow,
 		TestOnly:        cfg.TestOnly,
+		BindWorkspace:   installationBinding(pool),
 	}, log)
 }
 

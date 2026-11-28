@@ -97,13 +97,16 @@ func roleName(r jobs.Role) string {
 	return "undeclared"
 }
 
+// installationKey names the installation in a label or a payload key.
+const installationKey = "installation"
+
 // fanOutUnitName says what ONE child of this kind stands for, and answers
 // the empty string for a kind that fans out to nothing — the label is then
 // omitted rather than given an invented value.
 func fanOutUnitName(u jobs.FanOutUnit) string {
 	switch u {
-	case jobs.FanOutWorkspace:
-		return "workspace"
+	case jobs.FanOutInstallation:
+		return installationKey
 	case jobs.FanOutConnection:
 		return "connection"
 	case jobs.FanOutBuild:

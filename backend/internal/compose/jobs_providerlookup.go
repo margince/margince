@@ -45,7 +45,7 @@ type providerLookupSweepWorker struct {
 // The tick is the real cadence: a workspace that failed is picked up by the
 // next pass a minute later, which is why this takes one attempt and no ladder.
 func (w *providerLookupSweepWorker) Work(ctx context.Context, _ *river.Job[ProviderLookupSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.lookupWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.lookupWorkspace))
 }
 
 func (w *providerLookupSweepWorker) lookupWorkspace(ctx context.Context, workspace ids.UUID) error {
@@ -89,11 +89,7 @@ func providerLookupEnqueue(ctx context.Context, tx pgx.Tx, runID, workspaceID st
 	if err != nil {
 		return fmt.Errorf("compose: the catch-up sweep has no job client to submit through: %w", err)
 	}
-	ws, err := ids.Parse(workspaceID)
-	if err != nil {
-		return fmt.Errorf("compose: the submit job's workspace id does not parse: %w", err)
-	}
-	if _, err := client.InsertTx(ctx, tx, ProviderRunSubmitArgs{Workspace: ws, RunID: runID}, nil); err != nil {
+	if _, err := client.InsertTx(ctx, tx, ProviderRunSubmitArgs{RunID: runID}, nil); err != nil {
 		return fmt.Errorf("compose: enqueueing a swept contact's submission: %w", err)
 	}
 	return nil

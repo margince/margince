@@ -55,8 +55,8 @@ func (e *freshnessEnv) findingsOf(t *testing.T, deal ids.UUID) []findingState {
 func (e *freshnessEnv) rescan(t *testing.T, deal ids.UUID) error {
 	t.Helper()
 	worker := &assuranceDealRescanWorker{sweep: e.worker}
-	return worker.Work(context.Background(), &river.Job[AssuranceDealRescanArgs]{
-		Args: AssuranceDealRescanArgs{Workspace: e.WS, Deal: deal},
+	return worker.Work(boundBackground(t), &river.Job[AssuranceDealRescanArgs]{
+		Args: AssuranceDealRescanArgs{Deal: deal},
 	})
 }
 
@@ -248,8 +248,8 @@ func TestAChangeAsTheJobFinishesRunsItAgain(t *testing.T) {
 			return result, err
 		},
 	}
-	err := worker.Work(context.Background(), &river.Job[AssuranceDealRescanArgs]{
-		Args: AssuranceDealRescanArgs{Workspace: e.WS, Deal: e.faulted},
+	err := worker.Work(boundBackground(t), &river.Job[AssuranceDealRescanArgs]{
+		Args: AssuranceDealRescanArgs{Deal: e.faulted},
 	})
 	if _, snoozed := errors.AsType[*rivertype.JobSnoozeError](err); !snoozed {
 		t.Fatalf("a job whose deal changed as it finished answered %v, want a snooze", err)

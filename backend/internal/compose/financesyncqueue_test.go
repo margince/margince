@@ -31,16 +31,14 @@ func (r *syncInsertRecorder) Enqueue(_ context.Context, args river.JobArgs, opts
 // A press of "sync now" queues this workspace's pass on the declared queue,
 // and a second press while one is queued or running joins it.
 func TestQueueSyncQueuesThisWorkspacesPassOnceWhileOneIsActive(t *testing.T) {
-	workspace := ids.NewV7()
-	ctx := principal.WithWorkspaceID(context.Background(), workspace)
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	enqueuer := &syncInsertRecorder{}
 
 	if err := (financeSyncQueue{enqueue: enqueuer}).QueueSync(ctx); err != nil {
 		t.Fatal(err)
 	}
-	args, ok := enqueuer.args.(FinanceSyncArgs)
-	if !ok || args.Workspace != workspace {
-		t.Fatalf("queued %#v, want FinanceSyncArgs for workspace %s", enqueuer.args, workspace)
+	if _, ok := enqueuer.args.(FinanceSyncArgs); !ok {
+		t.Fatalf("queued %#v, want FinanceSyncArgs", enqueuer.args)
 	}
 	spec, declared := jobs.SpecFor(FinanceSyncArgs{}.Kind())
 	if !declared {

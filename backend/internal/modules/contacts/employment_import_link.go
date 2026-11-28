@@ -247,8 +247,8 @@ func mayEndUndatedTx(ctx context.Context, tx pgx.Tx, relationships []relationshi
 		}
 		var human bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log decided
-			 WHERE decided.entity_type = 'relationship' AND decided.entity_id = $1 AND decided.actor_type IN ('human','agent')
-			   AND (decided.after ?| ARRAY['employment_status', 'started_at', 'ended_at']))`, r.ID).Scan(&human); err != nil {
+			 WHERE decided.entity_type = 'relationship' AND decided.entity_id = @employment_edge AND `+employment.UserDecisionSQL("decided")+`
+			   AND (decided.after ?| ARRAY['employment_status', 'started_at', 'ended_at']))`, pgx.StrictNamedArgs{"employment_edge": r.ID}).Scan(&human); err != nil {
 			return false, fmt.Errorf("contacts: reading who set an employment's dates: %w", err)
 		}
 		if human {

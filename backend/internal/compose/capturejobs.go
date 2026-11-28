@@ -46,7 +46,7 @@ type captureClassifyWorker struct {
 }
 
 func (w *captureClassifyWorker) Work(ctx context.Context, _ *river.Job[CaptureClassifyArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.classifyWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.classifyWorkspace))
 }
 
 func (w *captureClassifyWorker) classifyWorkspace(ctx context.Context, workspace ids.UUID) error {
@@ -101,7 +101,7 @@ func (w *captureEnrichWorker) Work(ctx context.Context, job *river.Job[CaptureEn
 	if job.Args.Pending {
 		return jobs.FaultContext(ctx, runPendingPass(ctx, w.pool, w.enricher.RunPendingWorkspace))
 	}
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.enrichWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.enrichWorkspace))
 }
 
 func (w *captureEnrichWorker) enrichWorkspace(ctx context.Context, workspace ids.UUID) error {
@@ -167,7 +167,7 @@ type companyNamePromotionWorker struct {
 }
 
 func (w *companyNamePromotionWorker) Work(ctx context.Context, _ *river.Job[CompanyNamePromotionArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.promoteWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.promoteWorkspace))
 }
 
 // companyNamePromotionWorkspaceWorker runs one workspace's pass: a database-only
@@ -205,7 +205,7 @@ type counterpartyVerdictWorker struct {
 }
 
 func (w *counterpartyVerdictWorker) Work(ctx context.Context, _ *river.Job[CounterpartyVerdictArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.judgeWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.judgeWorkspace))
 }
 
 func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspace ids.UUID) error {

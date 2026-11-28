@@ -458,7 +458,7 @@ func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
 			t.Fatalf("delivering the relink event: %v", err)
 		}
 	}
-	want := compose.StageEvidenceReadArgs{Workspace: queue.first(t).Workspace, DealID: deal, ActivityID: mail}
+	want := compose.StageEvidenceReadArgs{DealID: deal, ActivityID: mail}
 	if len(queue.asked) != 2 || queue.asked[0] != want || queue.asked[1] != want {
 		t.Fatalf("the trigger asked for %+v, want the same reading of the mail against its deal twice", queue.asked)
 	}
@@ -489,14 +489,6 @@ func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
 	if len(queue.asked) != 0 {
 		t.Fatalf("the event for mail past the backlog window queued %d readings, want none", len(queue.asked))
 	}
-}
-
-func (q *readingQueue) first(t *testing.T) compose.StageEvidenceReadArgs {
-	t.Helper()
-	if len(q.asked) == 0 {
-		t.Fatal("the trigger queued no reading of the repaired mail")
-	}
-	return q.asked[0]
 }
 
 // waitForLockWaiters returns once n other sessions wait on a row lock. The race

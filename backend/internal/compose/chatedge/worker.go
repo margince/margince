@@ -23,7 +23,7 @@ import (
 
 // IngestJob is the args of an ingest job, which compose declares.
 type IngestJob interface {
-	jobs.WorkspaceScoped
+	river.JobArgs
 	RawCapture() ids.UUID
 	Connection() ids.UUID
 }
@@ -62,7 +62,6 @@ type Decoded struct {
 type Worker[T IngestJob] struct {
 	// Name prefixes errors and logs, such as "whatsapp_ingest".
 	Name   string
-	Bind   func(context.Context, jobs.WorkspaceScoped) (context.Context, error)
 	Pool   *pgxpool.Pool
 	Sink   connector.Sink
 	Actor  principal.Principal
@@ -75,13 +74,10 @@ type Worker[T IngestJob] struct {
 // delivered the item once. A file that stays unreachable through the last
 // attempt is dropped, so the message files without it.
 func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
-	bound, err := w.Bind(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	bound := ctx
 	rawID := job.Args.RawCapture()
 	var payload []byte
-	err = database.WithTx(bound, w.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(bound, w.Pool, func(tx pgx.Tx) error {
 		var err error
 		payload, err = capture.GetRawCapturePayloadTx(bound, tx, rawID)
 		return err

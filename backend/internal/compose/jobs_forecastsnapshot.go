@@ -37,7 +37,7 @@ type forecastSnapshotSweepWorker struct {
 }
 
 func (w *forecastSnapshotSweepWorker) Work(ctx context.Context, _ *river.Job[ForecastSnapshotSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.snapshotWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.snapshotWorkspace))
 }
 
 // forecastSnapshotActor is the principal the daily freeze runs as, and therefore

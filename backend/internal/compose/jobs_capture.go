@@ -53,11 +53,11 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 	// (next_sync_at = success + the mail sync setting), which is why the
 	// dispatcher's own cadence can be frequent without meaning frequent
 	// provider calls.
-	addDeclaredWorker[CaptureSyncArgs](reg, &captureSyncWorker{registry: cfg.GmailRegistry, log: log})
+	addDeclaredWorker[CaptureSyncArgs](reg, &captureSyncWorker{pool: pool, registry: cfg.GmailRegistry, log: log})
 	// Backfill jobs are enqueued by the api (start op); the worker role needs
 	// the pager registered, and the nightly reconcile that puts a pager back
 	// behind a run whose own was lost (ADR-0063).
-	addDeclaredWorker[CaptureBackfillArgs](reg, &captureBackfillWorker{registry: cfg.GmailRegistry, log: log})
+	addDeclaredWorker[CaptureBackfillArgs](reg, &captureBackfillWorker{pool: pool, registry: cfg.GmailRegistry, log: log})
 	if cfg.GmailWatch.Topic == "" {
 		return
 	}
@@ -108,9 +108,9 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// credential (no deployment-wide OAuth app to gate on), so there is nothing
 	// to check for before wiring it up.
 	addDeclaredWorker[TelegramIngestArgs](reg, newTelegramIngestWorker(pool, cfg.CaptureConfig, log))
-	addDeclaredWorker[ZaloOAIngestArgs](reg, zaloedge.NewWorker[ZaloOAIngestArgs](workspaceJobCtx, pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(zalo.CapturedBy), log, cfg.ChatMedia.Zalo))
+	addDeclaredWorker[ZaloOAIngestArgs](reg, zaloedge.NewWorker[ZaloOAIngestArgs](pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(zalo.CapturedBy), log, cfg.ChatMedia.Zalo))
 	addDeclaredWorker[WhatsAppIngestArgs](reg, whatsappedge.NewWorker[WhatsAppIngestArgs](
-		workspaceJobCtx, pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(whatsapp.CapturedBy), log,
+		pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(whatsapp.CapturedBy), log,
 		whatsappedge.NewMedia(cfg.ChatMedia.WhatsApp, pool, cfg.ChannelVault)))
 	// The captured-company auto-enrich sweep (ADR-0072): always
 	// registered, it enqueues system deep reads the site worker applies.
@@ -257,7 +257,6 @@ func (w *gmailSyncWorker) Work(ctx context.Context, _ *river.Job[GmailSyncArgs])
 		}
 		for _, d := range due {
 			if err := dispatchOne(ctx, w.pool, CaptureSyncArgs{
-				Workspace:    d.Workspace.UUID,
 				ConnectionID: d.ID.String(),
 				Provider:     desc.Name,
 			}, nil); err != nil {
@@ -273,9 +272,8 @@ func (w *gmailSyncWorker) Work(ctx context.Context, _ *river.Job[GmailSyncArgs])
 
 // CaptureSyncArgs names one connection whose registry owns the execution lease.
 type CaptureSyncArgs struct {
-	Workspace    ids.UUID `json:"workspace_id"`
-	ConnectionID string   `json:"connection_id"`
-	Provider     string   `json:"provider"`
+	ConnectionID string `json:"connection_id"`
+	Provider     string `json:"provider"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
@@ -283,9 +281,6 @@ func (CaptureSyncArgs) Kind() string { return "capture_sync" }
 
 // SessionLocked says the worker holds a session lease on the work for the run.
 func (CaptureSyncArgs) SessionLocked() {}
-
-// WorkspaceID binds this connection's sync to its tenant (jobs.WorkspaceScoped).
-func (a CaptureSyncArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // Push and scheduled syncs use the same connection lease inside SyncOnce.
 func pushSyncOpts() *river.InsertOpts {
@@ -296,6 +291,7 @@ func pushSyncOpts() *river.InsertOpts {
 // sync failure returns nil after the registry has recorded it: the sidecar's
 // backoff owns the retry cadence (ADR-0063) — a River retry would bypass it.
 type captureSyncWorker struct {
+	pool     *pgxpool.Pool
 	registry *capture.Registry
 	log      *slog.Logger
 }
@@ -305,10 +301,7 @@ func (w *captureSyncWorker) Work(ctx context.Context, job *river.Job[CaptureSync
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("capture_sync: connection id: %w", err))
 	}
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+	wsCtx := ctx
 	if err := w.registry.SyncOnce(wsCtx, conn); err != nil {
 		if _, snoozed := errors.AsType[*river.JobSnoozeError](err); snoozed {
 			return jobs.FaultContext(ctx, err)
