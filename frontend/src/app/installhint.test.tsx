@@ -45,6 +45,7 @@ type Device = Readonly<{
   agent?: string;
   touchPoints?: number;
   homeScreen?: boolean;
+  install?: () => Promise<unknown>;
 }>;
 
 type Routes = Readonly<Record<string, () => unknown>>;
@@ -58,6 +59,7 @@ function device({
   agent,
   touchPoints,
   homeScreen,
+  install,
 }: Device): void {
   vi.stubGlobal("matchMedia", (query: string) => ({
     matches:
@@ -71,6 +73,7 @@ function device({
     userAgent: agent,
     maxTouchPoints: touchPoints,
     standalone: homeScreen,
+    install,
   };
   for (const [name, value] of Object.entries(properties)) {
     if (value !== undefined) {
@@ -184,6 +187,35 @@ afterEach(() => {
 });
 
 describe("the install hint on Home", () => {
+  it("needs a browser offer before the new API can trigger an automatic hint", async () => {
+    const install = vi.fn(async () => undefined);
+    device({ install });
+    seed({ firstDay: EARLIER });
+    const client = await mount();
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(title()).toBeNull();
+    expect(install).not.toHaveBeenCalled();
+  });
+
+  it("records cancellation from the new API in the Home dismissal schedule", async () => {
+    device({
+      install: vi
+        .fn()
+        .mockRejectedValue(new DOMException("closed", "AbortError")),
+    });
+    seed({ firstDay: EARLIER });
+    await mount({ offer: offerEvent(unanswered()).event });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["settings.installAppAction"],
+      }),
+    );
+    await waitFor(() => expect(title()).toBeNull());
+    await waitFor(() => expect(stored()?.dismissals).toBe(1));
+    expect(document.activeElement).toBe(screen.getByTestId("scroller"));
+  });
+
   it("offers to install from the second day, with Not now before Install", async () => {
     seed({ firstDay: EARLIER });
     await mount({ offer: offerEvent(unanswered()).event });
