@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { surfaceEntries } from "../../scripts/lib/bundle-reach";
+import {
+  aliases,
+  SRC_ROOT,
+  surfaceEntries,
+} from "../../scripts/lib/bundle-reach";
+import { moduleAt } from "../../scripts/lib/source-tree";
 import { plantedFindings, srcDir, treeOf } from "../tree";
 import { reachedInTree, rule } from "./bundle-reach.census";
 
@@ -21,6 +27,19 @@ describe("the bundle-reach census", () => {
     const reached = reachedInTree(tree);
     expect(reached.has(planted)).toBe(true);
     expect(reached.has(stray)).toBe(false);
+  });
+});
+
+describe("the bundle aliases", () => {
+  it("map every specifier onto a module under src", () => {
+    const mapped = [...aliases().values()];
+    expect(mapped.length).toBeGreaterThan(0);
+    for (const target of mapped) {
+      // A type-only alias target is a declaration file no bundler loads.
+      const file =
+        moduleAt(target) ?? (existsSync(`${target}.d.ts`) ? target : null);
+      expect(file?.startsWith(`${SRC_ROOT}/`)).toBe(true);
+    }
   });
 });
 
