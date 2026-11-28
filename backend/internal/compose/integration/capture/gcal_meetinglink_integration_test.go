@@ -109,7 +109,7 @@ func syncOneGcalMeeting(t *testing.T, e *integration.SearchEnv) ids.ActivityID {
 	}
 
 	var activity ids.ActivityID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE source_system = 'gcal' AND kind = 'meeting'`).Scan(&activity)
 	}); err != nil {
@@ -122,7 +122,7 @@ func syncOneGcalMeeting(t *testing.T, e *integration.SearchEnv) ids.ActivityID {
 // was born with — the two halves this change moves together.
 func meetingFiling(t *testing.T, e *integration.SearchEnv, activity ids.ActivityID) (contacts []ids.UUID, companies int, audience string, reason *string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT contact_id FROM activity_link
 			  WHERE activity_id = $1 AND entity_type = 'contact' ORDER BY contact_id`, activity)
@@ -210,7 +210,7 @@ func TestACapturedMeetingWithNoKnownAttendeeIsHeldToItsParticipants(t *testing.T
 			audience, reason, activities.ReasonNoCounterparty)
 	}
 	var contacts int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM contact_email WHERE email = 'buyer@acme.com'`).Scan(&contacts)
 	}); err != nil {

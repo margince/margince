@@ -43,6 +43,8 @@ const theCompanyFKFloor = 35
 // statement deleted from the merge fails here even though the waiver map and
 // the schema are both untouched.
 var mergePathFiles = []string{
+	"internal/modules/chatlinks/mergecompanyrefs.go",
+	"internal/modules/chatlinks/mergedealrefs.go",
 	"internal/modules/contacts/mergerelink_company.go",
 	"internal/modules/contacts/mergecompanycollisions.go",
 	"internal/modules/contacts/dedupemove.go",

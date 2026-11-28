@@ -97,7 +97,7 @@ type MailAttempt struct {
 func (e *Engine) ClaimMailAttempt(ctx context.Context, reviewID ids.UUID, now time.Time) (MailAttempt, bool, error) {
 	var attempt MailAttempt
 	var claimed bool
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		attempt, claimed, err = e.ClaimMailAttemptTx(ctx, tx, reviewID, now)
 		return err
@@ -183,7 +183,7 @@ func (e *Engine) MailFailed(ctx context.Context, reviewID ids.UUID, cause string
 		return err
 	}
 	cause = textcut.Runes(cause, maxMailErrorRunes)
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE weekly_review SET mail_error = $3
 			 WHERE id = $1 AND user_id = $2 AND mail_attempted_at IS NOT NULL`,
@@ -235,7 +235,7 @@ func (e *Engine) MailPending(ctx context.Context, reviewID ids.UUID) (bool, erro
 		return false, err
 	}
 	var pending bool
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		args := []any{reviewID, user}
 		holders := strings.Split(storekit.Placeholders(args), ",")
 		return tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM weekly_review WHERE id = "+holders[0]+" AND user_id = "+holders[1]+" AND mail_attempted_at IS NULL)", args...).Scan(&pending)

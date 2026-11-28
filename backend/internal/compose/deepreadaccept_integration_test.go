@@ -79,7 +79,7 @@ func TestDeepReadOfferingsDedupeOnValueKeyAndTheApplyRespectsHumanPrecedence(t *
 
 	var factRows int
 	var serviceValue, serviceCapturedBy, productValue string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx,
 			`SELECT count(*) FROM company_fact WHERE company_id = $1`, company).Scan(&factRows); err != nil {
@@ -120,7 +120,7 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	}
 	readSizeBand := func(company ids.UUID) *string {
 		var sizeBand *string
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
 				`SELECT size_band FROM company WHERE id = $1`, company).Scan(&sizeBand)
 		}); err != nil {
@@ -181,7 +181,7 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 		t.Fatalf("an ambiguous range filled size_band = %q, want NULL", *got)
 	}
 	var factValue string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT value FROM company_fact
 			  WHERE company_id = $1 AND field = 'employee_range'`, vague).Scan(&factValue)
@@ -240,7 +240,7 @@ func TestDeepReadFillsTheCompanysOwnIndustryAndSizeFromItsHomePage(t *testing.T)
 
 	var industry, sizeBand *string
 	stamps := map[string]string{}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `SELECT industry, size_band FROM company WHERE id = $1`,
 			company).Scan(&industry, &sizeBand); err != nil {
@@ -292,7 +292,7 @@ func TestDeepReadNeverOverwritesAnIndustryAColleagueSet(t *testing.T) {
 		t.Fatalf("ApplyDeepRead: %v", err)
 	}
 	var industry, evidence string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `SELECT industry FROM company WHERE id = $1`, company).Scan(&industry); err != nil {
 			return err

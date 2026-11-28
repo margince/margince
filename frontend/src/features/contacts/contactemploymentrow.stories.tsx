@@ -16,6 +16,7 @@ import {
 // verbs folded behind its overflow.
 import { Employers } from "./contactemployers";
 import "./contact360.css";
+import { en as englishCopy } from "../../i18n/en";
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -170,7 +171,7 @@ export const UnnamedEmployerVerbs: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "More actions",
+        name: englishCopy["record.moreActions"],
       }),
     );
   },

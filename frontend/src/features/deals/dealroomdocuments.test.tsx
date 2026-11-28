@@ -17,6 +17,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { DealRoomConversation } from "./dealroomconversation";
 import { AddDocument } from "./dealroomdocuments";
 
@@ -90,14 +91,16 @@ it("offers the upload that fills an empty Files area, and says where it lands", 
   stubApi();
   render(<AddDocument room={ROOM} refusal={undefined} />);
 
-  expect(await screen.findByText("No files on this deal")).toBeInTheDocument();
   expect(
-    screen.getByText(
-      "Any file in the deal’s Files area can be added, including uploads and email attachments.",
-    ),
+    await screen.findByText(englishCopy["room.docs.noFiles"]),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(englishCopy["room.docs.fileHint"]),
   ).toBeInTheDocument();
 
-  await user.click(screen.getByRole("button", { name: "Upload a file" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["room.docs.upload"] }),
+  );
   expect(await screen.findByRole("dialog")).toBeInTheDocument();
 
   // And it lets go again. The upload is a detour on the way to the picker, so
@@ -106,7 +109,7 @@ it("offers the upload that fills an empty Files area, and says where it lands", 
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(
-    screen.getByRole("button", { name: "Upload a file" }),
+    screen.getByRole("button", { name: englishCopy["room.docs.upload"] }),
   ).toBeInTheDocument();
 });
 
@@ -124,7 +127,9 @@ it("a refused room offers no upload, only the sentence saying why", () => {
       "This room is closed, so its documents can no longer change.",
     ),
   ).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Upload a file" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: englishCopy["room.docs.upload"] }),
+  ).toBeNull();
 });
 
 function roomEntry(id: string, title: string, reachesBuyer: boolean) {
@@ -166,16 +171,20 @@ it("marks a room entry whose file the buyer no longer gets", async () => {
 
   const gone = await screen.findByRole("article", { name: "Old MSA" });
   const live = screen.getByRole("article", { name: "Order form" });
-  expect(within(gone).getByText("Buyers do not see this")).toBeInTheDocument();
   expect(
-    within(gone).queryByRole("button", { name: "Ask about this document" }),
+    within(gone).getByText(englishCopy["room.docs.lapsed"]),
+  ).toBeInTheDocument();
+  expect(
+    within(gone).queryByRole("button", {
+      name: englishCopy["threads.askAbout"],
+    }),
   ).toBeNull();
   expect(
     within(gone).getByRole("button", { name: "Remove Old MSA from the room" }),
   ).toBeInTheDocument();
-  expect(within(live).queryByText("Buyers do not see this")).toBeNull();
+  expect(within(live).queryByText(englishCopy["room.docs.lapsed"])).toBeNull();
   expect(
-    within(live).getByRole("button", { name: "Ask about this document" }),
+    within(live).getByRole("button", { name: englishCopy["threads.askAbout"] }),
   ).toBeInTheDocument();
 });
 
@@ -226,13 +235,15 @@ it("says once, on the file, that the file is already in the room, until another 
   await user.click(screen.getByRole("button", { name: "Add to room" }));
 
   expect(
-    await screen.findAllByText("This file is already in the room."),
+    await screen.findAllByText(englishCopy["room.docs.alreadyPresent"]),
   ).toHaveLength(1);
   expect(picker).toHaveAttribute("aria-invalid", "true");
   expect(screen.queryByText(/rename or regroup/)).toBeNull();
 
   await pickOption(user, picker, "Order form");
-  expect(screen.queryByText("This file is already in the room.")).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["room.docs.alreadyPresent"]),
+  ).toBeNull();
 });
 
 it("says the file is required when added with none picked, and sends nothing", async () => {

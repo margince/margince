@@ -200,6 +200,7 @@ func admitted(
 ) bool {
 	client := httpserver.ClientIP(r)
 	if refusals.Blocked(client) {
+		ratelimit.SetHeaders(w.Header(), refusals.Limit(), refusals.RetryAfterSeconds())
 		// Silent: the line that mattered was written when the budget ran out,
 		// and repeating it per request would let the flood fill the log it is
 		// meant to be visible in.

@@ -316,7 +316,7 @@ func TestCaptureTierGateAsksAboutARoleMailboxOnlyOnce(t *testing.T) {
 	}
 
 	// The ledger as the verdict engine leaves it.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET status = 'real', kind = 'role_mailbox',
@@ -402,7 +402,7 @@ func TestCaptureTierGateDistinguishesAttestedIntentFromForgedReplies(t *testing.
 	requireContacts := func(t *testing.T, address string, want int) {
 		t.Helper()
 		var got int
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id=p.id WHERE lower(pe.email)=@address AND p.archived_at IS NULL`, pgx.NamedArgs{"address": address}).Scan(&got)
 		})
 		if err != nil || got != want {
@@ -503,7 +503,7 @@ func TestCaptureTierGateReopensASenderWhoseNoiseVerdictHasAged(t *testing.T) {
 // resolved the given duration ago.
 func resolveDispositionAged(t *testing.T, e *integration.SearchEnv, email, status string, ago time.Duration) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET status = $2, resolved_at = now() - $3::interval,
@@ -551,7 +551,7 @@ func TestCaptureTierGateHonorsCorrespondenceFromACRMOriginatedSend(t *testing.T)
 	ctx := e.AsFullUser()
 
 	anchorID := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 			VALUES ($1,
@@ -594,7 +594,7 @@ func TestCaptureTierGateHonorsCorrespondenceFromACRMOriginatedSend(t *testing.T)
 	// The thread key is read back rather than guessed: the CRM send generated
 	// it, so a literal here would silently stop threading the day that changes.
 	var crmThread string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT thread_key FROM activity
 			 WHERE counterparty_email = 'team@news.prospect.example'
@@ -821,7 +821,7 @@ func TestCaptureTierGateNeverMintsAContactForADecidedRoleMailbox(t *testing.T) {
 
 	// The ledger as the verdict engine leaves it: real lifecycle, kind
 	// role_mailbox, no contact created.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET status = 'real', kind = 'role_mailbox',

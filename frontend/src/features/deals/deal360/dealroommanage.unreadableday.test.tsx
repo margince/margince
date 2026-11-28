@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { ManageRoomDialog } from "./dealroommanage";
 
 const ROOM: components["schemas"]["DealRoom"] = {
@@ -59,12 +60,16 @@ it("refuses a save while the end day cannot be read, and keeps the stored day", 
     </QueryClientProvider>,
   );
   const user = userEvent.setup();
-  const box = await screen.findByRole("textbox", { name: "Access ends on" });
+  const box = await screen.findByRole("textbox", {
+    name: englishCopy["roompage.expiryLabel"],
+  });
   expect(box).toHaveValue("31/12/2026");
   await user.clear(box);
   await user.type(box, "31/02/2027");
 
-  await user.click(screen.getByRole("button", { name: "Save changes" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["roomtab.manage.save"] }),
+  );
 
   expect(writes).toHaveLength(0);
   expect(screen.getByRole("alert")).toHaveTextContent(

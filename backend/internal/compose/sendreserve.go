@@ -50,7 +50,7 @@ func readSendPayload[P any](ctx context.Context, pool *pgxpool.Pool, read sendRe
 			return none, sendBasis{}, false, err
 		}
 		var basis sendBasis
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			var err error
 			basis, err = readSendBasis(ctx, tx, read.seat, read.team, refs, read.clock())
 			return err
@@ -96,7 +96,7 @@ func reserveSend[P any](ctx context.Context, pool *pgxpool.Pool, read sendReadin
 // the hold alone, in its own transaction.
 func reserveInOwnTx[P any](ctx context.Context, pool *pgxpool.Pool) func(P, func(pgx.Tx) error) (bool, error) {
 	return func(_ P, hold func(pgx.Tx) error) (bool, error) {
-		return true, database.WithWorkspaceTx(ctx, pool, hold)
+		return true, database.WithTx(ctx, pool, hold)
 	}
 }
 

@@ -60,7 +60,7 @@ func failAfterTheFirstCreate(t *testing.T, e *apptest.AppEnv, runID, sourceName,
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{migration.ImportRunObject: {Create: true}},
+			Objects:  map[string]principal.ObjectGrant{migration.ImportRunObject: {Create: true, Read: true, Update: true, Delete: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -73,7 +73,7 @@ func failAfterTheFirstCreate(t *testing.T, e *apptest.AppEnv, runID, sourceName,
 		t.Fatal(err)
 	}
 	system := provenance.ReservedSourceSystemPrefix + migration.ConnectorCSV + ":" + sourceName
-	if err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
 		if err := migration.NewRunStore(e.DB()).RecordIdentityTx(ctx, tx, migration.RunID(run),
 			system, migration.ObjectCompany, ref, native, migration.OriginCreated); err != nil {
 			return err

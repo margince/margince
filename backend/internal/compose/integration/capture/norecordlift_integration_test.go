@@ -56,7 +56,7 @@ func TestTheLimiterStillHoldsAMeetingThatNamesAJudgedSender(t *testing.T) {
 		email("dse@eu.docusign.net", "DocuSign EU", captureOwner, "forged-kind@docusign.net", ""))
 
 	var activityID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE kind = 'meeting'`).Scan(&activityID)
 	}); err != nil {
@@ -75,7 +75,7 @@ func TestTheLimiterStillHoldsAMeetingThatNamesAJudgedSender(t *testing.T) {
 // ask what the recompute makes of a row that has since been filed.
 func fileUnder(t *testing.T, e *integration.SearchEnv, activity ids.UUID, contact ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_link (activity_id, entity_type, contact_id)
 			VALUES ($1, 'contact', $2) ON CONFLICT DO NOTHING`, activity, contact)
@@ -133,7 +133,7 @@ func TestAJudgedHoldSurvivesBeingFiledWhateverTheKind(t *testing.T) {
 	// The same row, wearing the kind a calendar connector writes. The hold on
 	// it was placed by a judgement about its sender, and that is what the
 	// reason records.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET kind = 'meeting' WHERE id = $1`, activityID)
 		return err

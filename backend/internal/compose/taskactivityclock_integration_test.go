@@ -82,7 +82,7 @@ func (f taskClockFixture) fileAgentTask(t *testing.T) {
 		t.Fatal(err)
 	}
 	locator := commitmentLocator(sourceID, claimKindOurs, "seat:"+f.e.AdminUser.String(), "1:send the pricing")
-	if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		_, err := writeCommitmentTask(ctx, tx, f.e.Activities, f.e.Contacts, commitmentTask{
 			Extractor: transcriptProposalActor, Locator: locator, Summary: "Send the pricing", Body: "send the pricing",
 			SourceActivityID: sourceID, Links: f.links(), Assignee: f.e.AdminUser, Origin: activities.OriginAgent,
@@ -237,7 +237,7 @@ func (f taskClockFixture) assertNoTaskClocks(t *testing.T, why string) {
 	ctx := principal.WithWorkspaceID(context.Background(), f.e.WS)
 	for _, table := range []storekit.ClockTable{storekit.ClockContacts, storekit.ClockCompanies, storekit.ClockDeals, storekit.ClockProjects} {
 		var selected []ids.UUID
-		if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) (err error) {
 			_, selected, err = storekit.ClockPage(ctx, tx, table, storekit.ClockNotFolded, ids.Nil, 1000)
 			return err
 		}); err != nil || len(selected) != 0 {

@@ -77,7 +77,7 @@ func TestTheStoredWriterSideIsTheProjectedVoicesSide(t *testing.T) {
 			t.Fatalf("%s: reading the row: %v", name, err)
 		}
 		var stored string
-		if err := database.WithWorkspaceTx(logger, o.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(logger, o.e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
 				`SELECT coalesce(`+activities.WriterSideSQL("a", "true")+`, '') FROM activity a WHERE a.id = $1`, c.row).Scan(&stored)
 		}); err != nil {

@@ -101,7 +101,7 @@ func onContact(contact ids.UUID) activities.ActivityLinkInput {
 
 func inWorkspaceTx(t *testing.T, e *integration.Env, read func(tx pgx.Tx) error) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, read); err != nil {
+	if err := database.WithTx(e.Admin(), e.Pool, read); err != nil {
 		t.Fatal(err)
 	}
 }

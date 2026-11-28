@@ -227,7 +227,7 @@ func decide(stored *row, fingerprint string, now time.Time, force bool) decision
 func (s *Service) queue(ctx context.Context, userID ids.UserID, companyID ids.CompanyID, language string) (*row, error) {
 	said := langcopy.For(language)
 	var out *row
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		queued, rearmed, err := queue(ctx, tx, userID, companyID)
 		if err != nil || !rearmed {
 			return err
@@ -310,7 +310,7 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, companyID ids.Compan
 	case s.lane == nil:
 		out.Status, out.DegradeReason = StatusDegraded, said.Say(scanWords.NoModel)
 	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		return settle(ctx, tx, h.ID, &h.ClaimedAt, out)
 	})
 }
@@ -343,7 +343,7 @@ func (s *Service) assemble(ctx context.Context, companyID ids.CompanyID, languag
 		return Input{}, "", err
 	}
 	in := Input{Account: companybrief.FromView(view).WordedIn(language)}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		words, err := readWords(ctx, tx, companyID, s.now().UTC())
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			// No activity grant: the account is read from its records alone,
@@ -385,7 +385,7 @@ func (s *Service) caller(ctx context.Context) (ids.UserID, error) {
 // the account's own visibility gate.
 func (s *Service) load(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (*row, error) {
 	var stored *row
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
@@ -401,7 +401,7 @@ func (s *Service) load(ctx context.Context, userID ids.UserID, companyID ids.Com
 func (s *Service) claim(ctx context.Context, scanID ids.UUID) (row, bool, error) {
 	var r row
 	var ok bool
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		r, ok, err = begin(ctx, tx, scanID)
 		return err
@@ -410,7 +410,7 @@ func (s *Service) claim(ctx context.Context, scanID ids.UUID) (row, bool, error)
 }
 
 func (s *Service) deferRead(ctx context.Context, h held, next time.Time, reason string) error {
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		return deferRead(ctx, tx, h, next, reason)
 	})
 }
@@ -431,7 +431,7 @@ func deferralReason(cause error) string {
 func (s *Service) fail(ctx context.Context, h held, reason string) error {
 	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), failWriteTimeout)
 	defer cancel()
-	return database.WithWorkspaceTx(recordCtx, s.pool, func(tx pgx.Tx) error {
+	return database.WithTx(recordCtx, s.pool, func(tx pgx.Tx) error {
 		return fail(recordCtx, tx, h, reason)
 	})
 }

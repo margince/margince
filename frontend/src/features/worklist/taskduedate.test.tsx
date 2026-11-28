@@ -21,6 +21,7 @@ import {
   useTaskUpdate,
 } from "../../components/taskactions";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 
 const TASK = "01a05500-0000-7000-8000-000000000a01";
@@ -207,7 +208,9 @@ describe("moving a task to a named day", () => {
 
 describe("moving a task to a callback time", () => {
   const timeBox = () =>
-    screen.getByRole<HTMLInputElement>("textbox", { name: "Time (optional)" });
+    screen.getByRole<HTMLInputElement>("textbox", {
+      name: englishCopy["log.dueTime"],
+    });
 
   it("sends the picked hour as the due time, flagged as a time of day", async () => {
     const user = userEvent.setup();
@@ -288,11 +291,7 @@ describe("moving a task to a callback time", () => {
     renderVerbs(DUE_AT);
     await user.click(moveButton());
 
-    expect(
-      screen.getByText(
-        "The task is already due then. Pick another day or time.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["tasks.moveSame"])).toBeTruthy();
     expect(picker().getAttribute("aria-invalid")).toBe("true");
     expect(sent).toHaveLength(0);
   });
@@ -325,7 +324,9 @@ it("snoozes to tomorrow after midnight passes with the task still open", async (
   const user = userEvent.setup();
   renderVerbs("2026-08-20T13:00:00Z", true);
   vi.setSystemTime(new Date("2026-09-01T22:01:00Z"));
-  await user.click(screen.getByRole("button", { name: "Snooze 1 day" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["tasks.snooze"] }),
+  );
   await waitFor(() => expect(sent).toHaveLength(1));
   expect(sent[0]).toMatchObject({
     due_at: "2026-09-03T13:00:00.000Z",
@@ -340,10 +341,8 @@ describe("moving a task to a day already past", () => {
     await user.tripleClick(picker());
     await user.keyboard("20/08/2026{Enter}");
 
-    expect(screen.getByText("Date in the past")).toBeTruthy();
-    expect(
-      screen.getByText("Moving the task to this date makes it overdue."),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["tasks.movePastTitle"])).toBeTruthy();
+    expect(screen.getByText(englishCopy["tasks.movePastBody"])).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Move anyway" }));
 
     await waitFor(() => expect(sent).toHaveLength(1));
@@ -358,6 +357,6 @@ describe("moving a task to a day already past", () => {
     await user.keyboard("25/08/2026{Enter}");
 
     expect(screen.getByRole("button", { name: "Move" })).toBeTruthy();
-    expect(screen.queryByText("Date in the past")).toBeNull();
+    expect(screen.queryByText(englishCopy["tasks.movePastTitle"])).toBeNull();
   });
 });

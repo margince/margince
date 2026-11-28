@@ -136,7 +136,7 @@ func foldOneContact(t *testing.T, e *integration.Env, company, contact ids.UUID)
 	t.Helper()
 	var found *contacts.RelationshipStrength
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		all, err := contacts.StrengthForCompanyContacts(ctx, tx, ids.CompanyID{UUID: company}, company360Clock, nil)
 		if err != nil {
 			return err

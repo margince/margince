@@ -37,7 +37,7 @@ func withheldFileOnDealMail(t *testing.T, e *Env, store *activities.Store) (ids.
 	if err != nil {
 		t.Fatalf("logging the mail: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return store.RecordWithheldFiles(e.Admin(), tx, ids.From[ids.ActivityKind](ids.UUID(mail.Id)),
 			activities.CapturedFileSource{
 				System: "imap", MessageID: "m-withheld", CapturedBy: "connector:imap", Category: "email_attachment",

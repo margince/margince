@@ -19,7 +19,7 @@ func (l *Ledger) Condemn(ctx context.Context, key string, before, now time.Time)
 		return false, err
 	}
 	var claimed bool
-	err := database.WithWorkspaceTx(ctx, l.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, l.db.Pool(), func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `UPDATE stored_object_intent SET reaping_since = @now
  WHERE storage_key = (SELECT storage_key FROM stored_object_intent
  WHERE storage_key = @key AND recorded_at < @before AND reaped_at IS NULL
@@ -36,7 +36,7 @@ func (l *Ledger) CompleteReap(ctx context.Context, key string, now time.Time) er
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, l.db.Pool(), func(tx pgx.Tx) error {
+	return database.WithTx(ctx, l.db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE stored_object_intent SET reaped_at = @now
  WHERE storage_key = @key AND reaping_since IS NOT NULL`, pgx.NamedArgs{storageKeyArg: key, "now": now})
 		return err

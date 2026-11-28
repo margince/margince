@@ -32,7 +32,7 @@ func seedSignatureFill(t *testing.T, e *integration.Env) (ids.UUID, ids.UUID) {
 	contact := seedEnrichContact(t, e, "bob@acme.example",
 		"Best,\nBob Contact\nCTO\n+49 30 1234567\nAcme GmbH\nhttps://www.linkedin.com/in/bob-contact")
 	var activity ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
 	}); err != nil {
@@ -49,7 +49,7 @@ func seedSignatureFill(t *testing.T, e *integration.Env) (ids.UUID, ids.UUID) {
 		t.Fatalf("the mail reader filling the contact: %v", err)
 	}
 	var fill ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT id FROM audit_log
 			 WHERE entity_type = 'contact' AND entity_id = $1 AND evidence->>'source' = 'capture_enrich'`,
@@ -64,7 +64,7 @@ func seedSignatureFill(t *testing.T, e *integration.Env) (ids.UUID, ids.UUID) {
 // rows, a live phone number and a LinkedIn slot.
 func whatTheFillLeft(t *testing.T, e *integration.Env, contact ids.UUID) (title *string, evidence, phones, linkedin int) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		c := context.Background()
 		return tx.QueryRow(c, `
 			SELECT (SELECT title FROM contact WHERE id = $1),
@@ -126,7 +126,7 @@ func TestAFillAColleagueChangedSinceIsNotUndone(t *testing.T) {
 func judgeOnTheReceipt(seat context.Context, t *testing.T, e *integration.Env, entityType string, auditID ids.UUID) *crmcontracts.MagicUndo {
 	t.Helper()
 	var answer *crmcontracts.MagicUndo
-	if err := database.WithWorkspaceTx(seat, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(seat, e.Pool, func(tx pgx.Tx) error {
 		answers, err := magicUndoJudge{seam: restoreSeamFor(e)}.JudgeUndoPage(seat, tx,
 			[]magic.UndoSubject{{AuditID: auditID, EntityType: entityType}})
 		answer = answers[auditID]
@@ -230,7 +230,7 @@ func TestTheReceiptFoldsCreatesAndArchivesAndOffersAnUndoPerRecord(t *testing.T)
 func fillEntryOf(t *testing.T, e *integration.Env, contact ids.UUID, source string) ids.UUID {
 	t.Helper()
 	var fill ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT id FROM audit_log
 			 WHERE entity_type = 'contact' AND entity_id = $1 AND evidence->>'source' = $2
@@ -247,7 +247,7 @@ func TestUndoingASignatureThatOnlyConfirmedANumberLeavesTheNumber(t *testing.T) 
 	e := integration.Setup(t)
 	contact, _ := seedSignatureFill(t, e)
 	later := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		c := context.Background()
 		if _, err := tx.Exec(c, `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id, source, captured_by, occurred_at)
@@ -375,7 +375,7 @@ func TestUndoingASignatureLeavesATitleItOnlyConfirmed(t *testing.T) {
 		t.Fatal(err)
 	}
 	var activity ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
 	}); err != nil {
@@ -476,7 +476,7 @@ func TestUndoingALegacySignatureLeavesATitleTheRecordAlreadyHad(t *testing.T) {
 		t.Fatal(err)
 	}
 	var activity ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
 	}); err != nil {

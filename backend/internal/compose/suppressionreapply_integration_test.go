@@ -146,7 +146,7 @@ func seedContactWithEmail(t *testing.T, e *integration.Env, name, email string) 
 func liveEmails(t *testing.T, e *integration.Env, contact ids.UUID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM contact_email WHERE contact_id = $1`, contact).Scan(&n)
 	}); err != nil {

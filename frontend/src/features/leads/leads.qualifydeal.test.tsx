@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { leadPromotePreviewKey } from "../../lib/leadkeys";
 import { steppedClock } from "../../testing/steppedclock";
 import { QualifyDialog } from "./leads.qualify";
@@ -61,13 +62,17 @@ function fixture(deals: { id: string; name: string }[], cursor?: string) {
 it("preselects the only eligible deal and submits only its id", async () => {
   const f = fixture([{ id: "deal-one", name: "Annual renewal" }]);
   expect(
-    await screen.findByRole("radio", { name: "Add to an existing deal" }),
+    await screen.findByRole("radio", {
+      name: englishCopy["lead.qualify.existingDeal"],
+    }),
   ).toBeChecked();
   expect(
-    screen.getByRole("radio", { name: "Open a new deal" }),
+    screen.getByRole("radio", { name: englishCopy["lead.qualify.newDeal"] }),
   ).not.toBeChecked();
   await f.user.click(
-    screen.getByRole("button", { name: "Qualify and add to deal" }),
+    screen.getByRole("button", {
+      name: englishCopy["lead.qualify.confirmExisting"],
+    }),
   );
   await waitFor(() =>
     expect(f.body()).toMatchObject({ existing_deal_id: "deal-one" }),
@@ -78,11 +83,15 @@ it("preselects the only eligible deal and submits only its id", async () => {
 it("keeps an explicit opt-out when the preview refreshes", async () => {
   const f = fixture([{ id: "deal-one", name: "Annual renewal" }]);
   await f.user.click(
-    await screen.findByRole("radio", { name: "Qualify without a deal" }),
+    await screen.findByRole("radio", {
+      name: englishCopy["lead.qualify.withoutDeal"],
+    }),
   );
   await f.refresh();
   expect(
-    screen.getByRole("radio", { name: "Add to an existing deal" }),
+    screen.getByRole("radio", {
+      name: englishCopy["lead.qualify.existingDeal"],
+    }),
   ).not.toBeChecked();
   await f.user.click(screen.getByRole("button", { name: "Qualify" }));
   await waitFor(() => expect(f.body()).toBeTruthy());
@@ -92,25 +101,33 @@ it("keeps an explicit opt-out when the preview refreshes", async () => {
 
 it("offers a new deal without an existing-deal control when there are none", async () => {
   fixture([]);
-  await screen.findByText("Qualifying creates a new contact.");
+  await screen.findByText(englishCopy["lead.previewCreate"]);
   expect(
-    screen.queryByRole("radio", { name: "Add to an existing deal" }),
+    screen.queryByRole("radio", {
+      name: englishCopy["lead.qualify.existingDeal"],
+    }),
   ).toBeNull();
-  expect(screen.getByRole("radio", { name: "Open a new deal" })).toBeTruthy();
+  expect(
+    screen.getByRole("radio", { name: englishCopy["lead.qualify.newDeal"] }),
+  ).toBeTruthy();
 });
 
 it("does not treat the first page as a unique deal when another page exists", async () => {
   fixture([{ id: "deal-one", name: "Annual renewal" }], "next-page");
   expect(
-    await screen.findByRole("radio", { name: "Add to an existing deal" }),
+    await screen.findByRole("radio", {
+      name: englishCopy["lead.qualify.existingDeal"],
+    }),
   ).not.toBeChecked();
-  expect(screen.getByRole("button", { name: "Show more deals" })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: englishCopy["lead.qualify.moreDeals"] }),
+  ).toBeTruthy();
 });
 
 it("refuses a selected deal after its employer changes", async () => {
   const f = fixture([{ id: "deal-one", name: "Annual renewal" }]);
   const existing = await screen.findByRole("radio", {
-    name: "Add to an existing deal",
+    name: englishCopy["lead.qualify.existingDeal"],
   });
   expect(existing).toBeChecked();
   await f.refresh({
@@ -119,11 +136,11 @@ it("refuses a selected deal after its employer changes", async () => {
     existing_deals: [{ id: "deal-two", name: "New rollout" }],
     existing_deals_cursor: undefined,
   });
-  await screen.findByText(
-    "That deal is no longer available. Choose another deal or qualify without one.",
-  );
+  await screen.findByText(englishCopy["lead.qualify.dealUnavailable"]);
   expect(
-    screen.getByRole("radio", { name: "Add to an existing deal" }),
+    screen.getByRole("radio", {
+      name: englishCopy["lead.qualify.existingDeal"],
+    }),
   ).not.toBeChecked();
   expect(screen.getByRole("button", { name: "Qualify" })).toBeDisabled();
   await f.user.click(screen.getByRole("button", { name: "Qualify" }));
@@ -136,7 +153,9 @@ it("refuses a selected deal after its employer changes", async () => {
 it("pins the automatically selected deal when a refresh returns a different single candidate", async () => {
   const f = fixture([{ id: "deal-one", name: "Annual renewal" }]);
   expect(
-    await screen.findByRole("radio", { name: "Add to an existing deal" }),
+    await screen.findByRole("radio", {
+      name: englishCopy["lead.qualify.existingDeal"],
+    }),
   ).toBeChecked();
   await f.refresh({
     outcome: "create",
@@ -144,12 +163,12 @@ it("pins the automatically selected deal when a refresh returns a different sing
     existing_deals: [{ id: "deal-two", name: "New rollout" }],
     existing_deals_cursor: undefined,
   });
-  await screen.findByText(
-    "That deal is no longer available. Choose another deal or qualify without one.",
-  );
+  await screen.findByText(englishCopy["lead.qualify.dealUnavailable"]);
   expect(screen.getByRole("button", { name: "Qualify" })).toBeDisabled();
   expect(
-    screen.getByRole("radio", { name: "Add to an existing deal" }),
+    screen.getByRole("radio", {
+      name: englishCopy["lead.qualify.existingDeal"],
+    }),
   ).not.toBeChecked();
   expect(f.body()).toBeUndefined();
 });

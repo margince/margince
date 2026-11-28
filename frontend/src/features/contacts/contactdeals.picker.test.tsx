@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import {
   jsonResponse,
@@ -218,15 +219,15 @@ it.each(scenarios)(
     );
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Add to a deal" }),
+      await screen.findByRole("button", {
+        name: englishCopy["rel.seatOnDeal"],
+      }),
     );
     const dialog = screen.getByRole("dialog");
     const input = within(dialog).getByRole("searchbox");
     await user.click(input);
     if (withheld || contextFailure) {
-      await within(dialog).findByText(
-        "Employer details are unavailable. Type to search all open deals.",
-      );
+      await within(dialog).findByText(englishCopy["rel.employerUnavailable"]);
       expect(queries).toHaveLength(0);
     } else if (employers.length) {
       await within(dialog).findByRole("button", { name: /Employer A renewal/ });
@@ -284,7 +285,7 @@ it.each(scenarios)(
     );
     if (companyFailure)
       expect(
-        within(dialog).getAllByText("Name did not load").length,
+        within(dialog).getAllByText(englishCopy["ref.nameLoadFailed"]).length,
       ).toBeGreaterThan(0);
     else expect(within(dialog).getByText("Partner company")).toBeTruthy();
     if (paged) {

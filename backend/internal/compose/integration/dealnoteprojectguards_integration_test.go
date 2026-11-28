@@ -116,7 +116,7 @@ func TestTheDealsProjectNeedsProjectRead(t *testing.T) {
 	resolve := func(perms principal.Permissions) ids.UUID {
 		ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 		var got ids.UUID
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			got, err = storekit.DealsProject(ctx, tx, []ids.UUID{f.erpDeal})
 			return err

@@ -64,12 +64,7 @@ type ChannelPollTarget struct {
 // walk takes. A single broken tenant must not stop every other workspace's
 // messages arriving.
 func DueChannelConnections(ctx context.Context, pool *pgxpool.Pool, provider string) ([]DueChannelConnection, error) {
-	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; a scheduled poll carries no tenant, so every workspace is scanned under its own GUC.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL`)
-	if err != nil {
-		return nil, fmt.Errorf("capture: listing workspaces for the channel poll scan: %w", err)
-	}
-	workspaces, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	workspaces, err := database.LiveWorkspaces(ctx, pool)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +73,7 @@ func DueChannelConnections(ctx context.Context, pool *pgxpool.Pool, provider str
 	var errs error
 	for _, wsID := range workspaces {
 		wsCtx := principal.WithWorkspaceID(ctx, wsID)
-		err := database.WithWorkspaceTx(wsCtx, pool, func(tx pgx.Tx) error {
+		err := database.WithTx(wsCtx, pool, func(tx pgx.Tx) error {
 			rows, err := tx.Query(ctx, `
 				SELECT id FROM channel_connection
 				 WHERE provider = $1 AND status = $2 AND archived_at IS NULL AND `+botConnectionRow,
@@ -126,7 +121,7 @@ func LoadChannelPollTarget(ctx context.Context, pool *pgxpool.Pool, provider str
 		return ChannelPollTarget{}, errors.New("capture: loading a channel poll target outside workspace context")
 	}
 	out.WorkspaceID = ws
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT id, channel_id, credential_ref, poll_offset
 			  FROM channel_connection
@@ -196,7 +191,7 @@ func AdvanceChannelPollOffsetTx(ctx context.Context, tx pgx.Tx, id ids.UUID, bot
 // comes back — refusing here would instead leave a connection nothing ever
 // reports on.
 func StopPollingChannelConnection(ctx context.Context, pool *pgxpool.Pool, id ids.UUID, status, reason string) error {
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := storekit.LockRow(ctx, tx, "channel_connection", id, storekit.LiveOnly); err != nil {
 			return err
 		}

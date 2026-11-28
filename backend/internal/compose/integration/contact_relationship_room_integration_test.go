@@ -512,7 +512,7 @@ func TestCorrectionLedgerKeepsOneVerdictPerClaim(t *testing.T) {
 
 	var rows int
 	var verdict string
-	if err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*), max(verdict) FROM ai_feedback
 			 WHERE subject_type = 'contact' AND subject_id = $1`, mine).Scan(&rows, &verdict)
@@ -528,7 +528,7 @@ func TestCorrectionLedgerKeepsOneVerdictPerClaim(t *testing.T) {
 	// The superseded correction's value must not survive: the ledger stores
 	// the human's CURRENT answer, and a suppressed claim carries none.
 	var value *string
-	if err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT corrected_value FROM ai_feedback WHERE subject_id = $1`, mine).Scan(&value)
 	}); err != nil {
@@ -716,7 +716,7 @@ func TestADismissalHoldsUntilTheEvidenceMoves(t *testing.T) {
 func contactChanges(ctx context.Context, t *testing.T, e *Env, contactID ids.ContactID) ([]relstrength.Change, error) {
 	t.Helper()
 	var out []relstrength.Change
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		touches, zone, err := contactTouches(ctx, tx, contactID)
 		if err == nil {
 			out, err = e.Contacts.ContactRelationshipChangesTx(ctx, tx, contactID, roomFixedNow, nil, touches[contactID], zone)

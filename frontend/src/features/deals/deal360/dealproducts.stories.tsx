@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../../api/schema";
+import { en as englishCopy } from "../../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -171,10 +172,12 @@ async function openEditor(
   user: ReturnType<typeof userEvent.setup>,
 ) {
   await user.click(
-    await within(canvasElement).findByRole("button", { name: "Set products" }),
+    await within(canvasElement).findByRole("button", {
+      name: englishCopy["deal.products.edit"],
+    }),
   );
   return within(canvasElement.ownerDocument.body).findByRole("dialog", {
-    name: "Set the products this deal sells",
+    name: englishCopy["deal.products.editTitle"],
   });
 }
 
@@ -220,12 +223,12 @@ export const EditingTheLines: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.setup().click(
       await within(canvasElement).findByRole("button", {
-        name: "Edit products",
+        name: englishCopy["deal.lines.edit"],
       }),
     );
     await expect(
       await within(canvasElement.ownerDocument.body).findByRole("dialog", {
-        name: "Products and services",
+        name: englishCopy["deal.lines.editTitle"],
       }),
     ).toBeTruthy();
   },

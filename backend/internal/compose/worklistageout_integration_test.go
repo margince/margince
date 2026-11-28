@@ -147,7 +147,7 @@ func TestAHumanReopenedOldTaskStaysOnTheWorklist(t *testing.T) {
 			id := ids.From[ids.ActivityKind](ids.UUID(row.Id))
 			reopenContext := e.Admin()
 			if imported {
-				runContext := e.As(e.AdminUser, nil, principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"import_run": {Create: true}}})
+				runContext := e.As(e.AdminUser, nil, principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"import_run": {Create: true, Read: true, Update: true, Delete: true}}})
 				run, err := migration.NewRunStore(e.DB()).Create(runContext, migration.CreateRunInput{Connector: "csv", SourceRef: "tasks.csv"})
 				if err != nil {
 					t.Fatal(err)

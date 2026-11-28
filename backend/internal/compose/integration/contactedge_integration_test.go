@@ -50,7 +50,7 @@ func seedSharedThread(t *testing.T, e *Env, colleague, contactA, contactB ids.UU
 		}
 	}
 	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{id})
 	}); err != nil {
 		t.Fatalf("folding the edges: %v", err)
@@ -107,7 +107,7 @@ func TestDroppingAContactRemovesTheirContactEdgesOnEitherEnd(t *testing.T) {
 	if birgit.String() > anna.String() {
 		subject = birgit
 	}
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.DropEdgesForContact(wsCtx, tx, subject)
 	}); err != nil {
 		t.Fatalf("dropping the subject's edges: %v", err)
@@ -131,7 +131,7 @@ func TestContactPeersCarryOnlyContactsInsideRowScope(t *testing.T) {
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
 	var peers []search.PeerEdge
-	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		peers, err = search.ContactEdgesForContact(rep, tx, anchor, 10)
 		return err

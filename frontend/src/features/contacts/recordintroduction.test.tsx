@@ -92,7 +92,8 @@ it("says each empty field is required on Record, and sends nothing", async () =>
   expect(screen.getByText("How it happened is required.")).toBeTruthy();
   expect(document.activeElement?.getAttribute("aria-invalid")).toBe("true");
   expect(document.activeElement?.id).toBe(
-    screen.getByText("Introduced by").closest("label")?.htmlFor,
+    screen.getByText(en["contact.intro.recordIntroducer"]).closest("label")
+      ?.htmlFor,
   );
   const fetched = vi
     .mocked(fetch)

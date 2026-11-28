@@ -152,7 +152,7 @@ func (w *financeSyncSweepWorker) providerFor(
 		name string
 		conn finance.SourceConnection
 	)
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT provider, id::text, created_at FROM finance_connection
 			 WHERE status <> 'disconnected'

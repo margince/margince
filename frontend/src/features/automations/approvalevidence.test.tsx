@@ -7,6 +7,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { DecisionApproval } from "../../design-system/decisioncard";
 import { formatDateTime } from "../../format/format";
 import { LocaleProvider, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { messageApproval } from "../../testing/message-approval";
 import { SourceHost } from "../../testing/sourcehost";
@@ -305,11 +306,17 @@ it("draws the signature's images from the approval's own read once the reader as
   expect(readsOne()).toBe(false);
 
   await userEvent.click(
-    screen.getByRole("button", { name: "Show the images" }),
+    screen.getByRole("button", {
+      name: englishCopy["approval.preview.showImages"],
+    }),
   );
   await waitFor(() => expect(drawn()).toContain("data:image/png"));
   expect(readsOne()).toBe(true);
-  expect(screen.queryByRole("button", { name: "Show the images" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: englishCopy["approval.preview.showImages"],
+    }),
+  ).toBeNull();
 });
 
 it("asks for the images again after a read that failed", async () => {
@@ -348,7 +355,9 @@ it("asks for the images again after a read that failed", async () => {
   );
   const drawn = () => document.querySelector("iframe")?.getAttribute("srcdoc");
   const showImages = () =>
-    screen.getByRole("button", { name: "Show the images" });
+    screen.getByRole("button", {
+      name: englishCopy["approval.preview.showImages"],
+    });
 
   await userEvent.click(showImages());
   await waitFor(() => expect(reads).toBe(1));

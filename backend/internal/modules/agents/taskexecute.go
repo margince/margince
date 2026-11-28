@@ -139,7 +139,7 @@ func (s *Dispatcher) invokeReleased(ctx context.Context, task Task) Settlement {
 		s.log.Error("mcp: rebuilding a released call failed",
 			"task", task.ID, "approval", task.ApprovalID, "err", err)
 		const message = "The approved change could not be turned back into a call, so nothing was done. " +
-			"Report this to the workspace admin rather than retrying."
+			"Report this to the company admin rather than retrying."
 		return Settlement{
 			Status:        TaskFailed,
 			StatusMessage: message,

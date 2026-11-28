@@ -33,7 +33,7 @@ func workspacePromises(t *testing.T, e *integration.Env, limit int) ([]contacts.
 	var rows []contacts.CompanyCommitment
 	var more bool
 	store := contacts.NewStore(e.DB())
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		rows, more, err = store.OpenCommitmentsAcrossWorkspace(e.Admin(), tx, limit)
 		return err

@@ -128,7 +128,7 @@ export const AudienceOpen: Story = {
       }),
     );
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change visibility" }),
+      await screen.findByRole("button", { name: en["compose.audience"] }),
     );
     await screen.findByRole("dialog", {
       name: en["activity.audience.callTitle"],
@@ -159,7 +159,7 @@ export const ChatThreadAudienceOpen: Story = {
       await screen.findByRole("button", { name: "Visibility" }),
     );
     const dialog = await screen.findByRole("dialog", {
-      name: "Who may read this conversation?",
+      name: en["compose.threadAudienceTitle"],
     });
     await within(dialog).findByText(/whole conversation, not one message/);
   },
@@ -182,13 +182,13 @@ export const NotAboutThisDeal: Story = {
     },
   },
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByText("Not about this deal");
+    await within(canvasElement).findByText(en["dealDecline.action"]);
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
         name: "More actions for Rechnungslauf Oktober",
       }),
     );
-    await screen.findByRole("button", { name: "About this deal" });
+    await screen.findByRole("button", { name: en["dealRelevance.about"] });
   },
 };
 export const NotAboutThisDealDark: Story = {

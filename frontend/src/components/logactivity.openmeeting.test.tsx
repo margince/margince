@@ -227,7 +227,7 @@ const QUESTION = /Is this the record of Quarterly review/;
 async function addFollowUp() {
   const user = userEvent.setup();
   await user.click(
-    screen.getByRole("checkbox", { name: "Add a follow-up task" }),
+    screen.getByRole("checkbox", { name: en["log.addFollowUp"] }),
   );
   fireEvent.change(screen.getByRole("textbox", { name: "Next step" }), {
     target: { value: "Send revised quote" },
@@ -313,7 +313,7 @@ describe("logging a meeting where one owes its outcome", () => {
     render();
     const user = await logMeeting();
     expect(await screen.findByText(QUESTION)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Polish wording" }));
+    await user.click(screen.getByRole("button", { name: en["log.polish"] }));
     await screen.findByText(en["co.assistant.aiTag"]);
     await user.click(screen.getByRole("button", { name: "Log" }));
 
@@ -531,7 +531,7 @@ describe("logging a meeting where one owes its outcome", () => {
     const user = await logMeeting();
     await screen.findByText(QUESTION);
     await user.upload(
-      await screen.findByLabelText("Attach files"),
+      await screen.findByLabelText(en["log.files"]),
       new File(["%PDF-1.4"], "agenda.pdf", { type: "application/pdf" }),
     );
     await user.click(screen.getByRole("button", { name: "Log" }));
@@ -677,8 +677,8 @@ describe("logging a meeting where one owes its outcome", () => {
     const captured: Captured[] = [];
     stubApi([booked()], captured, () =>
       jsonResponse(
-        { title: "Precondition Failed", status: 412, code: "version_skew" },
-        412,
+        { title: "Conflict", status: 409, code: "version_skew" },
+        409,
       ),
     );
     render();

@@ -100,7 +100,7 @@ func TestRedactedNoiseMailKeepsItsMessageIdentity(t *testing.T) {
 	e := integration.Setup(t)
 	engine, mail := hiddenNoiseMail(t, e, "loud@bulk.example")
 	noise := mail["loud@bulk.example"]
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		activity := ids.From[ids.ActivityKind](noise)
 		if _, err := activities.ClaimIdentity(ctx, tx, activity, activities.IdentityKindMail,

@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   fillSendableForm,
   footScheduleConfirm,
@@ -64,7 +65,9 @@ describe("ComposeWindow send refusals", () => {
     expect(await screen.findByText(/without permission to send/i)).toBeTruthy();
     expect(
       screen
-        .getByRole("link", { name: "Reconnect your mailbox" })
+        .getByRole("link", {
+          name: englishCopy["compose.mailboxNotSendCapableGoto"],
+        })
         .getAttribute("href"),
     ).toBe("/#/settings/connections");
     expect(screen.queryByText(MAILBOX_NOT_SEND_CAPABLE.detail)).toBeNull();
@@ -102,7 +105,9 @@ describe("ComposeWindow send refusals", () => {
     ).toBeInTheDocument();
     expect(
       screen
-        .getByRole("link", { name: "Connect a mailbox" })
+        .getByRole("link", {
+          name: englishCopy["compose.mailboxNotConnectedGoto"],
+        })
         .getAttribute("href"),
     ).toBe("/#/settings/connections");
     expect(screen.queryByText(/capture only/i)).toBeNull();
@@ -117,7 +122,9 @@ describe("ComposeWindow send refusals", () => {
       await screen.findByText(/No mailbox is connected/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Connect a mailbox" }),
+      screen.getByRole("link", {
+        name: englishCopy["compose.mailboxNotConnectedGoto"],
+      }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   });
@@ -130,7 +137,7 @@ describe("ComposeWindow send refusals", () => {
         problemResponse(
           validationProblem(
             "body",
-            "undisclosable_obligation",
+            "undisclosable_obligation", // problem-code:unknown-field compatibility with an older server refusal
             "this message owes a disclosure (objection_route)",
           ),
           422,
@@ -150,30 +157,6 @@ describe("ComposeWindow send refusals", () => {
     expect(screen.getByLabelText("Subject")).toHaveValue("Hi there");
   });
 
-  it("states the one-send-per-recipient rule on a shared unsubscribe token", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubRoutes({
-      "POST /activities/act-1/send-email": () =>
-        problemResponse(
-          validationProblem(
-            "recipients",
-            "shared_unsubscribe_token",
-            "opaque server wording",
-          ),
-          422,
-        ),
-    });
-    renderComposer();
-    await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm(user);
-    await pressSend(user);
-
-    expect(
-      await screen.findByText(/goes to one recipient at a time/i),
-    ).toBeTruthy();
-    expect(screen.queryByText("opaque server wording")).toBeNull();
-  });
-
   it("keeps the generic line for a refusal it has no copy for", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
@@ -181,7 +164,7 @@ describe("ComposeWindow send refusals", () => {
         problemResponse(
           validationProblem(
             "subject",
-            "some_future_refusal",
+            "some_future_refusal", // problem-code:unknown-field exercises generic refusal copy
             "opaque server wording",
           ),
           422,
@@ -206,10 +189,12 @@ describe("ComposeWindow send refusals", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm(user);
     await user.click(
-      screen.getByRole("button", { name: "Other ways to send" }),
+      screen.getByRole("button", { name: englishCopy["compose.sendOptions"] }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Schedule send" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.schedule"],
+      }),
     );
     await user.click(
       await screen.findByRole("button", { name: /Tomorrow morning/ }),

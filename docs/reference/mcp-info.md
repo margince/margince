@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 244.9 KB |
+| Tool catalog | 245.0 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 64108 |
+| Approx. wire tokens | 64116 |
 | Largest tool | `read_details` (15.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.1 KB | 20% | Yes, every step |
-| Input schemas | 148.6 KB | 60% | Yes, every step |
+| Input schemas | 148.7 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
 | **Description + input schema** | **199.7 KB** | **81%** | **the recurring cost** |
 
@@ -46,7 +46,7 @@ descriptions and input schemas are what each step pays for.
 ### Resources (14)
 
 - [`margince://capabilities`](#capabilities): What this installation can do
-- [`margince://schema/query`](#query_vocabulary): Workspace query vocabulary
+- [`margince://schema/query`](#query_vocabulary): Record query vocabulary
 - [`margince://schema/record-fields`](#record_fields): Record write vocabulary
 - [`margince://schema/reports`](#report_vocabulary): Report plan vocabulary
 - [`margince://schema/views`](#read_view_views): Views read_view reads
@@ -66,49 +66,49 @@ descriptions and input schemas are what each step pays for.
 |---|---|:-:|---|---:|
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 416 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 299 |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 894 |
-| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 3063 |
-| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1833 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1986 |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 893 |
+| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1151 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 3000 |
+| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1832 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1987 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1289 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1068 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 1017 |
-| [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 816 |
+| [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 818 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 2014 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3261 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2362 |
-| [`change_tags`](#change_tags) | Change tags |  |  | 650 |
+| [`change_settings`](#change_settings) | Change how the company is set up |  |  | 3259 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2360 |
+| [`change_tags`](#change_tags) | Change tags |  |  | 647 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 375 |
-| [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 888 |
-| [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 463 |
+| [`commit_import`](#commit_import) | Commit an import |  |  | 274 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 892 |
+| [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 464 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 523 |
-| [`enrich`](#enrich) | Enrich a company from its website |  |  | 446 |
-| [`find_records`](#find_records) | Find records | yes |  | 2102 |
+| [`enrich`](#enrich) | Enrich a company from its website |  |  | 445 |
+| [`find_records`](#find_records) | Find records | yes |  | 2117 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 475 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 351 |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 1008 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1373 |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 1017 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1372 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 153 |
-| [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
-| [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4606 |
+| [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 368 |
+| [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 412 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4605 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 796 |
-| [`read_project`](#read_project) | Read a project or its handover | yes |  | 316 |
+| [`read_project`](#read_project) | Read a project or its handover | yes |  | 315 |
 | [`read_record`](#read_record) | Read a record | yes |  | 283 |
-| [`read_relationships`](#read_relationships) | Read who your team knows, and how well | yes |  | 366 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 3353 |
+| [`read_relationships`](#read_relationships) | Read who your team knows, and how well | yes |  | 365 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 3352 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 357 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1926 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 3012 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1925 |
+| [`read_workspace`](#read_workspace) | Read how this company is set up | yes |  | 3011 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 617 |
-| [`run_research`](#run_research) | Run AI work for your user |  |  | 1421 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 527 |
+| [`run_research`](#run_research) | Run AI work for your user |  |  | 1482 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 526 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1679 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 695 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 127 |
@@ -134,7 +134,7 @@ decision, and the scopes it holds. Names and governance only; the input schemas 
 
 `margince://schema/query` · application/json
 
-**Workspace query vocabulary**
+**Record query vocabulary**
 
 ```text
 Everything a query plan may say, for you: the record types you can ask about, the fields you can
@@ -295,8 +295,8 @@ Reject on each.
 **What needs attention**
 
 ```text
-Deals slipping this week, relationships at risk or promises still open, ranked, with the reason for
-each and a way to ask about it.
+Deals slipping this week, relationships at risk or commitments still open, ranked, with the reason
+for each and a way to ask about it.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
@@ -353,7 +353,7 @@ two snapshots.
 **The story so far**
 
 ```text
-Who is coming to a meeting, the open threads and what was promised, what has been happening on one
+Who is coming to a meeting, the open threads and commitments made, what has been happening on one
 record, or this morning's brief.
 ```
 
@@ -646,7 +646,7 @@ once. Keep batch_id from the answer: undo names the change by it.
       "type": "string"
     },
     "stage_id": {
-      "description": "The open stage to move deals to, for move_stage. Choose one from the workspace's pipeline list with read_workspace with topic=pipelines. A won or lost deal is left alone",
+      "description": "The open stage to move deals to, for move_stage. Choose one from the company's pipeline list with read_workspace with topic=pipelines. A won or lost deal is left alone",
       "format": "uuid",
       "type": "string"
     },
@@ -717,7 +717,7 @@ once. Keep batch_id from the answer: undo names the change by it.
 
 ```text
 Decide who works on what: share a record with a colleague or team and take the share back, make a
-colleague responsible for a record, offer, request or claim ownership, and set up the workspace
+colleague responsible for a record, offer, request or claim ownership, and set up the company
 (change a member's role, deactivate or remove a member, create teams and add or remove their
 members, and record a colleague who already left). An agent never grants or removes the admin role,
 never changes its own user's role or teams, never acts on a member who is an admin, never hands a
@@ -814,12 +814,11 @@ record_decision for a sales review's decision, which a note cannot track. Keep t
 relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs
 immediately for accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry,
 attach, attach_link, bring_back, cancel_send, check_new_send, check_send, deal_relevance,
-decline_deal, discard_draft, file_channel_message, hide_document, log, preview_inquiry_assignment,
-preview_sign_off, read_document_fields, read_transcript, ready, reject_link_suggestion,
-request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details,
-set_thread_audience, show_document, task, unready; decided per call from its arguments for relink,
-relink_many; ask the user first for the actions archive_document, assign_inquiry,
-reject_link_suggestion.)
+decline_deal, discard_draft, hide_document, log, preview_inquiry_assignment, preview_sign_off,
+read_document_fields, read_transcript, ready, reject_link_suggestion, request_document_access,
+reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience,
+show_document, task, unready; decided per call from its arguments for relink, relink_many; ask the
+user first for the actions archive_document, assign_inquiry, reject_link_suggestion.)
 ```
 
 <details><summary>Input schema</summary>
@@ -828,7 +827,7 @@ reject_link_suggestion.)
 {
   "properties": {
     "action": {
-      "description": "accept_document_fields: Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only)\naccept_link_suggestion: Accept a suggestion, filing the message under its record\narchive_document: Archive an attachment (soft delete)\nassign_inquiry: Take an inquiry or hand its lead and this task to a colleague in one transaction\nattach: Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from\nattach_link: Add a web link to a record's documents\nbring_back: Pick the message back up — the undo behind every set-aside verb\ncancel_send: Withdraw a scheduled message before it fires\ncheck_new_send: Would a new message with no thread behind it be allowed, and on what ground\ncheck_send: Would this reply be allowed, and on what ground — asked before a word is typed\ndeal_relevance: Say whether an activity linked to a deal is about that deal, or take that back\ndecline_deal: Say a captured message is not about a deal, or about none of the deals its question offered\ndiscard_draft: Discard one of the caller's unsent messages\nfile_channel_message: File a summary of one message in a record's channel, or of its thread, as a note\nhide_document: Stop listing a captured file on this deal without touching the file\nlog: Record something that happened (a call, a meeting, a note, a message) on every record it was about\npreview_inquiry_assignment: Show the inquiry task and record ownership before taking or assigning it\npreview_sign_off: The sign-off a send of this message would append beneath it\nread_document_fields: Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields\nread_transcript: Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals\nready: Say the user is ready for a meeting they attend, so their Worklist stops asking them to prepare it\nreject_link_suggestion: Reject a suggestion\nrelink: Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none\nrelink_many: Move up to 500 named activities onto one record, all or nothing\nrequest_document_access: Request access to a restricted attachment (audit row only — no notification system)\nreschedule_send: Move a scheduled message to a different moment\nsave_draft: Save the caller's unsent message for one anchor, replacing what was saved before\nset_aside: Put a waiting message down, so the Worklist stops offering it\nset_audience: Limit (or re-open) who may see this activity's content\nset_document_details: Set a document's category, title, state or supersedes pointer\nset_thread_audience: Share a thread with the team, or keep it private\nshow_document: List the file on this deal again\ntask: Put a to-do on someone's list: what is owed, by whom, on which records\nunready: Take back the user's confirmation that they are ready for a meeting",
+      "description": "accept_document_fields: Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only)\naccept_link_suggestion: Accept a suggestion, filing the message under its record\narchive_document: Archive an attachment (soft delete)\nassign_inquiry: Take an inquiry or hand its lead and this task to a colleague in one transaction\nattach: Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from\nattach_link: Add a web link to a record's documents\nbring_back: Pick the message back up — the undo behind every set-aside verb\ncancel_send: Withdraw a scheduled message before it fires\ncheck_new_send: Would a new message with no thread behind it be allowed, and on what ground\ncheck_send: Would this reply be allowed, and on what ground — asked before a word is typed\ndeal_relevance: Say whether an activity linked to a deal is about that deal, or take that back\ndecline_deal: Say a captured message is not about a deal, or about none of the deals its question offered\ndiscard_draft: Discard one of the caller's unsent messages\nhide_document: Stop listing a captured file on this deal without touching the file\nlog: Record something that happened (a call, a meeting, a note, a message) on every record it was about\npreview_inquiry_assignment: Show the inquiry task and record ownership before taking or assigning it\npreview_sign_off: The sign-off a send of this message would append beneath it\nread_document_fields: Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields\nread_transcript: Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals\nready: Say the user is ready for a meeting they attend, so their Worklist stops asking them to prepare it\nreject_link_suggestion: Reject a suggestion\nrelink: Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none\nrelink_many: Move up to 500 named activities onto one record, all or nothing\nrequest_document_access: Request access to a restricted attachment (audit row only — no notification system)\nreschedule_send: Move a scheduled message to a different moment\nsave_draft: Save the caller's unsent message for one anchor, replacing what was saved before\nset_aside: Put a waiting message down, so the Worklist stops offering it\nset_audience: Limit (or re-open) who may see this activity's content\nset_document_details: Set a document's category, title, state or supersedes pointer\nset_thread_audience: Share a thread with the team, or keep it private\nshow_document: List the file on this deal again\ntask: Put a to-do on someone's list: what is owed, by whom, on which records\nunready: Take back the user's confirmation that they are ready for a meeting",
       "enum": [
         "accept_document_fields",
         "accept_link_suggestion",
@@ -843,7 +842,6 @@ reject_link_suggestion.)
         "deal_relevance",
         "decline_deal",
         "discard_draft",
-        "file_channel_message",
         "hide_document",
         "log",
         "preview_inquiry_assignment",
@@ -888,7 +886,7 @@ reject_link_suggestion.)
       "type": "string"
     },
     "attendee_user_ids": {
-      "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused.",
+      "description": "log only: Meeting or call only: the company members who attended besides you, ids from the colleague roster. An id that is not an active member is refused.",
       "items": {
         "format": "uuid",
         "type": "string"
@@ -901,7 +899,7 @@ reject_link_suggestion.)
       "type": "string"
     },
     "channel_provider": {
-      "description": "log only: Required for kind \"message\", else refused; one the workspace's channel providers name.",
+      "description": "log only: Required for kind \"message\", else refused; one the company's channel providers name.",
       "type": "string"
     },
     "confirm_code": {
@@ -1003,7 +1001,7 @@ reject_link_suggestion.)
       "type": "object"
     },
     "id": {
-      "description": "accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry, bring_back, cancel_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, reject_link_suggestion, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
+      "description": "accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry, bring_back, cancel_send, check_send, deal_relevance, decline_deal, discard_draft, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, reject_link_suggestion, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1082,7 +1080,7 @@ reject_link_suggestion.)
       "type": "boolean"
     },
     "request_body": {
-      "description": "accept_document_fields, assign_inquiry, attach_link, check_new_send, check_send, deal_relevance, decline_deal, file_channel_message, preview_inquiry_assignment, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "accept_document_fields, assign_inquiry, attach_link, check_new_send, check_send, deal_relevance, decline_deal, preview_inquiry_assignment, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "source_activity_id": {
@@ -1134,7 +1132,7 @@ archive_signal, visit_list.)
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\naccept_applied_change: Deprecated: Accept a recorded automatic deal change\naccept_deal_suggestion: Open the suggested deal or link the evidence to an existing deal\naccept_tag_suggestion: Apply the suggested tag, as the caller\nacknowledge_company_view: Record that the user has now seen this company — the baseline `since_last_visit` counts from\nacknowledge_contact_view: Record that the user has now seen this contact — the baseline `since_last_visit` counts from\nacknowledge_failed_approval: Say you have seen that an approved change did not run, so it leaves your Worklist\nadd_commitment: Write one thing onto this week's plan\nanswer_teammate: Answer a teammate's request for help\narchive_signal: Archive (soft-delete) a signal\nask_for_help: Say what you need from your lead on one commitment\nbrief_item_done: Mark a brief item acted — the deal drops from the next run until it materially changes\ncreate_signal: Record a signal (a derived observation, or a raw inbound/web item awaiting resolution)\ndismiss_brief_item: Dismiss a brief item — it does not reappear unless a new linked activity arrives after the mark\ndismiss_company_suggestion: Dismiss one next-step suggestion for the calling human\ndismiss_contact_moment: Hide this moment for me until its evidence changes\ndismiss_deal_move: Set the deal card's move aside for me until it changes\ndismiss_deal_suggestion: Record that the suggestion is not a deal, for the whole workspace\ndismiss_nudge: Set a lapsed contact aside, so the Worklist stops raising them for a while\ndismiss_nudges: Set several lapsed contacts aside at once — the Worklist's \"Dismiss all\"\ndismiss_tag_suggestion: Record that the evidence does not earn the tag, for the whole workspace\nedit_commitment: Correct what a commitment says, when it is due, or what it is about\nmark_all_notices_read: Settle the acting contact's whole notification centre in one act\nmark_notice_read: Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane\nmark_rows_done: Take rows off your own Worklist, because there is nothing more to do there\npin_row: Put a row at the top of your own day, above what the ranking chose\nreopen_rows: Put rows back on your own Worklist — the undo behind Done\nrequest_deal_manager: Ask the team's manager to look at this deal\nresolve_signal: Run the signal→company resolver over the signal's raw_ref (inspectable match, never silently confident)\nrestore_company_suggestion: Show a dismissed suggestion or moment again, the undo behind \"Not now\"\nrestore_contact_moment: Show a dismissed moment again, the undo behind \"Not now\"\nrestore_deal_move: Put a set-aside move back on the deal card, the undo behind \"Not now\"\nrestore_nudge: Put a set-aside contact back on the lane — the undo behind the dismiss verb\nset_commitment_state: Mark one commitment done, reopen it, or drop it\nset_weekly_plan: Say what could go wrong this week, and what room there is for it\nsnooze_brief_item: Snooze a brief item — hidden until `snoozed_until` passes, then it re-surfaces as actionable\nstart_weekly_plan: Open a plan for this week\nunpin_row: Let the ranking have the row back — the undo behind the pin\nunsnooze_brief_item: Take back a snooze — the item returns to the queue immediately\nupdate_signal: Triage a signal (acknowledge / resolve / dismiss, severity)\nvisit_list: Record that the signed-in user has opened this list — the mark `since_last_visit` counts from",
+      "description": "read_workspace topic actions lists each action's body\naccept_applied_change: Deprecated: Accept a recorded automatic deal change\naccept_deal_suggestion: Open the suggested deal or link the evidence to an existing deal\naccept_tag_suggestion: Apply the suggested tag, as the caller\nacknowledge_company_view: Record that the user has now seen this company — the baseline `since_last_visit` counts from\nacknowledge_contact_view: Record that the user has now seen this contact — the baseline `since_last_visit` counts from\nacknowledge_failed_approval: Say you have seen that an approved change did not run, so it leaves your Worklist\nadd_commitment: Write one thing onto this week's plan\nanswer_teammate: Answer a teammate's request for help\narchive_signal: Archive (soft-delete) a signal\nask_for_help: Say what you need from your lead on one commitment\nbrief_item_done: Mark a brief item acted — the deal drops from the next run until it materially changes\ncreate_signal: Record a signal (a derived observation, or a raw inbound/web item awaiting resolution)\ndismiss_brief_item: Dismiss a brief item — it does not reappear unless a new linked activity arrives after the mark\ndismiss_company_suggestion: Dismiss one next-step suggestion for the calling human\ndismiss_contact_moment: Hide this moment for me until its evidence changes\ndismiss_deal_move: Set the deal card's move aside for me until it changes\ndismiss_deal_suggestion: Record that the suggestion is not a deal, for the whole company\ndismiss_nudge: Set a lapsed contact aside, so the Worklist stops raising them for a while\ndismiss_nudges: Set several lapsed contacts aside at once — the Worklist's \"Dismiss all\"\ndismiss_tag_suggestion: Record that the evidence does not earn the tag, for the whole company\nedit_commitment: Correct what a commitment says, when it is due, or what it is about\nmark_all_notices_read: Settle the acting contact's whole notification centre in one act\nmark_notice_read: Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane\nmark_rows_done: Take rows off your own Worklist, because there is nothing more to do there\npin_row: Put a row at the top of your own day, above what the ranking chose\nreopen_rows: Put rows back on your own Worklist — the undo behind Done\nrequest_deal_manager: Ask the team's manager to look at this deal\nresolve_signal: Run the signal→company resolver over the signal's raw_ref (inspectable match, never silently confident)\nrestore_company_suggestion: Show a dismissed suggestion or moment again, the undo behind \"Not now\"\nrestore_contact_moment: Show a dismissed moment again, the undo behind \"Not now\"\nrestore_deal_move: Put a set-aside move back on the deal card, the undo behind \"Not now\"\nrestore_nudge: Put a set-aside contact back on the lane — the undo behind the dismiss verb\nset_commitment_state: Mark one commitment done, reopen it, or drop it\nset_weekly_plan: Say what could go wrong this week, and what room there is for it\nsnooze_brief_item: Snooze a brief item — hidden until `snoozed_until` passes, then it re-surfaces as actionable\nstart_weekly_plan: Open a plan for this week\nunpin_row: Let the ranking have the row back — the undo behind the pin\nunsnooze_brief_item: Take back a snooze — the item returns to the queue immediately\nupdate_signal: Triage a signal (acknowledge / resolve / dismiss, severity)\nvisit_list: Record that the signed-in user has opened this list — the mark `since_last_visit` counts from",
       "enum": [
         "accept_applied_change",
         "accept_deal_suggestion",
@@ -1212,9 +1210,9 @@ signature pass, history baseline and filing word, cancel a backfill, disconnect 
 channel, define the knowledge corpora and upload a text document to one, import the user's LinkedIn
 connections export, and carry on, test, cancel or undo an import. import_vcards takes a vCard file
 or its text, and fills a contact that already matches rather than doubling it. Keep a domain out of
-the user's own capture with add_exclusion, scope user. Scope workspace stops capture for every
+the user's own capture with `add_exclusion`, scope `user`. Scope `workspace` stops capture for every
 colleague, so ask the user first. set_blocked_domain is a different act: it refuses the parent
-domain for the whole workspace, so a request about the user's own mail never reaches it. Answers
+domain for the whole company, so a request about the user's own mail never reaches it. Answers
 change what is captured from then on. A sender's keep_out destroys mail, so the app does that one.
 Connecting a mailbox needs the provider's consent in a browser, and deleting a document for good
 stays in the app. Ask the user first where the action is marked so: a vCard writes contacts at once,
@@ -1235,7 +1233,7 @@ withdraw_owner_identity.)
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of the workspace's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor verdict\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as the workspace's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_corpus: Bring an archived corpus back with everything filed in it\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
+      "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of your company's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor result\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as your company's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_corpus: Bring an archived corpus back with everything filed in it\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
       "enum": [
         "add_consumer_mail_domain",
         "add_counterparty_hold",
@@ -1925,9 +1923,9 @@ fields, and create_record with record_type offer to make an offer with its first
 ```text
 Work the relationships around a company: link its candidate contacts; check its VAT number; ask for,
 decide, complete or cancel an introduction and record one that happened; record, settle or take over
-a promise made in a conversation; save what research found. Each act runs as the app does it, on the
-records the user may open. Use run_research to ask about a company, refresh a brief, dossier, growth
-fit or scan, or research a contact, read_details to read one that is already there, and
+a commitment made in a conversation; save what research found. Each act runs as the app does it, on
+the records the user may open. Use run_research to ask about a company, refresh a brief, dossier,
+growth fit or scan, or research a contact, read_details to read one that is already there, and
 update_record to change a company's or contact's fields.
 ```
 
@@ -1937,7 +1935,7 @@ update_record to change a company's or contact's fields.
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\napply_employment_import: Apply retained employer evidence, resolve a company match, or dismiss an incorrect role\nbackfill_employment_import: Administratively preview or apply one resumable batch of retained employment evidence\ncancel_intro_request: Withdraw an ask you made\ncheck_vat: Ask the register again about the number this company states\ncomplete_intro_request: Record that the introduction happened, or that the name was used\ndecide_intro_request: Answer an ask made of you\nlink_contacts: Link the chosen link candidates to this company as current employees\nreassign_handoff: Choose a colleague who can work a waiting prospect handoff\nrecord_introduction: Record an introduction to this contact that already happened\nrecord_promise: Record something promised, asked or decided in a captured conversation\nreplace_intro_request: Withdraw your ask and make a fresh ask through another route\nrequest_intro: Ask a colleague to introduce you to this contact\nrestore_profile_field: Put back the value a newer statement replaced\nsave_research: Save the research claims a human accepted, and only those\nsettle_promise: Say a promise was kept, or that it no longer stands\ntake_over_promise: Take over a promise one of us made that nobody was asked to keep",
+      "description": "read_workspace topic actions lists each action's body\napply_employment_import: Apply retained employer evidence, resolve a company match, or dismiss an incorrect role\nbackfill_employment_import: Administratively preview or apply one resumable batch of retained employment evidence\ncancel_intro_request: Withdraw an ask you made\ncheck_vat: Ask the register again about the number this company states\ncomplete_intro_request: Record that the introduction happened, or that the name was used\ndecide_intro_request: Answer an ask made of you\nlink_contacts: Link the chosen link candidates to this company as current employees\nreassign_handoff: Choose a colleague who can work a waiting prospect handoff\nrecord_introduction: Record an introduction to this contact that already happened\nrecord_promise: Record something agreed, asked or decided in a captured conversation\nreplace_intro_request: Withdraw your ask and make a fresh ask through another route\nrequest_intro: Ask a colleague to introduce you to this contact\nrestore_profile_field: Put back the value a newer statement replaced\nsave_research: Save the research claims a human accepted, and only those\nsettle_promise: Say a commitment was kept, or that it no longer stands\ntake_over_promise: Take over a commitment one of us made that nobody was asked to keep",
       "enum": [
         "apply_employment_import",
         "backfill_employment_import",
@@ -2044,15 +2042,15 @@ discard_draft, launch_initiative, publish_draft, publish_framework, restore_revi
 
 ### change_settings
 
-**Change how the workspace is set up**
+**Change how the company is set up**
 
 ```text
-Change how the workspace is set up: pipelines, stages, exit criteria and partner stages; custom
+Change how the company is set up: pipelines, stages, exit criteria and partner stages; custom
 fields; automations and web forms; FX, tax and AI price sheets; product translations; lead sources,
 origins, disqualify and loss reasons and acquisition sources; lead, legal review, duplicate and
-follow-up settings; the review template and booking page; the workspace's own company, logos and
-legal entities; a partner company's terms; the accounting and contact data sources; background
-corrections; and the user's saved views. A workspace setting changes what every colleague sees from
+follow-up settings; the review template and booking page; the company's own record, logos and legal
+entities; a partner company's terms; the accounting and contact data sources; background
+corrections; and the user's saved views. A company setting changes what every colleague sees from
 then on, while a saved view is the user's alone. A request about the user's own preferences never
 reaches this tool. Read the current value first. Ask the user first where the action is marked so: a
 custom field changes the database for everyone and retiring one cannot be undone, a tax rate can
@@ -2285,12 +2283,12 @@ actions decide_commission, disqualify, transfer_projects.)
           "type": "string"
         },
         "pipeline_id": {
-          "description": "Choose from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "description": "Choose from the company's pipeline list with read_workspace with topic=pipelines.",
           "format": "uuid",
           "type": "string"
         },
         "stage_id": {
-          "description": "Choose an open stage from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "description": "Choose an open stage from the company's pipeline list with read_workspace with topic=pipelines.",
           "format": "uuid",
           "type": "string"
         }
@@ -2378,7 +2376,7 @@ actions decide_commission, disqualify, transfer_projects.)
       "type": "string"
     },
     "to_stage_id": {
-      "description": "move_deal only: The target stage, by id. Obtain it from the workspace's pipeline list, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval.",
+      "description": "move_deal only: The target stage, by id. Obtain it from the company's pipeline list, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval.",
       "format": "uuid",
       "type": "string"
     },
@@ -2423,8 +2421,8 @@ actions decide_commission, disqualify, transfer_projects.)
 **Change tags**
 
 ```text
-Change the workspace's tags: the words themselves, and which records carry them. apply never creates
-a tag: an unknown name is refused, a name matches case-insensitively, an archived word is refused as
+Change the company's tags: the words themselves, and which records carry them. apply never creates a
+tag: an unknown name is refused, a name matches case-insensitively, an archived word is refused as
 archived, and the same tag twice is a conflict. Before create, read the list: a near-duplicate
 splits records that belong together, and a taken name is a conflict, even a retired one, which
 restore brings back. create and update need tag grants an ordinary seat lacks. update changes only
@@ -2441,7 +2439,7 @@ archive.)
 {
   "properties": {
     "action": {
-      "description": "apply: Tag a contact, company, deal, lead or project by tag_id, or by tag_name, which must name a tag the workspace already has\narchive: Retire a word\ncreate: Coin a new word in the workspace vocabulary, so records can be grouped by it\nmerge: Fold a duplicate word into the one the workspace keeps, moving every record that carries it\nremove: Take one tag off one record (by tag_id or tag_name), leaving the word itself\nrestore: Bring an archived tag back into the vocabulary\nupdate: Rename, recolor or describe a word that already exists",
+      "description": "apply: Tag a contact, company, deal, lead or project by tag_id, or by tag_name, which must name a tag the company already has\narchive: Retire a word\ncreate: Coin a new word in the company vocabulary, so records can be grouped by it\nmerge: Fold a duplicate word into the one the company keeps, moving every record that carries it\nremove: Take one tag off one record (by tag_id or tag_name), leaving the word itself\nrestore: Bring an archived tag back into the vocabulary\nupdate: Rename, recolor or describe a word that already exists",
       "enum": [
         "apply",
         "archive",
@@ -2514,7 +2512,7 @@ archive.)
       "type": "string"
     },
     "tag_name": {
-      "description": "apply, remove only: Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
+      "description": "apply, remove only: Instead of tag_id: the name of a tag the company ALREADY has. An unknown name is refused, never created",
       "maxLength": 64,
       "type": "string"
     }
@@ -2592,15 +2590,15 @@ time.
 **Commit an import**
 
 ```text
-Write a checked import into the workspace. The dry run is the check; this starts the write and
-answers at once with the run running. Only from awaiting_approval, the state a run reaches by
-producing a dry-run report, so there is always a report first, or from a failed commit, which
-resumes at the row it stopped at. change_capture takes it back, and asks the user first. A request
-to get a file in is not a review of it: unless the asker says they have already been through these
-rows, show the counts and the mapping and wait for their go-ahead. Use read_import for the report
-first: numbers nobody read are not a check. The write goes on after this answers. Read read_import's
-report until its state is complete or failed, then report what landed: the counts and the mapping
-the run used, each column by the field it went to. (Ask the user first.)
+Write a checked import into the company. The dry run is the check; this starts the write and answers
+at once with the run running. Only from awaiting_approval, the state a run reaches by producing a
+dry-run report, so there is always a report first, or from a failed commit, which resumes at the row
+it stopped at. change_capture takes it back, and asks the user first. A request to get a file in is
+not a review of it: unless the asker says they have already been through these rows, show the counts
+and the mapping and wait for their go-ahead. Use read_import for the report first: numbers nobody
+read are not a check. The write goes on after this answers. Read read_import's report until its
+state is complete or failed, then report what landed: the counts and the mapping the run used, each
+column by the field it went to. (Ask the user first.)
 ```
 
 <details><summary>Input schema</summary>
@@ -2638,28 +2636,28 @@ the run used, each column by the field it went to. (Ask the user first.)
 
 ```text
 Create ONE contact, company, deal, lead, project, activity or relationship that does not exist yet.
-Rows from a file, a CSV or a pasted list, each a company, lead, contact, deal, activity, go through
-preview_import and then commit_import, never one create_record each: the preview checks every row,
-duplicates included, and its counts are what the user weighs. Creating a deal requires a pipeline_id
-and a stage_id, and the workspace's pipeline list is what yields them for a deal that does not exist
-yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a
-neighboring type is refused rather than dropped. A CONTACT created here is visible to everyone in
-the workspace, the same as one a human types in. No occurred_at means now; a past day with no time:
-its date, occurred_precision "day". Set meeting_status held only when the user says the meeting took
-place. Record a signed contract with change_offers action record_contract, never as a deal. A vCard
-file goes through change_capture. Before creating one contact or company that might already exist,
-ask find_records engine identify: it runs the duplicate check a create runs, on name spellings,
-emails, phones and domains. A second copy is a problem that then needs resolve_duplicates to undo. A
-record that shares only a name, with a different email, phone or employer, is not proof of a
-duplicate. When the check finds a contact with the same name at the same employer, ask the human
-whether it is the same contact before you link anything to it; two colleagues can share a name.
-Giving a contact its employer by creating an employment relationship files any same-name contact at
-that employer for review: the result carries it as duplicate_candidates, and you report the pair as
-filed, unresolved until the reviewer decides. When the user says where they met the contact, pass
-that word as offer_tag, also when they want to decide on the tag themselves: it puts no tag on the
-record and stores nothing, the answer says whether that tag already exists, and change_tags still
-needs their yes. The new record's id comes back in the result; keep it for anything that links to
-it.
+Rows from a file, a CSV or a pasted list, each a company, lead, contact, deal, activity, project,
+product, go through preview_import and then commit_import, never one create_record each: the preview
+checks every row, duplicates included, and its counts are what the user weighs. Creating a deal
+requires a pipeline_id and a stage_id, and the company's pipeline list is what yields them for a
+deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted,
+and a field belonging to a neighboring type is refused rather than dropped. A CONTACT created here
+is visible to everyone in your company, the same as one a human types in. No occurred_at means now;
+a past day with no time: its date, occurred_precision "day". Set meeting_status held only when the
+user says the meeting took place. Record a signed contract with change_offers action
+record_contract, never as a deal. A vCard file goes through change_capture. Before creating one
+contact or company that might already exist, ask find_records engine identify: it runs the duplicate
+check a create runs, on name spellings, emails, phones and domains. A second copy is a problem that
+then needs resolve_duplicates to undo. A record that shares only a name, with a different email,
+phone or employer, is not proof of a duplicate. When the check finds a contact with the same name at
+the same employer, ask the human whether it is the same contact before you link anything to it; two
+colleagues can share a name. Giving a contact its employer by creating an employment relationship
+files any same-name contact at that employer for review: the result carries it as
+duplicate_candidates, and you report the pair as filed, unresolved until the reviewer decides. When
+the user says where they met the contact, pass that word as offer_tag, also when they want to decide
+on the tag themselves: it puts no tag on the record and stores nothing, the answer says whether that
+tag already exists, and change_tags still needs their yes. The new record's id comes back in the
+result; keep it for anything that links to it.
 ```
 
 Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.
@@ -2991,7 +2989,7 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
 ```text
 Answer staged actions for the colleague asking you: approve, which lets the change happen, or
 reject, which discards it. Name staged_action_id for one action, or bundle_id for every
-still-waiting proposal one act staged together. The verdict is theirs: take an explicit approve or
+still-waiting proposal one act staged together. The decision is theirs: take an explicit approve or
 reject rather than deciding what they would have wanted. Approving runs a change the system staged
 now, including sending a message that was only drafted. Approving a call an agent staged only lets
 that agent repeat it: the item then reads awaiting_agent and nothing has changed until it does. A
@@ -3147,15 +3145,15 @@ comes back with its deal_id and draft_activity_id. (Requires passport scope "dra
 
 ```text
 Learn about a company by reading its public website, and propose what was found for a human to
-accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL: nothing
+accept onto the record. It reaches OUTSIDE the company, and what it returns is a PROPOSAL: nothing
 lands on the record until someone accepts it, which is the review that guards this, not an approval
 on the call. Reading one page answers immediately; reading a whole site is queued and answers with a
 read id rather than the content. What it finds is captured text from a third party, not a fact this
-workspace has verified. Use change_state with action=qualify to qualify a lead when the missing
-values are already derivable from the record itself, which costs no external read and needs no
-approval. Keep the company_id you enriched, and the read id when a whole-site read was queued: the
-result is collected against it later. (Governance: a human approves every call before it runs;
-requires passport scope "enrich".)
+company has verified. Use change_state with action=qualify to qualify a lead when the missing values
+are already derivable from the record itself, which costs no external read and needs no approval.
+Keep the company_id you enriched, and the read id when a whole-site read was queued: the result is
+collected against it later. (Governance: a human approves every call before it runs; requires
+passport scope "enrich".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3323,7 +3321,7 @@ next_cursor to read on.
     },
     "filters": {
       "additionalProperties": false,
-      "description": "list only: String operands. read_workspace with topic=list_filters lists each record_type's filters and values. A pipeline_id or stage_id comes from the workspace's pipeline list; nothing else on this surface yields one.",
+      "description": "list only: String operands. read_workspace with topic=list_filters lists each record_type's filters and values. A pipeline_id or stage_id comes from the company's pipeline list; nothing else on this surface yields one.",
       "patternProperties": {
         "^cf_[a-z0-9_]+$": {
           "type": "string"
@@ -3355,6 +3353,9 @@ next_cursor to read on.
           "type": "string"
         },
         "channel_provider": {
+          "type": "string"
+        },
+        "chat_provider": {
           "type": "string"
         },
         "close_from": {
@@ -3498,6 +3499,9 @@ next_cursor to read on.
         "reminder_due": {
           "type": "string"
         },
+        "salutation": {
+          "type": "string"
+        },
         "shared_with_me": {
           "type": "string"
         },
@@ -3592,7 +3596,7 @@ next_cursor to read on.
       "type": "integer"
     },
     "plan": {
-      "description": "query only: A query plan, in the grammar published at margince://schema/query. That document, not this description, holds the record types, fields, operators and relationships this workspace admits: a name outside it is refused by name, never guessed at.",
+      "description": "query only: A query plan, in the grammar published at margince://schema/query. That document, not this description, holds the record types, fields, operators and relationships this company admits: a name outside it is refused by name, never guessed at.",
       "type": "object"
     },
     "q": {
@@ -4443,7 +4447,7 @@ category, contract or state. Keep next_cursor to read the next page.
 
 ```text
 Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this
-checks every row against the workspace and reports what importing it would do. Writes nothing.
+checks every row against the company and reports what importing it would do. Writes nothing.
 `object` is company, contact, lead, deal or activity. Use `contact` for a file the business already
 knows (a migration off another CRM, a corrected export coming back). Use `lead` for a
 machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row
@@ -4498,7 +4502,9 @@ did not write is a decision they did not make.
               "lead",
               "contact",
               "deal",
-              "activity"
+              "activity",
+              "project",
+              "product"
             ],
             "type": "string"
           }
@@ -4510,7 +4516,7 @@ did not write is a decision they did not make.
         ],
         "type": "object"
       },
-      "maxItems": 5,
+      "maxItems": 7,
       "minItems": 1,
       "type": "array"
     },
@@ -4531,7 +4537,9 @@ did not write is a decision they did not make.
         "lead",
         "contact",
         "deal",
-        "activity"
+        "activity",
+        "project",
+        "product"
       ],
       "type": "string"
     },
@@ -4613,7 +4621,7 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                   "type": "array"
                 },
                 "metric_ref": {
-                  "description": "A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.",
+                  "description": "A `pipeline_id` or `stage_id` used in a plan comes from the company's pipeline list.",
                   "properties": {
                     "metric": {
                       "type": "string"
@@ -5570,7 +5578,7 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
 
 ```text
 See what needs attention. slipping lists deals at risk this week and why. at_risk lists the open
-deals that rest on a single contact or whose contacts have gone quiet. commitments lists promises
+deals that rest on a single contact or whose contacts have gone quiet. commitments lists commitments
 made to customers that are still open. Each view covers only what you may see, and says why each
 item is on it. Use read_context to dig into one item. Keep each item's record id to act on it.
 ```
@@ -5583,7 +5591,7 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
 {
   "properties": {
     "assignee_id": {
-      "description": "commitments only: Narrow to one owner's promises; omit for everyone's",
+      "description": "commitments only: Narrow to one owner's commitments; omit for everyone's",
       "format": "uuid",
       "type": "string"
     },
@@ -5599,7 +5607,7 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
       "type": "string"
     },
     "project_id": {
-      "description": "commitments only: Keep only promises filed under this project or under none",
+      "description": "commitments only: Keep only commitments filed under this project or under none",
       "format": "uuid",
       "type": "string"
     },
@@ -5611,7 +5619,7 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
       "type": "integer"
     },
     "view": {
-      "description": "slipping: deals at risk this week; at_risk: relationships going cold; commitments: promises still open",
+      "description": "slipping: deals at risk this week; at_risk: relationships going cold; commitments: commitments still open",
       "enum": [
         "at_risk",
         "commitments",
@@ -5940,8 +5948,8 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
 
 ```text
 Get the story so far. catch_up tells what has been happening on one contact, company, deal or
-project. meeting prepares for a meeting: who is coming, the open threads and what was promised.
-brief reads this morning's brief for the seat. It reads and writes nothing. catch_up summarizes the
+project. meeting prepares for a meeting: who is coming, the open threads and commitments made. brief
+reads this morning's brief for the seat. It reads and writes nothing. catch_up summarizes the
 timeline; a field's current value is read_record's. brief answers the brief already made, never a
 fresh one. Use read_attention for what is at risk across the whole pipeline, and read_details for a
 company's dossier, growth fit, scan or brief. Keep the ids the answer cites to read or change those
@@ -7098,7 +7106,7 @@ read_attention for what needs the user now, and read_record for a record's own f
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\nactivity_deal_filing: How a call or meeting logged from this record will be filed on a deal\nactivity_pipeline: Every ingress stage this message passed through, and why each did or did not run\nai_budget_preview: Preview an allowance change (ai_budget read/update)\nai_routing_preview: Preview affected features without calling a model (ai_routing read/update and ai_budget read)\nai_task_overrides_preview: Judge a draft of the overrides without saving it (ai_routing read and update)\nautomation_preview: Dry-run an automation's blast radius, writing nothing, sending nothing and staging no approval\nbackfill_preview: Preview a backfill window — the scope before the spend\ncapture_triage: Which mail domains were triaged into this company, and what each concluded\nchannel_link: The chat channel a deal or project is linked to, if any\ncommunication_review: What a refused send was refused for, and for whom\ncompany_brief: Deprecated: The standing company brief — what this company is, where it stands, and what changed\ncompany_contracts: The agreements this company holds, newest first\ncompany_for_address: The company a contact at this email address would work at\ncompany_linkedin_reach: Which colleagues can get you in at this company\ncompany_logo: Stream a company's logo image\ncompany_logo_icon: Stream a company's square logo icon\ncompany_scan: What this company needs, as the model last judged it for this reader\ncontact_brief: The standing relationship brief — who this contact is commercially, what they care about, what changed\ncontact_consent: Read a contact's per-purpose consent state plus the append-only proof log\ncontact_consent_guard: May we write to this contact right now — per purpose and channel, with the reason\ncontact_optout_records: Export this contact's registrations, refusals and opt-out receipts for an inspection\ncontact_overrides: List the contact's standing exceptions and their exact scope\ncontact_profile_fields: The evidence sidecar for this contact's enriched fields — each value with the verbatim snippet it was read from\ncontact_stops: List the stops that stand on this contact, and which ones you may take back\ncontract: One agreement with a company, with its terms, value, dates and status\ncontroller_mail_preview: Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it\ndeal_legal_reviews: The legal reviews asked for on this deal, newest first\ndeal_lines: The products and services a deal sells, and the value they add up to\ndeal_margince_changes: Every change Margince made to this deal, newest first\ndeal_products: The products a deal sells, with the value allocated to each\ndeal_room_brief: A short written brief of what the room's buyers did and what is waiting on the seller\ndeal_suggestion: Read one suggestion and its currently visible evidence\ndeal_suggestions: Open Deal Scout suggestions the caller may see, newest first\ndocument_extraction: The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted\ndossier: What this company IS — assembled from its own facts, every sentence citing one\nedit_access_request: The caller's open request for edit access to this record\nenrichment_run: Read one asynchronous enrichment run and its safe status\nevidence: The receipt behind one cited record — where it came from, and what is missing\nfield_history: Per-field change history for one record, projected from audit_log before/after diffs\nfilter_preview: Count and sample what a filter would select, before it is saved\nfinance_invoice_pdf: Open a mirrored invoice's own PDF, fetched from the accounting source\nforecast_assurance_preview: What a check would find, without recording any of it\nforecast_share_csv: The rows behind a shared reading, as CSV\nforecast_shared_reading: Open a shared forecast view\nforecast_shares: List the share links you issued that still serve\nforecast_stage_chances: The chance the forecast uses for each open stage, and the evidence behind it\ngrowth_fit: How well this company fits what we sell — banded, with both completeness counts\nhandled_for_you: What the product did on your behalf, so you can check it\nhandoff_assignee: Read the current receiver and reassignment version of a prospect handoff\nhidden_backlog: What the queue is not showing, and which rule is holding it back\nhidden_backlog_rows: Which threads one hiding rule is keeping off the queue\nimport_problems: Download the run's row problems as a CSV\nimport_template: Download the import template for this workspace\nintro_requests: The asks about this contact that the caller is party to\njob_health_history: Grouped totals and a bounded page of retained job failures\njurisdiction_document: Download one of the selected jurisdiction's documents\nknowledge_document: Download a document's own bytes\nlatest_weekly_review: The acting rep's most recent weekly review, or a named week's\nlead_promotion_preview: What promoting this lead would do — merge into an existing contact, or create one\nlead_score: Explain This Score — the weighted-factor decomposition behind a lead's score\nlead_signals: List current and superseded manual qualification signals\nlead_stops: List the stops that stand on this lead, and which ones you may take back\nlegal_entity_logo: Stream a legal entity's logo image\nlegal_review: One review with its pack and the deal's earlier reviews\nlegal_reviews: The reviewer's queue\nlink_candidates: Live contacts on this company's domains who do not work here yet\nmagic: What the machinery did, what it needs, what it could not finish, and what it is watching\nmagic_line_records: Every record one done line stands for, with what changed on each and whether it can be taken back\nmail_deal_repair_preview: Preview what the captured-mail deal repair does and leaves unresolved\nmail_draft: The caller's own unsent message for one place the composer opens\nmeeting_availability: Find alternative times for one existing invitation\nmeeting_proposals: List the acting host's open proposals and personal links for one contact\nmy_linkedin_reach: Which companies your imported network reaches\nnotice_case: One privacy notice owed, where the source is confirmed\nnotice_case_review: One contact's privacy-notice case — its source, whether a notice is owed, and by when\nnotice_source_evidence: Read accessible evidence for a contact source assessment\nnotice_source_preview: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case\nnotices: The acting user's own in-app notifications, newest first\noffer_pdf: Download the offer's most recently rendered PDF\noffered_values: What each source last offered for the company's fields, to show beside the value on the record\nownership_offer: The caller's open offer of this record\nownership_offer_candidates: The colleagues the caller may offer this record to\nownership_request: The caller's open request to be handed this record\npending_margince_changes: The changes Margince made to your deals in the last 7 days that you have not undone\nproduct_translations: The product's name and description in further languages\nproject_filing: What filing this activity under a project did to its retention, and whether it can be undone\nrelationship_nudge: Whether THIS reader has set a quiet contact aside or stopped following it\nresponse_metrics: How fast the workspace answers, how much of the queue it puts down, and how often an at-risk deal gets a next step\nscheduled_send: One of the caller's scheduled messages\nscheduled_sends: The caller's own messages waiting to be sent\nscheduling_calendars: List the current host's connected calendars for scheduling settings\nsite_read_logo: Stream the mark a website read resolved, before anything adopts it\ntag_suggestion: One open tag suggestion the caller may see, with the mail and notes it cites\nteam_board: One row per teammate — who is carrying what, so a lead can see where to help\nteam_exceptions: What is going wrong on this lead's team, and what it was judged against\nteam_margince_changes: What Margince changed on your team's deals\nteammate_weekly_plan: A teammate's plan for this week, for their lead\nvoice_source_preview: Dry-run one candidate source; detect its shape and speakers without storing anything\nwebsite_inquiry_preview: Preview inquiry deadlines and explicitly selected accepted submissions without writing\nweekly_plan: The caller's plan for this week — what they said they would do\nweekly_reviews: The weeks the acting rep has a review for, newest first\nwin_evidence: Whether the deal has the signed agreement a win rests on",
+      "description": "read_workspace topic actions lists each action's body\nactivity_deal_filing: How a call or meeting logged from this record will be filed on a deal\nactivity_pipeline: Every ingress stage this message passed through, and why each did or did not run\nai_budget_preview: Preview an allowance change (ai_budget read/update)\nai_routing_preview: Preview affected features without calling a model (ai_routing read/update and ai_budget read)\nai_task_overrides_preview: Judge a draft of the overrides without saving it (ai_routing read and update)\nautomation_preview: Dry-run an automation's blast radius, writing nothing, sending nothing and staging no approval\nbackfill_preview: Preview a backfill window — the scope before the spend\ncapture_triage: Which mail domains were triaged into this company, and what each concluded\nchannel_link: The chat channel a deal or project is linked to, if any\ncommunication_review: What a refused send was refused for, and for whom\ncompany_brief: Deprecated: The standing company brief — what this company is, where it stands, and what changed\ncompany_contracts: The agreements this company holds, newest first\ncompany_for_address: The company a contact at this email address would work at\ncompany_linkedin_reach: Which colleagues can get you in at this company\ncompany_logo: Stream a company's logo image\ncompany_logo_icon: Stream a company's square logo icon\ncompany_scan: What this company needs, as the model last judged it for this reader\ncontact_brief: The standing relationship brief — who this contact is commercially, what they care about, what changed\ncontact_consent: Read a contact's per-purpose consent state plus the append-only proof log\ncontact_consent_guard: May we write to this contact right now — per purpose and channel, with the reason\ncontact_optout_records: Export this contact's registrations, refusals and opt-out receipts for an inspection\ncontact_overrides: List the contact's standing exceptions and their exact scope\ncontact_profile_fields: The evidence sidecar for this contact's enriched fields — each value with the verbatim snippet it was read from\ncontact_stops: List the stops that stand on this contact, and which ones you may take back\ncontract: One agreement with a company, with its terms, value, dates and status\ncontroller_mail_preview: Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it\ndeal_legal_reviews: The legal reviews asked for on this deal, newest first\ndeal_lines: The products and services a deal sells, and the value they add up to\ndeal_margince_changes: Every change Margince made to this deal, newest first\ndeal_products: The products a deal sells, with the value allocated to each\ndeal_room_brief: A short written brief of what the room's buyers did and what is waiting on the seller\ndeal_suggestion: Read one suggestion and its currently visible evidence\ndeal_suggestions: Open Deal Scout suggestions the caller may see, newest first\ndocument_extraction: The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted\ndossier: What this company IS — assembled from its own facts, every sentence citing one\nedit_access_request: The caller's open request for edit access to this record\nenrichment_run: Read one asynchronous enrichment run and its safe status\nevidence: The receipt behind one cited record — where it came from, and what is missing\nfield_history: Per-field change history for one record, projected from audit_log before/after diffs\nfilter_preview: Count and sample what a filter would select, before it is saved\nfinance_invoice_pdf: Open a mirrored invoice's own PDF, fetched from the accounting source\nforecast_assurance_preview: What a check would find, without recording any of it\nforecast_share_csv: The rows behind a shared reading, as CSV\nforecast_shared_reading: Open a shared forecast view\nforecast_shares: List the share links you issued that still serve\nforecast_stage_chances: The chance the forecast uses for each open stage, and the evidence behind it\ngrowth_fit: How well this company fits what we sell — banded, with both completeness counts\nhandled_for_you: What the product did on your behalf, so you can check it\nhandoff_assignee: Read the current receiver and reassignment version of a prospect handoff\nhidden_backlog: What the queue is not showing, and which rule is holding it back\nhidden_backlog_rows: Which threads one hiding rule is keeping off the queue\nimport_problems: Download the run's row problems as a CSV\nimport_template: Download the import template for your company\nintro_requests: The asks about this contact that the caller is party to\njob_health_history: Grouped totals and a bounded page of retained job failures\njurisdiction_document: Download one of the selected jurisdiction's documents\nknowledge_document: Download a document's own bytes\nlatest_weekly_review: The acting rep's most recent weekly review, or a named week's\nlead_promotion_preview: What promoting this lead would do — merge into an existing contact, or create one\nlead_score: Explain This Score — the weighted-factor decomposition behind a lead's score\nlead_signals: List current and superseded manual qualification signals\nlead_stops: List the stops that stand on this lead, and which ones you may take back\nlegal_entity_logo: Stream a legal entity's logo image\nlegal_review: One review with its pack and the deal's earlier reviews\nlegal_reviews: The reviewer's queue\nlink_candidates: Live contacts on this company's domains who do not work here yet\nmagic: What the machinery did, what it needs, what it could not finish, and what it is watching\nmagic_line_records: Every record one done line stands for, with what changed on each and whether it can be taken back\nmail_deal_repair_preview: Preview what the captured-mail deal repair does and leaves unresolved\nmail_draft: The caller's own unsent message for one place the composer opens\nmeeting_availability: Find alternative times for one existing invitation\nmeeting_proposals: List the acting host's open proposals and personal links for one contact\nmy_linkedin_reach: Which companies your imported network reaches\nnotice_case: One privacy notice owed, where the source is confirmed\nnotice_case_review: One contact's privacy-notice case — its source, whether a notice is owed, and by when\nnotice_source_evidence: Read accessible evidence for a contact source assessment\nnotice_source_preview: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case\nnotices: The acting user's own in-app notifications, newest first\noffer_pdf: Download the offer's most recently rendered PDF\noffered_values: What each source last offered for the company's fields, to show beside the value on the record\nownership_offer: The caller's open offer of this record\nownership_offer_candidates: The colleagues the caller may offer this record to\nownership_request: The caller's open request to be handed this record\npending_margince_changes: The changes Margince made to your deals in the last 7 days that you have not undone\nproduct_translations: The product's name and description in further languages\nproject_filing: What filing this activity under a project did to its retention, and whether it can be undone\nrelationship_nudge: Whether THIS reader has set a quiet contact aside or stopped following it\nresponse_metrics: How fast your company answers, how much of the queue it puts down, and how often an at-risk deal gets a next step\nscheduled_send: One of the caller's scheduled messages\nscheduled_sends: The caller's own messages waiting to be sent\nscheduling_calendars: List the current host's connected calendars for scheduling settings\nsite_read_logo: Stream the mark a website read resolved, before anything adopts it\ntag_suggestion: One open tag suggestion the caller may see, with the mail and notes it cites\nteam_board: One row per teammate — who is carrying what, so a lead can see where to help\nteam_exceptions: What is going wrong on this lead's team, and what it was judged against\nteam_margince_changes: What Margince changed on your team's deals\nteammate_weekly_plan: A teammate's plan for this week, for their lead\nvoice_source_preview: Dry-run one candidate source; detect its shape and speakers without storing anything\nwebsite_inquiry_preview: Preview inquiry deadlines and explicitly selected accepted submissions without writing\nweekly_plan: The caller's plan for this week — what they said they would do\nweekly_reviews: The weeks the acting rep has a review for, newest first\nwin_evidence: Whether the deal has the signed agreement a win rests on",
       "enum": [
         "activity_deal_filing",
         "activity_pipeline",
@@ -8274,8 +8282,8 @@ next_cursor to read the next page.
 Read one project. overview: its whole page of company, current health, phase history (each move with
 its reason, and time per phase), deals, stakeholders, contracts, documents, open commitments,
 timeline, filing coverage, totals. handoff: what the delivery side needs from sales (who owns it,
-who to call at the client, what was sold, by when, what is already promised), with a named gap for
-each the records do not answer. overview cuts each section at 25 rows and flags it truncated;
+who to call at the client, what was sold, by when, existing commitments), with a named gap for each
+the records do not answer. overview cuts each section at 25 rows and flags it truncated;
 sections_omitted names what your grants withhold. A handoff gap means the field is empty as far as
 the caller can see. Preparing a handover is not performing one. read_record for the project's stored
 fields alone, read_context with about=catch_up for what has been happening, change_state
@@ -8371,7 +8379,7 @@ rather than silently overwriting a change made in between. Its `owner` says who 
 **Read who your team knows, and how well**
 
 ```text
-Read the relationships this workspace has recorded, from the one id you name. contact_id: the
+Read the relationships this company has recorded, from the one id you name. contact_id: the
 colleagues who know that contact, warmest first. company_id: a warm route into the company: who the
 team knows there and which colleague could make the introduction. deal_id: which roles at the deal's
 company the team has a relationship with, and where the deal rests on a single contact. Only
@@ -8644,7 +8652,7 @@ evidence, and quote coverage with each number.
       "type": "object"
     },
     "report": {
-      "description": "run only: The prebuilt report to run. Send `report` ALONE for the default answer listed below: that call takes no other argument and needs nothing read first. Per report: default measures; by: every dimension, * = grouped by default. activities-by-kind: count; by: direction, kind*, meeting_status, period_month, period_quarter, period_year, project, project_id. deals-by-stage: count, sum(amount_minor); by: currency*, link_type, partner_company_id, pipeline_id, stage_id*, status, win_probability. forecast: count, sum(amount_minor), sum(weighted_amount_minor); by: currency*, link_type, owner_id, partner_company_id, pipeline_id, stage_id, win_probability, win_probability_band*. leads-by-status: count; by: origin, owner_id, source, status*. loss-events: count; by: company_id, deal_id, link_type, loss_reason*, owner_id, period_month, period_quarter, period_year, pipeline_id. meeting-conversion: count; by: became_opportunity*, host_user_id. open-deals-per-company: count; by: company_id*, currency, link_type, owner_id. pipeline-current: count, sum(amount_base_minor), sum(weighted_base_minor), count(amount_base_minor); by: close_month, currency, link_type, owner_id, partner_company_id, pipeline_id, stage_id*. project-commitments: sum(overdue_commitments), sum(open_commitments); by: company_id, key*, name*, owner_id*, phase*, project_id*. projects-by-phase: count, sum(open_deal_value_minor), sum(won_deal_value_minor), sum(open_deal_unpriced), sum(won_deal_unpriced); by: company_id, owner_id, phase*. projects-gone-quiet: count; by: company_id, key*, last_activity_at*, name*, owner_id*, phase*, project_id*, quiet_since*. stage-age: count, median(days_in_stage), p75(days_in_stage); by: link_type, owner_id, pipeline_id, stage_id*. win-loss: count, sum(amount_minor), median(days_to_close), p75(days_to_close); by: company_id, currency*, link_type, loss_reason, loss_reason_state, lost_reason, owner_id, period_month, period_quarter, period_year, pipeline_id, size_band, source, status*. A report's `filters` and `aggregates` are its own, published at margince://schema/reports and answered by read_workspace with topic=report_vocabulary; a name outside them is refused with the accepted list. A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.",
+      "description": "run only: The prebuilt report to run. Send `report` ALONE for the default answer listed below: that call takes no other argument and needs nothing read first. Per report: default measures; by: every dimension, * = grouped by default. activities-by-kind: count; by: direction, kind*, meeting_status, period_month, period_quarter, period_year, project, project_id. deals-by-stage: count, sum(amount_minor); by: currency*, link_type, partner_company_id, pipeline_id, stage_id*, status, win_probability. forecast: count, sum(amount_minor), sum(weighted_amount_minor); by: currency*, link_type, owner_id, partner_company_id, pipeline_id, stage_id, win_probability, win_probability_band*. leads-by-status: count; by: origin, owner_id, source, status*. loss-events: count; by: company_id, deal_id, link_type, loss_reason*, owner_id, period_month, period_quarter, period_year, pipeline_id. meeting-conversion: count; by: became_opportunity*, host_user_id. open-deals-per-company: count; by: company_id*, currency, link_type, owner_id. pipeline-current: count, sum(amount_base_minor), sum(weighted_base_minor), count(amount_base_minor); by: close_month, currency, link_type, owner_id, partner_company_id, pipeline_id, stage_id*. project-commitments: sum(overdue_commitments), sum(open_commitments); by: company_id, key*, name*, owner_id*, phase*, project_id*. projects-by-phase: count, sum(open_deal_value_minor), sum(won_deal_value_minor), sum(open_deal_unpriced), sum(won_deal_unpriced); by: company_id, owner_id, phase*. projects-gone-quiet: count; by: company_id, key*, last_activity_at*, name*, owner_id*, phase*, project_id*, quiet_since*. stage-age: count, median(days_in_stage), p75(days_in_stage); by: link_type, owner_id, pipeline_id, stage_id*. win-loss: count, sum(amount_minor), median(days_to_close), p75(days_to_close); by: company_id, currency*, link_type, loss_reason, loss_reason_state, lost_reason, owner_id, period_month, period_quarter, period_year, pipeline_id, size_band, source, status*. A report's `filters` and `aggregates` are its own, published at margince://schema/reports and answered by read_workspace with topic=report_vocabulary; a name outside them is refused with the accepted list. A `pipeline_id` or `stage_id` used in a plan comes from the company's pipeline list.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",
@@ -8691,7 +8699,7 @@ evidence, and quote coverage with each number.
           "type": "string"
         },
         "kind": {
-          "description": "Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.",
+          "description": "Whose figures the report covers: one owner, one team, or the whole company. id names the owner or team.",
           "enum": [
             "owner",
             "team",
@@ -9029,7 +9037,7 @@ evidence, and quote coverage with each number.
 **Read tags**
 
 ```text
-Read the workspace's tags. list: every word, with the tag_id the other tag calls take. get: one tag
+Read the company's tags. list: every word, with the tag_id the other tag calls take. get: one tag
 and how many contacts, companies, deals and leads carry it (the records themselves come from
 find_records with engine=list). record: the tags on one contact, company, deal or lead, with who
 applied each and when. list returns archived words only with include_archived, and they cannot be
@@ -9098,7 +9106,7 @@ applies and stores nothing and says whether the tag exists.
 ```text
 Read one view the app draws that no other tool answers: a record's panels, such as a company's 360,
 contacts, documents, facts, graph or strength, a deal's status, documents or stakeholders, and a
-contact's cases; the workspace's reference lists, such as stages, custom fields, lead sources, loss
+contact's cases; the company's reference lists, such as stages, custom fields, lead sources, loss
 reasons, teams and lists; and reporting objects, such as targets, schedules, executions, sales
 progress and forecast calls. Each view takes only a few of the arguments listed here: a record view
 its id, and its own filters. Each argument names the views that take it, read_workspace with
@@ -9299,7 +9307,7 @@ find_records to find or list records, and read_reports for the standard metrics 
       "type": "boolean"
     },
     "pipeline_id": {
-      "description": "views: export_reporting_evaluation, stages; comes from the workspace's pipeline list",
+      "description": "views: export_reporting_evaluation, stages; comes from the company's pipeline list",
       "type": "string"
     },
     "plan_owned": {
@@ -9416,10 +9424,10 @@ find_records to find or list records, and read_reports for the standard metrics 
 
 ### read_workspace
 
-**Read how this workspace is set up**
+**Read how this company is set up**
 
 ```text
-Read how this workspace is set up. colleagues: the seats that can receive work, not the contacts
+Read how this company is set up. colleagues: the seats that can receive work, not the contacts
 stored as records; q narrows by name. pipelines: every pipeline with its stages, each open, won or
 lost. channel_providers: the messaging transports. The other topics name what a tool accepts: query
 (find_records engine query), analytics (read_analytics), record_fields (create_record and
@@ -10105,7 +10113,7 @@ business cards into proposals, build the user's voice, preview the Home repair, 
 details from the data provider, rebuild the search index, or bring in old mail. Each call spends AI
 budget, and research asks an outside provider, so the passport needs the enrich scope. Read the
 panel first through read_details; run this only when it is out of date. Ask the user first before
-buying a contact's details, and before rebuilding the search index for the whole workspace. Buying
+buying a contact's details, and before rebuilding the search index for the whole company. Buying
 needs a daily limit and a healthy connection, skips a contact already looked up, and buys a priced
 detail only when you name its category. Use read_details to read a panel, and enrich to fill a
 company's fields from its website. (Ask the user first for the actions enrich_contact_from_provider,
@@ -10118,7 +10126,7 @@ start_backfill, start_search_reindex; requires passport scope "enrich".)
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\nask_about_company: Ask one of the prepared questions about this company\nask_corpus: Ask this corpus a question, answered only from its documents\nask_site_read: Ask Margince about a website read and receive reviewable company-field suggestions\nassess_sales_review: The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see\nbuild_voice_profile: Queue a durable build over the current included corpus\ndraft_intro_note: Draft the forwardable note a colleague can paste into their own introduction\ndraft_intro_request: Draft the message asking a colleague to introduce you\nenrich_contact_from_provider: Queue an on-demand contact-data enrichment run\ngenerate_brief: Assemble the acting rep's brief for today if the overnight pass has not already\npreview_home_repair: Review a bounded page of automatic Home work\npropose_deal_roles: Read the buying roles out of what this deal's contacts have written\npropose_filter: Propose filter clauses for a list described in plain words\npropose_report_setup: A sales initiative or a custom report proposed from a description in plain words: the filters, metrics and charts the words name, resolved against what the reader may use, with the phrase each came from, the questions the words leave open and the phrases nothing here can express\nread_card_photo: Read a photo of business cards and propose the contacts it shows\nrefresh_company_brief: Deprecated: Regenerate this company's brief, ignoring the cached one\nrefresh_contact_brief: Regenerate this contact's brief, ignoring the cached one\nrefresh_dossier: Reassemble the dossier now, past a fingerprint that still matches\nrefresh_growth_fit: Re-assemble the caller's growth fit now, past a fingerprint that still matches\nrefresh_scan: Make sure this reader's scan of the company is current, reading it again only when the company changed\nregenerate_offer: Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal\nresearch_contact: Ask the connected provider what is publicly known about this contact\nstart_backfill: Start the bounded connect-time backfill\nstart_search_reindex: Confirm and start a fleet-wide reindex",
+      "description": "read_workspace topic actions lists each action's body\nask_about_company: Ask one of the prepared questions about this company\nask_corpus: Ask this corpus a question, answered only from its documents\nask_site_read: Ask Margince about a website read and receive reviewable company-field suggestions\nassess_sales_review: The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see\nbuild_voice_profile: Queue a durable build over the current included corpus\ndraft_intro_note: Draft the forwardable note a colleague can paste into their own introduction\ndraft_intro_request: Draft the message asking a colleague to introduce you\nenrich_contact_from_provider: Queue an on-demand contact-data enrichment run\nfile_channel_message: File a summary of one message in a record's channel, or of its thread, as a note\ngenerate_brief: Assemble the acting rep's brief for today if the overnight pass has not already\npreview_home_repair: Review a bounded page of automatic Home work\npropose_deal_roles: Read the buying roles out of what this deal's contacts have written\npropose_filter: Propose filter clauses for a list described in plain words\npropose_report_setup: A sales initiative or a custom report proposed from a description in plain words: the filters, metrics and charts the words name, resolved against what the reader may use, with the phrase each came from, the questions the words leave open and the phrases nothing here can express\nread_card_photo: Read a photo of business cards and propose the contacts it shows\nrefresh_company_brief: Deprecated: Regenerate this company's brief, ignoring the cached one\nrefresh_contact_brief: Regenerate this contact's brief, ignoring the cached one\nrefresh_dossier: Reassemble the dossier now, past a fingerprint that still matches\nrefresh_growth_fit: Re-assemble the caller's growth fit now, past a fingerprint that still matches\nrefresh_scan: Make sure this reader's scan of the company is current, reading it again only when the company changed\nregenerate_offer: Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal\nresearch_contact: Ask the connected provider what is publicly known about this contact\nstart_backfill: Start the bounded connect-time backfill\nstart_search_reindex: Confirm and start a fleet-wide reindex",
       "enum": [
         "ask_about_company",
         "ask_corpus",
@@ -10128,6 +10136,7 @@ start_backfill, start_search_reindex; requires passport scope "enrich".)
         "draft_intro_note",
         "draft_intro_request",
         "enrich_contact_from_provider",
+        "file_channel_message",
         "generate_brief",
         "preview_home_repair",
         "propose_deal_roles",
@@ -10147,7 +10156,7 @@ start_backfill, start_search_reindex; requires passport scope "enrich".)
       "type": "string"
     },
     "id": {
-      "description": "ask_about_company, ask_corpus, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, propose_deal_roles, refresh_company_brief, refresh_contact_brief, refresh_dossier, refresh_growth_fit, refresh_scan, regenerate_offer, research_contact only",
+      "description": "ask_about_company, ask_corpus, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, file_channel_message, propose_deal_roles, refresh_company_brief, refresh_contact_brief, refresh_dossier, refresh_growth_fit, refresh_scan, regenerate_offer, research_contact only",
       "type": "string"
     },
     "idempotency_key": {
@@ -10155,7 +10164,7 @@ start_backfill, start_search_reindex; requires passport scope "enrich".)
       "type": "string"
     },
     "request_body": {
-      "description": "ask_about_company, ask_corpus, ask_site_read, assess_sales_review, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, preview_home_repair, propose_filter, propose_report_setup, refresh_scan, start_backfill, start_search_reindex only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "ask_about_company, ask_corpus, ask_site_read, assess_sales_review, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, file_channel_message, preview_home_repair, propose_filter, propose_report_setup, refresh_scan, start_backfill, start_search_reindex only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     }
   },
@@ -10175,7 +10184,7 @@ start_backfill, start_search_reindex; requires passport scope "enrich".)
 ```text
 Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the
 invitation to every attendee: the contact, and any further addresses. invite reaches attendees
-outside the workspace. The call queues it and returns it pending, so name them and the time and get
+outside the company. The call queues it and returns it pending, so name them and the time and get
 the user's yes first, unless they asked for this invite themselves. Read check_availability before
 choosing a time. A start_intent (the user's local time) replaces start, and end moves with it so the
 meeting keeps its length. Use change_activities with log to record a meeting without inviting

@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   CAPTURE_CONTACT_PARAM,
   captureReviewTarget,
@@ -89,9 +90,9 @@ async function openDrawer() {
       name: "View Mail not shared with the team",
     }),
   );
-  await screen.findByRole("dialog", { name: "Mail not shared with the team" });
+  await screen.findByRole("dialog", { name: englishCopy["heldThreads.title"] });
   await user.click(
-    screen.getByRole("button", { name: "Browse recent conversations" }),
+    screen.getByRole("button", { name: englishCopy["heldThreads.browse"] }),
   );
   return user;
 }
@@ -131,10 +132,12 @@ it("opens the list narrowed to the contact a timeline linked from", async () => 
   openFromContact("contact-one");
 
   const drawer = await screen.findByRole("dialog", {
-    name: "Mail not shared with the team",
+    name: englishCopy["heldThreads.title"],
   });
   expect(await within(drawer).findByText("Lena's contract")).toBeVisible();
-  expect(within(drawer).getByText("Threads with")).toBeVisible();
+  expect(
+    within(drawer).getByText(englishCopy["heldThreads.withContact"]),
+  ).toBeVisible();
   expect(
     await within(drawer).findByRole("link", { name: "Lena Brandt" }),
   ).toBeVisible();
@@ -170,7 +173,7 @@ it("never shows one contact's threads under the next contact's name", async () =
   steppedClock();
   openFromContact("contact-one");
   const drawer = await screen.findByRole("dialog", {
-    name: "Mail not shared with the team",
+    name: englishCopy["heldThreads.title"],
   });
   await within(drawer).findByText("Lena's contract");
 
@@ -197,12 +200,14 @@ it("waits for the contact's answer before saying nothing matches", async () => {
   openFromContact("contact-one");
 
   const drawer = await screen.findByRole("dialog", {
-    name: "Mail not shared with the team",
+    name: englishCopy["heldThreads.title"],
   });
   expect(await within(drawer).findByRole("status")).toHaveTextContent(
     "Loading…",
   );
-  expect(within(drawer).queryByText("No held thread matches.")).toBeNull();
+  expect(
+    within(drawer).queryByText(englishCopy["heldThreads.noMatch"]),
+  ).toBeNull();
 });
 
 it("keeps the rows already read when the next page fails", async () => {
@@ -237,7 +242,7 @@ it("retries a contact's list whose first read failed", async () => {
   const user = steppedClock();
   openFromContact("contact-one");
   const drawer = await screen.findByRole("dialog", {
-    name: "Mail not shared with the team",
+    name: englishCopy["heldThreads.title"],
   });
   const retry = await within(drawer).findByRole("button", { name: "Retry" });
 
@@ -263,26 +268,30 @@ it("says a refused contact is refused, and offers the whole list", async () => {
   openFromContact("contact-one");
 
   const drawer = await screen.findByRole("dialog", {
-    name: "Mail not shared with the team",
+    name: englishCopy["heldThreads.title"],
   });
   expect(await within(drawer).findByRole("alert")).toHaveTextContent(
-    "The contact is archived or not visible to you, so its threads are not listed.",
+    englishCopy["heldThreads.contactUnavailable"],
   );
-  expect(within(drawer).queryByText("No held thread matches.")).toBeNull();
+  expect(
+    within(drawer).queryByText(englishCopy["heldThreads.noMatch"]),
+  ).toBeNull();
   expect(
     within(drawer).queryByRole("button", {
-      name: "Browse recent conversations",
+      name: englishCopy["heldThreads.browse"],
     }),
   ).toBeNull();
   expect(contactAsked(asked)).not.toHaveLength(0);
 
   await user.click(
-    within(drawer).getByRole("button", { name: "Show all threads" }),
+    within(drawer).getByRole("button", {
+      name: englishCopy["heldThreads.allThreads"],
+    }),
   );
   expect(window.location.hash).not.toContain(CAPTURE_CONTACT_PARAM);
   await user.click(
     await within(drawer).findByRole("button", {
-      name: "Browse recent conversations",
+      name: englishCopy["heldThreads.browse"],
     }),
   );
   expect(
@@ -299,7 +308,7 @@ it("ends the contact filter when the drawer closes", async () => {
   );
   const user = steppedClock();
   openFromContact("contact-one");
-  await screen.findByRole("dialog", { name: "Mail not shared with the team" });
+  await screen.findByRole("dialog", { name: englishCopy["heldThreads.title"] });
 
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -325,7 +334,7 @@ it("asks the server for what is typed and lists what it answers", async () => {
   expect(await screen.findByText("Sam's renewal")).toBeInTheDocument();
 
   await user.type(
-    screen.getByRole("searchbox", { name: "Search subject or party" }),
+    screen.getByRole("searchbox", { name: englishCopy["heldThreads.search"] }),
     "lena",
   );
 

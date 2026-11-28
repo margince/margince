@@ -45,7 +45,7 @@ func TestACapturedLeadsTextPastItsLimitLandsCut(t *testing.T) {
 		t.Fatalf("capturing a lead with long text: %v", err)
 	}
 	var name, company, title string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT full_name, company_name, title FROM lead WHERE id = $1`, ref.ID).
 			Scan(&name, &company, &title)
 	}); err != nil {

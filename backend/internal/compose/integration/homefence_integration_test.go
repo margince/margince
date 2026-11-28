@@ -68,7 +68,7 @@ func homeFence(t *testing.T, e *Env) int64 {
 func inOneTx(t *testing.T, e *Env, statements []fenceStatement) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		for _, s := range statements {
 			if _, err := tx.Exec(ctx, s.sql, s.args...); err != nil {
 				return err

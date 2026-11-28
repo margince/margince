@@ -9,6 +9,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiSetupPanel } from "./installation-setup.ai-later";
@@ -57,7 +58,7 @@ describe("AiSetupPanel", () => {
       await screen.findByRole("heading", { name: "Set up AI" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Connect provider" }),
+      screen.getByRole("button", { name: englishCopy["aiSetup.connect"] }),
     ).toBeInTheDocument();
     // Settings has nothing to skip to.
     expect(screen.queryByRole("button", { name: "Not now" })).toBeNull();

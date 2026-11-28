@@ -253,7 +253,7 @@ type technicalBackfillWorker struct{ pool *pgxpool.Pool }
 
 // Work nominates up to TechnicalBackfillBatch companies per workspace.
 func (w *technicalBackfillWorker) Work(ctx context.Context, _ *river.Job[TechnicalEnrichBackfillArgs]) error {
-	workspaces, err := enumerateWorkspaces(ctx, w.pool)
+	workspaces, err := database.LiveWorkspaces(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

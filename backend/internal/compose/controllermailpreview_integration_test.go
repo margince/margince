@@ -215,7 +215,7 @@ func TestTheNetworkReceiptOfARelaySendCarriesTheSameMark(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LogActivity: %v", err)
 	}
-	if err := database.WithWorkspaceTx(l.ctx, l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.ctx, l.e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(l.ctx, tx, []ids.UUID{staged, ids.UUID(own.Id)})
 	}); err != nil {
 		t.Fatalf("folding the edge: %v", err)

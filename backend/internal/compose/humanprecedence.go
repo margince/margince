@@ -100,7 +100,7 @@ func (w humanWrite) moved(entityType, table string) bool {
 // who left it.
 func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType string, id ids.UUID, patch json.RawMessage) ([]string, error) {
 	var conflicts []string
-	err := database.WithWorkspaceTx(ctx, f.pool, func(tx pgx.Tx) (err error) {
+	err := database.WithTx(ctx, f.pool, func(tx pgx.Tx) (err error) {
 		conflicts, err = humanOwnedConflictsIn(ctx, tx, entityType, id, patch)
 		return err
 	})

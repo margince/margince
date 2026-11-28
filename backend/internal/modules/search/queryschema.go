@@ -43,7 +43,7 @@ func (r *QuerySchemaResource) Resources(context.Context) []mcp.Resource {
 	return []mcp.Resource{{
 		URI:   QuerySchemaURI,
 		Name:  "query_vocabulary",
-		Title: "Workspace query vocabulary",
+		Title: "Record query vocabulary",
 		// A vocabulary is a read of what the workspace holds — it names the
 		// record types and the workspace's own custom columns — so it is
 		// governed by the same scope a record read is.

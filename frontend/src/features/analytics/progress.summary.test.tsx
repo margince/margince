@@ -44,7 +44,7 @@ describe("ProgressSummary", () => {
     expect(
       screen.getByText("That leaves €40,000 still missing to the goal."),
     ).toBeTruthy();
-    expect(screen.getByText("Written by Margince")).toBeTruthy();
+    expect(screen.getByText(en["co.brief.by.model"])).toBeTruthy();
     expect(asked[0]).toMatchObject({
       period: "month",
       year: 2026,
@@ -59,7 +59,9 @@ describe("ProgressSummary", () => {
     const user = userEvent.setup();
     render(<ProgressSummary ask={ASK} progress={sellerMarch} />);
     await user.click(
-      await screen.findByRole("button", { name: "Refresh summary" }),
+      await screen.findByRole("button", {
+        name: en["progress.summary.refresh"],
+      }),
     );
     await waitFor(() => expect(asked).toHaveLength(2));
     expect(asked[1]).toMatchObject({ refresh: true });
@@ -131,7 +133,7 @@ describe("ProgressScenarios", () => {
     render(<ProgressScenarios progress={marchRunning} />);
     expect(screen.getByText("€60,000")).toBeTruthy();
     expect(screen.getByText("€40,000 below goal")).toBeTruthy();
-    expect(screen.getByText("Won + Likely deals")).toBeTruthy();
+    expect(screen.getByText(en["forecast.basis.likely"])).toBeTruthy();
     expect(screen.getByText("€10,000 below goal")).toBeTruthy();
     expect(screen.getByText("€30,000 above goal")).toBeTruthy();
     expect(

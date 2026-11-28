@@ -5,6 +5,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { listAddress } from "../lib/listreturn";
 import { navigate, type Route, useRoute } from "../lib/router";
 import type { UrlParams } from "../lib/urlstate";
@@ -160,7 +161,9 @@ describe("Top bar way back from a record", () => {
 
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
     const moved = nextHashChange();
-    await user.click(screen.getByRole("button", { name: "Back to Worklist" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["brief.queue.back"] }),
+    );
     await moved;
 
     expect(window.location.hash).toBe(
@@ -173,7 +176,9 @@ describe("Top bar way back from a record", () => {
     await mountAt("#/contacts/p-anna/activity?from=worklist");
 
     const moved = nextHashChange();
-    await user.click(screen.getByRole("button", { name: "Back to Worklist" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["brief.queue.back"] }),
+    );
     await moved;
 
     expect(window.location.hash).toBe("#/home?queue=1");

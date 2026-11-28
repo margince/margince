@@ -143,7 +143,7 @@ type sweptRun struct {
 func (re *runnerEnv) runState(t *testing.T, runID ids.UUID) sweptRun {
 	t.Helper()
 	var got sweptRun
-	if err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		var degrade *string
 		var finishedAt *time.Time
 		if err := tx.QueryRow(context.Background(),

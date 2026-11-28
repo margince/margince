@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { meFixture } from "../../../testing/mefixture";
 import { OnboardingScreen } from "../onboarding";
 import { resolutionsFromAnswers } from "./company-proposal";
@@ -340,14 +341,16 @@ describe("dismissing a clarify in the company act", () => {
     ).toBeTruthy();
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Skip. I will set it myself." }),
+      screen.getByRole("button", {
+        name: englishCopy["ob.conv.clarify.dismiss"],
+      }),
     );
 
     // The dismissal is noted and the deck's confirm button re-arms — the
     // required fields are all grounded and no decision is left open, so
     // nothing else stands between the reader and confirming.
     const confirm = (await screen.findByRole("button", {
-      name: "Confirm profile",
+      name: englishCopy["ob.deck.confirm"],
     })) as HTMLButtonElement;
     expect(confirm.disabled).toBe(false);
 
@@ -362,7 +365,7 @@ describe("dismissing a clarify in the company act", () => {
     // heading is the first proof the confirm landed, and Continue carries the
     // installation's prefilled reporting basis forward unchanged.
     await screen.findByRole("heading", {
-      name: "Set the reporting basis",
+      name: englishCopy["ob.conv.basis.title"],
     });
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
@@ -372,7 +375,9 @@ describe("dismissing a clarify in the company act", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(
-      await screen.findByRole("heading", { name: "Train your writing voice" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["ob.conv.voice.sceneTitle"],
+      }),
     ).toBeTruthy();
   });
 
@@ -387,11 +392,13 @@ describe("dismissing a clarify in the company act", () => {
     });
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Keep my value" }),
+      await screen.findByRole("button", {
+        name: englishCopy["ob.conv.clarify.keepMine"],
+      }),
     );
 
     const confirm = (await screen.findByRole("button", {
-      name: "Confirm profile",
+      name: englishCopy["ob.deck.confirm"],
     })) as HTMLButtonElement;
     expect(confirm.disabled).toBe(false);
     await userEvent.click(confirm);

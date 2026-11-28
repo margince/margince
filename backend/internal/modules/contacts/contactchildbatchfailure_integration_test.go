@@ -97,7 +97,7 @@ func TestContactChildBatchServerErrorAttachesNothing(t *testing.T) {
 func TestContactChildBatchRidesPendingSnapshotSetup(t *testing.T) {
 	e, ctx, id, empty := childBatchFixture(t)
 	rows := []crmcontracts.Contact{{Id: openapi_types.UUID(id.UUID)}, {Id: openapi_types.UUID(empty.UUID)}}
-	err := database.WithWorkspaceSnapshot(ctx, e.store.db.Pool(), func(snap context.Context) error {
+	err := database.WithSnapshot(ctx, e.store.db.Pool(), func(snap context.Context) error {
 		return e.store.tx(snap, func(tx pgx.Tx) error {
 			idx := map[openapi_types.UUID]*crmcontracts.Contact{rows[0].Id: &rows[0], rows[1].Id: &rows[1]}
 			if err := attachContactChannels(snap, tx, idx, []ids.UUID{id.UUID, empty.UUID}); err != nil {

@@ -69,8 +69,8 @@ var documentReader = colleagueJob{work: documentExtractActor, books: "system:doc
 
 // withDocumentReader binds the reading's two principals for the human who
 // asked. work is nil when that human left or lost their seat.
-func (w *documentExtractWorker) withDocumentReader(ctx context.Context, requestedBy string, readID ids.UUID) (books, work context.Context, err error) {
-	books, work, err = forColleague(principal.WithCorrelationID(ctx, readID), w.users, requestedByUserID(requestedBy), documentReader)
+func withDocumentReader(ctx context.Context, users *identity.Service, requestedBy string, readID ids.UUID) (books, work context.Context, err error) {
+	books, work, err = forColleague(principal.WithCorrelationID(ctx, readID), users, requestedByUserID(requestedBy), documentReader)
 	if err != nil && !workRefused(err) {
 		return nil, nil, err
 	}
@@ -99,7 +99,7 @@ func (w *documentExtractWorker) Work(ctx context.Context, job *river.Job[Documen
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	wsCtx, work, err := w.withDocumentReader(wsCtx, args.RequestedBy, args.ExtractionReadID)
+	wsCtx, work, err := withDocumentReader(wsCtx, w.users, args.RequestedBy, args.ExtractionReadID)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

@@ -103,9 +103,9 @@ describe("ProjectScreen", () => {
     expect(
       screen.getAllByRole("button", { name: "Move to Pursuing" }),
     ).toContain(screen.getByTestId("project-step-pursuing"));
-    expect(screen.getByRole("button", { name: "Close project" })).toBe(
-      screen.getByTestId("project-step-closed"),
-    );
+    expect(
+      screen.getByRole("button", { name: en["project.advance.close"] }),
+    ).toBe(screen.getByTestId("project-step-closed"));
     expect(screen.queryByText("Closed")).toBeNull();
 
     // The figures: the phase's days, the open tasks, no file attached.
@@ -195,7 +195,9 @@ describe("ProjectScreen", () => {
     projectsBackend({ view: project360() });
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
     await user.click(
       screen.getByRole("button", { name: en["project.more.contacts"] }),
     );
@@ -203,7 +205,9 @@ describe("ProjectScreen", () => {
       name: en["project.more.contacts"],
     });
     expect(within(drawer).getByText("Anna Weber")).toBeTruthy();
-    expect(within(drawer).getByText("Project lead")).toBeTruthy();
+    expect(
+      within(drawer).getByText(en["project.role.project_lead"]),
+    ).toBeTruthy();
   });
 
   it("opens the files from the Contracts card", async () => {
@@ -300,7 +304,9 @@ describe("ProjectScreen", () => {
     });
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
     await user.click(
       screen.getByRole("button", { name: en["record.fullHistory"] }),
     );
@@ -340,7 +346,7 @@ describe("ProjectScreen", () => {
     });
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
-    const withheld = screen.getAllByText("Hidden for your role");
+    const withheld = screen.getAllByText(en["state.withheld"]);
     // The contracts, company references and both financial readings stay hidden.
     expect(withheld).toHaveLength(5);
     expect(
@@ -362,10 +368,10 @@ describe("ProjectScreen", () => {
     });
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
-    expect(screen.queryByText("Hidden for your role")).toBeNull();
+    expect(screen.queryByText(en["state.withheld"])).toBeNull();
     expect(screen.queryByTestId("project-company-withheld")).toBeNull();
     expect(screen.getByTestId("project-company-none").textContent).toBe(
-      "No customer company",
+      en["project.noCustomer"],
     );
     expect(
       await screen.findByTestId("project-new-deal-needs-company"),
@@ -443,7 +449,9 @@ describe("ProjectScreen", () => {
     // in here with them, and the id each describes itself by must resolve to
     // the band's sentence — which is why that sentence is minted OUTSIDE the
     // panel: one minted inside would name no element until the menu opened.
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
     // Barred is the NATIVE disabled attribute — the design system reserves
     // aria-disabled for "busy" — and each carries aria-describedby pointing at
     // the one sentence in the band, so a reader is told why rather than left
@@ -538,7 +546,7 @@ describe("ProjectScreen", () => {
     });
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
-    const more = screen.getByRole("button", { name: "More actions" });
+    const more = screen.getByRole("button", { name: en["record.moreActions"] });
     await user.click(more);
     const assign = screen.getByRole("button", {
       name: en["project.assignOwner"],
@@ -613,7 +621,9 @@ describe("Edit project in the More menu", () => {
     });
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
     await user.click(screen.getByRole("button", { name: en["project.edit"] }));
     const dialog = within(
       await screen.findByRole("dialog", { name: en["project.edit"] }),
@@ -649,7 +659,9 @@ describe("Edit project in the More menu", () => {
     });
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
     await user.click(screen.getByRole("button", { name: en["project.edit"] }));
     expect(
       screen.queryByRole("dialog", { name: en["project.edit"] }),

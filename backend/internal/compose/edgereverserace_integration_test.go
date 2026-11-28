@@ -45,7 +45,7 @@ func reversalsOf(t *testing.T, e *integration.Env, auditID ids.UUID) int {
 	t.Helper()
 	admin := e.Admin()
 	var count int
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin, `
 			SELECT count(*) FROM audit_log
 			WHERE evidence ->> $1 = $2::text`, privacy.UndidAuditLogID, auditID).Scan(&count)

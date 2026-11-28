@@ -76,7 +76,7 @@ func TestEveryDoorRefusesAFieldThatLeftReportsTheSameWay(t *testing.T) {
 		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll}},
 	}
 	var runID ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		answer, err := RunAnalyticsQuery(ctx, tx, q, analyticsquery.Floor(1))
 		if err != nil {
 			return err
@@ -94,11 +94,11 @@ func TestEveryDoorRefusesAFieldThatLeftReportsTheSameWay(t *testing.T) {
 	}
 
 	refusals := map[string]error{}
-	refusals["run"] = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	refusals["run"] = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := RunAnalyticsQuery(ctx, tx, q, analyticsquery.Floor(1))
 		return err
 	})
-	refusals["saved"] = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	refusals["saved"] = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := ReadReportRun(ctx, tx, runID, analyticsquery.Floor(1))
 		return err
 	})
@@ -140,7 +140,7 @@ func TestARenamedReportableFieldKeepsASavedQuestionAnswering(t *testing.T) {
 		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll}},
 	}
 	var runID ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		answer, err := RunAnalyticsQuery(ctx, tx, q, analyticsquery.Floor(1))
 		if err != nil {
 			return err
@@ -156,7 +156,7 @@ func TestARenamedReportableFieldKeepsASavedQuestionAnswering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		run, err := ReadReportRun(ctx, tx, runID, analyticsquery.Floor(1))
 		if err != nil {
 			return fmt.Errorf("the saved question after the rename: %w", err)

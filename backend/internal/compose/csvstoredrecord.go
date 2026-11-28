@@ -48,6 +48,8 @@ func (w *csvWriters) read(ctx context.Context, id ids.UUID) ([]byte, error) {
 			return nil, err
 		}
 		return encodeRecord(activity)
+	case migration.ObjectProject, migration.ObjectProduct:
+		return w.record.Read(ctx, id)
 	default:
 		return nil, fmt.Errorf("import: %q is not an importable object", w.object)
 	}

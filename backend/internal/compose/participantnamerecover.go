@@ -61,7 +61,7 @@ func recoverAttendeeNamesBatch(ctx context.Context, pool *pgxpool.Pool, limit in
 	// forever while reporting nothing.
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	var settled int
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		candidates, err := selectNameRecoveryCandidates(ctx, tx, limit)
 		if err != nil {
 			return err

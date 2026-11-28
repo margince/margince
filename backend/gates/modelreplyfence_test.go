@@ -501,6 +501,7 @@ func expressionMentions(expr ast.Expr, ident string) bool {
 // name-based scan, paid here in one line rather than by narrowing the scan and
 // missing a real site.
 var notAModelReply = gatekit.Waive(map[string]string{
+	"teams.PostReviewed": "decodes the Bot Framework HTTP response to an already reviewed outbound post, never a model completion",
 	"ai.decodeTranscriptItems": "reads the transcript an OPERATOR uploaded to the voice corpus, not a completion — " +
 		"its `content` is a form field, and there is no model whose manners could have wrapped it",
 	"whatsapp.SendText": "reads the Graph API's JSON answer to a send, which Meta's server wrote and no model produced",

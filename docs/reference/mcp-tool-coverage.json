@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 0,
     "never_driven": 6,
     "permitted_but_never_required": 1,
-    "tokens_served_but_never_driven": 3685,
+    "tokens_served_but_never_driven": 3686,
     "use_case_cases": 83,
     "acceptance_criteria_named": 133,
     "tools_added_by_shipped_units": 0,
@@ -11832,7 +11832,7 @@
     },
     {
       "name": "change_relationships",
-      "tokens": 816,
+      "tokens": 818,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11846,7 +11846,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 527,
+      "tokens": 526,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11860,7 +11860,7 @@
     },
     {
       "name": "decide_approvals",
-      "tokens": 463,
+      "tokens": 464,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11876,7 +11876,7 @@
     },
     {
       "name": "enrich",
-      "tokens": 446,
+      "tokens": 445,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11910,7 +11910,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 4606,
+      "tokens": 4605,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11957,7 +11957,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 3353,
+      "tokens": 3352,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"
@@ -12003,7 +12003,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3261,
+      "tokens": 3259,
       "agents": [],
       "required_by_cases": [
         "case116_the_rate_and_the_logo",
@@ -12046,76 +12046,8 @@
       }
     },
     {
-      "name": "change_activities",
-      "tokens": 3063,
-      "agents": [
-        "overnight_at_risk_sweep"
-      ],
-      "required_by_cases": [
-        "case9_filed_in_the_wrong_place"
-      ],
-      "required_as_one_of_a_set_by_cases": [
-        "case122_file_the_acceptance_report",
-        "case1_log_it",
-        "case42_can_i_answer_on_whatsapp",
-        "case60_send_one_draft_one"
-      ],
-      "permitted_in_cases": [
-        "case110_write_greta_a_thank_you",
-        "case117_log_it_and_say_what_waits",
-        "case126_file_it_i_approve",
-        "case127_log_the_call_again",
-        "case130_put_the_offer_link_on_the_deal",
-        "case46_get_us_in_a_room",
-        "case48_that_whole_thread_is_filed_wrong",
-        "case59_file_it_on_the_meeting_and_the_contract",
-        "case74_read_the_file_back"
-      ],
-      "called_in_held_runs": [
-        "case1_log_it",
-        "case110_write_greta_a_thank_you",
-        "case117_log_it_and_say_what_waits",
-        "case122_file_the_acceptance_report",
-        "case126_file_it_i_approve",
-        "case130_put_the_offer_link_on_the_deal",
-        "case42_can_i_answer_on_whatsapp",
-        "case46_get_us_in_a_room",
-        "case48_that_whole_thread_is_filed_wrong",
-        "case59_file_it_on_the_meeting_and_the_contract",
-        "case60_send_one_draft_one",
-        "case74_read_the_file_back",
-        "case9_filed_in_the_wrong_place"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "read_workspace",
-      "tokens": 3012,
+      "tokens": 3011,
       "agents": [],
       "required_by_cases": [
         "case111_how_is_the_workspace_doing"
@@ -12258,8 +12190,76 @@
       }
     },
     {
+      "name": "change_activities",
+      "tokens": 3000,
+      "agents": [
+        "overnight_at_risk_sweep"
+      ],
+      "required_by_cases": [
+        "case9_filed_in_the_wrong_place"
+      ],
+      "required_as_one_of_a_set_by_cases": [
+        "case122_file_the_acceptance_report",
+        "case1_log_it",
+        "case42_can_i_answer_on_whatsapp",
+        "case60_send_one_draft_one"
+      ],
+      "permitted_in_cases": [
+        "case110_write_greta_a_thank_you",
+        "case117_log_it_and_say_what_waits",
+        "case126_file_it_i_approve",
+        "case127_log_the_call_again",
+        "case130_put_the_offer_link_on_the_deal",
+        "case46_get_us_in_a_room",
+        "case48_that_whole_thread_is_filed_wrong",
+        "case59_file_it_on_the_meeting_and_the_contract",
+        "case74_read_the_file_back"
+      ],
+      "called_in_held_runs": [
+        "case1_log_it",
+        "case110_write_greta_a_thank_you",
+        "case117_log_it_and_say_what_waits",
+        "case122_file_the_acceptance_report",
+        "case126_file_it_i_approve",
+        "case130_put_the_offer_link_on_the_deal",
+        "case42_can_i_answer_on_whatsapp",
+        "case46_get_us_in_a_room",
+        "case48_that_whole_thread_is_filed_wrong",
+        "case59_file_it_on_the_meeting_and_the_contract",
+        "case60_send_one_draft_one",
+        "case74_read_the_file_back",
+        "case9_filed_in_the_wrong_place"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-4-hydrogen-medium@agy-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "change_state",
-      "tokens": 2362,
+      "tokens": 2360,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12287,7 +12287,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 2102,
+      "tokens": 2117,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -12487,7 +12487,7 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1986,
+      "tokens": 1987,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12507,7 +12507,7 @@
     },
     {
       "name": "read_view",
-      "tokens": 1926,
+      "tokens": 1925,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12542,7 +12542,7 @@
     },
     {
       "name": "change_attention",
-      "tokens": 1833,
+      "tokens": 1832,
       "agents": [],
       "required_by_cases": [
         "case104_mark_it_seen"
@@ -12623,7 +12623,7 @@
     },
     {
       "name": "run_research",
-      "tokens": 1421,
+      "tokens": 1482,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12641,7 +12641,7 @@
     },
     {
       "name": "read_analytics",
-      "tokens": 1373,
+      "tokens": 1372,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [
@@ -12687,7 +12687,7 @@
     },
     {
       "name": "change_access",
-      "tokens": 1152,
+      "tokens": 1151,
       "agents": [],
       "required_by_cases": [
         "case114_the_fleet_team"
@@ -12745,7 +12745,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 1008,
+      "tokens": 1017,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12795,7 +12795,7 @@
     },
     {
       "name": "bulk_update_records",
-      "tokens": 894,
+      "tokens": 893,
       "agents": [],
       "required_by_cases": [
         "case131_no_to_the_hand_over"
@@ -12823,7 +12823,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 888,
+      "tokens": 892,
       "agents": [],
       "required_by_cases": [
         "case56_not_the_same"
@@ -12979,7 +12979,7 @@
     },
     {
       "name": "change_tags",
-      "tokens": 650,
+      "tokens": 647,
       "agents": [],
       "required_by_cases": [
         "case32_two_words_for_one_thing"
@@ -13152,7 +13152,7 @@
     },
     {
       "name": "read_context",
-      "tokens": 413,
+      "tokens": 412,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -13274,34 +13274,8 @@
       }
     },
     {
-      "name": "read_relationships",
-      "tokens": 366,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case108_ask_sofia_for_an_intro",
-        "case120_what_the_pump_customer_wants",
-        "case33_two_cards_for_one_company",
-        "case49_who_can_introduce_us",
-        "case5_before_the_meeting"
-      ],
-      "called_in_held_runs": [
-        "case105_what_changed_there",
-        "case108_ask_sofia_for_an_intro",
-        "case44_chase_what_is_slipping",
-        "case49_who_can_introduce_us",
-        "case58_quiet_for_three_weeks"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {}
-    },
-    {
       "name": "read_attention",
-      "tokens": 365,
+      "tokens": 368,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -13335,6 +13309,32 @@
         "case61_what_have_i_promised",
         "case64_catch_me_up_and_the_brief",
         "case65_clear_out_the_dead_deals"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {}
+    },
+    {
+      "name": "read_relationships",
+      "tokens": 365,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case108_ask_sofia_for_an_intro",
+        "case120_what_the_pump_customer_wants",
+        "case33_two_cards_for_one_company",
+        "case49_who_can_introduce_us",
+        "case5_before_the_meeting"
+      ],
+      "called_in_held_runs": [
+        "case105_what_changed_there",
+        "case108_ask_sofia_for_an_intro",
+        "case44_chase_what_is_slipping",
+        "case49_who_can_introduce_us",
+        "case58_quiet_for_three_weeks"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -13398,7 +13398,7 @@
     },
     {
       "name": "read_project",
-      "tokens": 316,
+      "tokens": 315,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -13583,7 +13583,7 @@
     },
     {
       "name": "commit_import",
-      "tokens": 275,
+      "tokens": 274,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],

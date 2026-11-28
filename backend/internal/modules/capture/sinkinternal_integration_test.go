@@ -50,7 +50,7 @@ func bootstrapInternalMailWorkspace(t *testing.T, ownDomains ...string) (context
 		// Registered the way cold start does it: the installation's own company
 		// claims these domains. That claim, not a row in the capture registry,
 		// is what makes them count.
-		if err := database.WithWorkspaceTx(wsCtx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(wsCtx, pool, func(tx pgx.Tx) error {
 			companyID := ids.NewV7()
 			if _, err := tx.Exec(wsCtx, `
 				INSERT INTO company (id, display_name, is_anchor, source, captured_by)
@@ -120,7 +120,7 @@ func mailRecord(sourceID string, counterparty string, addresses ...string) conne
 // looked correct while the body was on the timeline.
 func countsFor(ctx context.Context, t *testing.T, pool *pgxpool.Pool, sourceID string) (activities, participants, raws, audits int) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx,
 			`SELECT count(*) FROM activity WHERE source_id = $1`, sourceID).Scan(&activities); err != nil {
 			return err
@@ -152,7 +152,7 @@ func countsFor(ctx context.Context, t *testing.T, pool *pgxpool.Pool, sourceID s
 func breadcrumbReasons(ctx context.Context, t *testing.T, pool *pgxpool.Pool, sourceID string) []string {
 	t.Helper()
 	var out []string
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
 			`SELECT detail->>'reason' FROM system_log
 			  WHERE detail->>'source_id' = $1 ORDER BY occurred_at`, sourceID)

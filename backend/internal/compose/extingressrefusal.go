@@ -52,7 +52,7 @@ func (r *callRuntime) noteRefusal(ctx context.Context, class extension.RecordRef
 	// refused before any authority is spent.
 	scoped, err := r.scoped(ctx)
 	if err == nil {
-		err = database.WithWorkspaceTx(scoped, r.deps.pool, func(tx pgx.Tx) error {
+		err = database.WithTx(scoped, r.deps.pool, func(tx pgx.Tx) error {
 			return recordIngestRefusal(scoped, tx, r.unit, class, time.Now().UTC())
 		})
 	}

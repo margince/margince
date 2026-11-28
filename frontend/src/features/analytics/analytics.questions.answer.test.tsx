@@ -5,6 +5,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { ProblemError } from "../../lib/problem";
 import { meFixture } from "../../testing/mefixture";
 import { AnswerTable, type ExplainSource } from "./analytics.questions.answer";
@@ -111,7 +112,7 @@ describe("the answer table", () => {
     });
     await screen.findByText("Qualified");
     expect(
-      within(bodyRows()[0]).getByText("Too large to show exactly"),
+      within(bodyRows()[0]).getByText(englishCopy["format.tooLargeExact"]),
     ).toBeTruthy();
     expect(within(bodyRows()[2]).getByText("US$125,000")).toBeTruthy();
   });
@@ -126,7 +127,9 @@ describe("the answer table", () => {
     expect(rows[1].textContent).toContain("Proposal");
     const withheld = rows[2];
     expect(withheld.textContent).toBe("3 groups withheld");
-    expect(screen.getByText("Some groups are withheld")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["analytics.q.withheldTitle"]),
+    ).toBeTruthy();
     expect(
       within(withheld).queryByRole("button", { name: /Explain/ }),
     ).toBeNull();
@@ -194,9 +197,11 @@ describe("the answer table", () => {
       { ...QUERY, group_by: ["stage_id"] },
     );
     await screen.findByText("Qualified");
-    expect(screen.getAllByText("Mixed currencies")).toHaveLength(3);
     expect(
-      screen.getByText("Amounts in different currencies are not added up"),
+      screen.getAllByText(englishCopy["analytics.q.mixedCurrencies"]),
+    ).toHaveLength(3);
+    expect(
+      screen.getByText(englishCopy["analytics.q.mixedTitle"]),
     ).toBeTruthy();
   });
 
@@ -214,7 +219,7 @@ describe("the answer table", () => {
     stubServer();
     renderAnswer({ ...ANSWER, rows: [] });
     expect(
-      await screen.findByText("No records match this question."),
+      await screen.findByText(englishCopy["analytics.q.empty"]),
     ).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
   });
@@ -331,9 +336,7 @@ describe("a row's drill-down", () => {
       await screen.findByRole("button", { name: "Explain Qualified, EUR" }),
     );
     expect(
-      await screen.findByText(
-        "This group covers too few records to show, so its records stay hidden.",
-      ),
+      await screen.findByText(englishCopy["analytics.q.explainWithheld"]),
     ).toBeTruthy();
     cleanup();
 
@@ -381,7 +384,7 @@ describe("a question that was not answered", () => {
     const note = screen.getByRole("status");
     expect(note.textContent).toContain("group by stage_id alone");
     expect(note.textContent).toContain(
-      "The answer would describe too few records.",
+      englishCopy["analytics.q.refusal.privacy"],
     );
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -398,7 +401,7 @@ describe("a question that was not answered", () => {
     );
     const heading = document.querySelector(".callout-title");
     expect(heading?.textContent).toBe(
-      "The answer would describe too few records.",
+      englishCopy["analytics.q.refusal.privacy"],
     );
   });
 
@@ -458,8 +461,12 @@ describe("a converted amount with no base currency", () => {
       />,
     );
     expect(await screen.findByText("No amount")).toBeTruthy();
-    expect(screen.getByText("Currency not set")).toBeTruthy();
-    expect(screen.queryByText("Mixed currencies")).toBeNull();
+    expect(
+      screen.getByText(englishCopy["analytics.noBaseCurrencyWhy"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(englishCopy["analytics.q.mixedCurrencies"]),
+    ).toBeNull();
   });
 });
 

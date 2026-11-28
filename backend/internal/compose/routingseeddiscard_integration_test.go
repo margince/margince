@@ -57,7 +57,7 @@ func TestADeclaredBindingSeedsAnInstallationThatHoldsNone(t *testing.T) {
 	ctx := e.Admin()
 
 	var discarded []string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return seedRoutingBinding(ctx, tx, declaredFromFile(t), &discarded)
 	}); err != nil {
 		t.Fatalf("seeding the declared binding: %v", err)
@@ -95,7 +95,7 @@ embeddings: {provider: gemini, model: survivor-embed, dimensions: 8}
 	if err != nil {
 		t.Fatalf("building the surviving binding: %v", err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := config.SeedTx(ctx, tx, nil, ai.Routing, surviving)
 		return err
 	}); err != nil {
@@ -103,7 +103,7 @@ embeddings: {provider: gemini, model: survivor-embed, dimensions: 8}
 	}
 
 	var discarded []string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return seedRoutingBinding(ctx, tx, declaredFromFile(t), &discarded)
 	}); err != nil {
 		t.Fatalf("seeding over an existing binding: %v", err)

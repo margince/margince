@@ -60,17 +60,17 @@ it("announces the failure alone when a withheld line sits beside it", () => {
   );
   const spoken = container.querySelector('[role="status"]');
   expect(spoken?.textContent).toContain("Tasks");
-  expect(spoken?.textContent).not.toContain("Privacy requests");
+  expect(spoken?.textContent).not.toContain(en["brief.coverage.source.dsr"]);
   expect(spoken?.textContent).not.toContain(en["brief.factor.warmth"]);
   // Still on the page, just not announced.
-  expect(document.body.textContent).toContain("Privacy requests");
+  expect(document.body.textContent).toContain(en["brief.coverage.source.dsr"]);
   expect(document.body.textContent).toContain(en["brief.factor.warmth"]);
 });
 it("names a withheld source without dressing it as a fault", () => {
   const day = readingsDay({}, []);
   day.sources_unavailable = [{ source: "dsr", reason: "withheld" }];
   render(<BriefCoverage day={day} onRetry={vi.fn()} />);
-  expect(document.body.textContent).toContain("Privacy requests");
+  expect(document.body.textContent).toContain(en["brief.coverage.source.dsr"]);
   expect(
     screen.queryByRole("button", { name: en["brief.coverage.retry"] }),
   ).toBeNull();

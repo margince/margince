@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -85,7 +86,7 @@ export const RecoveryCodes: Story = {
     );
     await userEvent.click(screen.getByRole("button", { name: "Turn on" }));
     const codes = await screen.findByRole("textbox", {
-      name: "Recovery codes",
+      name: englishCopy["mfa.codesLabel"],
     });
     await waitFor(() => expect(codes).toBeVisible());
   },

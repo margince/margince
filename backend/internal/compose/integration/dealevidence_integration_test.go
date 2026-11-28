@@ -120,7 +120,7 @@ func (w dealEvidenceWorld) judgeThread(t *testing.T, thread, kind string) {
 	if row.ID == ids.Nil {
 		t.Fatalf("the mailbox asked no question about thread %s", thread)
 	}
-	if err := database.WithWorkspaceTx(w.e.Admin(), w.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(w.e.Admin(), w.e.Pool, func(tx pgx.Tx) error {
 		won, err := store.ResolveAs(w.e.Admin(), tx, row, capture.VerdictHeld, kind, 0.95, nil, "test")
 		if err != nil || !won {
 			return err
@@ -266,7 +266,7 @@ func TestTheDealVerdictReadsNoPersonalMailDate(t *testing.T) {
 			w.judgeThread(t, thread, kind)
 			var in dealverdict.Input
 			var newest time.Time
-			if err := database.WithWorkspaceTx(w.e.Admin(), w.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(w.e.Admin(), w.e.Pool, func(tx pgx.Tx) error {
 				return dealprivatemail.Read(context.Background(), tx, w.deal.UUID, 20, &in, &newest)
 			}); err != nil {
 				t.Fatal(err)
@@ -290,7 +290,7 @@ func TestTheDataTaskTakesAPersonalMailOffAStoredDealClock(t *testing.T) {
 	step := dealclockrefold.PersonalMeetingsTask().Steps[0]
 	ctx := principal.SystemActing(w.e.Admin(), "system:datatask-test")
 	for pass, want := range []int{1, 0} {
-		if err := database.WithWorkspaceTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
 			out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 200, RunID: ids.NewV7()})
 			if err == nil && out.Changed != want {
 				t.Errorf("pass %d refolded %d deal clocks, want %d", pass+1, out.Changed, want)

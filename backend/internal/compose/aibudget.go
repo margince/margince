@@ -43,7 +43,7 @@ func NewSeatBudget(pool *pgxpool.Pool) ai.BudgetPolicy { return seatBudget{pool:
 // over-cap. A NEW value being written still validates strictly, in ReplaceBudget.
 func (b seatBudget) MonthlyTokenBudget(ctx context.Context, workspaceID ids.WorkspaceID) (int64, error) {
 	var monthly int64
-	err := database.WithWorkspaceTx(principal.WithWorkspaceID(ctx, workspaceID.UUID), b.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(principal.WithWorkspaceID(ctx, workspaceID.UUID), b.pool, func(tx pgx.Tx) error {
 		budget, err := config.StoredApplyTx(ctx, tx, loadedConfig(), ai.BudgetSettings)
 		if err != nil {
 			return err

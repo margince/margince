@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import {
   installFetchStub,
@@ -97,7 +98,9 @@ describe("a promise nobody was asked to keep", () => {
     renderCard([OWNERLESS]);
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "I’ll take this" }),
+      await screen.findByRole("button", {
+        name: englishCopy["commitment.takeOver"],
+      }),
     );
     await waitFor(() => expect(pressed).toEqual(["c-1"]));
   });
@@ -118,7 +121,9 @@ describe("a promise nobody was asked to keep", () => {
     renderCard([OWNERLESS]);
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "I’ll take this" }),
+      await screen.findByRole("button", {
+        name: englishCopy["commitment.takeOver"],
+      }),
     );
     expect(await screen.findByText(/Priya Raman/)).toBeTruthy();
   });
@@ -134,7 +139,11 @@ describe("a promise nobody was asked to keep", () => {
     renderCard([OWNERLESS]);
     await waitFor(() => expect(meServed).toBe(true));
     await act(async () => {});
-    expect(screen.queryByRole("button", { name: "I’ll take this" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["commitment.takeOver"],
+      }),
+    ).toBeNull();
   });
 
   it("is not offered once it is somebody's task", async () => {
@@ -145,7 +154,11 @@ describe("a promise nobody was asked to keep", () => {
     // The open task is the promise now, and the Tasks tab lists it.
     await screen.findByRole("heading", { name: "Commitments" });
     await act(async () => {});
-    expect(screen.queryByRole("button", { name: "I’ll take this" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["commitment.takeOver"],
+      }),
+    ).toBeNull();
   });
 });
 
@@ -170,7 +183,11 @@ describe("a promise a colleague took over", () => {
       await screen.findByText("Priya Raman took this on 25 Aug"),
     ).toBeTruthy();
     expect(screen.getAllByRole("checkbox")).toHaveLength(1);
-    expect(screen.queryByRole("button", { name: "I’ll take this" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["commitment.takeOver"],
+      }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   });
 });

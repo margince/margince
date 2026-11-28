@@ -54,7 +54,7 @@ func TestCalendarAgendaNeedsAuthoredNotesBeforeARecap(t *testing.T) {
 				t.Fatal("captured meeting has no version")
 			}
 			ctx := principal.SystemActing(e.Admin(), "render-calendar-description")
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				rendered, err := activities.RenderMeetingBodyTx(ctx, tx, activities.MeetingBodyRender{Activity: ref.ID, Version: *meeting.Version, StoredBody: agenda, Body: "Agenda: discuss the account."})
 				if err == nil && !rendered {
 					t.Error("calendar description was not rendered")

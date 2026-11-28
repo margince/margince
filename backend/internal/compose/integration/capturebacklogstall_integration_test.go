@@ -59,7 +59,7 @@ func TestARowTheRetryLoopKeepsTouchingIsStillStalled(t *testing.T) {
 	e := Setup(t)
 	seedPendingSender(t, e, e.Rep1, "haengt@example.test", 1, 8*time.Hour)
 	// What Defer does on every outage cycle.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET updated_at = now(), next_attempt_at = now() + interval '30 minutes'
@@ -79,7 +79,7 @@ func TestAResolvedRowIsNotStalled(t *testing.T) {
 	// The question was answered. Only a row still waiting is waiting.
 	e := Setup(t)
 	seedPendingSender(t, e, e.Rep1, "beantwortet@example.test", 2, 8*time.Hour)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_pending_counterparty SET status = 'real' WHERE email = $1`,
 			"beantwortet@example.test")
@@ -126,7 +126,7 @@ func stalledSeats(t *testing.T, e *Env) map[ids.UUID]int {
 func seedPendingSender(t *testing.T, e *Env, owner ids.UUID, email string, attempts int, quietFor time.Duration) {
 	t.Helper()
 	activity := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source, captured_by,
 			                      counterparty_email, audience)

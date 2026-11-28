@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption, toggleOptions } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { AutomationDialog } from "./automations.form";
 
 afterEach(() => {
@@ -94,7 +95,9 @@ it("clears destination stages when the chosen pipeline changes and saves the sel
   );
   const pipeline = await screen.findByRole("combobox", { name: "Pipeline" });
   await pickOption(user, pipeline, "Renewals");
-  const stages = screen.getByRole("combobox", { name: "Destination stages" });
+  const stages = screen.getByRole("combobox", {
+    name: englishCopy["auto.stages.destinations"],
+  });
   expect(stages).not.toHaveTextContent("Proposal");
   await toggleOptions(user, stages, ["Review"]);
   await user.click(screen.getByRole("button", { name: "Save" }));

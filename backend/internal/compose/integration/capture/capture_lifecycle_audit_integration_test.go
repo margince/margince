@@ -47,7 +47,7 @@ func (v *hangUpVault) Delete(ctx context.Context, ws ids.WorkspaceID, ref keyvau
 func connectionCredentialRef(t *testing.T, e *integration.SearchEnv, connID ids.UUID) string {
 	t.Helper()
 	var ref *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT credential_ref FROM capture_connection WHERE id = $1`, connID).Scan(&ref)
 	}); err != nil {
@@ -112,7 +112,7 @@ func TestDisconnectDeletesTheCredentialWhenTheCallerHangsUp(t *testing.T) {
 	}
 	// The row must not keep pointing at a destroyed secret, hang-up or not.
 	var stillRefs *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT credential_ref FROM capture_connection WHERE id = $1`, connID).Scan(&stillRefs)
 	}); err != nil {
@@ -135,7 +135,7 @@ type lifecycleAudit struct {
 func connectionAudits(t *testing.T, e *integration.SearchEnv) []lifecycleAudit {
 	t.Helper()
 	var out []lifecycleAudit
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT action, actor_id, after FROM audit_log
 			 WHERE entity_type = 'capture_connection'
@@ -202,7 +202,7 @@ func TestConnectAndDisconnectLeaveAnAttributableAuditRow(t *testing.T) {
 
 	// The audited entity is the connection the caller was handed.
 	var audited int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM audit_log WHERE entity_type = 'capture_connection' AND entity_id = $1`, connID).Scan(&audited)
 	}); err != nil {
@@ -218,7 +218,7 @@ func TestConnectAndDisconnectLeaveAnAttributableAuditRow(t *testing.T) {
 func connectionGeneration(t *testing.T, e *integration.SearchEnv, connID ids.UUID) int {
 	t.Helper()
 	var generation int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT generation FROM capture_connection WHERE id = $1`, connID).Scan(&generation)
 	}); err != nil {
@@ -309,7 +309,7 @@ func TestAConnectThatFailsLeavesNoAuditRow(t *testing.T) {
 		t.Fatalf("a rolled-back connect left %d audit rows behind: %+v", len(audits), audits)
 	}
 	var connections int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM capture_connection`).Scan(&connections)
 	}); err != nil {
 		t.Fatal(err)

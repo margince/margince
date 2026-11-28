@@ -4,7 +4,7 @@
 // Package installtrial answers the trial of a production installation that has
 // no license, and whether the installation is locked. Its two inputs live in
 // different layers: the license posture is platform's, and the start is the
-// workspace table's creation time.
+// creation time of the first company.
 package installtrial
 
 import (
@@ -15,9 +15,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
@@ -128,21 +131,25 @@ func (t *Trial) Paused(log *slog.Logger) func(context.Context) bool {
 	}
 }
 
-// start is the creation time of the installation's first workspace, archived
+// start is the creation time of the installation's first company, archived
 // ones included. Archiving the workspace and creating another begins no second
 // trial.
 func (t *Trial) start(ctx context.Context) (time.Time, bool, error) {
 	if cached := t.started.Load(); cached != nil {
 		return *cached, true, nil
 	}
-	var first *time.Time
-	// rls-exempt: the workspace table is not workspace-scoped; the trial belongs to the installation, before any tenant transaction.
-	if err := t.pool.QueryRow(ctx, `SELECT min(created_at) FROM workspace`).Scan(&first); err != nil {
+	var trial storekit.InstallationTrial
+	var found bool
+	if err := database.WithInfraTx(ctx, t.pool, func(tx pgx.Tx) error {
+		var err error
+		trial, found, err = storekit.InstallationStateTx[storekit.InstallationTrial](ctx, tx, storekit.StateInstallationTrial)
+		return err
+	}); err != nil {
 		return time.Time{}, false, fmt.Errorf("installtrial: reading when the trial started: %w", err)
 	}
-	if first == nil {
+	if !found {
 		return time.Time{}, false, nil
 	}
-	t.started.Store(first)
-	return *first, true, nil
+	t.started.Store(&trial.StartedAt)
+	return trial.StartedAt, true, nil
 }

@@ -12,6 +12,7 @@ import {
 import { DealActions } from "./dealactions";
 // The bar class the stories wrap the verbs in is styled by the record view.
 import "../../../design-system/recordview.css";
+import { en as englishCopy } from "../../../i18n/en";
 
 // The verbs a deal's header offers: mail first, then what the reader RECORDS
 // about the deal, and everything rarer behind the overflow. Worth looking at
@@ -147,7 +148,7 @@ export const ReadOnlyDeal: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "More actions",
+        name: englishCopy["record.moreActions"],
       }),
     );
     const addTask = await screen.findByRole("button", { name: "Add task" });
@@ -180,7 +181,7 @@ export const ArchiveRefusedNotYours: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "More actions",
+        name: englishCopy["record.moreActions"],
       }),
     );
     const archive = await screen.findByTestId("archive-record");
@@ -208,7 +209,7 @@ export const Archived: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "More actions",
+        name: englishCopy["record.moreActions"],
       }),
     );
     const reopen = await screen.findByRole("button", { name: "Reopen" });
@@ -231,14 +232,14 @@ export const OverflowOnAClosedDeal: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "More actions",
+        name: englishCopy["record.moreActions"],
       }),
     );
     await expect(
       await screen.findByRole("button", { name: "Reopen" }),
     ).toBeVisible();
     await expect(
-      await screen.findByRole("button", { name: "Archive deal" }),
+      await screen.findByRole("button", { name: englishCopy["deal.archive"] }),
     ).toBeEnabled();
   },
 };
@@ -249,14 +250,14 @@ export const ReopeningAClosedDeal: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "More actions",
+        name: englishCopy["record.moreActions"],
       }),
     );
     await userEvent.click(
       await screen.findByRole("button", { name: "Reopen" }),
     );
     const dialog = await screen.findByRole("dialog", {
-      name: "Move this deal back to an open stage",
+      name: englishCopy["deal.reopenPick"],
     });
     const stage = within(dialog).getByRole("button", { name: "Qualified" });
     await userEvent.click(stage);

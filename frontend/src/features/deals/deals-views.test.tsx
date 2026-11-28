@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { SEARCH_DEBOUNCE_MS } from "../../components/listquery";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { showLayout } from "../../testing/listquery.testkit";
 import { openView, toggleArchived } from "../../testing/listview.testkit";
 import { DealsScreen } from "./deals";
@@ -244,7 +245,9 @@ describe("a saved view over the deals board", () => {
         name: `More actions for the ${STALLED_CHIP} filter`,
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Delete filter" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["table.deleteFilter"] }),
+    );
 
     // Cleared means WIDENED, not un-drawn: the next read of the list asks the
     // server for the deals the filter was keeping off the board.
@@ -304,9 +307,7 @@ describe("a saved view over the deals board", () => {
     expect(await screen.findByText("2 deals in Sales")).toBeInTheDocument();
     expect(screen.getByText("2 deals")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Loaded deals only. Totals are unavailable while archived deals are included.",
-      ),
+      screen.getByText(englishCopy["deals.totalsNoArchived"]),
     ).toBeTruthy();
   });
 
@@ -448,9 +449,7 @@ describe("the deals list narrows like every other record list", () => {
     // count deals the search is keeping off the board.
     // One stage, so one column states it.
     expect(
-      await screen.findAllByText(
-        "Loaded deals only. The stage totals cannot apply a search, so none is shown.",
-      ),
+      await screen.findAllByText(englishCopy["deals.totalsNoSearch"]),
     ).toHaveLength(1);
   });
 

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { PORTRAIT } from "../../testing/seatphotos";
 import { accountStory } from "./account-settings.stories";
 import { ProfilePictureRow } from "./profilepicture";
@@ -21,7 +22,7 @@ function pickPicture(file: File) {
   return async ({ canvasElement }: { canvasElement: HTMLElement }) => {
     const page = within(canvasElement);
     await userEvent.upload(
-      await page.findByLabelText("Profile picture"),
+      await page.findByLabelText(englishCopy["account.pictureLabel"]),
       file,
       { applyAccept: false },
     );
@@ -56,7 +57,7 @@ export const PictureUploadedDark: Story = {
 async function openEdit({ canvasElement }: { canvasElement: HTMLElement }) {
   await userEvent.click(
     await within(canvasElement).findByRole("button", {
-      name: "Edit profile picture",
+      name: englishCopy["account.pictureEdit"],
     }),
   );
 }
@@ -69,7 +70,7 @@ export const PictureMenuOpen: Story = {
     await within(context.canvasElement.ownerDocument.body).findByRole(
       "button",
       {
-        name: "Remove picture",
+        name: englishCopy["account.pictureRemove"],
       },
     );
   },
@@ -94,7 +95,7 @@ export const PictureEmptyMenuOpen: Story = {
     await within(context.canvasElement.ownerDocument.body).findByRole(
       "button",
       {
-        name: "Upload picture",
+        name: englishCopy["account.pictureAdd"],
       },
     );
   },
@@ -109,7 +110,7 @@ export const PictureUploading: Story = {
     await pickPicture(PICTURE)(context);
     await expect(
       await within(context.canvasElement).findByRole("button", {
-        name: "Edit profile picture",
+        name: englishCopy["account.pictureEdit"],
       }),
     ).toHaveAttribute("aria-busy", "true");
   },
@@ -125,7 +126,7 @@ export const PictureTooLarge: Story = {
       }),
     )(context);
     await within(context.canvasElement).findByText(
-      "Picture not uploaded. Use a file up to 5 MB.",
+      englishCopy["account.pictureTooLarge"],
     );
   },
 };
@@ -137,7 +138,7 @@ export const PictureWrongType: Story = {
       context,
     );
     await within(context.canvasElement).findByText(
-      "Picture not uploaded. Use a PNG, JPEG or WebP file.",
+      englishCopy["account.pictureWrongType"],
     );
   },
 };
@@ -156,7 +157,7 @@ export const PictureNoStorage: Story = {
   play: async (context) => {
     await pickPicture(PICTURE)(context);
     await within(context.canvasElement).findByText(
-      "This installation has no file storage for pictures. Contact your system administrator.",
+      englishCopy["account.pictureNoStorage"],
     );
   },
 };

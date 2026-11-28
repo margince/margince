@@ -32,7 +32,7 @@ import (
 func saveForecastRun(ctx context.Context, t *testing.T, e *forecastEnv, q analyticsquery.Query) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		answer, err := RunAnalyticsQuery(ctx, tx, q, analyticsquery.Floor(1))
 		if err != nil {
 			return err
@@ -49,7 +49,7 @@ func saveForecastRun(ctx context.Context, t *testing.T, e *forecastEnv, q analyt
 func savedRunCount(ctx context.Context, t *testing.T, e *forecastEnv, run ids.UUID) string {
 	t.Helper()
 	var read ReportRun
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		read, err = ReadReportRun(ctx, tx, run, analyticsquery.Floor(1))
 		return err
@@ -103,7 +103,7 @@ func TestASavedPeriodKeepsItsDatesWhenTheFiscalStartMoves(t *testing.T) {
 	saved := []ids.UUID{saveForecastRun(ctx, t, e, calendarYear), saveForecastRun(ctx, t, e, calendarYear)}
 
 	var impact crmcontracts.InstallationFiscalYearImpact
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		impact, err = fiscalYearImpact(ctx, tx)
 		return err
@@ -247,7 +247,7 @@ func TestABoundFilterNamingASubjectIsHandedOverAndErased(t *testing.T) {
 		t.Fatalf("erasure left %d revisions keeping the subject's address (%v)", kept, err)
 	}
 	var card reporting.QuestionCard
-	if err := database.WithWorkspaceTx(q.human, q.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(q.human, q.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		card, _, err = q.service.QuestionCardIn(q.human, tx, ids.UUID(report.Id), nil, "bound")
 		return err

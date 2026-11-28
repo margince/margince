@@ -44,7 +44,7 @@ func TestACompletionAtTheClosingBoundaryRemainsCarriedOver(t *testing.T) {
 	// The real writer stamps creation and completion. Dating only the due date
 	// exercises the cutoff without guessing how fast the machine executes.
 	start := due.Add(-time.Hour)
-	err = database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		counts, err := countWeek(e.repCtx, tx, e.Rep1, start, end)
 		if err != nil {
 			return err
@@ -98,7 +98,7 @@ func TestAccountCoincidenceDoesNotProveAMeetingFollowUp(t *testing.T) {
 	}
 	read := func(end time.Time, want int) {
 		t.Helper()
-		err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 			count, linked, err := countWeekMeetings(e.repCtx, tx, e.Rep1,
 				meeting.OccurredAt.Add(-time.Hour), end)
 			if err == nil && (count != 1 || linked != want) {
@@ -194,7 +194,7 @@ func TestUndatedWorkCountsAsCompletedWithoutInventingADueDate(t *testing.T) {
 	if finished.DoneAt == nil {
 		t.Fatal("completion missing timestamp")
 	}
-	err = database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		counts, err := countWeek(e.repCtx, tx, e.Rep1, task.CreatedAt.Add(-time.Hour), finished.DoneAt.Add(time.Second))
 		if err != nil {
 			return err
@@ -241,7 +241,7 @@ func TestReopeningAfterTheCutoffDoesNotEraseCompletedWork(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		counts, err := countWeek(e.repCtx, tx, e.Rep1, task.CreatedAt.Add(-time.Hour), reopened.UpdatedAt)
 		if err != nil {
 			return err

@@ -88,7 +88,7 @@ func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 	if !may {
 		return lang
 	}
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		resolved, err := BaseLanguageOf(ctx, tx)
 		if err != nil {
 			return err

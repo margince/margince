@@ -46,11 +46,11 @@ var modelRouteSuffixes = []string{
 	"/enrich",
 	"/coldstart",
 	"/coldstart/preview",
-	"/messages",
 	"/regenerate",
 	"/filters/propose",
 	"/reader-rendering",
 	"/rewrites",
+	"/label-translations",
 	"/analytics/assessment",
 	"/analytics/setup-proposal",
 	"/analytics/progress/summary",
@@ -72,6 +72,10 @@ var modelRouteSuffixes = []string{
 // route matching nothing here fails, and an entry reaching an unmarked route
 // fails too. The second direction is the one a bare `/status` trips.
 var modelRoutePatterns = []string{
+	"/channel-links/*/*/delivery-preview",
+	"/channel-links/*/*/notes",
+	"/onboarding/company/messages",
+	"/company/site-reads/*/messages",
 	"/deals/*/status",
 }
 

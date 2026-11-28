@@ -880,7 +880,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## channel_connection
 
-20 columns · primary key `(id)` · referenced by 2 foreign keys
+20 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -897,7 +897,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `ownership` | `text`, default `'workspace'::text` | yes | One of `workspace`, `member`. |
 | `parent_connection_id` | `uuid` |  | Points at `channel_connection.id`. |
 | `poll_offset` | `bigint`, default `0` | yes |  |
-| `provider` | `text` | yes | One of `telegram`, `telegram_business`, `dispact`, `whatsapp`, `zalo_oa`. |
+| `provider` | `text` | yes | One of `telegram`, `telegram_business`, `dispact`, `whatsapp`, `zalo_oa`, `slack` and 1 more. |
 | `seat_id` | `uuid` |  | Points at `capture_connection.id`. |
 | `status` | `text` | yes | Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -920,7 +920,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `channel_connection_child_names_account`: `CHECK (((parent_connection_id IS NULL) OR (account_id IS NOT NULL)))`
 - `channel_connection_owner_shape`: `CHECK (((ownership = 'member') = (owner_user_id IS NOT NULL)))`
 - `channel_connection_ownership_check`: `CHECK ((ownership = ANY (ARRAY['workspace', 'member'])))`
-- `channel_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['telegram', 'telegram_business', 'dispact', 'whatsapp', 'zalo_oa'])))`
+- `channel_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['telegram', 'telegram_business', 'dispact', 'whatsapp', 'zalo_oa', 'slack', 'teams'])))`
 - `channel_connection_status_check`: `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required', 'pending_approval'])))`
 - `channel_connection_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 

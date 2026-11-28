@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { use } from "react";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import type { Route } from "../../lib/router";
 import type { SettingsPageId } from "../../lib/settingscatalog";
 import { AGENT_RULES_SUBPAGE, settingsHref } from "../../lib/settingsrouting";
@@ -215,7 +216,9 @@ export const AccountSignatureDialog: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Edit signature" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["settings.signatureEdit"],
+      }),
     );
   },
 };
@@ -231,7 +234,9 @@ const aiAccessRoutes = {
 
 async function openDevelopers(canvasElement: HTMLElement, tab?: string) {
   const canvas = within(canvasElement);
-  await userEvent.click(await canvas.findByText("For developers"));
+  await userEvent.click(
+    await canvas.findByText(englishCopy["aiAccess.dev.title"]),
+  );
   if (tab !== undefined) {
     await userEvent.click(await canvas.findByRole("button", { name: tab }));
   }
@@ -319,7 +324,9 @@ export const PassportMintDialog: Story = {
     await openDevelopers(canvasElement);
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "New passport" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["settings.mintOpen"],
+      }),
     );
   },
 };
@@ -348,7 +355,9 @@ const mintPassport = async ({
   await openDevelopers(canvasElement);
   const canvas = within(canvasElement);
   await userEvent.click(
-    await canvas.findByRole("button", { name: "New passport" }),
+    await canvas.findByRole("button", {
+      name: englishCopy["settings.mintOpen"],
+    }),
   );
   // The Modal portals into the document body, outside the canvas.
   const body = within(canvasElement.ownerDocument.body);
@@ -358,9 +367,9 @@ const mintPassport = async ({
     "Claude Code on my laptop",
   );
   await userEvent.click(
-    dialog.getByRole("button", { name: "Create passport" }),
+    dialog.getByRole("button", { name: englishCopy["settings.mint"] }),
   );
-  await dialog.findByText("Next, use it");
+  await dialog.findByText(englishCopy["settings.passportNext"]);
 };
 
 export const PassportMinted: Story = {
@@ -387,7 +396,9 @@ export const PassportMintDialogDark: Story = {
     await openDevelopers(canvasElement);
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "New passport" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["settings.mintOpen"],
+      }),
     );
   },
 };
@@ -406,7 +417,7 @@ const selectScoutPassport = async ({
   // The listbox is portalled to the body, outside this story's canvas, so the
   // pick goes through the shared helper rather than a canvas-scoped query.
   const passport = await canvas.findByRole("combobox", {
-    name: "All passports",
+    name: englishCopy["tools.scopeAll"],
   });
   const disclosure = passport.closest("details");
   if (!disclosure)
@@ -416,7 +427,9 @@ const selectScoutPassport = async ({
   );
   passport.scrollIntoView({ block: "center", behavior: "instant" });
   await pickOption(userEvent.setup(), passport, "Reachable by Scout");
-  await userEvent.click(await canvas.findByText("Send messages"));
+  await userEvent.click(
+    await canvas.findByText(englishCopy["passport.scope.send"]),
+  );
 };
 
 export const AgentToolConsole: Story = {

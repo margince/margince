@@ -47,8 +47,8 @@ func laneEnv(t *testing.T) (context.Context, *pgxpool.Pool) {
 // ask the connection directly what the lanes left on it.
 func onSnapshot(ctx context.Context, t *testing.T, pool *pgxpool.Pool, fn func(context.Context, pgx.Tx)) {
 	t.Helper()
-	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithSnapshot(ctx, pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			fn(ctx, tx)
 			return nil
 		})
@@ -179,8 +179,8 @@ func TestALaneCannotStartOnAnAbortedSnapshot(t *testing.T) {
 	ran := false
 	// The snapshot itself cannot commit once aborted; that refusal is not the
 	// subject, only that the lane was turned away.
-	_ = database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error { //craft:ignore swallowed-errors the aborted commit is the setup, not the subject
-		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	_ = database.WithSnapshot(ctx, pool, func(ctx context.Context) error { //craft:ignore swallowed-errors the aborted commit is the setup, not the subject
+		return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(ctx, `SELECT 1/0`); err == nil {
 				t.Error("the probe statement did not fail")
 			}

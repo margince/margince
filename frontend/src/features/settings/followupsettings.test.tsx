@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   FollowUpSettingsCard,
@@ -110,9 +111,7 @@ describe("FollowUpSettingsCard", () => {
     )) as HTMLInputElement;
     await waitFor(() =>
       expect(
-        screen.getByText(
-          "Only an administrator or operations user can change these settings.",
-        ),
+        screen.getByText(englishCopy["installationSettings.readOnly"]),
       ).toBeTruthy(),
     );
     expect(days.disabled).toBe(true);

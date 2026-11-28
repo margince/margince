@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -313,6 +314,6 @@ export const RefreshReview: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: /Refresh from website/ }),
     );
-    await canvas.findByText("Review what changed");
+    await canvas.findByText(englishCopy["settings.companyRefreshReady"]);
   },
 };

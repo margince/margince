@@ -78,6 +78,7 @@ export function LogActivityForm({
   askedKind,
   frame,
   onlyTasks = false,
+  onlyNotes = false,
   sourceActivityId,
   taskToComplete,
   inheritSourceLinks = false,
@@ -91,6 +92,7 @@ export function LogActivityForm({
   askedKind?: OpeningKind;
   // Opened as Add task: no other kind is offered, so no date stops at today.
   onlyTasks?: boolean;
+  onlyNotes?: boolean;
   sourceActivityId?: string;
   taskToComplete?: Readonly<{ id: string; version?: number }>;
   inheritSourceLinks?: boolean;
@@ -290,7 +292,7 @@ export function LogActivityForm({
   const draftFields = () => (
     <>
       <div className="form-row">
-        {!onlyTasks && (
+        {!onlyTasks && !onlyNotes && (
           <ActivityKindField
             value={draft.kind}
             offersTask={!taskToComplete}

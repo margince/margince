@@ -102,7 +102,7 @@ describe("one press for mail and calendar", () => {
     await pick(user, /Google/);
 
     await user.click(
-      screen.getByRole("button", { name: "Connect mail and calendar" }),
+      screen.getByRole("button", { name: en["ob.conv.connect.connectBoth"] }),
     );
 
     await waitFor(() =>
@@ -127,7 +127,7 @@ describe("one press for mail and calendar", () => {
     await pick(user, /Microsoft/);
 
     await user.click(
-      screen.getByRole("button", { name: "Connect mail and calendar" }),
+      screen.getByRole("button", { name: en["ob.conv.connect.connectBoth"] }),
     );
 
     await waitFor(() => expect(bodies).toHaveLength(1));
@@ -148,7 +148,11 @@ describe("one press for mail and calendar", () => {
     expect(
       screen.getByText("Google asks once, then brings you back here"),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Connect mail" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: en["ob.conv.connect.connectMailOnly"],
+      }),
+    );
 
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual({
@@ -164,7 +168,11 @@ describe("one press for mail and calendar", () => {
     const user = userEvent.setup();
     await pick(user, /Google/);
     await user.click(screen.getByRole("checkbox", { name: /^Mail/ }));
-    await user.click(screen.getByRole("button", { name: "Connect calendar" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: en["ob.conv.connect.connectCalendar"],
+      }),
+    );
 
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual({
@@ -183,7 +191,7 @@ describe("one press for mail and calendar", () => {
     await user.click(screen.getByRole("checkbox", { name: /Calendar/ }));
 
     expect(
-      screen.getByRole("button", { name: "Connect mail and calendar" }),
+      screen.getByRole("button", { name: en["ob.conv.connect.connectBoth"] }),
     ).toBeDisabled();
     expect(screen.getByText(en["ob.conv.connect.pickService"])).toBeVisible();
     expect(bodies).toEqual([]);
@@ -246,7 +254,7 @@ describe("the ask before the vendor's screens", () => {
     const user = userEvent.setup();
     await pick(user, /Google/);
     await user.click(
-      screen.getByRole("button", { name: "Connect mail and calendar" }),
+      screen.getByRole("button", { name: en["ob.conv.connect.connectBoth"] }),
     );
 
     expect(
@@ -269,14 +277,14 @@ describe("the ask before the vendor's screens", () => {
     const user = userEvent.setup();
     await pick(user, /Google/);
     await user.click(
-      screen.getByRole("button", { name: "Connect mail and calendar" }),
+      screen.getByRole("button", { name: en["ob.conv.connect.connectBoth"] }),
     );
 
     // A skip or another account landing while the consent URL is still on
     // its way would contradict the redirect that follows it.
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Skip for now" }),
+        screen.getByRole("button", { name: en["ob.conv.voice.skipped"] }),
       ).toBeDisabled(),
     );
     expect(screen.getByRole("radio", { name: /Microsoft/ })).toBeDisabled();
@@ -300,9 +308,9 @@ describe("the way onward before a mailbox", () => {
 
     const primaries = document.querySelectorAll(".btn-primary");
     expect(primaries).toHaveLength(1);
-    expect(primaries[0]).toHaveTextContent("Connect mail and calendar");
+    expect(primaries[0]).toHaveTextContent(en["ob.conv.connect.connectBoth"]);
     const rail = screen
-      .getByRole("button", { name: "Skip for now" })
+      .getByRole("button", { name: en["ob.conv.voice.skipped"] })
       .closest(".ob-stage-acts");
     expect(rail).not.toBeNull();
     expect(
@@ -314,7 +322,9 @@ describe("the way onward before a mailbox", () => {
     stub();
     const { persist, dispatch } = renderAct();
     const user = userEvent.setup();
-    const skip = screen.getByRole("button", { name: "Skip for now" });
+    const skip = screen.getByRole("button", {
+      name: en["ob.conv.voice.skipped"],
+    });
     await waitFor(() => expect(skip).not.toBeDisabled());
     await user.click(skip);
 
@@ -340,7 +350,7 @@ describe("coming back from a refused consent", () => {
       expect(screen.getByRole("radio", { name: /Google/ })).toBeChecked(),
     );
     expect(
-      screen.getByRole("button", { name: "Connect mail and calendar" }),
+      screen.getByRole("button", { name: en["ob.conv.connect.connectBoth"] }),
     ).toBeInTheDocument();
     // Spent on read: a reload of the same address is the stale link it is.
     expect(sessionStorage.getItem("ob.connect.oauthAttempt")).toBeNull();
@@ -355,7 +365,7 @@ describe("coming back from a refused consent", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Google/ })).not.toBeChecked();
     expect(
-      screen.queryByRole("button", { name: "Connect mail and calendar" }),
+      screen.queryByRole("button", { name: en["ob.conv.connect.connectBoth"] }),
     ).toBeNull();
   });
 });

@@ -147,3 +147,25 @@ export const LeadReferenceWithEmailName: Story = {
     ).resolves.toBeVisible();
   },
 };
+
+export const SuppliedArchivedCompany: Story = {
+  args: {
+    kind: "company",
+    id: "known-archived",
+    name: "Former customer",
+    archived: true,
+  },
+};
+
+export const SuppliedActiveCompany: Story = {
+  args: {
+    kind: "company",
+    id: "known-active",
+    name: "Current customer",
+    archived: false,
+  },
+};
+
+export const SuppliedNameWithArchiveLookup: Story = {
+  args: { kind: "contact", id: "ct-1", name: "Recorded contact name" },
+};

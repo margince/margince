@@ -29,9 +29,10 @@ import (
 // is a subset the call must carry to get this answer. So two reads of one tool
 // on two records are two entries.
 type agentLoopToolAnswer struct {
-	Tool   string                     `json:"tool"`
-	Args   map[string]json.RawMessage `json:"args,omitempty"`
-	Result json.RawMessage            `json:"result,omitempty"`
+	Refusal *agentLoopToolRefusal      `json:"refusal,omitempty"`
+	Tool    string                     `json:"tool"`
+	Args    map[string]json.RawMessage `json:"args,omitempty"`
+	Result  json.RawMessage            `json:"result,omitempty"`
 }
 
 // agentLoopToolSurface is the tool surface a certification run is offered. It
@@ -39,9 +40,10 @@ type agentLoopToolAnswer struct {
 // The runner narrows it to the agent's allowlist as it narrows a production run's. It holds no state, so a replay of the same replies meets
 // the same answers.
 type agentLoopToolSurface struct {
-	work    agentLoopWork
-	list    agentLoopWorklist
-	answers []agentLoopToolAnswer
+	recoveryKind string
+	work         agentLoopWork
+	list         agentLoopWorklist
+	answers      []agentLoopToolAnswer
 }
 
 func (agentLoopToolSurface) Specs() []mcp.ToolSpec { return agentLoopRegistry() }
@@ -59,6 +61,15 @@ func (s agentLoopToolSurface) Invoke(_ context.Context, name string, args json.R
 	if err != nil {
 		return nil, err
 	}
+	if s.recoveryKind != "" && name == "read_record" {
+		if _, err := agents.DecodeReadRecordArguments(args); err != nil {
+			return nil, err
+		}
+	}
+	if refusal := s.refusalFor(name, args); refusal != nil && refusal.Kind == "unsupported" {
+		return nil, fmt.Errorf("record reader: %w", apperrors.ErrUnsupportedBySoR)
+	}
+
 	if name == s.work.write {
 		if _, err := s.work.wrote(args, s.list); err != nil {
 			return nil, err
@@ -78,7 +89,7 @@ func (s agentLoopToolSurface) Invoke(_ context.Context, name string, args json.R
 // call carries, or nil when none does.
 func (s agentLoopToolSurface) fixedAnswer(tool string, args json.RawMessage) json.RawMessage {
 	for _, answer := range s.answers {
-		if answer.Tool == tool && len(agentLoopArgDisagreements(answer.Args, args)) == 0 {
+		if answer.Refusal == nil && answer.Tool == tool && len(agentLoopArgDisagreements(answer.Args, args)) == 0 {
 			return answer.Result
 		}
 	}
@@ -115,7 +126,7 @@ func refuseUnanswerableTools(answers []agentLoopToolAnswer, specs []mcp.ToolSpec
 func listAnswer(answers []agentLoopToolAnswer, list string) (json.RawMessage, error) {
 	var found []json.RawMessage
 	for _, answer := range answers {
-		if answer.Tool == list {
+		if answer.Tool == list && answer.Refusal == nil {
 			found = append(found, answer.Result)
 		}
 	}

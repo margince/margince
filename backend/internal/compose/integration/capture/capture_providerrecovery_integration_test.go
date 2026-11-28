@@ -72,7 +72,7 @@ type ledgerRow struct {
 func ledgerOf(t *testing.T, e *integration.SearchEnv, address string) ledgerRow {
 	t.Helper()
 	var r ledgerRow
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT status, attempts FROM capture_pending_counterparty
 			 WHERE email = $1 ORDER BY created_at DESC LIMIT 1`, address).Scan(&r.status, &r.attempts)
@@ -85,7 +85,7 @@ func ledgerOf(t *testing.T, e *integration.SearchEnv, address string) ledgerRow 
 
 func backdateResolution(t *testing.T, e *integration.SearchEnv, address string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET resolved_at = resolved_at - interval '10 days' WHERE email = $1`, address)
@@ -136,7 +136,7 @@ func seedParkedSenders(t *testing.T, env captureEnv) {
 	// A stranger's mail is held from colleagues, and the review queue offers
 	// only what colleagues may see, so the one sender meant to carry an offer
 	// has its message shared first.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE activity SET audience = 'workspace', audience_reason = NULL
 			 WHERE id = (SELECT activity_id FROM capture_pending_counterparty
@@ -171,13 +171,13 @@ func seedParkedSenders(t *testing.T, env captureEnv) {
 
 	// A human rejects one: the ledger row leaves `unsure` through the real writer.
 	var decided ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM capture_pending_counterparty WHERE email = 'decided@stranger.example'`).Scan(&decided)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return store.ResolveReviewed(context.Background(), tx, decided, capturemod.PendingStatusRejected, "declined in the review queue")
 	}); err != nil {
 		t.Fatal(err)
@@ -189,7 +189,7 @@ func TestReopenParkedReopensOnlyWhatTheWindowParkedAndNobodyDecided(t *testing.T
 	e := env.e
 	seedParkedSenders(t, env)
 	var offer ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT proposal_id FROM capture_pending_counterparty
 			 WHERE email = 'offered@stranger.example'`).Scan(&offer)
@@ -239,7 +239,7 @@ func TestReopenParkedReopensASenderWhoseOfferExpired(t *testing.T) {
 	e := env.e
 	seedParkedSenders(t, env)
 	var offer ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT proposal_id FROM capture_pending_counterparty
 			 WHERE email = 'offered@stranger.example'`).Scan(&offer)
@@ -333,7 +333,7 @@ func TestReopenParkedReopensExhaustedEnrichmentInTheWindowOnly(t *testing.T) {
 
 	seedCompany := func(name string) ids.CompanyID {
 		id := ids.NewV7()
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(context.Background(), `
 				INSERT INTO company (id, owner_id, display_name, name_source, source, captured_by)
 				VALUES ($1, $2, $3, 'domain', 'connector:gmail', 'connector:gmail')`, id, e.Rep1, name); err != nil {
@@ -366,7 +366,7 @@ func TestReopenParkedReopensExhaustedEnrichmentInTheWindowOnly(t *testing.T) {
 	if err := store.ExpireExhausted(wsCtx); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			UPDATE capture_auto_enrich_state SET last_attempt_at = last_attempt_at - interval '10 days'
 			 WHERE company_id = $1`, old); err != nil {

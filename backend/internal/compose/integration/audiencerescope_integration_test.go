@@ -55,7 +55,7 @@ func TestALimitedMessageLeavesTheInteractionGraph(t *testing.T) {
 	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
 	refold := func() {
 		t.Helper()
-		if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 			return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{activity})
 		}); err != nil {
 			t.Fatal(err)
@@ -107,7 +107,7 @@ func TestAnAudienceChangeNarrowsTheDerivedSignalAndMakesTheThreadDue(t *testing.
 
 	// The signal arrives through the real writer, workspace-visible.
 	extractor := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
-	if err := database.WithWorkspaceTx(extractor, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(extractor, e.Pool, func(tx pgx.Tx) error {
 		written, err := signals.RecordDerived(extractor, tx, signals.DerivedSignal{
 			Kind: "risk", CompanyID: company, Summary: "renewal at risk per the thread",
 			Severity: "warn", Fingerprint: "thr-1:risk",
@@ -189,7 +189,7 @@ func TestOwnerlessAndCrossOwnerCitationsArchiveTheSignal(t *testing.T) {
 	extractor := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 	seed := func(fingerprint string, activity ids.UUID, privateTo ids.UUID) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(extractor, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(extractor, e.Pool, func(tx pgx.Tx) error {
 			_, err := signals.RecordDerived(extractor, tx, signals.DerivedSignal{
 				Kind: "risk", CompanyID: company, Summary: "s", Severity: "warn",
 				Fingerprint: fingerprint, PrivateTo: privateTo,

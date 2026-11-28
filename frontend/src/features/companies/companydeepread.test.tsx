@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { companyBackstop, jsonResponse } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { RecordShell } from "../../testing/recordshell.testkit";
@@ -108,7 +109,7 @@ async function startDeepRead(calls: string[]) {
   );
   // The offer stands on the Profile tab, where render() opens the page.
   await userEvent.click(
-    screen.getByRole("button", { name: "Start company research" }),
+    screen.getByRole("button", { name: englishCopy["deepread.cta"] }),
   );
   await waitFor(() =>
     expect(
@@ -140,7 +141,7 @@ describe("company-360 deep read", () => {
       await flush();
       await flush();
       fireEvent.click(
-        screen.getByRole("button", { name: "Start company research" }),
+        screen.getByRole("button", { name: englishCopy["deepread.cta"] }),
       );
       await flush();
       await flush();
@@ -222,7 +223,9 @@ describe("company-360 deep read", () => {
     // what the read did rather than as a warning about what it did not: no
     // "Stopped early" anywhere, and no warning badge repeating the cap underneath.
     await waitFor(() =>
-      expect(screen.getByText("Read up to the page limit")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["deepread.statusPageCapped"]),
+      ).toBeTruthy(),
     );
     expect(screen.queryByText(/Stopped early/)).toBeNull();
     expect(screen.getByText("6 facts with evidence staged")).toBeTruthy();
@@ -252,7 +255,9 @@ describe("company-360 deep read", () => {
     await waitFor(() =>
       expect(screen.getByText("Stopped early: model budget")).toBeTruthy(),
     );
-    expect(screen.queryByText("Read up to the page limit")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["deepread.statusPageCapped"]),
+    ).toBeNull();
   });
 
   it("a failed read says why, in the reader's words for the recorded cause", async () => {
@@ -274,9 +279,7 @@ describe("company-360 deep read", () => {
 
     await waitFor(() => expect(screen.getByText("Failed")).toBeTruthy());
     expect(
-      screen.getByText(
-        "Margince could not finish the read. The cause is on this installation, not on the site, and an admin finds it in the server log.",
-      ),
+      screen.getByText(englishCopy["deepread.failure.internal"]),
     ).toBeTruthy();
   });
 
@@ -308,7 +311,7 @@ describe("company-360 deep read", () => {
     await waitFor(() =>
       expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
     );
-    expect(screen.queryByText("Research this company")).toBeNull();
+    expect(screen.queryByText(englishCopy["deepread.title"])).toBeNull();
     await userEvent.click(
       await screen.findByRole("button", { name: "Profile" }),
     );
@@ -319,11 +322,13 @@ describe("company-360 deep read", () => {
     await waitFor(() =>
       expect(screen.getByText("9 facts with evidence staged")).toBeTruthy(),
     );
-    expect(screen.getByText("Website research")).toBeTruthy();
-    expect(screen.queryByText("Research this company")).toBeNull();
+    expect(
+      screen.getByText(englishCopy["aiTask.name.site_extract"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(englishCopy["deepread.title"])).toBeNull();
     expect(screen.queryByText(/It reads the company's website/)).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Read website again" }),
+      screen.getByRole("button", { name: englishCopy["deepread.ctaAgain"] }),
     ).toBeTruthy();
   });
 
@@ -349,17 +354,19 @@ describe("company-360 deep read", () => {
     render(<CompanyScreen id="o-1" />);
 
     await waitFor(() =>
-      expect(screen.getByText("Research this company")).toBeTruthy(),
+      expect(screen.getByText(englishCopy["deepread.title"])).toBeTruthy(),
     );
     expect(
-      screen.getByRole("button", { name: "Start company research" }),
+      screen.getByRole("button", { name: englishCopy["deepread.cta"] }),
     ).toBeTruthy();
-    expect(screen.queryByText("Website research")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["aiTask.name.site_extract"]),
+    ).toBeNull();
 
     // Released so the test leaves no request hanging behind it.
     answerLatest?.();
     await waitFor(() =>
-      expect(screen.getByText("Research this company")).toBeTruthy(),
+      expect(screen.getByText(englishCopy["deepread.title"])).toBeTruthy(),
     );
   });
 
@@ -381,9 +388,13 @@ describe("company-360 deep read", () => {
     await startDeepRead(calls);
 
     await waitFor(() =>
-      expect(screen.getByText("Read up to the size limit")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["deepread.statusByteCapped"]),
+      ).toBeTruthy(),
     );
-    expect(screen.queryByText("Read up to the page limit")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["deepread.statusPageCapped"]),
+    ).toBeNull();
     expect(screen.queryByText(/Stopped early/)).toBeNull();
   });
 
@@ -410,7 +421,9 @@ describe("company-360 deep read", () => {
     expect(screen.queryByText("brandt.example/team")).toBeNull();
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Open Worklist" }),
+      screen.getByRole("button", {
+        name: englishCopy["analytics.sdrOpenWorklist"],
+      }),
     );
     expect(window.location.hash).toBe("#/worklist");
   });
@@ -490,13 +503,15 @@ describe("company-360 deep read", () => {
     try {
       render(<CompanyScreen id="o-1" />);
       await flushUntil(() =>
-        screen.queryByRole("button", { name: "Read website again" }),
+        screen.queryByRole("button", {
+          name: englishCopy["deepread.ctaAgain"],
+        }),
       );
       const beforeSecondRead = factsCallCount();
       expect(beforeSecondRead).toBeGreaterThan(0);
 
       fireEvent.click(
-        screen.getByRole("button", { name: "Read website again" }),
+        screen.getByRole("button", { name: englishCopy["deepread.ctaAgain"] }),
       );
       await flushUntil(() => secondReadPollCount > 0);
       // rd-2 is still running: nothing has finished, so nothing should have
@@ -530,7 +545,7 @@ describe("company-360 deep read", () => {
       expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Start company research" }),
+      screen.getByRole("button", { name: englishCopy["deepread.cta"] }),
     );
     await waitFor(() =>
       expect(screen.getByText("no website on file")).toBeTruthy(),
@@ -546,11 +561,11 @@ describe("company-360 deep read", () => {
       expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Start company research" }),
+      screen.getByRole("button", { name: englishCopy["deepread.cta"] }),
     );
     await waitFor(() =>
       expect(
-        screen.getByText("Website research is not configured on this server."),
+        screen.getByText(englishCopy["deepread.unavailable"]),
       ).toBeTruthy(),
     );
   });

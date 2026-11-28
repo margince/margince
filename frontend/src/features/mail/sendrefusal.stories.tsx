@@ -18,9 +18,3 @@ export const Mailbox: Story = { args: { refusal: "mailbox" } };
 
 // A sender who has connected no mailbox is told to connect one.
 export const NoMailbox: Story = { args: { refusal: "noMailbox" } };
-
-// A message carrying an unsubscribe link carries ONE recipient's credential,
-// so it may only ever have one addressee.
-export const SharedUnsubscribe: Story = {
-  args: { refusal: "sharedUnsubscribe" },
-};

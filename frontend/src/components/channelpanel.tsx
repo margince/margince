@@ -15,6 +15,7 @@ import {
   OverviewList,
   OverviewRow,
 } from "../design-system/overviewcard";
+import { ProviderMark } from "../design-system/provider-mark";
 import { QueryStates } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -27,6 +28,13 @@ import {
   type Verbosity,
   verbosityOptions,
 } from "./channellinkdialog";
+import { ChannelSyncEnded } from "./channelsyncended";
+import { ChannelSyncHealth } from "./channelsynchealth";
+import { ChannelSyncSettings } from "./channelsyncsettings";
+import {
+  MESSENGER_PROVIDERS,
+  type MessengerProvider,
+} from "./messenger/messenger.queries";
 
 type LinkableChannel = components["schemas"]["LinkableChannel"];
 type ChannelLinkState = components["schemas"]["ChannelLinkState"];
@@ -37,7 +45,7 @@ type RecordType = components["schemas"]["ChannelLinkRecordType"];
 
 // A deal and its project share one channel, so every record's read goes stale
 // when any link changes.
-const CHANNEL_LINK_KEY = "channel-link";
+export const CHANNEL_LINK_KEY = "channel-link";
 
 type RecordRef = Readonly<{ recordType: RecordType; recordId: string }>;
 
@@ -69,7 +77,8 @@ export function ChannelPanel({
   // Held here, not in the unlinked body. A create moves the card to linked,
   // and the notice must outlive the body that asked for the channel.
   const [invites, setInvites] = useState<ChannelInvites | null>(null);
-  if (query.isPending || state?.state === "off") return null;
+  if (query.isPending || (state?.state === "off" && !state.last_sync))
+    return null;
   return (
     <OverviewCard
       title={t("channelLink.title")}
@@ -86,6 +95,9 @@ export function ChannelPanel({
       }
     >
       <QueryStates query={query} pendingLabel={t("channelLink.title")}>
+        {state?.last_sync && (
+          <ChannelSyncEnded sync={state.last_sync} canEdit={canEdit} />
+        )}
         {state?.state === "none" && (
           <UnlinkedBody record={ref} canEdit={canEdit} onCreated={setInvites} />
         )}
@@ -95,6 +107,12 @@ export function ChannelPanel({
             channel={state.link}
             paused={state.state === "paused"}
             canEdit={canEdit}
+          />
+        )}
+        {state?.link && state.sync && (
+          <ChannelSyncHealth
+            health={state.sync}
+            reading={state.link.save_channel_updates !== false}
           />
         )}
         {invites && <InvitesNotice invites={invites} />}
@@ -130,22 +148,29 @@ function useLinkChannel(
 
 // The channels the record can be linked to. It is read only while the dialog
 // is open, because the list is the bot's and changes in the chat.
-function useLinkableChannels(record: RecordRef, open: boolean) {
+function useLinkableChannels(
+  record: RecordRef,
+  open: boolean,
+  provider: MessengerProvider,
+) {
   const t = useT();
   return useQuery({
     queryKey: [
       CHANNEL_LINK_KEY,
       "linkable",
+      provider,
       record.recordType,
       record.recordId,
     ],
     enabled: open,
     queryFn: async (): Promise<LinkableChannel[]> =>
       unwrap(
-        await api.GET(
-          "/channel-links/{record_type}/{id}/channels",
-          linkPath(record),
-        ),
+        await api.GET("/channel-links/{record_type}/{id}/channels", {
+          params: {
+            path: { record_type: record.recordType, id: record.recordId },
+            query: { provider },
+          },
+        }),
         t,
       ).channels,
   });
@@ -163,7 +188,8 @@ function UnlinkedBody({
   const t = useT();
   const link = useLinkChannel(record, onCreated);
   const [existingOpen, setExistingOpen] = useState(false);
-  const linkable = useLinkableChannels(record, existingOpen);
+  const [provider, Provider] = useState<MessengerProvider>("dispact");
+  const linkable = useLinkableChannels(record, existingOpen, provider);
   const createFailed = link.isError && link.variables?.mode === "create";
   return (
     <>
@@ -174,12 +200,28 @@ function UnlinkedBody({
         />
       </OverviewList>
       {canEdit && (
+        <Select
+          aria-label={t("messenger.provider")}
+          value={provider}
+          options={MESSENGER_PROVIDERS.map((item) => ({
+            ...item,
+            adornment: <ProviderMark providerKey={item.value} />,
+          }))}
+          onChange={(value) => {
+            const next = MESSENGER_PROVIDERS.find(
+              (item) => item.value === value,
+            );
+            if (next) Provider(next.value);
+          }}
+        />
+      )}
+      {canEdit && (
         <div className="card-actions">
           <Button
             variant="primary"
             pending={link.isPending && link.variables?.mode === "create"}
             disabled={link.isPending}
-            onClick={() => link.mutate({ mode: "create" })}
+            onClick={() => link.mutate({ mode: "create", provider })}
           >
             {t("channelLink.create")}
           </Button>
@@ -198,6 +240,10 @@ function UnlinkedBody({
         </Callout>
       )}
       <LinkExistingDialog
+        key={provider}
+        provider={provider}
+        recordType={record.recordType}
+        recordId={record.recordId}
         open={existingOpen}
         channels={linkable.data}
         onClose={() => {
@@ -241,6 +287,8 @@ function LinkedBody({
   canEdit: boolean;
 }>) {
   const t = useT();
+  const qc = useQueryClient();
+  const [manage, Manage] = useState(false);
   return (
     <>
       <OverviewList>
@@ -270,16 +318,48 @@ function LinkedBody({
           }
         />
       </OverviewList>
-      {paused ? (
+      {paused && (
         <Callout tone="warning" title={t("channelLink.paused")}>
-          {t("channelLink.pausedBody")}
+          {t(
+            channel.status === "identity_needs_review"
+              ? "channelLink.identityReviewBody"
+              : "channelLink.pausedBody",
+          )}
         </Callout>
-      ) : (
-        <VerbositySetting
-          record={record}
-          verbosity={channel.verbosity}
-          canEdit={canEdit}
-        />
+      )}
+      <p>
+        {t(
+          channel.save_channel_updates === false
+            ? "channelLink.readOff"
+            : "channelLink.readOn",
+        )}{" "}
+        ·{" "}
+        {t(
+          channel.send_crm_updates === false
+            ? "channelLink.postOff"
+            : "channelLink.postOn",
+        )}
+      </p>
+      {channel.overview_card_paused && <p>{t("channelDelivery.cardPaused")}</p>}
+      {canEdit && (
+        <Button onClick={() => Manage(true)}>{t("channelLink.manage")}</Button>
+      )}
+      {manage && (
+        <ChannelSyncSettings
+          channel={channel}
+          recordType={record.recordType}
+          recordId={record.recordId}
+          onClose={() => Manage(false)}
+          onSaved={() => {
+            void qc.invalidateQueries({ queryKey: [CHANNEL_LINK_KEY] });
+          }}
+        >
+          <VerbositySetting
+            record={record}
+            verbosity={channel.verbosity}
+            canEdit={canEdit && !paused}
+          />
+        </ChannelSyncSettings>
       )}
     </>
   );

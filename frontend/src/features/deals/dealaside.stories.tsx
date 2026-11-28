@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { Locale } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { listsMe } from "../../testing/lists.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -121,7 +122,9 @@ export const Lists: Story = {
       await within(canvasElement).findByRole("region", { name: "Lists" }),
     );
     await expect(
-      await lists.findByRole("button", { name: "Add to Shortlist" }),
+      await lists.findByRole("button", {
+        name: englishCopy["lists.addToShortlist"],
+      }),
     ).toBeVisible();
   },
 };
@@ -193,7 +196,9 @@ export const ProbabilityReason: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("button", { name: "Edit About" });
-    canvas.getByRole("button", { name: "Why this probability" }).focus();
+    canvas
+      .getByRole("button", { name: englishCopy["deal.winProbability.why"] })
+      .focus();
     await expect(
       await within(document.body).findByText(/No reply from Dana Ruiz/),
     ).toBeTruthy();
@@ -238,7 +243,9 @@ export const TagsFlow: Story = {
     );
     const body = within(document.body);
     const registration = within(
-      await body.findByRole("dialog", { name: "Registration" }),
+      await body.findByRole("dialog", {
+        name: englishCopy["record.registration"],
+      }),
     );
     await waitFor(() => expect(registration.getByText("Fleet")).toBeVisible());
     await userEvent.click(

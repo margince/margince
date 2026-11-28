@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -292,11 +293,13 @@ export const DeleteDataDialog: Story = {
     const user = userEvent.setup();
     await user.click(
       await within(canvasElement).findByRole("button", {
-        name: "More actions",
+        name: englishCopy["record.moreActions"],
       }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Delete provider data" }),
+      await screen.findByRole("button", {
+        name: englishCopy["provider.deleteData"],
+      }),
     );
     await screen.findByRole("dialog");
   },

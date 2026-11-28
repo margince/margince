@@ -129,7 +129,7 @@ func TestASenderPurgeWaitsForWorkInFlightAndKeepsTheContact(t *testing.T) {
 			var outcome PurgeOutcome
 			purged := make(chan error, 1)
 			ctx := ownerCtx(e)
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				if err := work.write(ctx, tx, minted); err != nil {
 					return err
 				}
@@ -189,7 +189,7 @@ func TestWorkWrittenDuringASenderPurgesScrubWaitsAndMissesTheContact(t *testing.
 				}
 				go func() {
 					wctx := ownerCtx(e)
-					written <- database.WithWorkspaceTx(wctx, e.Pool, func(wtx pgx.Tx) error {
+					written <- database.WithTx(wctx, e.Pool, func(wtx pgx.Tx) error {
 						return work.write(wctx, wtx, id)
 					})
 				}()
@@ -224,7 +224,7 @@ func backendPID(t *testing.T, tx pgx.Tx) int {
 func seedRow(t *testing.T, e *integration.Env, sql string, args ...any) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), sql, args...).Scan(&id)
 	}); err != nil {
 		t.Fatalf("seeding a row: %v", err)
@@ -235,7 +235,7 @@ func seedRow(t *testing.T, e *integration.Env, sql string, args ...any) ids.UUID
 func holds(t *testing.T, e *integration.Env, sql string, args ...any) bool {
 	t.Helper()
 	var yes bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), sql, args...).Scan(&yes)
 	}); err != nil {
 		t.Fatalf("reading what landed on the contact: %v", err)

@@ -171,10 +171,12 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 
 // ListLeadsInput is one read of the lead list: its page, its sort and what it narrows by.
 type ListLeadsInput struct {
-	Cursor *string
-	Offset *int
-	Limit  *int
-	Status *string
+	CustomFilters map[string]string
+	Salutation    *string
+	Cursor        *string
+	Offset        *int
+	Limit         *int
+	Status        *string
 	// OwnerID, OwnerTeamID and Unassigned are the owner dials every
 	// owner-scoped list carries (DM-VOCAB-OWN-1), bound through
 	// storekit.OwnershipClause as contact and company bind them.
@@ -203,6 +205,7 @@ type ListLeadsInput struct {
 	TagMode storekit.TagMode
 	// FromContactID narrows to the leads worked from one contact.
 	FromContactID *ids.ContactID
+	CompanyID     *ids.CompanyID
 	// SLAState narrows to leads in one first-response state; breached is the
 	// overdue queue.
 	SLAState *crmcontracts.ListLeadsParamsSlaState
@@ -230,6 +233,7 @@ func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog
 		CapturedByKind:  in.CapturedByKind,
 		AiWritten:       in.AiWritten,
 		entity:          leadEntity,
+		CustomFilters:   in.CustomFilters,
 		OwnerID:         in.OwnerID,
 		OwnerTeamID:     in.OwnerTeamID,
 		Unassigned:      in.Unassigned,
@@ -277,6 +281,9 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	if in.Source != nil {
 		where = append(where, storekit.SQLf(leadSourceColumn+" = $%d", arg(*in.Source)))
 	}
+	if clause := salutationListClause(leadEntity, in.Salutation, arg); clause != "" {
+		where = append(where, clause)
+	}
 	if in.Origin != nil {
 		where = append(where, leadOriginClause(*in.Origin, arg))
 	}
@@ -288,6 +295,14 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	}
 	if in.FromContactID != nil {
 		where = append(where, storekit.SQLf("lead.from_contact_id = $%d", arg(*in.FromContactID)))
+	}
+	if in.CompanyID != nil {
+		where = append(where, storekit.SQLf("lead.company_id = $%d", arg(*in.CompanyID)))
+		readable, err := storekit.LinkedCompanyColumn(ctx, "lead.company_id", "id", arg)
+		if err != nil {
+			return nil, err
+		}
+		where = append(where, readable+" IS NOT NULL")
 	}
 	return where, nil
 }

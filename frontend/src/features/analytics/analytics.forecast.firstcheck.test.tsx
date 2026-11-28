@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { ForecastReview } from "./analytics.forecast.review";
 
@@ -116,16 +117,22 @@ describe("a workspace nobody has started", () => {
     // needs the number, not just the verb.
     expect(await screen.findByText(/340/)).toBeTruthy();
     expect(screen.getByText(/100/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Start checking" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["review.firstCheck.start"],
+      }),
+    ).toBeTruthy();
   });
 
   it("offers the concrete check without a redundant unchecked assurance", async () => {
     show();
     expect(
-      await screen.findByRole("button", { name: "Start checking" }),
+      await screen.findByRole("button", {
+        name: englishCopy["review.firstCheck.start"],
+      }),
     ).toBeTruthy();
     expect(screen.queryByText(/Nothing checked yet/)).toBeNull();
-    expect(screen.queryByText("Nothing to check.")).toBeNull();
+    expect(screen.queryByText(englishCopy["review.nothingToCheck"])).toBeNull();
   });
 
   it("starts the check on the press, and then says it is running", async () => {
@@ -133,7 +140,9 @@ describe("a workspace nobody has started", () => {
     const { posted } = show();
 
     await user.click(
-      await screen.findByRole("button", { name: "Start checking" }),
+      await screen.findByRole("button", {
+        name: englishCopy["review.firstCheck.start"],
+      }),
     );
 
     await waitFor(() => expect(posted.length).toBe(1));
@@ -149,7 +158,9 @@ describe("a workspace nobody has started", () => {
     show({ conflict: true });
 
     await user.click(
-      await screen.findByRole("button", { name: "Start checking" }),
+      await screen.findByRole("button", {
+        name: englishCopy["review.firstCheck.start"],
+      }),
     );
 
     // 409 is not a failure to report as one: the pass this reader wanted is
@@ -171,7 +182,9 @@ describe("a workspace nobody has started", () => {
       },
     });
 
-    await screen.findByRole("button", { name: "Start checking" });
+    await screen.findByRole("button", {
+      name: englishCopy["review.firstCheck.start"],
+    });
     // The zeroes must not be printed as a scope: a reader takes "0 findings"
     // for a sound pipeline and starts the cycle on it.
     expect(screen.queryByText(/Findings it would raise/)).toBeNull();
@@ -185,7 +198,9 @@ describe("a workspace nobody has started", () => {
     show({ refuse: { status: 403, detail: "you may not start a check" } });
 
     await user.click(
-      await screen.findByRole("button", { name: "Start checking" }),
+      await screen.findByRole("button", {
+        name: englishCopy["review.firstCheck.start"],
+      }),
     );
 
     // A stopped spinner and nothing else is indistinguishable from a button

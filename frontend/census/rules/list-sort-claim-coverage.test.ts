@@ -39,6 +39,30 @@ describe("an imported fetcher", () => {
       screenSendsSort("x/things.tsx", screenText, moduleWith("limit: 50")),
     ).toBe(false);
   });
+
+  // The fetcher's own module holds the builder it spreads, which the screen
+  // need not import.
+  const moduleBuilding = (built: string) => () =>
+    [
+      `function thingsParams(query: ListQuery) {\n  return {\n    ${built},\n  };\n}`,
+      "export async function fetchThingsPage(query: ListQuery) {",
+      '  return api.GET("/things", { params: { query: { ...thingsParams(query), limit: 50 } } });',
+      "}",
+      "",
+    ].join("\n");
+
+  it("reads a builder the imported fetcher's module declares", () => {
+    expect(
+      screenSendsSort(
+        "x/things.tsx",
+        screenText,
+        moduleBuilding("sort: query.sort || undefined"),
+      ),
+    ).toBe(true);
+    expect(
+      screenSendsSort("x/things.tsx", screenText, moduleBuilding("q: query.q")),
+    ).toBe(false);
+  });
 });
 
 // The builder a fetcher spreads is read alone: a sibling that sends sort does

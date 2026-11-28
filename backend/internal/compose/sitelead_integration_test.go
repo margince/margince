@@ -95,7 +95,7 @@ func stageSiteLeadFrom(
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	var id ids.ApprovalID
 	ctx := withClaimedRequester(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), readID)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		in, err := siteLeadStageInput(approvalSummaryCopyIn(ctx, tx), readID, company, seedURL, contact, bundleID)
 		if err != nil {
 			return err
@@ -139,7 +139,7 @@ func TestASiteLeadStagedBeforeTheLaneShutStaysPendingWhenAccepted(t *testing.T) 
 		t.Fatalf("accepting a site lead while the lane is shut = %v, want a conflict", err)
 	}
 	var status string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT status FROM approval WHERE id = $1`, id).Scan(&status)
 	}); err != nil {
 		t.Fatal(err)
@@ -174,7 +174,7 @@ func TestABundleApprovalLeavesASiteLeadPendingWhileTheLaneIsShut(t *testing.T) {
 		t.Fatalf("bundle members = %+v, want the site lead refused", members)
 	}
 	var status string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT status FROM approval WHERE id = $1`, id).Scan(&status)
 	}); err != nil {
 		t.Fatal(err)

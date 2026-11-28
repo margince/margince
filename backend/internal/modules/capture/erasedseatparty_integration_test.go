@@ -23,7 +23,7 @@ import (
 // the question belongs.
 func TestAnErasedSeatIsNotBoundToAMeeting(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, email := seedSeat(ctx, t, tx, "active")
 		if _, err := tx.Exec(ctx,
 			`UPDATE app_user SET archived_at = now() WHERE id = $1`, seat); err != nil {
@@ -47,7 +47,7 @@ func TestAnErasedSeatIsNotBoundToAMeeting(t *testing.T) {
 // attested disjunction is empty, so the account-address match answers alone.
 func TestAnErasedSeatWithAProvedMailboxIsNotBoundToAMeeting(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, email := seedSeat(ctx, t, tx, "active")
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO capture_connection (id, provider, user_id, status, account_label)
@@ -75,7 +75,7 @@ func TestAnErasedSeatWithAProvedMailboxIsNotBoundToAMeeting(t *testing.T) {
 // test above would pass on a fragment that bound nobody.
 func TestADepartedSeatIsStillBoundToAMeeting(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, email := seedSeat(ctx, t, tx, "active")
 		if _, err := tx.Exec(ctx,
 			`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, seat); err != nil {

@@ -70,7 +70,7 @@ func TestTheAnalyticsToolAndTheHTTPEngineServeOneAnswer(t *testing.T) {
 
 	// The HTTP engine's answer to the same question, through the same seam.
 	var twin AnalyticsAnswer
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		twin, err = RunAnalyticsQuery(ctx, tx, analyticsquery.Query{
 			Entity:   "deals-by-stage",

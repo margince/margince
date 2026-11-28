@@ -3,7 +3,7 @@
 
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { getAllVersions } from "baseline-browser-mapping";
+import { getCompatibleVersions } from "baseline-browser-mapping";
 import browserslist from "browserslist";
 import { stable } from "../src/format/collate";
 
@@ -38,13 +38,15 @@ export type ChromiumReleases = ReadonlyMap<
 
 function chromiumReleases(): ChromiumReleases {
   const releases = new Map<string, { version: number[]; chromium: number }[]>();
-  const all = getAllVersions({
+  // Read releases without asking for Baseline-year classifications. Those
+  // classifications depend on today and reject years outside their data.
+  // 2002 predates Baseline, so this returns every known browser release.
+  const all = getCompatibleVersions({
+    targetYear: 2002,
+    listAllCompatibleVersions: true,
     includeDownstreamBrowsers: true,
-    outputFormat: "array",
+    suppressWarnings: true,
   });
-  if (!Array.isArray(all)) {
-    throw new Error("baseline-browser-mapping answered no list of versions.");
-  }
   for (const release of all) {
     if (release.engine !== "Blink" || release.engine_version === undefined) {
       continue;

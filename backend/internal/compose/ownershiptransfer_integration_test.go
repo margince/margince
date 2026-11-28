@@ -265,7 +265,7 @@ func TestAHandedOverContactTakesOnlyTheWorkThatIsItsAlone(t *testing.T) {
 // cannot land between the check and the move.
 func TestTheReceiverIsHeldUntilTheHandoverCommits(t *testing.T) {
 	e := integration.Setup(t)
-	err := database.WithWorkspaceTx(giver(e), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(giver(e), e.Pool, func(tx pgx.Tx) error {
 		if err := auth.EnsureHandOverRecipient(giver(e), tx, e.Rep3); err != nil {
 			return err
 		}

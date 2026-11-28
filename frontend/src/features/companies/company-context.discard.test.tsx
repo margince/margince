@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyContextCard } from "./company-context";
 
@@ -81,20 +82,24 @@ async function renderCard() {
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  await screen.findByRole("button", { name: "Edit business context" });
+  await screen.findByRole("button", {
+    name: englishCopy["settings.companyEditContext"],
+  });
 }
 
 // The card is on screen once renderCard resolves, so opening it waits on nothing.
 async function openEditor(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
-    screen.getByRole("button", { name: "Edit business context" }),
+    screen.getByRole("button", {
+      name: englishCopy["settings.companyEditContext"],
+    }),
   );
   return screen.getByRole("dialog");
 }
 
 const companyName = (dialog: HTMLElement) =>
   within(dialog).getByRole<HTMLInputElement>("textbox", {
-    name: "Company name",
+    name: englishCopy["ob.field.display_name"],
   });
 
 afterEach(() => {
@@ -133,10 +138,12 @@ describe("Edit business context", () => {
     await user.type(companyName(dialog), " GmbH");
     await user.keyboard("{Escape}");
     const question = await screen.findByRole("dialog", {
-      name: "Discard unsaved changes?",
+      name: englishCopy["unsaved.title"],
     });
     await user.click(
-      within(question).getByRole("button", { name: "Discard changes" }),
+      within(question).getByRole("button", {
+        name: englishCopy["unsaved.discard"],
+      }),
     );
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());

@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -66,6 +67,8 @@ func (w *csvWriters) Reverse(
 		// The archive takes the activity's links with it, so the contact's last
 		// activity falls back to what was there before the import.
 		_, err = w.activities.ArchiveActivity(ctx, ids.From[ids.ActivityKind](nativeID), nil, activities.NotTouchedByHumanSince(importedAt))
+	case migration.ObjectProject, migration.ObjectProduct:
+		err = w.record.Undo(ctx, nativeID, importedAt)
 	default:
 		return fmt.Errorf("import undo: %q is not a reversible object: %w", object, apperrors.ErrConflict)
 	}
@@ -79,7 +82,7 @@ func (w *csvWriters) Reverse(
 // its reason, and any other error as it is.
 func keptCause(err error) error {
 	if wrapsA[*contacts.HumanTouchedError](err) || wrapsA[*deals.HumanTouchedError](err) ||
-		wrapsA[*activities.HumanTouchedError](err) {
+		wrapsA[*activities.HumanTouchedError](err) || wrapsA[*storekit.HumanTouchedError](err) {
 		return &migration.KeptError{Why: migration.Why(migration.ReasonUndoEdited)}
 	}
 	if still, ok := errors.AsType[*contacts.StillReferencedError](err); ok {

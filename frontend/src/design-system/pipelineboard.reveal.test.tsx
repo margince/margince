@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { AnsweredSearch } from "./answeredsearch";
 import { ListTable } from "./listtable";
 import {
@@ -135,7 +136,9 @@ describe("PipelineBoard search off screen", () => {
     const user = userEvent.setup();
     render(board("fraunhofer"));
     await user.click(
-      await screen.findByRole("button", { name: "Go to column" }),
+      await screen.findByRole("button", {
+        name: englishCopy["board.showMatches"],
+      }),
     );
     expect(scrolled).toEqual(["won", "won"]);
   });

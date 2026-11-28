@@ -66,7 +66,7 @@ var (
 func TestNotClauseKeepsARowWhoseDetailIsNull(t *testing.T) {
 	e := integration.Setup(t)
 	var kept, matched int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM (SELECT NULL::text AS status_detail) r WHERE `+providerwait.NotClause).Scan(&kept); err != nil {
 			return err

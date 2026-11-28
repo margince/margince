@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { throwProblem } from "../lib/problem";
 import { seedWriter } from "../testing/mefixture";
 import { CreateAction } from "./create";
@@ -65,9 +66,9 @@ describe("CreateAction dedupe link", () => {
     await userEvent.type(screen.getByLabelText("Full name *"), "Peter Neu");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() =>
-      expect(screen.getByText("View existing record")).toBeTruthy(),
+      expect(screen.getByText(englishCopy["dedupe.viewExisting"])).toBeTruthy(),
     );
-    await userEvent.click(screen.getByText("View existing record"));
+    await userEvent.click(screen.getByText(englishCopy["dedupe.viewExisting"]));
     await waitFor(() => expect(window.location.hash).toBe("#/contacts/01ABC"));
   });
 });

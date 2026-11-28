@@ -1,16 +1,33 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { jsonResponse, renderSettings } from "../../testing/settings.testkit";
+import { SETTINGS_PAGE_VIEWS } from "./settings";
 
 // The two entries one Connections tab became: the CONTACT's mailbox and network
 // on Connections, the INSTALLATION's outside wiring on Integrations. Each page
 // has to carry its own half and none of the other's — a relabelling would pass
 // any claim that only ever looked at one of them.
 
-// No shared fetch stub: the backend a claim needs is installed beside the claim,
-// so what answered it is readable where it is asserted.
+// These cases check page contents; await their real code loaders before
+// starting the DOM wait budget. Loading and retry have their own suite.
+beforeAll(async () => {
+  await Promise.all([
+    SETTINGS_PAGE_VIEWS.connections.drawn({ tab: "" }),
+    SETTINGS_PAGE_VIEWS.integrations.drawn({ tab: "" }),
+  ]);
+});
+
 beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
 });
@@ -35,6 +52,24 @@ function wiringSettingsBackend(opts: { roles: string[]; allow?: GrantSpec }) {
         user: { ...me.user, email: "ada@acme.test" },
       });
     }
+    const provider = new URL(url).pathname.split("/")[3];
+    if (url.includes("/v1/messenger/") && url.endsWith("/identity"))
+      return jsonResponse({ provider, state: "needs_consent" });
+    if (url.includes("/v1/messenger/") && url.endsWith("/setup"))
+      return jsonResponse({
+        provider,
+        configured: false,
+        callback_url: "",
+        participant_scopes: [],
+      });
+    if (url.includes("/v1/installation/oauth-apps/"))
+      return jsonResponse({
+        provider,
+        configured: false,
+        client_id: "",
+        source: "none",
+        redirect_uris: [],
+      });
     return jsonResponse({
       data: [],
       page: { next_cursor: null, has_more: false },
@@ -93,7 +128,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
     // the calling human server-side, and the LinkedIn panel reads /me.
     expect(
       await screen.findByRole("heading", {
-        name: "Mail and calendar",
+        name: englishCopy["settings.part.connections.mail"],
       }),
     ).toBeTruthy();
     // And nothing workspace-wide: a key everybody spends from, the
@@ -118,10 +153,14 @@ describe("SettingsScreen connections and integrations tabs", () => {
     );
     renderSettings("connections", "linkedin");
     expect(
-      await screen.findByRole("heading", { name: "LinkedIn network" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["linkedinReach.title"],
+      }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "Mail and calendar" }),
+      screen.queryByRole("heading", {
+        name: englishCopy["settings.part.connections.mail"],
+      }),
     ).toBeNull();
   });
 
@@ -130,11 +169,13 @@ describe("SettingsScreen connections and integrations tabs", () => {
     renderSettings("connections", "activity");
     expect(
       await screen.findByRole("heading", {
-        name: "What your connections found",
+        name: englishCopy["connectionOutcomes.title"],
       }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "Mail and calendar" }),
+      screen.queryByRole("heading", {
+        name: englishCopy["settings.part.connections.mail"],
+      }),
     ).toBeNull();
   });
 
@@ -145,7 +186,9 @@ describe("SettingsScreen connections and integrations tabs", () => {
     );
     renderSettings("integrations");
     expect(
-      await screen.findByRole("heading", { name: "Contact data" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["settings.part.integrations.contact"],
+      }),
     ).toBeTruthy();
     for (const heading of ["Mail and calendar", "LinkedIn network"]) {
       expect(screen.queryByRole("heading", { name: heading })).toBeNull();
@@ -163,6 +206,10 @@ describe("SettingsScreen connections and integrations tabs", () => {
     );
     renderSettings("integrations", tab);
     expect(await screen.findByRole("heading", { name: heading })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Contact data" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", {
+        name: englishCopy["settings.part.integrations.contact"],
+      }),
+    ).toBeNull();
   });
 });

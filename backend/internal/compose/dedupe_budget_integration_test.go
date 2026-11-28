@@ -72,7 +72,7 @@ func TestCaptureDedupeStagesMergeInsteadOfDuplicating(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = second
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var leads, proposals int
 		if err := tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM lead WHERE email = 'dana@example.test'`).Scan(&leads); err != nil {
@@ -186,7 +186,7 @@ func TestAcceptingACaptureCollisionFillsTheLeadsEmptyFields(t *testing.T) {
 	}
 
 	var company, title *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT company_name, title FROM lead WHERE id = $1`, first.ID).Scan(&company, &title)
 	}); err != nil {
@@ -215,7 +215,7 @@ func unsetOr(value *string) string {
 func pendingCollisionFor(t *testing.T, e *integration.Env, target ids.UUID) ids.ApprovalID {
 	t.Helper()
 	var id ids.ApprovalID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM approval WHERE kind = 'merge_records' AND target_entity_id = $1 AND status = 'pending'`,
 			target).Scan(&id)
@@ -268,7 +268,7 @@ func TestAcceptingACaptureCollisionNeverOverwritesWhatIsAlreadyThere(t *testing.
 	}
 
 	var name, company, title *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT full_name, company_name, title FROM lead WHERE id = $1`, first.ID).
 			Scan(&name, &company, &title)

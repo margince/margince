@@ -120,7 +120,7 @@ func TestAnAttendeesOwnDeclineKeepsTheSharedMeetingAndSurvivesAColleaguesReplay(
 					if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND address=$2 AND response=$3`, ref.ID, second, answer); n != 1 {
 						t.Fatalf("%s: found %d rows with the attendee's own answer after a colleague's replay", answer, n)
 					}
-					if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+					if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 						for _, seat := range []ids.UUID{e.Rep1, e.Rep2} {
 							var responsible bool
 							query := "SELECT " + storekit.MeetingResponsibilitySQL("a", "$2") + " FROM activity a WHERE id=$1"

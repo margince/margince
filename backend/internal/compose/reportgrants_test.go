@@ -146,9 +146,10 @@ func TestEveryGrantedNameIsInTheReportsVocabulary(t *testing.T) {
 			_, isDimension := spec.dimensions[field]
 			_, isMeasure := spec.measures[field]
 			_, isFilter := spec.filters[field]
-			if !isDimension && !isMeasure && !isFilter {
+			_, isThreshold := spec.thresholds[field]
+			if !isDimension && !isMeasure && !isFilter && !isThreshold {
 				t.Errorf("report %q owes a grant for %q, which is not one of its "+
-					"dimensions, measures or filters: the entry defends nothing and "+
+					"dimensions, measures, filters or thresholds: the entry defends nothing and "+
 					"reads as protection the next author will not re-derive", report, field)
 			}
 		}

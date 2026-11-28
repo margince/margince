@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { precedes } from "../testing/domorder";
 import { openView, openViewStep } from "../testing/listview.testkit";
 import { type ListColumn, ListTable } from "./listtable";
@@ -87,7 +88,10 @@ describe("the Columns row and the Compact toggle", () => {
     const panel = within(await openView(user));
     const compact = panel.getByRole("button", { name: "Compact" });
     expect(
-      precedes(panel.getByRole("button", { name: "Show archived" }), compact),
+      precedes(
+        panel.getByRole("button", { name: englishCopy["list.showArchived"] }),
+        compact,
+      ),
     ).toBe(true);
     expect(compact).not.toHaveTextContent("On");
     expect(compact).toHaveAccessibleName("Compact");

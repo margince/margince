@@ -43,7 +43,7 @@ func emptiedApproval(t *testing.T, e *integration.Env, targetType string, target
 
 func writeAudit(t *testing.T, e *integration.Env, write func(pgx.Tx) error) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, write); err != nil {
+	if err := database.WithTx(e.Admin(), e.Pool, write); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -57,7 +57,7 @@ func grantAdmin(t *testing.T, e *integration.Env, users ...ids.UUID) {
 
 func runBatch(ctx context.Context, e *integration.Env, step datatask.Step) (int, error) {
 	var changed int
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 1000, RunID: ids.NewV7()})
 		changed = out.Changed
 		return err

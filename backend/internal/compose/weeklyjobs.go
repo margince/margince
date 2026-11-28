@@ -288,7 +288,7 @@ func (w *weeklyGenerateWorker) repsDueTheirReview(
 	ctx context.Context, wsID ids.UUID, now time.Time,
 ) ([]ids.UUID, error) {
 	var due []ids.UUID
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		// The engine's own week arithmetic, not a second copy: this decides who
 		// is due and the store then dates what it writes. Two spellings would
 		// let the pair disagree about which week. This job is a combined surface:

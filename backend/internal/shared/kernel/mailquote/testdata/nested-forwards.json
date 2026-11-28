@@ -1,0 +1,30 @@
+[
+  {
+    "name": "nested Gmail",
+    "subject": "Fwd: Request",
+    "body": "Please review.\n\n---------- Forwarded message ---------\nFrom: Colleague <colleague@example.test>\nDate: Tuesday\nSubject: Fwd: Original request\n\nFor the team.\n\n--\nForwarding signature\n\n---------- Forwarded message ---------\nFrom: Customer <buyer@example.test>\nDate: Monday\nSubject: Original request\n\nPlease send a migration quote.\n\nOn Sunday, Sales wrote:\n> Old newsletter.",
+    "main": "Please review.\n\n---------- Forwarded message ---------\nFrom: Colleague <colleague@example.test>\nDate: Tuesday\nSubject: Fwd: Original request\n\nFor the team.\n\n--\nForwarding signature\n\n---------- Forwarded message ---------\nFrom: Customer <buyer@example.test>\nDate: Monday\nSubject: Original request\n\nPlease send a migration quote.",
+    "trimmed": "On Sunday, Sales wrote:\n> Old newsletter."
+  },
+  {
+    "name": "nested Apple",
+    "subject": "WG: Request",
+    "body": "Please review.\n\n---------- Forwarded message ---------\nFrom: Colleague <colleague@example.test>\nDate: Tuesday\nSubject: Fwd: Original request\n\nFor the team.\n\n--\nForwarding signature\n\nBegin forwarded message:\n\nFrom: Customer <buyer@example.test>\nDate: Monday\nSubject: Original request\n\nPlease send a migration quote.\n\nOn Sunday, Sales wrote:\n> Old newsletter.",
+    "main": "Please review.\n\n---------- Forwarded message ---------\nFrom: Colleague <colleague@example.test>\nDate: Tuesday\nSubject: Fwd: Original request\n\nFor the team.\n\n--\nForwarding signature\n\nBegin forwarded message:\n\nFrom: Customer <buyer@example.test>\nDate: Monday\nSubject: Original request\n\nPlease send a migration quote.",
+    "trimmed": "On Sunday, Sales wrote:\n> Old newsletter."
+  },
+  {
+    "name": "nested Outlook",
+    "subject": "FW: Request",
+    "body": "Please review.\n\n---------- Forwarded message ---------\nFrom: Colleague <colleague@example.test>\nDate: Tuesday\nSubject: Fwd: Original request\n\nFor the team.\n\n--\nForwarding signature\n\nFrom: Customer <buyer@example.test>\nDate: Monday\nSubject: Original request\n\nPlease send a migration quote.\n\nOn Sunday, Sales wrote:\n> Old newsletter.",
+    "main": "Please review.\n\n---------- Forwarded message ---------\nFrom: Colleague <colleague@example.test>\nDate: Tuesday\nSubject: Fwd: Original request\n\nFor the team.\n\n--\nForwarding signature\n\nFrom: Customer <buyer@example.test>\nDate: Monday\nSubject: Original request\n\nPlease send a migration quote.",
+    "trimmed": "On Sunday, Sales wrote:\n> Old newsletter."
+  },
+  {
+    "name": "ordinary reply below a forwarded customer",
+    "subject": "Fwd: Request",
+    "body": "Please review.\n\n---------- Forwarded message ---------\nFrom: Colleague <colleague@example.test>\nDate: Tuesday\nSubject: Re: Original request\n\nFor the team.\n\n--\nForwarding signature\n\nFrom: Customer <buyer@example.test>\nDate: Monday\nSubject: Original request\n\nPlease send a migration quote.",
+    "main": "Please review.\n\n---------- Forwarded message ---------\nFrom: Colleague <colleague@example.test>\nDate: Tuesday\nSubject: Re: Original request\n\nFor the team.",
+    "trimmed": "--\nForwarding signature\n\nFrom: Customer <buyer@example.test>\nDate: Monday\nSubject: Original request\n\nPlease send a migration quote."
+  }
+]

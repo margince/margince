@@ -120,8 +120,8 @@ func TestTheTaskMovesEveryOlderSourceOntoItsChannel(t *testing.T) {
 		t.Errorf("%d update event(s) announce the corrected deal and project, want 2", n)
 	}
 	if n := o.e.WsCount(t, `SELECT count(*) FROM event_outbox o
-		WHERE o.envelope->'entity'->>'id' = $1`, offer.String()); n != 0 {
-		t.Errorf("the corrected offer sent %d event(s), want none", n)
+		WHERE o.envelope->'entity'->>'id' = $1`, offer.String()); n != 1 {
+		t.Errorf("the corrected offer sent %d event(s), want its source update", n)
 	}
 	if n := o.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update'`, typed); n != 0 {
 		t.Errorf("a deal already on the list got %d audit row(s)", n)
@@ -145,7 +145,7 @@ func TestBatchesOfTwoReachEveryOlderDealAndAReplayChangesNothing(t *testing.T) {
 	in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
 	for batches := 1; ; batches++ {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) (err error) {
 			out, err = move(ctx, tx, in)
 			return err
 		}); err != nil {
@@ -165,7 +165,7 @@ func TestBatchesOfTwoReachEveryOlderDealAndAReplayChangesNothing(t *testing.T) {
 	if n := o.e.WsCount(t, `SELECT count(*) FROM deal WHERE source = 'seed'`); n != 0 {
 		t.Errorf("%d older deal(s) were never reached", n)
 	}
-	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 		out, err := move(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		if err == nil && (out.Changed != 0 || !out.Done) {
 			t.Errorf("a replay changed %d deal(s), done %v, want none and done", out.Changed, out.Done)
@@ -203,14 +203,14 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 	if n := o.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update'`, deal); n != 0 {
 		t.Errorf("the rolled-back batch left %d audit row(s)", n)
 	}
-	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 		_, err := move(ctx, tx, datatask.BatchIn{Cursor: []byte(`"bad cursor"`), Limit: 2})
 		return err
 	}); err == nil {
 		t.Fatal("accepted a malformed cursor")
 	}
 	member := o.e.Admin()
-	if err := database.WithWorkspaceTx(member, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(member, o.e.Pool, func(tx pgx.Tx) error {
 		_, err := move(member, tx, datatask.BatchIn{Limit: 2})
 		return err
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {

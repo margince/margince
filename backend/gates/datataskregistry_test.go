@@ -16,6 +16,7 @@ import (
 	"go/token"
 	"io"
 	"io/fs"
+	"os"
 	"os/exec"
 	"slices"
 	"strconv"
@@ -143,7 +144,11 @@ func currentTaskLiterals() ([]string, error) {
 }
 
 func releasedTaskLiterals() ([]string, error) {
-	body, err := exec.Command("git", "-C", repoRoot, "archive", "origin/main", "backend/internal").Output()
+	base := os.Getenv("CHECK_BASE_REF")
+	if base == "" {
+		base = "origin/main"
+	}
+	body, err := exec.Command("git", "-C", repoRoot, "archive", base, "backend/internal").Output()
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -90,7 +91,9 @@ function editor(state: DealCommercial, typedAmount: string | null) {
 }
 
 const opens = async () => {
-  await screen.findByRole("dialog", { name: "Products and services" });
+  await screen.findByRole("dialog", {
+    name: englishCopy["deal.lines.editTitle"],
+  });
 };
 
 /** The deal's own lines, open for a change. */
@@ -116,12 +119,14 @@ export const EnterInCustomItem: Story = {
   render: () => editor(PRICED, null),
   play: async () => {
     const dialog = within(
-      await screen.findByRole("dialog", { name: "Products and services" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["deal.lines.editTitle"],
+      }),
     );
     const custom = dialog.getByRole("textbox", { name: "Custom item" });
     await userEvent.type(custom, "Ripening{Enter}");
     await expect(
-      screen.getByRole("dialog", { name: "Products and services" }),
+      screen.getByRole("dialog", { name: englishCopy["deal.lines.editTitle"] }),
     ).toBeVisible();
     await expect(custom).toHaveValue("Ripening");
   },

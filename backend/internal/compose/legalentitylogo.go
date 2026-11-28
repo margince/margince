@@ -8,15 +8,12 @@ package compose
 // by the rules the company's is.
 
 import (
-	"errors"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // UploadLegalEntityLogo implements POST /legal-entities/{id}/logo.
@@ -40,12 +37,11 @@ func (h companyHandlers) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Re
 	if !ok {
 		return
 	}
-	workspace, found := principal.WorkspaceID(r.Context())
-	if !found {
-		httperr.Write(w, r, errors.New("compose: a legal entity logo upload outside a workspace context"))
+	markKey, err := h.store.NewLogoBase(r.Context(), "legal-entity/"+entityID.String())
+	if err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
-	markKey := legalEntityLogoKey(ids.From[ids.WorkspaceKind](workspace), entityID)
 	if err := h.store.RecordLogoIntent(r.Context(), markKey); err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -93,10 +89,4 @@ func (h companyHandlers) writeLegalEntity(w http.ResponseWriter, r *http.Request
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, contacts.LegalEntityWire(entity))
-}
-
-// legalEntityLogoKey mints a key per upload, under the company logo's kind so
-// the one logo sweep owns it, for the reason companyLogoKey mints per attempt.
-func legalEntityLogoKey(wsID ids.WorkspaceID, id ids.LegalEntityID) string {
-	return blobstore.WorkspaceKey(wsID, companyLogoKind, "legal-entity/"+id.String()+"/"+ids.NewV7().String())
 }

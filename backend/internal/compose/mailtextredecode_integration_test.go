@@ -57,7 +57,7 @@ func seedMisdecodedMail(t *testing.T, e *integration.Env, sourceID, subject, bod
 	var id ids.UUID
 	// raw_capture_id is set, because the join reads the link and not the
 	// Message-ID: an original found by a key a sender typed may be planted.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			WITH rc AS (INSERT INTO raw_capture (source_system, source_id, payload)
 			            VALUES ('email', $1, $4::jsonb) RETURNING id)

@@ -31,9 +31,13 @@ describe("ConsentPurposesCard", () => {
     stubRoutes();
     render(<ConsentPurposesCard />);
     const marketing = await screen.findByRole("row", { name: /Marketing/ });
-    expect(within(marketing).getByText("Double opt-in")).toBeInTheDocument();
+    expect(
+      within(marketing).getByText(en["privacy.purposeDoiBadge"]),
+    ).toBeInTheDocument();
     const transactional = screen.getByRole("row", { name: /Deal messages/ });
-    expect(within(transactional).queryByText("Double opt-in")).toBeNull();
+    expect(
+      within(transactional).queryByText(en["privacy.purposeDoiBadge"]),
+    ).toBeNull();
   });
 
   // G-3
@@ -78,15 +82,15 @@ describe("ConsentPurposesCard", () => {
     });
   });
 
-  // A purpose has no PATCH and no DELETE — say so before they commit, not after.
-  it("warns that a purpose cannot be renamed or removed", async () => {
+  it("explains that recorded use prevents changes to a purpose", async () => {
+    const user = userEvent.setup({ delay: null });
     stubRoutes();
     render(<ConsentPurposesCard />);
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /add purpose/i }),
     );
     expect(
-      screen.getByText(/cannot be renamed or removed/i),
+      screen.getByText(/an unused purpose can be renamed or archived/i),
     ).toBeInTheDocument();
   });
 

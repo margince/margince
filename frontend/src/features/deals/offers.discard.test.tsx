@@ -66,7 +66,7 @@ describe("discarding a draft offer", () => {
     await user.click(await screen.findByTestId("archive-record"));
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
-        name: "Discard draft",
+        name: en["offer.discard"],
       }),
     );
     await waitFor(() => expect(archives).toEqual([{ ifMatch: "4" }]));

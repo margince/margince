@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import type { OpenReceipt } from "../../components/citations";
-import { RecordCustomFields } from "../../components/recordcustomfields";
 import { RelationshipsTab } from "../../components/relationshiprows";
 import { DisclosureGroup } from "../../design-system/disclosure";
 import { Panel } from "../../design-system/panel";
@@ -86,7 +85,6 @@ export function CompanyProfileTab({
             refusedReasonId={refusedReasonId}
           />
           <HierarchyRollupPanel companyId={company.id} />
-          <RecordCustomFields kind="company" record={company} />
           <DeepReadPanel companyId={company.id} />
           {/* What the company runs, read from public records it never wrote
               for us. Under the site read, because that read queues it. */}

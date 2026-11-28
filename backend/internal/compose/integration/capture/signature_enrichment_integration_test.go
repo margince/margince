@@ -117,7 +117,7 @@ func TestSettingSignatureEnrichmentAuditsTheChange(t *testing.T) {
 	}
 
 	var before, after *bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT (before->>'signature_enrich_enabled')::boolean,
 			       (after->>'signature_enrich_enabled')::boolean

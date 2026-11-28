@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { HiddenBacklogPanel } from "./worklist.hidden";
 
 // The surface that reports the queue's own worst failure.
@@ -104,10 +105,14 @@ describe("the hidden-backlog panel", () => {
     draw(backlog({ clear: false, past_horizon: 3, not_sales: 7 }));
 
     await waitFor(() =>
-      expect(screen.getByText("Too old for the Worklist")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["worklist.hidden.pastHorizon"]),
+      ).toBeTruthy(),
     );
     expect(screen.getByText("3 waiting")).toBeTruthy();
-    expect(screen.getByText("Marked not sales work")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["worklist.hidden.notSales"]),
+    ).toBeTruthy();
     expect(screen.getByText("7 waiting")).toBeTruthy();
   });
 
@@ -117,7 +122,9 @@ describe("the hidden-backlog panel", () => {
     draw(backlog({ clear: false, informs_us: 4 }));
 
     await waitFor(() =>
-      expect(screen.getByText("Judged to ask nothing")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["worklist.hidden.informsUs"]),
+      ).toBeTruthy(),
     );
     expect(screen.getByText("4 waiting")).toBeTruthy();
   });
@@ -132,18 +139,16 @@ describe("the hidden-backlog panel", () => {
         screen.getByText("2 private emails not checked by AI"),
       ).toBeTruthy(),
     );
-    expect(
-      screen.getByText(
-        "Nothing is hidden. Every waiting customer reaches a Worklist.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["worklist.hidden.clear"])).toBeTruthy();
   });
 
   it("says nothing about private mail when every message was checked", async () => {
     draw(backlog({ clear: false, past_horizon: 1 }));
 
     await waitFor(() =>
-      expect(screen.getByText("Too old for the Worklist")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["worklist.hidden.pastHorizon"]),
+      ).toBeTruthy(),
     );
     expect(screen.queryByText(/not checked by AI/)).toBeNull();
   });
@@ -167,12 +172,16 @@ describe("the hidden-backlog panel", () => {
       },
     );
     await waitFor(() =>
-      expect(screen.getByText("Judged to ask nothing")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["worklist.hidden.informsUs"]),
+      ).toBeTruthy(),
     );
     expect(screen.queryByText(/Weekly figures/)).toBeNull();
     expect(rowReads).toEqual([]);
 
-    await user.click(screen.getByText("Judged to ask nothing"));
+    await user.click(
+      screen.getByText(englishCopy["worklist.hidden.informsUs"]),
+    );
 
     expect(await screen.findByText(/Weekly figures/)).toBeTruthy();
     expect(onOpenEmail).not.toHaveBeenCalled();
@@ -210,9 +219,13 @@ describe("the hidden-backlog panel", () => {
       },
     );
     await waitFor(() =>
-      expect(screen.getByText("Judged to ask nothing")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["worklist.hidden.informsUs"]),
+      ).toBeTruthy(),
     );
-    await user.click(screen.getByText("Judged to ask nothing"));
+    await user.click(
+      screen.getByText(englishCopy["worklist.hidden.informsUs"]),
+    );
     await user.click(
       await screen.findByRole("button", { name: /Monthly report/ }),
     );
@@ -223,9 +236,13 @@ describe("the hidden-backlog panel", () => {
     const user = userEvent.setup();
     draw(backlog({ clear: false, informs_us: 1 }), true, "fails");
     await waitFor(() =>
-      expect(screen.getByText("Judged to ask nothing")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["worklist.hidden.informsUs"]),
+      ).toBeTruthy(),
     );
-    await user.click(screen.getByText("Judged to ask nothing"));
+    await user.click(
+      screen.getByText(englishCopy["worklist.hidden.informsUs"]),
+    );
     expect(await screen.findByText(/did not load/i)).toBeTruthy();
   });
 
@@ -233,11 +250,15 @@ describe("the hidden-backlog panel", () => {
     const user = userEvent.setup();
     draw(backlog({ clear: false, informs_us: 1 }));
     await waitFor(() =>
-      expect(screen.getByText("Judged to ask nothing")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["worklist.hidden.informsUs"]),
+      ).toBeTruthy(),
     );
-    await user.click(screen.getByText("Judged to ask nothing"));
+    await user.click(
+      screen.getByText(englishCopy["worklist.hidden.informsUs"]),
+    );
     expect(
-      await screen.findByText("Nothing is held back by this rule now."),
+      await screen.findByText(englishCopy["worklist.hidden.rows.empty"]),
     ).toBeTruthy();
   });
 
@@ -247,10 +268,16 @@ describe("the hidden-backlog panel", () => {
     draw(backlog({ clear: false, past_horizon: 3 }));
 
     await waitFor(() =>
-      expect(screen.getByText("Too old for the Worklist")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["worklist.hidden.pastHorizon"]),
+      ).toBeTruthy(),
     );
-    expect(screen.queryByText("Set aside by you")).toBeNull();
-    expect(screen.queryByText("Marked not sales work")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["worklist.hidden.setAside"]),
+    ).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["worklist.hidden.notSales"]),
+    ).toBeNull();
   });
 
   // THE failure this whole reading exists for. A read cut short by its own scan
@@ -272,17 +299,21 @@ describe("the hidden-backlog panel", () => {
     draw(backlog({ clear: false, truncated: true, past_horizon: 0 }));
 
     await waitFor(() =>
-      expect(screen.getByText("Too old for the Worklist")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["worklist.hidden.pastHorizon"]),
+      ).toBeTruthy(),
     );
     expect(screen.getAllByText("Not counted").length).toBeGreaterThan(0);
 
     // Opened, an empty page there is out of reach, never "nothing held back".
-    await userEvent.setup().click(screen.getByText("Too old for the Worklist"));
+    await userEvent
+      .setup()
+      .click(screen.getByText(englishCopy["worklist.hidden.pastHorizon"]));
     expect(
       await screen.findByText(/None could be read at this size/),
     ).toBeTruthy();
     expect(
-      screen.queryByText("Nothing is held back by this rule now."),
+      screen.queryByText(englishCopy["worklist.hidden.rows.empty"]),
     ).toBeNull();
   });
 

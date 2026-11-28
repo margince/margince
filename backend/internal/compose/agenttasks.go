@@ -91,7 +91,7 @@ func (t agentTasks) Create(ctx context.Context, in agents.NewTask) (agents.Task,
 		return agents.Task{}, err
 	}
 	var task agents.Task
-	err = database.WithWorkspaceTx(ctx, t.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, t.pool, func(tx pgx.Tx) error {
 		// DO UPDATE over DO NOTHING, because DO NOTHING returns no row at all and
 		// this needs the existing one. Touching a column it already holds is what
 		// makes RETURNING fire; approval_id is the conflict key, so the write is a
@@ -123,7 +123,7 @@ func (t agentTasks) Load(ctx context.Context, id ids.UUID) (agents.Task, error) 
 		return agents.Task{}, err
 	}
 	var task agents.Task
-	err = database.WithWorkspaceTx(ctx, t.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, t.pool, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `SELECT `+taskColumns+`
 			FROM agent_task WHERE id = $1 AND `+taskOwnedBy+` AND expires_at > now()`, id, passport, connection)
 		return scanTask(row, &task)
@@ -151,7 +151,7 @@ func (t agentTasks) Claim(ctx context.Context, id ids.UUID, lease time.Duration)
 		return agents.TaskClaim{}, err
 	}
 	var claim agents.TaskClaim
-	err = database.WithWorkspaceTx(ctx, t.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, t.pool, func(tx pgx.Tx) error {
 		// `prior` reads the row as it was BEFORE the update, because every CTE
 		// in one statement sees the same snapshot. That is the only way to learn
 		// what claimed_at held: RETURNING answers the new value, which this
@@ -192,7 +192,7 @@ func (t agentTasks) Settle(ctx context.Context, id ids.UUID, s agents.Settlement
 		return agents.Task{}, err
 	}
 	var task agents.Task
-	err = database.WithWorkspaceTx(ctx, t.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, t.pool, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
 			UPDATE agent_task SET status = $4, status_message = NULLIF($5, ''),
 				result = $6, error = $7, served_records = $8, updated_at = now()
@@ -238,7 +238,7 @@ func (t agentTasks) Cancel(ctx context.Context, id ids.UUID, lease time.Duration
 		return false, err
 	}
 	var cancelled bool
-	err = database.WithWorkspaceTx(ctx, t.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, t.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			WITH taken AS (
 				UPDATE agent_task SET status = 'cancelled', status_message = NULLIF($5, ''), updated_at = now()

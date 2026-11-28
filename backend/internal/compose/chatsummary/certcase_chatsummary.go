@@ -94,7 +94,10 @@ type certCase struct {
 }
 
 func (c *certCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := Request(c.in, model.AboutNoContact("certification corpus"))
+	req, err := Request(c.in, model.AboutNoContact("certification corpus"))
+	if err != nil {
+		return aitasks.Trace{}, err
+	}
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	res, err := completer.Complete(ctx, req)
 	if err != nil {

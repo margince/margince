@@ -139,7 +139,7 @@ func assertDocumentQuestion(t *testing.T, env captureEnv, activity ids.UUID) {
 	t.Helper()
 	e := env.e
 	var pointed ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT first_activity_id FROM capture_thread_verdict
    WHERE user_id=@seat AND thread_key=(SELECT thread_key FROM activity WHERE id=@activity) AND status='pending'`, pgx.StrictNamedArgs{"seat": e.Rep1, "activity": activity}).Scan(&pointed)
 	}); err != nil {
@@ -205,7 +205,7 @@ func TestANonclassifiedReopenKeepsTheTriggeringMessage(t *testing.T) {
 			env.sync(t, emailWithFile(sender, captureOwner, "reopen-file@vendor.example", root, "image001.png", []byte("image contents")))
 			activity := activityIDOf(t, e, "reopen-file@vendor.example")
 			var pointer ids.UUID
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(e.Admin(), `SELECT first_activity_id FROM capture_thread_verdict WHERE user_id=@user AND thread_key=@thread`, pgx.StrictNamedArgs{"user": e.Rep1, "thread": root}).Scan(&pointer)
 			}); err != nil {
 				t.Fatal(err)
@@ -213,7 +213,7 @@ func TestANonclassifiedReopenKeepsTheTriggeringMessage(t *testing.T) {
 			if pointer != activity {
 				t.Fatalf("question points at %s, want %s", pointer, activity)
 			}
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				_, err := tx.Exec(e.Admin(), `UPDATE capture_thread_verdict SET updated_at = now() - interval '2 minutes' WHERE user_id=@user AND thread_key=@thread`, pgx.StrictNamedArgs{"user": e.Rep1, "thread": root})
 				return err
 			}); err != nil {
@@ -234,7 +234,7 @@ func TestANonclassifiedReopenKeepsTheTriggeringMessage(t *testing.T) {
 				t.Fatalf("nonclassified mailbox commissioned %d verdicts", len(claimed))
 			}
 			setPosture(t, env, e.Rep1, capturemod.PostureClassified)
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				_, err := tx.Exec(e.Admin(), `UPDATE capture_thread_verdict SET next_attempt_at=@attempt WHERE user_id=@user AND thread_key=@thread`, pgx.StrictNamedArgs{"attempt": captureNow.Add(-time.Hour), "user": e.Rep1, "thread": root})
 				return err
 			}); err != nil {

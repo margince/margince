@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { phoneRow } from "../../testing/phonerow";
 import {
   installFetchStub,
@@ -124,12 +125,14 @@ export const ContactsListCopyAddress: Story = {
   },
   play: async () => {
     const copy = await screen.findByRole("button", {
-      name: "Copy email address",
+      name: englishCopy["contactLink.copyEmail"],
     });
     const clipboard = stubClipboard("accepts");
     try {
       await userEvent.click(copy);
-      await screen.findByRole("button", { name: "Email address copied" });
+      await screen.findByRole("button", {
+        name: englishCopy["contactLink.emailCopied"],
+      });
       await expect(clipboard.written).toEqual(["anna.weber@brandt.example"]);
       await expect(screen.queryByRole("dialog")).toBeNull();
     } finally {

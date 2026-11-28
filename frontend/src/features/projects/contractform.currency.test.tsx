@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ContractForm } from "./contractform";
 
 // The unit an agreement is written in is one somebody stated: the reader's pick,
@@ -90,7 +91,9 @@ function show(ui: ReactNode) {
 async function recordAgreement(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/^Title/), "MSA 2026");
   await user.type(screen.getByLabelText("Value"), "5000");
-  await user.click(screen.getByRole("button", { name: "Record contract" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["contracts.form.save"] }),
+  );
 }
 
 // The value box, once the installation's currency has opened it.
@@ -151,7 +154,9 @@ describe("recording an agreement's value", () => {
       /^USD/,
     );
     await user.type(screen.getByLabelText(/^Title/), "MSA 2026");
-    await user.click(screen.getByRole("button", { name: "Record contract" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["contracts.form.title"] }),
+    );
 
     await waitFor(async () =>
       expect(await writtenBody(seen, "POST")).toMatchObject({
@@ -187,7 +192,7 @@ describe("recording an agreement's value", () => {
     show(<ContractForm companyId="o-1" open onClose={() => {}} />);
 
     const [unread] = await screen.findAllByText(
-      "The currency could not be read, so no amount can be entered yet.",
+      englishCopy["amount.currencyUnread"],
     );
     const value = screen.getByLabelText("Value") as HTMLInputElement;
     expect(value.disabled).toBe(true);
@@ -264,7 +269,11 @@ describe("correcting an agreement's value", () => {
     );
     await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeTruthy());
 
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["contracts.form.saveEdit"],
+      }),
+    );
 
     await waitFor(async () =>
       expect(await writtenBody(seen, "PATCH")).toMatchObject({
@@ -291,7 +300,11 @@ describe("correcting an agreement's value", () => {
     await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeTruthy());
 
     await user.type(await openedValueBox(), "5000");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["contracts.form.saveEdit"],
+      }),
+    );
 
     await waitFor(async () =>
       expect(await writtenBody(seen, "PATCH")).toMatchObject({

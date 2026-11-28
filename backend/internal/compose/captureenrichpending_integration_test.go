@@ -26,7 +26,7 @@ import (
 func (h *historyEnv) queueSignature(t *testing.T, contact ids.UUID) {
 	t.Helper()
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), h.e.WS), "agent:enrich")
-	if err := database.WithWorkspaceTx(ctx, h.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, h.e.Pool, func(tx pgx.Tx) error {
 		return contacts.QueueSignatureWorkTx(ctx, tx, []ids.ContactID{ids.From[ids.ContactKind](contact)}, nil)
 	}); err != nil {
 		t.Fatal(err)
@@ -49,7 +49,7 @@ func TestPendingSignaturePassReadsOnlyItsRequestedContacts(t *testing.T) {
 		t.Fatalf("title=%q", got)
 	}
 	var attempts int
-	if err := database.WithWorkspaceTx(ctx, h.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, h.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT count(*) FROM contact_signature_enrich_state WHERE contact_id=@contact`, pgx.NamedArgs{"contact": unrelated}).Scan(&attempts)
 	}); err != nil {
 		t.Fatal(err)
@@ -72,7 +72,7 @@ func TestPendingSignaturePassKeepsARequestArrivingDuringTheModelRead(t *testing.
 	h.queueSignature(t, h.contact)
 	h.brain.onAsk = func(ids.UUID) {
 		system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), h.e.WS), "agent:enrich")
-		if err := database.WithWorkspaceTx(system, h.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(system, h.e.Pool, func(tx pgx.Tx) error {
 			_, err := contacts.QueueSignatureEventTx(system, tx, []ids.ContactID{ids.From[ids.ContactKind](h.contact)}, contacts.SignatureRequest{Reopen: true, Live: true})
 			return err
 		}); err != nil {
@@ -113,7 +113,7 @@ func TestDeletingAnUnreadSignatureSourceKeepsTheContactPending(t *testing.T) {
 	if err != nil || len(work) != 1 {
 		t.Fatalf("selected work=%+v err=%v", work, err)
 	}
-	if err := database.WithWorkspaceTx(ctx, h.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, h.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `DELETE FROM activity WHERE id=@id`, pgx.NamedArgs{"id": newest})
 		return err
 	}); err != nil {

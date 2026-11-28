@@ -74,7 +74,7 @@ func seedHeldQueue(t *testing.T, e *integration.Env, user ids.UUID, label string
 func activityForThread(t *testing.T, e *integration.Env, threadKey string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT first_activity_id FROM capture_thread_verdict WHERE thread_key = $1`,
 			threadKey).Scan(&id)

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "../design-system/atoms";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { en as englishCopy } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import { meFixture } from "../testing/mefixture";
 import {
@@ -121,7 +122,9 @@ function Picker({
 
 async function openList(canvasElement: HTMLElement) {
   await userEvent.click(
-    await within(canvasElement).findByRole("button", { name: "Change owner" }),
+    await within(canvasElement).findByRole("button", {
+      name: englishCopy["ownerPick.change"],
+    }),
   );
   return within(await screen.findByRole("dialog"));
 }
@@ -223,7 +226,7 @@ export const PartialRoster: Story = {
   render: () => <Picker roster="partial" />,
   play: async ({ canvasElement }) => {
     const list = await openList(canvasElement);
-    await list.findByText("Showing part of the list");
+    await list.findByText(englishCopy["state.partial"]);
   },
 };
 
@@ -278,7 +281,9 @@ export const OpenedByCaller: Story = {
     });
     await userEvent.click(edit);
     const list = within(
-      await screen.findByRole("dialog", { name: "Change owner" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["ownerPick.change"],
+      }),
     );
     await userEvent.click(
       await list.findByRole("option", { name: "Jane Doe" }),

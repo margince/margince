@@ -232,7 +232,7 @@ func TestTheBackfillReadsTheMethodOfOurOwnLegacyInvitation(t *testing.T) {
 func (o *owedEnv) offeredByTheWalk(t *testing.T) int {
 	t.Helper()
 	var offered int
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		found, err := activities.CalendarMethodCandidatesTx(t.Context(), tx, ids.UUID{}, calendarMethodsDataTask(o.e.Pool).Steps[0].Limit)
 		offered = len(found)
 		return err

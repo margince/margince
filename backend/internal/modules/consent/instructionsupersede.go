@@ -53,8 +53,8 @@ func SupersedeStaleDecisionTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID)
 	var fresh ids.UUID
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO communication_review
-		  (state, kind, delivery_intent_id, initiated_by, refusals, reason_code)
-		SELECT $2, kind, delivery_intent_id, initiated_by, refusals, reason_code
+		  (state, delivery_intent_id, initiated_by, refusals, reason_code)
+		SELECT $2, delivery_intent_id, initiated_by, refusals, reason_code
 		  FROM communication_review WHERE id = $1
 		RETURNING id`, inst.ReviewID, state).Scan(&fresh); err != nil {
 		return fmt.Errorf("consent: opening the review that replaces a stale approval: %w", err)

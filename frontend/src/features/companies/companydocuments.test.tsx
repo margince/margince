@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { CompanyDocumentsCard } from "./companydocuments";
 
 // What this card is for: finding a document by the name a human gave it, and
@@ -100,7 +101,9 @@ describe("the account's document library", () => {
         />
       </>,
     );
-    const add = await screen.findByRole("button", { name: "Add document" });
+    const add = await screen.findByRole("button", {
+      name: englishCopy["docs.add.action"],
+    });
     expect(add).toBeDisabled();
     // Once on the page, where the header states it, and once in this panel.
     expect(screen.getAllByText("You cannot edit this company.")).toHaveLength(
@@ -180,9 +183,7 @@ describe("the account's document library", () => {
   it("says the account has no documents rather than leaving the section blank", async () => {
     stub([]);
     show(<CompanyDocumentsCard companyId="o-1" />);
-    expect(
-      await screen.findByText("No documents for this company yet."),
-    ).toBeTruthy();
+    expect(await screen.findByText(englishCopy["docs.empty"])).toBeTruthy();
   });
 
   it("leaves a document filed against an agreement to that agreement", async () => {
@@ -210,9 +211,7 @@ describe("the account's document library", () => {
     // "No documents on this account yet" would be a lie about an account that
     // has one: the file is upstairs, and the copy has to say so.
     expect(
-      await screen.findByText(
-        "Every document here is filed under a contract above.",
-      ),
+      await screen.findByText(englishCopy["docs.allOnAgreements"]),
     ).toBeTruthy();
   });
 
@@ -232,9 +231,13 @@ describe("the account's document library", () => {
     // reachable, not gone: the footer says how much of it is being held back,
     // beside the control that holds it.
     expect(screen.queryByText("scan_0001_v0.pdf")).toBeNull();
-    expect(screen.getByText("1 superseded document is hidden.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["docs.superseded.hidden_one"]),
+    ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Show superseded" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: englishCopy["docs.superseded.show"] }),
+    );
     expect(await screen.findByText("scan_0001_v0.pdf")).toBeTruthy();
   });
 
@@ -245,13 +248,15 @@ describe("the account's document library", () => {
     // list that opened them all fired one request per deal file and buried the
     // filenames the reader came for.
     const toggle = await screen.findByRole("button", {
-      name: "Show extracted fields",
+      name: englishCopy["docs.reading.show"],
     });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
 
     fireEvent.click(toggle);
     expect(
-      await screen.findByRole("button", { name: "Hide extracted fields" }),
+      await screen.findByRole("button", {
+        name: englishCopy["docs.reading.hide"],
+      }),
     ).toBeTruthy();
   });
 
@@ -302,7 +307,9 @@ describe("the account's document library", () => {
     show(<CompanyDocumentsCard companyId="o-1" />);
 
     const chips = within(
-      await screen.findByRole("group", { name: "Document category" }),
+      await screen.findByRole("group", {
+        name: englishCopy["docs.filterLabel"],
+      }),
     ).getAllByRole("button");
     const counts = chips.map((chip) =>
       Number(chip.querySelector(".t-num")?.textContent),

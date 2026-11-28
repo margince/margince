@@ -41,7 +41,7 @@ func holdAndReadSummary(ctx context.Context, t *testing.T, e *Env) string {
 		ScheduledAt:     time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC),
 	}
 	var summary string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := notifier.NotifyHeldInTx(ctx, tx, notice); err != nil {
 			return err
 		}
@@ -83,7 +83,7 @@ func seedLinkedInLookalike(ctx context.Context, t *testing.T, e *Env, company id
 	if err != nil {
 		t.Fatalf("seeding the contact %s: %v", contactName, err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 			VALUES ('employment', $1, $2, 'manual', 'human:test')`, ids.UUID(created.Id), company); err != nil {
@@ -111,7 +111,7 @@ func stageLinkedInAndReadSummary(ctx context.Context, t *testing.T, e *Env, cont
 		t.Fatalf("staging the matches: %v", err)
 	}
 	var summary string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT summary FROM approval
 			 WHERE kind = 'linkedin_match' AND proposed_change->>'contact_name' = $1`, contactName).Scan(&summary)
@@ -128,7 +128,7 @@ func TestALinkedInMatchCardIsWrittenInTheInstallationsBaseLanguage(t *testing.T)
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 	var company ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			INSERT INTO company (display_name, source, captured_by)
 			VALUES ('Acme GmbH', 'manual', 'human:test') RETURNING id`).Scan(&company)

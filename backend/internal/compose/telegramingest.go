@@ -121,7 +121,7 @@ func (w *telegramIngestWorker) Work(ctx context.Context, job *river.Job[Telegram
 	}
 
 	var payload []byte
-	err = database.WithWorkspaceTx(wsCtx, w.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(wsCtx, w.pool, func(tx pgx.Tx) error {
 		var err error
 		payload, err = capture.GetRawCapturePayloadTx(wsCtx, tx, rawID)
 		return err
@@ -271,7 +271,7 @@ func (w *telegramIngestWorker) applyMembership(actorCtx context.Context, botID s
 		w.log.Warn("telegram_ingest: unhandled my_chat_member status", "status", m.Status)
 		return nil
 	}
-	err := database.WithWorkspaceTx(actorCtx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(actorCtx, w.pool, func(tx pgx.Tx) error {
 		// The account lock and the update watermark answer two different
 		// questions and neither substitutes for the other: the lock keeps this
 		// write from interleaving with an erasure of the same human, the

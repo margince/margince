@@ -120,27 +120,24 @@ describe("restingReadings", () => {
   // ABSENT, never a zero standing in for an all-clear.
   it("says nothing needs you when every read came back with nothing", () => {
     expect(restingReadings(QUIET, WORDS).map(said)).toEqual([
-      "Nothing needs attention",
+      en["agent.line.allClear"],
     ]);
   });
 
   it("does not count an unanswered approvals read as a clean queue", () => {
     const answered = restingReadings({ ...QUIET, waiting: 0 }, WORDS);
-    expect(answered.map(said)).toEqual(["Nothing needs attention"]);
+    expect(answered.map(said)).toEqual([en["agent.line.allClear"]]);
   });
 
   it("claims no all-clear when the connections read failed, and keeps saying so beside other news", () => {
     const unknown = { ...QUIET, sourcesUnknown: true };
     expect(restingReadings(unknown, WORDS).map(said)).toEqual([
-      "Could not check your connected sources",
+      en["agent.line.sourcesUnknown"],
     ]);
     // Other news does not push the failed check out of the rotation.
     expect(
       restingReadings({ ...unknown, waiting: 2 }, WORDS).map(said),
-    ).toEqual([
-      "Could not check your connected sources",
-      "2 approvals waiting",
-    ]);
+    ).toEqual([en["agent.line.sourcesUnknown"], "2 approvals waiting"]);
   });
 
   // The fix for the pinned line: a day that settled three runs says three

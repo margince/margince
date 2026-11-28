@@ -51,7 +51,7 @@ func (s Sweeper) Seat(ctx context.Context, seat ids.UUID, windows capture.Person
 func (s Sweeper) runSeat(ctx context.Context, run, seat ids.UUID, windows capture.PersonalPurgeWindows) (int, error) {
 	var subject capture.PurgeSubject
 	var kept capture.KeptCounts
-	if err := database.WithWorkspaceTx(ctx, s.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, s.Pool, func(tx pgx.Tx) error {
 		floor, err := s.Floor(ctx, tx)
 		if err != nil {
 			return err

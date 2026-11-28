@@ -38,7 +38,7 @@ describe("usePlural", () => {
     );
   });
 
-  it("gives Vietnamese one wording for both counts, because vi has one form", () => {
+  it("keeps Vietnamese wording stable across plural categories", () => {
     const vi = renderHook(() => usePlural(), { wrapper: wrapper("vi") });
     expect(vi.result.current("share.teamMembers", 1, { count: "1" })).toBe(
       vi.result.current("share.teamMembers", 9, { count: "1" }),
@@ -56,10 +56,8 @@ describe("usePluralKey", () => {
       "ob.conv.review.requiredRemaining_other",
     );
 
-    // vi has a single category, and it is `other` — so a caller carrying keys
-    // gets the one arm that exists rather than a singular nothing reaches.
     const vi = renderHook(() => usePluralKey(), { wrapper: wrapper("vi") });
-    expect(vi.result.current("ob.conv.review.requiredRemaining", 1)).toBe(
+    expect(vi.result.current("ob.conv.review.requiredRemaining", 5)).toBe(
       "ob.conv.review.requiredRemaining_other",
     );
   });

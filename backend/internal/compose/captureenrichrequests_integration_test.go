@@ -33,7 +33,7 @@ func TestHistorySignatureRequestsSurviveDelayedDeliveryAndCancellation(t *testin
 		t.Fatal(err)
 	}
 	var encoded []byte
-	if err := database.WithWorkspaceTx(ctx, b.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, b.env.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT envelope FROM event_outbox WHERE envelope->>'type'='contact.created' AND envelope->'entity'->>'id'=@id`, pgx.NamedArgs{"id": contact.Id.String()}).Scan(&encoded)
 	}); err != nil {
 		t.Fatal(err)
@@ -91,7 +91,7 @@ func TestHistoricalSignatureWorkCannotPostponeLiveMail(t *testing.T) {
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
 	queue := func(deferred *ids.UUID) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(ctx, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(ctx, tx, []ids.ContactID{id}, deferred) }); err != nil {
+		if err := database.WithTx(ctx, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(ctx, tx, []ids.ContactID{id}, deferred) }); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -161,7 +161,7 @@ func TestHistoryArrivingDuringAFailedSignatureReadDoesNotEraseBackoff(t *testing
 	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "agent:enrich")
 	queue := func(run *ids.UUID) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{id}, run) }); err != nil {
+		if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{id}, run) }); err != nil {
 			t.Fatal(err)
 		}
 	}

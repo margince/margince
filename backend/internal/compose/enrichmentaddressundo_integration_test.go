@@ -53,7 +53,7 @@ func judgeEnrichment(t *testing.T, e *integration.Env, ctx context.Context, seam
 		t.Fatalf("judge the entry on the history page: %v", err)
 	}
 	var receipt map[ids.UUID]*crmcontracts.MagicUndo
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		receipt, err = magicUndoJudge{seam: seam}.JudgeUndoPage(ctx, tx,
 			[]magic.UndoSubject{{AuditID: auditID, EntityType: "company"}})

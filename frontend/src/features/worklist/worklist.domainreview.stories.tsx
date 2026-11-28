@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -129,7 +130,9 @@ export const SingleUndated: Story = {
     await userEvent.click(body.getByRole("button", { name: "Not now" }));
     await waitFor(() =>
       expect(
-        body.getByRole("button", { name: "Return to Review" }),
+        body.getByRole("button", {
+          name: englishCopy["worklist.domainReview.restore"],
+        }),
       ).toBeVisible(),
     );
     await expect(
@@ -152,10 +155,14 @@ export const ForwardedIdentityNeedsAMatch: Story = {
       ).toBeVisible(),
     );
     await expect(
-      body.queryByRole("button", { name: "Create company" }),
+      body.queryByRole("button", {
+        name: englishCopy["worklist.domainReview.create"],
+      }),
     ).not.toBeInTheDocument();
     await expect(
-      body.getByRole("button", { name: "Match company" }),
+      body.getByRole("button", {
+        name: englishCopy["worklist.domainReview.match"],
+      }),
     ).toBeDisabled();
   },
 };

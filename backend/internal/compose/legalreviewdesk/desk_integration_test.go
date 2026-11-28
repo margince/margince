@@ -84,7 +84,7 @@ func (d deskEnv) inTx(t *testing.T, fn func(context.Context, pgx.Tx) error) {
 func (d deskEnv) query(t *testing.T, sql string, scan func(pgx.Rows) error) {
 	t.Helper()
 	ctx := d.ctx()
-	if err := database.WithWorkspaceTx(ctx, d.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, d.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, sql)
 		if err != nil {
 			return err

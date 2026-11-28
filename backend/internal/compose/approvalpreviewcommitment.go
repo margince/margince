@@ -49,7 +49,13 @@ func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval c
 		return out, nil
 	}
 	sourceType := crmcontracts.ApprovalEvidenceSourceType(string(recordTypeActivity))
-	citation, err := r.currentCitation(ctx, crmcontracts.ApprovalEvidence{SourceType: &sourceType, SourceId: new(openapi_types.UUID(proposal.SourceActivityID)), EvidenceSnippet: proposal.Quote})
+	citation := crmcontracts.ApprovalEvidence{SourceType: &sourceType, SourceId: new(openapi_types.UUID(proposal.SourceActivityID)), EvidenceSnippet: proposal.Quote}
+	if proposal.ReconfirmSource {
+		// promisesStillOpen checked this quote against current recap metadata.
+		citation.EvidenceSnippet = approvals.SanitizeSummary(citation.EvidenceSnippet)
+	} else {
+		citation, err = r.currentCitation(ctx, citation)
+	}
 	if state := evidenceFailureState(err); state != "" {
 		out.State = state
 		return out, nil

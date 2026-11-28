@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { removeStored, STORAGE_KEYS } from "../lib/storage";
 import { meFixture, READS_RECORDS } from "../testing/mefixture";
 import { recordNamesRoutes } from "../testing/recordnames.testkit";
@@ -147,7 +148,7 @@ export const CreateOnly: Story = {
         await canvas.findByRole("option", { name: new RegExp(label) }),
       ).toBeInTheDocument();
     }
-    await expect(canvas.queryByText("Ask your documents")).toBeNull();
+    await expect(canvas.queryByText(englishCopy["corpusAsk.title"])).toBeNull();
   },
 };
 

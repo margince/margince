@@ -512,6 +512,7 @@ test("AC-deal-6: a pointer drag onto Won opens the 🟡 confirm, and nothing is 
   const card = page.locator('[data-deal="d-fleet"]');
   await expect(card).toBeVisible();
   const won = page.locator('[data-stage="s4"]');
+  await settleAnimations(page);
   // A rep scrolls the board until both ends of the drag show.
   await centreBetween(card, won);
   expect(

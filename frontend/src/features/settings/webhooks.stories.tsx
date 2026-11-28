@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { Badge } from "../../design-system/atoms";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -110,7 +111,9 @@ async function clickTestIds(testIds: string[]) {
 async function openRowActions(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await userEvent.click(
-    await canvas.findByRole("button", { name: "More actions" }),
+    await canvas.findByRole("button", {
+      name: englishCopy["record.moreActions"],
+    }),
   );
 }
 
@@ -284,7 +287,9 @@ export const SecretRevealed: Story = {
     await userEvent.click(await canvas.findByText("deal.stage_changed"));
     await userEvent.click(addEvents);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Create subscription" }),
+      canvas.getByRole("button", {
+        name: englishCopy["webhooks.drawer.create"],
+      }),
     );
   },
 };
@@ -329,7 +334,9 @@ export const RotateSecretRevealed: Story = {
     // matches and the one it wants is the second.
     const dialog = within(await canvas.findByRole("dialog"));
     await userEvent.click(
-      await dialog.findByRole("button", { name: "Rotate secret" }),
+      await dialog.findByRole("button", {
+        name: englishCopy["webhooks.rotate"],
+      }),
     );
     // The reveal is the story: without this the play could only prove the
     // confirm was clickable, and a screenshot of the confirm dialog still

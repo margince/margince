@@ -227,3 +227,12 @@ func TestTextThatIsNotValidUTF8IsRefusedInEveryBodyKind(t *testing.T) {
 		}
 	}
 }
+
+func TestSalutationAliasesKeepTheVisitorsExplicitChoice(t *testing.T) {
+	for _, name := range []string{"salutation", "anrede", "title_salutation"} {
+		got := readEnquiry([]Field{{Name: name, Value: "Frau"}}, nil)
+		if got.Salutation != "Frau" || len(got.Extra) != 0 {
+			t.Fatalf("%s: %+v", name, got)
+		}
+	}
+}

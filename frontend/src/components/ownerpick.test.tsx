@@ -18,6 +18,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import { meFixture } from "../testing/mefixture";
 import { type OpenedRecord, OwnerPick } from "./ownerpick";
@@ -129,7 +130,9 @@ function render(props: Harness = {}) {
 }
 
 async function openPicker(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Change owner" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["ownerPick.change"] }),
+  );
   return within(await screen.findByRole("dialog"));
 }
 
@@ -339,9 +342,9 @@ describe("OwnerPick", () => {
     expect(onAssigned).not.toHaveBeenCalled();
 
     await user.keyboard("{Escape}");
-    expect(screen.getByRole("button", { name: "Change owner" })).toBe(
-      document.activeElement,
-    );
+    expect(
+      screen.getByRole("button", { name: englishCopy["ownerPick.change"] }),
+    ).toBe(document.activeElement);
     const reopened = await openPicker(user);
     await reopened.findByRole("option", { name: "Jane Doe" });
     expect(reopened.queryByRole("alert")).toBeNull();
@@ -367,7 +370,7 @@ describe("OwnerPick", () => {
     const panel = await openPicker(user);
     await panel.findByRole("option", { name: "Jane Doe" });
 
-    expect(panel.getByText("Showing part of the list")).toBeInTheDocument();
+    expect(panel.getByText(englishCopy["state.partial"])).toBeInTheDocument();
   });
 
   it("writes against the record as the list opened on it, though it changed since", async () => {
@@ -457,7 +460,9 @@ describe("OwnerPick", () => {
     const edit = screen.getByRole("button", { name: "Edit Ownership" });
     await user.click(edit);
     const sheet = within(
-      await screen.findByRole("dialog", { name: "Change owner" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["ownerPick.change"],
+      }),
     );
     await sheet.findByRole("option", { name: "Jane Doe" });
     rerender(ui(6));

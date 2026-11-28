@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import {
   type Company360,
@@ -55,12 +56,10 @@ describe("company view — withheld sections", () => {
     if (!deals) {
       throw new Error("the deals card has no section wrapper");
     }
-    expect(within(deals).getByText("Hidden for your role")).toBeTruthy();
+    expect(within(deals).getByText(englishCopy["state.withheld"])).toBeTruthy();
     // The empty state and the withheld state must never both appear: one
     // says there is nothing, the other says you may not know.
-    expect(
-      within(deals).queryByText("No open deals for this company."),
-    ).toBeNull();
+    expect(within(deals).queryByText(englishCopy["co.deals.empty"])).toBeNull();
   });
 
   it("draws the empty state when the section is present and empty", async () => {
@@ -75,10 +74,8 @@ describe("company view — withheld sections", () => {
     if (!deals) {
       throw new Error("the deals card has no section wrapper");
     }
-    expect(
-      within(deals).getByText("No open deals for this company."),
-    ).toBeTruthy();
-    expect(within(deals).queryByText("Hidden for your role")).toBeNull();
+    expect(within(deals).getByText(englishCopy["co.deals.empty"])).toBeTruthy();
+    expect(within(deals).queryByText(englishCopy["state.withheld"])).toBeNull();
   });
 
   it("reports no committee gap when the contacts section was withheld", async () => {
@@ -120,9 +117,9 @@ describe("company view — withheld sections", () => {
     renderCompany();
 
     const strip = await screen.findByRole("region", {
-      name: "Company status",
+      name: englishCopy["co.strip.title"],
     });
-    expect(within(strip).getByText("Hidden for your role")).toBeTruthy();
+    expect(within(strip).getByText(englishCopy["state.withheld"])).toBeTruthy();
   });
 
   it("says the health verdict is hidden rather than drawing no card", async () => {
@@ -149,7 +146,9 @@ describe("company view — withheld sections", () => {
       throw new Error("How it stands has no card");
     }
     expect(within(pane).getAllByText("Not shown").length).toBeGreaterThan(0);
-    expect(within(pane).queryByText("Not assessed")).toBeNull();
+    expect(
+      within(pane).queryByText(englishCopy["standing.notAssessed"]),
+    ).toBeNull();
   });
 
   it("says there is no health reading yet, distinct from hidden", async () => {
@@ -171,7 +170,9 @@ describe("company view — withheld sections", () => {
     if (!(pane instanceof HTMLElement)) {
       throw new Error("How it stands has no card");
     }
-    expect(within(pane).getAllByText("Not assessed").length).toBeGreaterThan(0);
+    expect(
+      within(pane).getAllByText(englishCopy["standing.notAssessed"]).length,
+    ).toBeGreaterThan(0);
     expect(within(pane).queryByText("Not shown")).toBeNull();
   });
 });
@@ -191,9 +192,7 @@ describe("company view — the verbs that change a section", () => {
     if (!deals) {
       throw new Error("the deals card has no section wrapper");
     }
-    expect(
-      within(deals).getByText("No open deals for this company."),
-    ).toBeTruthy();
+    expect(within(deals).getByText(englishCopy["co.deals.empty"])).toBeTruthy();
     // Awaited: the verb appears once the pipeline read resolves, because a
     // deal needs somewhere to land before the page offers to open one.
     expect(
@@ -217,11 +216,13 @@ describe("company view — the verbs that change a section", () => {
       await screen.findByRole("button", { name: /^Deals/ }),
     );
     await waitFor(() =>
-      expect(screen.queryAllByText("Hidden for your role")).toHaveLength(1),
+      expect(screen.queryAllByText(englishCopy["state.withheld"])).toHaveLength(
+        1,
+      ),
     );
     // And the empty state it did not draw: "no open deal" is a claim about
     // the account that this payload cannot support.
-    expect(screen.queryByText("No open deals for this company.")).toBeNull();
+    expect(screen.queryByText(englishCopy["co.deals.empty"])).toBeNull();
     // The absent button alone would prove nothing: the verb also renders null
     // while its pipeline read is in flight, so the assertion could pass on
     // that transient state with the guard deleted. What pins the guard is
@@ -362,7 +363,7 @@ describe("company view — a section still loading is not one that failed", () =
     expect(heading.closest(".standing-sheet")?.textContent).not.toMatch(
       /did not load/,
     );
-    expect(screen.queryByText("Nothing needs attention right now.")).toBeNull();
+    expect(screen.queryByText(englishCopy["today.quiet"])).toBeNull();
   });
 });
 
@@ -377,7 +378,7 @@ describe("company view — a failed read is not an empty account", () => {
     // How it stands says it could not be read. No card claims the account has
     // no contacts and no deals, which is the one thing this page does not know.
     expect(screen.getAllByText(/did not load/).length).toBeGreaterThan(0);
-    expect(screen.queryByText("No open deals for this company.")).toBeNull();
+    expect(screen.queryByText(englishCopy["co.deals.empty"])).toBeNull();
     expect(
       screen.queryByText("No contact linked to this account yet."),
     ).toBeNull();
@@ -399,10 +400,8 @@ describe("company view — a failed read is not an empty account", () => {
       throw new Error("the deals card has no section wrapper");
     }
     expect(within(deals).getByText(/did not load/)).toBeTruthy();
-    expect(
-      within(deals).queryByText("No open deals for this company."),
-    ).toBeNull();
-    expect(within(deals).queryByText("Hidden for your role")).toBeNull();
+    expect(within(deals).queryByText(englishCopy["co.deals.empty"])).toBeNull();
+    expect(within(deals).queryByText(englishCopy["state.withheld"])).toBeNull();
   });
 });
 
@@ -425,9 +424,7 @@ describe("company view — figures that outlive the list they sit under", () => 
     );
     // No OPEN deal is true and is said. The account still won €120,000 —
     // hiding that because today's pipeline is empty loses a real fact.
-    expect(
-      await screen.findByText("No open deals for this company."),
-    ).toBeTruthy();
+    expect(await screen.findByText(englishCopy["co.deals.empty"])).toBeTruthy();
     expect(screen.getByText(/120,000/)).toBeTruthy();
     const lost = screen.getByText("Lost").closest(".stat-card");
     expect(lost?.textContent).toContain("3");

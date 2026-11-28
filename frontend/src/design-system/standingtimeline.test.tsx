@@ -8,6 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { UTC_ZONE } from "../format/timezone";
+import { en as englishCopy } from "../i18n/en";
 import {
   StandingTimeline,
   type TimelineEvent,
@@ -73,12 +74,16 @@ describe("an axis with nothing dated", () => {
 
   it("says nothing is dated when nothing is", () => {
     drawOnly([]);
-    expect(screen.getByText("Nothing dated here yet.")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["standing.timeline.empty"]),
+    ).toBeInTheDocument();
   });
 
   it("draws a logged item rather than saying nothing is dated", () => {
     drawOnly([mark({ key: "m", at: "2026-08-10", when: "10 Aug" })]);
-    expect(screen.queryByText("Nothing dated here yet.")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["standing.timeline.empty"]),
+    ).toBeNull();
     expect(
       screen.getByRole("button", { name: "Email, 10 Aug" }),
     ).toBeInTheDocument();
@@ -471,7 +476,9 @@ describe("the zoom", () => {
     });
 
     expect(fetchNextPage).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Loading earlier items…")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["standing.timeline.loadingOlder"]),
+    ).toBeInTheDocument();
   });
 
   it("asks for nothing once the rows on hand reach the zoom's start", () => {
@@ -481,7 +488,9 @@ describe("the zoom", () => {
     });
 
     expect(fetchNextPage).not.toHaveBeenCalled();
-    expect(screen.queryByText("Loading earlier items…")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["standing.timeline.loadingOlder"]),
+    ).toBeNull();
   });
 
   it("reads a task's date as well, though a task draws no mark", () => {
@@ -503,7 +512,7 @@ describe("the zoom", () => {
 
     expect(fetchNextPage).not.toHaveBeenCalled();
     expect(
-      screen.getByText("Earlier items could not load. They are in History."),
+      screen.getByText(englishCopy["standing.timeline.olderFailed"]),
     ).toBeInTheDocument();
   });
 
@@ -517,7 +526,7 @@ describe("the zoom", () => {
 
     expect(fetchNextPage).not.toHaveBeenCalled();
     expect(
-      screen.getByText("Earlier items are in History."),
+      screen.getByText(englishCopy["standing.timeline.olderOnHistory"]),
     ).toBeInTheDocument();
   });
 

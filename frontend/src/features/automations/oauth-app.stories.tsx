@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { OAuthAppCard } from "./oauth-app";
 
@@ -193,7 +194,9 @@ const openRedirects = async ({
   canvasElement,
 }: Readonly<{ canvasElement: HTMLElement }>) => {
   await userEvent.click(
-    await within(canvasElement).findByText("Authorized redirect URIs"),
+    await within(canvasElement).findByText(
+      englishCopy["oauthApp.redirectTitle"],
+    ),
   );
 };
 

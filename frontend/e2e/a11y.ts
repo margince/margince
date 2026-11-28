@@ -183,6 +183,7 @@ async function axeFindings(page: Page) {
 }
 
 export async function expectNoAaViolations(page: Page, screen: string) {
+  await settleAnimations(page);
   const results = await axeFindings(page);
   const undecided = results.incomplete.flatMap((check) =>
     check.nodes.map(

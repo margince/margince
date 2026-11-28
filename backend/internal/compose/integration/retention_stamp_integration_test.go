@@ -77,7 +77,7 @@ type stampRow struct {
 func readStamp(t *testing.T, e *Env, activity ids.UUID) stampRow {
 	t.Helper()
 	var got stampRow
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx,
 			`SELECT retention_class, retention_class_at::text FROM activity WHERE id = $1`,

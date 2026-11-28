@@ -11,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   company,
   company360,
@@ -212,9 +213,7 @@ describe("CompanyScreen — hierarchy roll-up in the rail (P-7)", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText(
-          "An exchange rate is missing, so the total cannot be calculated.",
-        ),
+        screen.getByText(englishCopy["rollup.fxUnavailable"]),
       ).toBeTruthy(),
     );
     expect(screen.queryByText("€0")).toBeNull();
@@ -391,7 +390,9 @@ describe("CompanyScreen — relationship kinds by scope (P-5)", () => {
     const kind = screen.getByLabelText("Kind");
     await user.click(kind);
     const kinds = screen.getByRole("listbox");
-    expect(within(kinds).queryByText("Deal stakeholder")).toBeNull();
+    expect(
+      within(kinds).queryByText(englishCopy["rel.kind.dealStakeholder"]),
+    ).toBeNull();
     await user.click(within(kinds).getByRole("option", { name: "Partner of" }));
 
     await user.type(screen.getByRole("searchbox", { name: "Company" }), "acme");
@@ -427,7 +428,9 @@ describe("CompanyScreen — the header's overflow menu", () => {
     stubFetch(companyBackstop);
     render(<CompanyScreen id="o-1" />);
 
-    const trigger = await screen.findByRole("button", { name: "More actions" });
+    const trigger = await screen.findByRole("button", {
+      name: englishCopy["record.moreActions"],
+    });
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
     const panelId = trigger.getAttribute("aria-controls");
     expect(panelId).toBeTruthy();
@@ -531,7 +534,9 @@ describe("CompanyScreen — the record's history", () => {
     // so a page-wide match on the old value would pass on the heading.
     const timeline = await screen.findByRole("region", { name: "History" });
     await waitFor(() =>
-      expect(within(timeline).getByText("Manufacturing")).toBeTruthy(),
+      expect(
+        within(timeline).getByText(englishCopy["industry.manufacturing"]),
+      ).toBeTruthy(),
     );
     expect(within(timeline).getByText("Automotive")).toBeTruthy();
     expect(within(timeline).getByText("Industry")).toBeTruthy();
@@ -560,7 +565,9 @@ describe("CompanyScreen — History requests", () => {
       urls.filter((url) => new URL(url).pathname.endsWith("/activities"));
     expect(listReads()).toEqual([]);
     await openHistory();
-    expect(await screen.findByText("Loading change history…")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["record.chronologyLoading"]),
+    ).toBeTruthy();
     expect(listReads()).toEqual([]);
 
     if (!finishOverview) throw new Error("Overview response is unresolved");
@@ -633,7 +640,7 @@ describe("CompanyScreen — the timeline says where it stops", () => {
       expect(screen.getAllByText("Re: Lead Gen").length).toBeGreaterThan(0),
     );
     expect(
-      screen.getByText("Only the most recent activities are shown."),
+      screen.getByText(englishCopy["chronology.truncatedActivities"]),
     ).toBeTruthy();
   });
 
@@ -841,11 +848,13 @@ describe("CompanyScreen — the Partner tab is scoped to the account being read"
     render(<CompanyScreen id="o-1" />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", {
+        name: englishCopy["record.moreActions"],
+      }),
     );
     await userEvent.click(
       await screen.findByRole("button", {
-        name: "Set up partner program",
+        name: englishCopy["company.partnerSetUp"],
       }),
     );
 

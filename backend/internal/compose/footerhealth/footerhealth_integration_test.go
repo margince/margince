@@ -30,7 +30,7 @@ func TestAnUnnamedDefaultEntityWarnsUntilTheCompanyIsNamed(t *testing.T) {
 	gaps := func() []footerhealth.Gap {
 		t.Helper()
 		var out []footerhealth.Gap
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = footerhealth.GapsTx(ctx, tx, store)
 			return err

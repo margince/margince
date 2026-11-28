@@ -178,14 +178,13 @@ func envelopeCausedBy(t *testing.T, e *Env, causation ids.UUID, eventType string
 }
 
 // queryOneEnvelope runs a single-row event_outbox query and decodes its
-// envelope column. event_outbox carries no RLS (tenancy rides inside the
-// envelope, per its own migration comment); WithWorkspaceTx is still
-// used here so every read in this suite goes through the one sanctioned
-// query path, matching the harness's own WsCount/WsExec convention.
+// envelope column. WithTx carries the read so every read in this suite goes
+// through the one sanctioned query path, matching the harness's own
+// WsCount/WsExec convention.
 func queryOneEnvelope(t *testing.T, e *Env, query string, args ...any) kevents.Envelope {
 	t.Helper()
 	var raw []byte
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&raw)
 	})
 	if err != nil {
@@ -205,7 +204,7 @@ func readWorkflowRun(t *testing.T, e *Env, handler string) workflowRunTrace {
 	t.Helper()
 	var trace workflowRunTrace
 	var plannedRaw, appliedRaw []byte
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT trigger_event, status, detail, planned, applied FROM workflow_run WHERE handler = $1`,
 			handler).Scan(&trace.triggerEvent, &trace.status, &trace.detail, &plannedRaw, &appliedRaw)
@@ -231,7 +230,7 @@ func decodeActions(t *testing.T, raw []byte) []replayedAction {
 // shape's own link) to the row's own action/entity_type/entity_id.
 func readAuditRow(t *testing.T, e *Env, id ids.UUID) (action, entityType string, entityID ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT action, entity_type, entity_id FROM audit_log WHERE id = $1`, id).Scan(&action, &entityType, &entityID)
 	})

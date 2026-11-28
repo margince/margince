@@ -61,7 +61,7 @@ func TestAProposalIsNamedByAWordOfItsFileName(t *testing.T) {
 		args := []any{c.filename, c.contentType}
 		matcher := dealscout.ProposalDocumentSQL("$1::text", "$2::text", func(v any) int { args = append(args, v); return len(args) })
 		var got bool
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(ctx, `SELECT `+matcher, args...).Scan(&got)
 		}); err != nil {
 			t.Fatalf("matching %q: %v", c.filename, err)
@@ -86,7 +86,7 @@ func TestTheCapChoosesAmongCompaniesWhoseEvidenceQualifies(t *testing.T) {
 
 	ctx := e.system()
 	var pass DealScoutPass
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		pass, err = scoutPass(ctx, tx, e.now, 2)
 		return err

@@ -14,6 +14,7 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { browserZone } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   activity202,
@@ -214,7 +215,7 @@ describe("the email drawer's verbs", () => {
       },
     );
     expect(
-      await screen.findByText("This message is not shared with you"),
+      await screen.findByText(englishCopy["email.detail.withheldReason"]),
     ).toBeTruthy();
     expect(screen.queryByText("Private newer text")).toBeNull();
     const newestRow = within(screen.getByRole("list")).getAllByRole(
@@ -232,7 +233,7 @@ describe("the email drawer's verbs", () => {
       within(newestRow).getByRole("button", { name: "Collapse" }),
     );
     expect(
-      screen.queryByText("This message is not shared with you"),
+      screen.queryByText(englishCopy["email.detail.withheldReason"]),
     ).toBeNull();
   });
 
@@ -309,7 +310,7 @@ describe("the email drawer's verbs", () => {
         ).toBe(true),
       );
       expect(
-        await screen.findByText("Sent and added to this thread."),
+        await screen.findByText(englishCopy["email.thread.replied"]),
       ).toBeTruthy();
     },
   );
@@ -343,7 +344,7 @@ describe("the email drawer's verbs", () => {
     expect(await screen.findByDisplayValue("Fwd: Angebot Q4")).toBeTruthy();
     // The forwarded words sit under a header, below where the reader writes.
     await waitFor(() =>
-      expect(messageText("Body")).toContain("Forwarded message"),
+      expect(messageText("Body")).toContain(englishCopy["email.forwardHeader"]),
     );
     expect(messageText("Body")).toContain("Können wir Dienstag kurz sprechen?");
     // Its draft is kept on the message it carries, apart from the record's.
@@ -362,9 +363,11 @@ it("says a mail without text has none, and offers no translation of it", async (
     summary: { ...PRESENTATION.summary, preview: "" },
   });
 
-  expect(await screen.findByText("This message has no text.")).toBeTruthy();
   expect(
-    screen.queryByRole("button", { name: "Show in my language" }),
+    await screen.findByText(englishCopy["email.thread.noText"]),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: englishCopy["readerRendering.show"] }),
   ).toBeNull();
 });
 
@@ -372,9 +375,11 @@ it("offers a mail with text in the reader's language", async () => {
   drawer();
 
   expect(
-    await screen.findByRole("button", { name: "Show in my language" }),
+    await screen.findByRole("button", {
+      name: englishCopy["readerRendering.show"],
+    }),
   ).toBeTruthy();
-  expect(screen.queryByText("This message has no text.")).toBeNull();
+  expect(screen.queryByText(englishCopy["email.thread.noText"])).toBeNull();
 });
 
 it("leaves the To line out of a forwarded header when the mail had no recipient", async () => {
@@ -384,7 +389,7 @@ it("leaves the To line out of a forwarded header when the mail had no recipient"
   await user.click(await screen.findByRole("button", { name: "Forward" }));
 
   await waitFor(() =>
-    expect(messageText("Body")).toContain("Forwarded message"),
+    expect(messageText("Body")).toContain(englishCopy["email.forwardHeader"]),
   );
   expect(messageText("Body")).toContain("From: Ana Sommer");
   expect(messageText("Body")).not.toContain("To:");
@@ -405,9 +410,15 @@ it("books with the sender of an incoming email and carries the message as contex
         jsonResponse(meFixture({ allow: { activity: ["read", "create"] } })),
     },
   );
-  await user.click(await screen.findByRole("button", { name: "More actions" }));
   await user.click(
-    await screen.findByRole("button", { name: "Book a meeting" }),
+    await screen.findByRole("button", {
+      name: englishCopy["record.moreActions"],
+    }),
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: englishCopy["scheduling.bookContact"],
+    }),
   );
   expect(window.location.hash).toBe(
     `#/book/contact-${ANA}?activity=${MESSAGE}`,
@@ -441,6 +452,10 @@ it.each([false, undefined, "forbidden"])(
         attachable === "forbidden" ? "error" : "success",
       ),
     );
-    expect(screen.queryByRole("button", { name: "Book a meeting" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["scheduling.bookContact"],
+      }),
+    ).toBeNull();
   },
 );

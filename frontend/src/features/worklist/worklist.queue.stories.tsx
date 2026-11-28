@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders, stubWithSession } from "../../testing/story-utils";
 import { useWorklistPicks, WorklistSelect } from "./worklist.bulkdone";
 import { row } from "./worklist.fixtures";
@@ -111,7 +112,7 @@ export const DecisionsWithSelectNarrow: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const launcher = canvas
-      .getByRole("button", { name: "Company questions" })
+      .getByRole("button", { name: englishCopy["worklist.domainReview.title"] })
       .getBoundingClientRect();
     const select = canvas
       .getByRole("button", { name: "Select" })

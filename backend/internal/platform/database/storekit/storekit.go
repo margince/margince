@@ -196,10 +196,11 @@ func emitEnvelope(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, e
 	if err != nil {
 		return events.Envelope{}, err
 	}
-	if err := insertEvents(ctx, tx, []stagedEvent{staged}); err != nil {
+	stagedRows := []stagedEvent{staged}
+	if err := insertEvents(ctx, tx, stagedRows); err != nil {
 		return events.Envelope{}, err
 	}
-	return staged.env, nil
+	return stagedRows[0].env, nil
 }
 
 // stagedEvent is one outbox row ready to insert.
@@ -274,7 +275,11 @@ func insertEvents(ctx context.Context, tx pgx.Tx, staged []stagedEvent) error {
 	}
 	args := make([]any, 0, 3*len(staged))
 	rows := make([]string, 0, len(staged))
-	for _, event := range staged {
+	for index := range staged {
+		if err := stageSourceChange(tx, &staged[index]); err != nil {
+			return err
+		}
+		event := staged[index]
 		args = append(args, event.stream, event.body, assuranceInputsRead(event.env.Type))
 		rows = append(rows, "($"+strconv.Itoa(len(args)-2)+", $"+strconv.Itoa(len(args)-1)+", $"+strconv.Itoa(len(args))+")")
 	}
@@ -369,9 +374,8 @@ func UUIDOrNil(id ids.UUID) *ids.UUID {
 // workspace, not for a tenant column: ADR-0091 §8 phase D has taken the last of
 // those off the schema, the ledgers included.
 //
-// It survives that phase rather than following it, because what its callers
-// need is an identifier for the installation, which the collapse of
-// WithWorkspaceTx into a plain Tx (§5) is what actually retires.
+// It survives that phase, because what its callers need is an identifier for the
+// installation.
 func MustWorkspace(ctx context.Context) ids.UUID {
 	wsID, _ := principal.WorkspaceID(ctx)
 	return wsID

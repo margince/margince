@@ -7,6 +7,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { companyContextCapabilitiesQueryKey } from "../../lib/companycontextreach";
 import * as router from "../../lib/router";
 import { SETTINGS_PAGES, type SettingsPage } from "../../lib/settingscatalog";
@@ -98,7 +99,9 @@ describe("the settings search box", () => {
 
       expect(
         options().some((option) =>
-          option.textContent?.includes("Company profile"),
+          option.textContent?.includes(
+            englishCopy["roles.object.installation_settings"],
+          ),
         ),
       ).toBe(sent);
     },
@@ -111,7 +114,9 @@ describe("the settings search box", () => {
 
     expect(
       options().some((option) =>
-        option.textContent?.includes("Company profile"),
+        option.textContent?.includes(
+          englishCopy["roles.object.installation_settings"],
+        ),
       ),
     ).toBe(false);
   });

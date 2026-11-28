@@ -78,7 +78,7 @@ func TestStoredAutomaticNotesRecordTheMeetingWithoutReplacingAnOutcome(t *testin
 			if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND action='update' AND after ? 'participant_users'`, transcript); got != 1 {
 				t.Fatalf("reader audits = %d, want 1", got)
 			}
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				out, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100})
 				if out.Changed != 0 {
 					t.Errorf("replay changed %d notes", out.Changed)
@@ -103,7 +103,7 @@ func TestStoredNotesRepairRollsBackAndSkipsUntrustedOrImmutableRecords(t *testin
 	e.WsExec(t, `UPDATE activity SET captured_by=$1 WHERE id=$2`, "human:"+e.Rep1.String(), human)
 	member := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
 	for _, repair := range []datatask.Task{activities.CaptureLabelsDataTask(), activities.MeetingNotesDataTask(e.Activities)} {
-		err := database.WithWorkspaceTx(member, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(member, e.Pool, func(tx pgx.Tx) error {
 			_, err := repair.Steps[0].Batch(member, tx, datatask.BatchIn{Limit: 10})
 			return err
 		})

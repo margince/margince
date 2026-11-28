@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { ForcedPasswordChangeScreen } from "./forcedpassword";
 
@@ -53,7 +54,7 @@ export const AtTheBoundaryDark: Story = { globals: { theme: "dark" } };
 export const TheFormOpen: Story = {
   play: async () => {
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change password" }),
+      await screen.findByRole("button", { name: englishCopy["password.open"] }),
     );
     await screen.findByRole("dialog");
   },

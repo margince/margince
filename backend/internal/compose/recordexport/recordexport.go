@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package recordexport writes a list of contacts, companies, deals or leads as a
+// Package recordexport writes a list of contacts, companies, deals, leads or projects as a
 // file the CSV import reads back. Each cell is the text the importer compares a
 // row against, so an unchanged record uploads as "same".
 package recordexport
@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -48,6 +49,8 @@ const (
 	// edge, so no stored record holds either as a cell.
 	Author     = "author"
 	ContactRef = "contact_ref"
+	// DealRef is the deal that started a project, an edge written on create only.
+	DealRef = "deal_ref"
 )
 
 // ByteOrderMark is what Excel needs at the start of a file to read it as UTF-8.
@@ -58,6 +61,9 @@ const (
 	objectCompany = "company"
 	objectLead    = "lead"
 	objectDeal    = "deal"
+	// objectProject is exported as its own import fields. A project's tags are
+	// not part of its stored shape, so they are left out of the file.
+	objectProject = "project"
 )
 
 // tagSeparator joins tag names in one cell, as the importer splits them.
@@ -89,6 +95,7 @@ var unrenderable = map[string][]string{
 	objectCompany: {Author},
 	objectLead:    {Author},
 	objectDeal:    {ContactRef},
+	objectProject: {DealRef, Tags},
 }
 
 // ExportedTargets is the import fields of an object that a file carries.
@@ -165,6 +172,12 @@ func read(ctx context.Context, tx pgx.Tx, object string, id ids.UUID) (map[strin
 		record, err = contacts.NewStore(nil).GetLeadTx(ctx, tx, ids.From[ids.LeadKind](id), storekit.LiveOnly, contacts.CustomColumns{})
 	case objectDeal:
 		record, err = deals.NewStore(nil, deals.Installation{}).GetDealTx(ctx, tx, ids.From[ids.DealKind](id), storekit.LiveOnly, deals.CustomColumns{})
+	case objectProject:
+		// Only the read seams: a file is written from the stored project, so the
+		// create-side deal link is not wired here.
+		record, err = projects.NewStore(nil).
+			WithCompanyEdges(contacts.AttachCompanyToProjectTx, projects.CompaniesFrom(contacts.CompaniesOnProjectTx), contacts.FirstCustomersOnProjectsTx).
+			GetProjectTx(ctx, tx, ids.From[ids.ProjectKind](id), storekit.LiveOnly, projects.CustomColumns{})
 	default:
 		return nil, fmt.Errorf("export: %q has no readable file", object)
 	}

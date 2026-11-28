@@ -3,6 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Briefcase } from "lucide-react";
+import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
@@ -25,6 +26,7 @@ import { fromHere } from "../../lib/navigatefrom";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import type { Project } from "../projects/projects.form";
+import { DealDeliveryHandoff } from "./dealdeliveryhandoff";
 import "./deal360/deal360.css";
 
 // Where a deal meets its project: the picker on the deal form (with the
@@ -248,6 +250,12 @@ export function DealProjectLine({ deal }: Readonly<{ deal: Deal }>) {
  */
 export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
+  const [review, setReview] = useState<{
+    dealId: string;
+    version: number | undefined;
+    project: Project;
+    attached: boolean;
+  } | null>(null);
   const queryClient = useQueryClient();
   // The server answers with the projects this deal's company is on — as the
   // customer, a partner or a subcontractor — so there is nothing left to filter
@@ -295,6 +303,7 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
     },
     onMutate: fromHere,
     onSuccess: (project, _input, from) => {
+      setReview(null);
       for (const queryKey of dealRecordKeys(deal.id)) {
         queryClient.invalidateQueries({ queryKey });
       }
@@ -306,6 +315,7 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
     // Whatever landed before the failure is real: re-read both records so
     // the offer below says what is still owed rather than what was owed.
     onError: (_error, input) => {
+      setReview(null);
       for (const queryKey of dealRecordKeys(input.dealId)) {
         queryClient.invalidateQueries({ queryKey });
       }
@@ -352,7 +362,7 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
             disabled={attach.isPending}
             data-testid="deal-start-delivery"
             onClick={() =>
-              attach.mutate({
+              setReview({
                 dealId: deal.id,
                 version: deal.version,
                 project,
@@ -368,6 +378,16 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
           project: project.name,
         })}
       </Callout>
+      {review?.dealId === deal.id && (
+        <DealDeliveryHandoff
+          dealId={review.dealId}
+          projectId={review.project.id}
+          busy={attach.isPending}
+          error={attach.error ? problemMessageOf(attach.error, t) : null}
+          onClose={() => setReview(null)}
+          onConfirm={() => attach.mutate(review)}
+        />
+      )}
       {/* The refusal is its own notice rather than a hand-rolled alert inside
           the offer: an offer and the reason the last press failed are two
           claims, and the second one is the surface's own danger tone. */}

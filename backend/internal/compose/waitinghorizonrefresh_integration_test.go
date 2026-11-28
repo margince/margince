@@ -54,7 +54,7 @@ func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 	}
 
 	var days int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT (value->>'horizon_days')::int FROM installation_state WHERE key = 'activity_waiting_horizon'`).Scan(&days)
 	})
 	if err != nil || days != 30 {

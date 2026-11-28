@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LOCALES, localeNameKey, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { depthBackOutOf, entryDepth } from "../../lib/historydepth";
 import {
   keepReturnRoute,
@@ -50,11 +51,11 @@ describe("AuthScreen login", () => {
     // complete on the first render, and reading the visible layer instead would
     // be asserting on a race.
     expect(
-      screen.getByText("This is Margince.", { selector: ".sr-only" }),
+      screen.getByText(englishCopy["auth.coreGreeting"], {
+        selector: ".sr-only",
+      }),
     ).toBeTruthy();
-    expect(
-      screen.getByText("It takes care of the work around your work."),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["auth.corePurpose"])).toBeTruthy();
     // What the region no longer says, asserted because each was removed on
     // purpose and a silent return would be a change nobody asked for: the
     // disclosure kicker that named the region, the send promise, the handover,
@@ -163,7 +164,7 @@ describe("AuthScreen login", () => {
     );
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "Margince could not be reached",
+      englishCopy["auth.connectionTitle"],
     );
     expect(probe).toHaveBeenCalledOnce();
     expect(
@@ -184,9 +185,7 @@ describe("AuthScreen login", () => {
     await userEvent.type(screen.getByLabelText("Password"), "wrong{enter}");
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain(
-      "Sign-in failed. Check the email and password and retry.",
-    );
+    expect(alert.textContent).toContain(englishCopy["auth.errCredentials"]);
     expect(screen.getByLabelText("Email")).toHaveProperty(
       "value",
       "ada@example.com",
@@ -206,9 +205,7 @@ describe("AuthScreen login", () => {
 
     const alert = await screen.findByRole("alert");
     // The budget refills within a minute, so the sentence names that wait.
-    expect(alert.textContent).toContain(
-      "Too many sign-in attempts. Wait a minute, then retry.",
-    );
+    expect(alert.textContent).toContain(englishCopy["auth.errRateLimited"]);
   });
 
   it("presents a server outage as connectivity, not wrong credentials", async () => {
@@ -221,7 +218,7 @@ describe("AuthScreen login", () => {
     await userEvent.type(screen.getByLabelText("Password"), "whatever{enter}");
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Margince could not be reached");
+    expect(alert.textContent).toContain(englishCopy["auth.connectionTitle"]);
   });
 
   it("restores a deep link after login instead of forcing the Brief", async () => {
@@ -262,28 +259,30 @@ describe("AuthScreen login", () => {
     stubApi({ password: true, password_reset: false }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} notice="session-expired" />);
     expect(
-      await screen.findByText(
-        "The session expired. Sign in again to continue.",
-      ),
+      await screen.findByText(englishCopy["auth.noticeSessionExpired"]),
     ).toBeTruthy();
     cleanup();
 
     stubApi({ password: true, password_reset: false }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} notice="signed-out" />);
-    expect(await screen.findByText("You have been signed out.")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["auth.noticeSignedOut"]),
+    ).toBeTruthy();
   });
 
   it("hides the forgot-password link when the capability is off, shows it when on", async () => {
     stubApi({ password: true, password_reset: false }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
     await screen.findByLabelText("Email");
-    expect(screen.queryByText("Forgot password?")).toBeNull();
+    expect(screen.queryByText(englishCopy["auth.forgotLink"])).toBeNull();
     expect(screen.getByText(t("auth.forgotAskAdmin"))).toBeTruthy();
     cleanup();
 
     stubApi({ password: true, password_reset: true }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
-    expect(await screen.findByText("Forgot password?")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["auth.forgotLink"]),
+    ).toBeTruthy();
     expect(screen.queryByText(t("auth.forgotAskAdmin"))).toBeNull();
   });
 
@@ -296,13 +295,15 @@ describe("AuthScreen login", () => {
     stubApi({ password: true, password_reset: false }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
     await screen.findByLabelText("Email");
-    expect(screen.queryByText("Forgot password?")).toBeNull();
+    expect(screen.queryByText(englishCopy["auth.forgotLink"])).toBeNull();
     cleanup();
 
     vi.stubEnv("VITE_UI_PREVIEW_RESET", "1");
     stubApi({ password: true, password_reset: false }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
-    expect(await screen.findByText("Forgot password?")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["auth.forgotLink"]),
+    ).toBeTruthy();
   });
 
   // §12: the two fields keep their VISIBLE labels, which is where this build
@@ -328,7 +329,7 @@ describe("AuthScreen login", () => {
     stubApi({ password: true, password_reset: true }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
     expect(
-      await screen.findByText("Access to this company is restricted."),
+      await screen.findByText(englishCopy["auth.legalProtected"]),
     ).toBeTruthy();
     expect(
       screen.queryByText(/encrypted|compliant|sovereign|your data is safe/i),
@@ -619,13 +620,17 @@ describe("AuthScreen forgot password", () => {
     );
     render(<AuthScreen onAuthed={vi.fn()} />);
 
-    await userEvent.click(await screen.findByText("Forgot password?"));
+    await userEvent.click(
+      await screen.findByText(englishCopy["auth.forgotLink"]),
+    );
     await userEvent.type(
       screen.getByLabelText("Email"),
       "ada@example.com{enter}",
     );
 
-    expect(await screen.findByText("Check your email")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["auth.forgotSentTitle"]),
+    ).toBeTruthy();
     expect(String(calls[0]?.url)).toContain("/v1/auth/forgot-password");
   });
 });
@@ -649,14 +654,18 @@ async function expectEveryPasswordFieldRevealable() {
     const reveal = field?.querySelector<HTMLButtonElement>(".field-reveal");
     expect(reveal, input.name).toBeTruthy();
     expect(input.type, input.name).toBe("password");
-    expect(reveal?.getAttribute("aria-label")).toBe("Show password");
+    expect(reveal?.getAttribute("aria-label")).toBe(
+      englishCopy["auth.showPassword"],
+    );
     expect(reveal?.getAttribute("aria-pressed")).toBe("false");
 
     if (reveal) {
       await userEvent.click(reveal);
     }
     expect(input.type, input.name).toBe("text");
-    expect(reveal?.getAttribute("aria-label")).toBe("Hide password");
+    expect(reveal?.getAttribute("aria-label")).toBe(
+      englishCopy["auth.hidePassword"],
+    );
     expect(reveal?.getAttribute("aria-pressed")).toBe("true");
 
     if (reveal) {
@@ -687,7 +696,7 @@ describe("password reveal", () => {
       origin: "http://localhost",
     });
     render(<AuthScreen onAuthed={vi.fn()} />);
-    await screen.findByLabelText("New password");
+    await screen.findByLabelText(englishCopy["auth.newPassword"]);
 
     await expectEveryPasswordFieldRevealable();
   });
@@ -736,7 +745,7 @@ describe("AuthScreen rewriting its own entry", () => {
     stubApi({ password: true, password_reset: true }, () => ok(204));
     render(<AuthScreen onAuthed={vi.fn()} />);
     await userEvent.type(
-      await screen.findByLabelText("New password"),
+      await screen.findByLabelText(englishCopy["auth.newPassword"]),
       "an entirely new password{enter}",
     );
     await userEvent.click(
@@ -761,13 +770,13 @@ describe("AvailabilityScreen", () => {
     );
     const onRetry = vi.fn();
     render(<AvailabilityScreen kind="connection" onRetry={onRetry} />);
-    expect(screen.getByText("Margince could not be reached")).toBeTruthy();
+    expect(screen.getByText(englishCopy["auth.connectionTitle"])).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalled();
     cleanup();
 
     render(<AvailabilityScreen kind="installation" onRetry={vi.fn()} />);
-    expect(screen.getByText("Installation not ready")).toBeTruthy();
+    expect(screen.getByText(englishCopy["auth.unavailableTitle"])).toBeTruthy();
     // No credential fields: this is not a login problem.
     expect(screen.queryByLabelText("Email")).toBeNull();
   });

@@ -37,7 +37,7 @@ var calendarProvidersUnderTest = []string{"gcal", "graphcal"}
 
 func seedConnection(ctx context.Context, t *testing.T, e *SearchEnv, provider string, user ids.UUID, status string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO capture_connection (provider, user_id, status, auth)
 			VALUES ($1, $2, $3, $4)`,
@@ -51,7 +51,7 @@ func seedConnection(ctx context.Context, t *testing.T, e *SearchEnv, provider st
 func connectedOnAny(ctx context.Context, t *testing.T, e *SearchEnv, user ids.UUID) bool {
 	t.Helper()
 	var connected bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		connected, err = capture.ConnectedOnAny(ctx, tx, ids.From[ids.UserKind](user), calendarProvidersUnderTest)
 		return err

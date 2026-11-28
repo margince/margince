@@ -106,7 +106,7 @@ func ensureReplayVisible(ctx context.Context, pool *pgxpool.Pool, probes map[str
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		switch table {
 		case tableActivity:
 			return auth.EnsureActivityContentVisibleLive(ctx, tx, id)
@@ -284,7 +284,7 @@ func ensureCompanionsVisible(ctx context.Context, pool *pgxpool.Pool, target rep
 		if len(named[i]) == 0 {
 			continue
 		}
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			for _, id := range named[i] {
 				if err := auth.EnsureVisible(ctx, tx, companion.table, id); err != nil {
 					return err

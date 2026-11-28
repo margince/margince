@@ -42,7 +42,7 @@ type stuckWaiting struct {
 }
 
 func (w stuckWaiting) Unanswered(ctx context.Context, asOf time.Time, narrow attention.WaitingFor) ([]attention.WaitingCustomer, bool, error) {
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `SELECT pg_sleep(30)`)
 		return err
 	})
@@ -110,7 +110,7 @@ type stuckSuggestions struct {
 func (s stuckSuggestions) OpenSuggestions(
 	ctx context.Context, owners *storekit.OwnerSet, limit int,
 ) ([]crmcontracts.DealSuggestion, bool, error) {
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `SELECT pg_sleep(30)`)
 		return err
 	})

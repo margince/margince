@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -131,7 +132,11 @@ export const RemoveDropsBand: Story = {
       }),
     );
     const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(page.getByRole("button", { name: "Remove sample" }));
+    await userEvent.click(
+      page.getByRole("button", {
+        name: englishCopy["settings.voice.removeSource"],
+      }),
+    );
     const dialog = within(await page.findByRole("dialog"));
     const drop = dialog.getByText(
       "Removing this lowers the voice from good to thin.",

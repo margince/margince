@@ -87,7 +87,7 @@ func TestNotifyFiringWithNoTransportLandsAVisibleSkippedRun(t *testing.T) {
 
 	var status string
 	var reason *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(
 			context.Background(),
 			`SELECT status, detail->>'reason' FROM workflow_run WHERE handler = 'task11a_notify_no_transport_probe'`,
@@ -223,7 +223,7 @@ func TestDraftEmailFiringLandsTheComposedDraftOnTheRunRecord(t *testing.T) {
 
 	var status string
 	var appliedJSON []byte
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var count int
 		if err := tx.QueryRow(ctx, `SELECT count(*) FROM workflow_run
 			WHERE handler = 'task11a_draft_email_probe'`).Scan(&count); err != nil {
@@ -280,7 +280,7 @@ func TestDraftEmailFiringLandsTheComposedDraftOnTheRunRecord(t *testing.T) {
 	// nobody. Asserted against the row the real service wrote, not against the
 	// request the engine handed it.
 	var kind, proposed string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT kind, proposed_change::text FROM approval
 			  WHERE target_entity_id = $1 AND status = 'pending'`, dealID).Scan(&kind, &proposed)

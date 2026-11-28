@@ -527,7 +527,7 @@ func problemDetail(t *testing.T, status int, body string) string {
 // taxonomy every surface renders from, so this reads the same verdict the tool
 // dispatcher and the HTTP handler each read.
 func (e *forecastEnv) analyticsStatus(ctx context.Context, q analyticsquery.Query) (int, string) {
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, runErr := RunAnalyticsQuery(ctx, tx, q, analyticsquery.DefaultFloor)
 		return runErr
 	})

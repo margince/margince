@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { lastEmailAgo } from "../testing/dealmail";
 import { Button } from "./button";
 import { DealCard } from "./dealcard";
@@ -277,7 +278,7 @@ const openMenu: StoryObj["play"] = async ({ canvasElement }) => {
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await expect(
     within(canvasElement.ownerDocument.body).getByRole("button", {
-      name: "Move to stage",
+      name: englishCopy["deals.bulkStage"],
     }),
   ).toBeVisible();
 };

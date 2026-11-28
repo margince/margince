@@ -29,7 +29,7 @@ import (
 func seedProvisionalCompany(t *testing.T, e *integration.Env, name, nameSource string) ids.UUID {
 	t.Helper()
 	company := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO company (id, display_name, name_source, source, captured_by, owner_id)
 			VALUES ($1, $2, $3, 'gmail:seed', 'connector:gmail', $4)`, company, name, nameSource, e.AdminUser)
@@ -46,7 +46,7 @@ func seedProvisionalCompany(t *testing.T, e *integration.Env, name, nameSource s
 func seedSigningEmployee(t *testing.T, e *integration.Env, company ids.UUID, fullName, signedName string) ids.UUID {
 	t.Helper()
 	contact := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO contact (id, full_name, source, captured_by)
@@ -83,7 +83,7 @@ func seedDossierName(t *testing.T, e *integration.Env, company ids.UUID, legalNa
 func companyNameAndSource(t *testing.T, e *integration.Env, company ids.UUID) (string, string) {
 	t.Helper()
 	var name, source string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT display_name, name_source FROM company WHERE id = $1`, company).Scan(&name, &source)
 	})
@@ -247,7 +247,7 @@ func TestCompanyNamePromotionDoesNotReofferADeclinedRename(t *testing.T) {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 	var approvalID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM approval WHERE kind = 'company_name_promotion' AND target_entity_id = $1`,
 			company).Scan(&approvalID)
@@ -316,7 +316,7 @@ func declineTheStagedRename(t *testing.T, e *integration.Env, promoter *CompanyN
 		t.Fatalf("RunWorkspace: %v", err)
 	}
 	var approvalID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM approval WHERE kind = 'company_name_promotion' AND target_entity_id = $1`,
 			company).Scan(&approvalID)
@@ -393,7 +393,7 @@ func TestCompanyNamePromotionSupersedesAStalePendingOffer(t *testing.T) {
 	}
 	// The survivor is the FRESH one: it cites both signers.
 	var contacts int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT jsonb_array_length(proposed_change -> 'contacts') FROM approval
 			 WHERE kind = 'company_name_promotion' AND target_entity_id = $1

@@ -41,7 +41,7 @@ func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 	other := seedBareContact(t, e)
 
 	var restricted, archived bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT restricted_at IS NOT NULL, archived_at IS NOT NULL FROM activity WHERE id = $1`, f.email).
 			Scan(&restricted, &archived)
@@ -306,7 +306,7 @@ func TestAnUnboundedCallerStillFacesTheAudienceArmOnAHeldRow(t *testing.T) {
 func seedBareContact(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO contact (id, full_name, first_name, source, captured_by)
 			 VALUES ($1, 'Relink Target', 'Relink', 'manual', 'human:x')`, id)

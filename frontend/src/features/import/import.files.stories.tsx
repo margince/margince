@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   formatFixture,
   recentRunsFixture,
@@ -129,7 +130,7 @@ function wizard(
 async function dropZip(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await userEvent.upload(
-    await canvas.findByLabelText("Upload your data"),
+    await canvas.findByLabelText(englishCopy["import.hub.uploadLabel"]),
     new File(["PK"], "pipedrive-export.zip"),
   );
   await canvas.findByRole("combobox", {
@@ -140,7 +141,7 @@ async function dropZip(canvasElement: HTMLElement) {
 async function dropCsv(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await userEvent.upload(
-    await canvas.findByLabelText("Upload your data"),
+    await canvas.findByLabelText(englishCopy["import.hub.uploadLabel"]),
     new File(["email\n"], "export.csv"),
   );
   await canvas.findByLabelText("Source name");
@@ -261,6 +262,6 @@ export const RetypedCancelRefused: Story = {
     await userEvent.click(
       await within(document.body).findByRole("option", { name: "Contacts" }),
     );
-    await canvas.findByText("The earlier draft of this file was not canceled");
+    await canvas.findByText(englishCopy["import.files.retireFailed"]);
   },
 };

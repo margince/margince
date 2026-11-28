@@ -51,7 +51,7 @@ type legacyCommitment struct {
 // not seen, and reports how many it settled.
 func (x *SignalExtractor) convertLegacyCommitments(ctx context.Context) (int, error) {
 	var owed []legacyCommitment
-	if err := database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, x.pool, func(tx pgx.Tx) error {
 		var err error
 		owed, err = legacyCommitmentsOwed(ctx, tx)
 		return err
@@ -96,7 +96,7 @@ func (x *SignalExtractor) convertLegacyCommitments(ctx context.Context) (int, er
 func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy legacyCommitment) error {
 	asOf := x.now()
 	var thread settledThread
-	if err := database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, x.pool, func(tx pgx.Tx) error {
 		var err error
 		thread, err = legacyThread(ctx, tx, legacy)
 		return err
@@ -118,7 +118,7 @@ func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy le
 			return fmt.Errorf("%w: %s", errRefusedReading, msg)
 		}
 	}
-	return database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, x.pool, func(tx pgx.Tx) error {
 		if err := lockPromiseSources(ctx, tx, []ids.UUID{legacy.cited}); err != nil {
 			return err
 		}

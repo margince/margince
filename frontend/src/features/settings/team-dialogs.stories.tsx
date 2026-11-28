@@ -109,7 +109,7 @@ export const SearchedLargeTeam: Story = {
   play: async () => {
     const dialog = within(await within(document.body).findByRole("dialog"));
     await userEvent.type(
-      dialog.getByRole("searchbox", { name: "Search team members" }),
+      dialog.getByRole("searchbox", { name: en["teams.searchMembers"] }),
       "Member 07",
     );
     // Names and emails both match, so the story asks only that the count of
@@ -141,7 +141,7 @@ export const RemoveRefused: Story = {
       }),
     );
     await expect(
-      await dialog.findByText("Membership not changed"),
+      await dialog.findByText(en["users.teamNotChanged"]),
     ).toBeInTheDocument();
     await expect(dialog.getByText("Ada Lovelace")).toBeInTheDocument();
   },

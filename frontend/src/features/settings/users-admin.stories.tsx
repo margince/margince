@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import {
@@ -337,7 +338,9 @@ export const InviteDialog: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Invite member" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["users.inviteOpen"],
+      }),
     );
     await within(document.body).findByRole("dialog");
   },

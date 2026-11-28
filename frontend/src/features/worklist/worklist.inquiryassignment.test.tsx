@@ -12,6 +12,7 @@ import {
   INQUIRY_FIRST_SOURCE,
   INQUIRY_MEMBERS,
 } from "../../components/websiteinquiry.fixtures";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
@@ -79,18 +80,24 @@ it.each(recordKinds)(
     const fetch = vi.spyOn(globalThis, "fetch");
     const user = userEvent.setup();
     renderWithQueryClient(<InquiryTakeButton item={item} />);
-    await user.click(screen.getByRole("button", { name: "Take inquiry" }));
-    const dialog = await screen.findByRole("dialog", { name: "Take inquiry" });
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["inquiry.assignment.take"],
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: englishCopy["inquiry.assignment.take"],
+    });
     await within(dialog).findByText(task.subject ?? "");
     expect(write).not.toHaveBeenCalled();
     if (kind === "contact")
       expect(
-        within(dialog).getByText(
-          "This changes the inquiry task holder. The record keeps its owner.",
-        ),
+        within(dialog).getByText(englishCopy["inquiry.assignment.taskOnly"]),
       ).toBeVisible();
     await user.click(
-      within(dialog).getByRole("button", { name: "Take inquiry" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["inquiry.assignment.take"],
+      }),
     );
     await waitFor(() =>
       expect(write).toHaveBeenCalledWith(
@@ -143,26 +150,40 @@ it("requires a fresh review after a stale assignment is refused", async () => {
   const fetch = vi.spyOn(globalThis, "fetch");
   const user = userEvent.setup();
   renderWithQueryClient(<InquiryTakeButton item={item} />);
-  await user.click(screen.getByRole("button", { name: "Take inquiry" }));
-  const dialog = await screen.findByRole("dialog", { name: "Take inquiry" });
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["inquiry.assignment.take"],
+    }),
+  );
+  const dialog = await screen.findByRole("dialog", {
+    name: englishCopy["inquiry.assignment.take"],
+  });
   await within(dialog).findByText(task.subject ?? "");
   await user.click(
-    within(dialog).getByRole("button", { name: "Take inquiry" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["inquiry.assignment.take"],
+    }),
   );
   const review = await within(dialog).findByRole("button", {
-    name: "Review current assignment",
+    name: englishCopy["inquiry.assignment.reviewAgain"],
   });
   expect(
-    within(dialog).getByRole("button", { name: "Take inquiry" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["inquiry.assignment.take"],
+    }),
   ).toBeDisabled();
   await user.click(review);
   await waitFor(() =>
     expect(
-      within(dialog).getByRole("button", { name: "Take inquiry" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["inquiry.assignment.take"],
+      }),
     ).toBeEnabled(),
   );
   await user.click(
-    within(dialog).getByRole("button", { name: "Take inquiry" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["inquiry.assignment.take"],
+    }),
   );
   await waitFor(() =>
     expect(write).toHaveBeenLastCalledWith(
@@ -216,14 +237,14 @@ it("reviews the selected colleague before handing over the lead and its inquiry 
     />,
   );
   await user.click(
-    await screen.findByRole("combobox", { name: "Choose a colleague" }),
+    await screen.findByRole("combobox", {
+      name: englishCopy["inquiry.assignment.chooseColleague"],
+    }),
   );
   await user.click(
     await screen.findByRole("option", { name: "Mina Coordinator" }),
   );
-  await screen.findByText(
-    "The lead and this inquiry task go to this colleague.",
-  );
+  await screen.findByText(englishCopy["inquiry.assignment.movesLead"]);
   expect(preview).toHaveBeenCalledWith(
     {
       mode: "assign_and_follow_up",
@@ -233,7 +254,9 @@ it("reviews the selected colleague before handing over the lead and its inquiry 
   );
   expect(write).not.toHaveBeenCalled();
   await user.click(
-    screen.getByRole("button", { name: "Assign and follow up" }),
+    screen.getByRole("button", {
+      name: englishCopy["inquiry.assignment.assign"],
+    }),
   );
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith(
@@ -260,15 +283,23 @@ it("refuses a record type this client cannot review", async () => {
   });
   const user = userEvent.setup();
   renderWithQueryClient(<InquiryTakeButton item={item} />);
-  await user.click(screen.getByRole("button", { name: "Take inquiry" }));
-  const dialog = await screen.findByRole("dialog", { name: "Take inquiry" });
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["inquiry.assignment.take"],
+    }),
+  );
+  const dialog = await screen.findByRole("dialog", {
+    name: englishCopy["inquiry.assignment.take"],
+  });
   expect(
     await within(dialog).findByText(
-      "This version cannot assign this inquiry. Reload the page.",
+      englishCopy["inquiry.assignment.unsupported"],
     ),
   ).toBeVisible();
   expect(
-    within(dialog).getByRole("button", { name: "Take inquiry" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["inquiry.assignment.take"],
+    }),
   ).toBeDisabled();
   expect(write).not.toHaveBeenCalled();
 });

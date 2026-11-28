@@ -372,7 +372,7 @@ describe("the outcomes an intake can end as", () => {
       body: {
         code: "validation_error",
         detail: "Nope.",
-        details: { errors: [{ field: "content", code: "brand_new_rule" }] },
+        details: { errors: [{ field: "content", code: "brand_new_rule" }] }, // problem-code:unknown-field proves the fallback for a code from a newer server
       },
     });
     const outcome = await intakeUpload("r", "notes.txt", "some words here");

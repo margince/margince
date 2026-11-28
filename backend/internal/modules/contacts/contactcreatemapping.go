@@ -54,6 +54,7 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 	in := CreateContactInput{
 		FullName:              req.FullName,
 		FirstName:             req.FirstName,
+		Salutation:            req.Salutation,
 		LastName:              req.LastName,
 		Title:                 req.Title,
 		Source:                req.Source,

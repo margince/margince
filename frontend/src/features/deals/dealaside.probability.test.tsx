@@ -3,6 +3,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { type Translator, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -93,7 +94,7 @@ function mount(
 
 async function tipText(): Promise<string> {
   const mark = await screen.findByRole("button", {
-    name: "Why this probability",
+    name: englishCopy["deal.winProbability.why"],
   });
   act(() => mark.focus());
   return (await screen.findByRole("tooltip")).textContent ?? "";
@@ -107,7 +108,7 @@ it("quotes Margince's own reason for the figure it lowered, and keeps the edit",
     /35%$/,
   );
   const mark = await screen.findByRole("button", {
-    name: "Why this probability",
+    name: englishCopy["deal.winProbability.why"],
   });
   act(() => mark.focus());
   const tip = await screen.findByRole("tooltip");
@@ -150,7 +151,7 @@ it("names the colleague who set the figure and asks Margince for nothing", async
   });
   await screen.findByRole("button", { name: "Edit About" });
   const mark = await screen.findByRole("button", {
-    name: "Why this probability",
+    name: englishCopy["deal.winProbability.why"],
   });
   act(() => mark.focus());
   expect((await screen.findByRole("tooltip")).textContent).toBe(

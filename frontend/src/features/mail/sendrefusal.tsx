@@ -25,9 +25,6 @@ export function SendRefusal({ refusal }: Readonly<{ refusal: Refusal }>) {
   if (refusal === "legacyFooter") {
     return <ErrorLine>{t("compose.legacyFooter")}</ErrorLine>;
   }
-  if (refusal === "sharedUnsubscribe") {
-    return <ErrorLine>{t("compose.sharedUnsubscribeToken")}</ErrorLine>;
-  }
   return null;
 }
 

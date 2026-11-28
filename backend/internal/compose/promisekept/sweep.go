@@ -39,7 +39,7 @@ type Sweep struct {
 func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
 	writer := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), contacts.PromiseKeptActor)
 	var claims []ids.UUID
-	if err := database.WithWorkspaceTx(writer, s.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(writer, s.Pool, func(tx pgx.Tx) error {
 		var err error
 		claims, err = s.Store.KeptPromiseCandidatesTx(writer, tx)
 		return err
@@ -48,7 +48,7 @@ func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
 	}
 	var failures []error
 	for _, claim := range claims {
-		if err := database.WithWorkspaceTx(writer, s.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(writer, s.Pool, func(tx pgx.Tx) error {
 			// Authority is taken before any row lock, as authorization writers order it.
 			if err := identity.HoldAuthorizationTx(writer, tx); err != nil {
 				return err

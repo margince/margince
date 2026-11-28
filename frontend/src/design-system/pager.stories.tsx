@@ -6,6 +6,7 @@ import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Pager } from "./pager";
 import "./listtable.css";
+import { en } from "../i18n/en";
 
 // The footer of a list. What the strip of page numbers and the range under it
 // say in each state of what the caller knows about the list's length.
@@ -101,7 +102,7 @@ export const OnAPhone: Story = {
       canvas.getByRole("button", { name: "Previous" }).querySelector("svg"),
     ).not.toBeNull();
     await expect(
-      canvas.getByRole("combobox", { name: "Rows per page" }),
+      canvas.getByRole("combobox", { name: en["table.rowsPerPage"] }),
     ).toHaveTextContent(/^25$/);
     await expectStacked(canvasElement);
     const strip = box(canvasElement, ".lt-pager");
@@ -126,7 +127,7 @@ export const OnATablet: Story = {
       7,
     );
     await expect(
-      canvas.getByRole("combobox", { name: "Rows per page" }),
+      canvas.getByRole("combobox", { name: en["table.rowsPerPage"] }),
     ).toHaveTextContent("25 per page");
   },
 };

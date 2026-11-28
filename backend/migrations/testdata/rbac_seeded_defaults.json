@@ -625,10 +625,10 @@
         "update": false
       },
       "import_run": {
-        "create": false,
+        "create": true,
         "delete": false,
-        "read": false,
-        "update": false
+        "read": true,
+        "update": true
       },
       "installation_settings": {
         "create": false,
@@ -1068,10 +1068,10 @@
         "update": false
       },
       "import_run": {
-        "create": false,
+        "create": true,
         "delete": false,
-        "read": false,
-        "update": false
+        "read": true,
+        "update": true
       },
       "installation_settings": {
         "create": false,
@@ -2397,10 +2397,10 @@
         "update": false
       },
       "import_run": {
-        "create": false,
+        "create": true,
         "delete": false,
-        "read": false,
-        "update": false
+        "read": true,
+        "update": true
       },
       "installation_settings": {
         "create": false,

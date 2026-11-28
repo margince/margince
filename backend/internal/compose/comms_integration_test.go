@@ -124,7 +124,7 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	// (activities.IsMailThread), so an anchor carrying no direction is a topic
 	// WE picked and is drafted as "About …". This test answers a customer's
 	// mail, so the row has to be one.
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, direction, subject, occurred_at, source, captured_by)
 			VALUES ($1,

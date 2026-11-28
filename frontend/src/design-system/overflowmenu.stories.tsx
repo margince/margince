@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Bell, ChevronDown } from "lucide-react";
 import { expect, screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { Button, Modal, OverflowMenu } from "./atoms";
 import { Heading } from "./heading";
 import { ListPopover } from "./listpopover";
@@ -91,7 +92,9 @@ export const ButtonFace: Story = {
     await userEvent.click(
       await within(canvasElement).findByRole("button", { name: "Setup" }),
     );
-    await screen.findByRole("button", { name: "Metric definitions" });
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.definitions"],
+    });
   },
 };
 
@@ -113,7 +116,9 @@ export const ChipFace: Story = {
     await userEvent.click(
       await within(canvasElement).findByRole("button", { name: "Remind me" }),
     );
-    await screen.findByRole("button", { name: "Tomorrow morning" });
+    await screen.findByRole("button", {
+      name: englishCopy["compose.scheduleTomorrow"],
+    });
   },
 };
 
@@ -186,7 +191,7 @@ export const InsideADrawer: Story = {
       }),
     );
     const item = await screen.findByRole("button", {
-      name: "Mark as business",
+      name: englishCopy["senders.markBusiness"],
     });
     const box = item.getBoundingClientRect();
     await expect(

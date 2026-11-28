@@ -69,9 +69,6 @@ func (r *Registry) runContext(ctx context.Context, name string, grantedBy *ids.U
 	if grantedBy != nil {
 		return r.connectorContext(ctx, name, *grantedBy)
 	}
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return nil, errors.New("capture: sync outside workspace context")
-	}
 	shared := principal.WithActor(withSharedMailbox(ctx, connection), sharedMailboxPrincipal(name))
 	return asMailboxRun(principal.WithCorrelationID(shared, ids.NewV7())), nil
 }

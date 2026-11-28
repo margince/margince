@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { ForecastReview } from "./analytics.forecast.review";
 
@@ -179,9 +180,7 @@ describe("an input check the records moved past", () => {
     );
 
     expect(
-      await screen.findByText(
-        "Margince has not yet confirmed whether the records changed since this check. Wait for an update, or choose Check again to read them now.",
-      ),
+      await screen.findByText(englishCopy["review.freshnessUnknown"]),
     ).toBeTruthy();
     expect(
       within(await rowOf("Fleet retrofit")).queryByText("Out of date"),

@@ -5,6 +5,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -35,9 +36,11 @@ describe("closing the drawer over a typed note", () => {
     await user.type(screen.getByLabelText("Subject *"), "Recap");
     await user.keyboard("{Escape}");
     expect(
-      screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
+      screen.getByRole("dialog", { name: englishCopy["unsaved.title"] }),
     ).toBeTruthy();
-    expect(screen.getByRole("dialog", { name: "Log activity" })).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", { name: englishCopy["log.title"] }),
+    ).toBeTruthy();
   });
 
   it("closes without asking once the note is saved", async () => {

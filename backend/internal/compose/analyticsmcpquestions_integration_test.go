@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -137,16 +138,13 @@ func TestEveryCanonicalQuestionHasExecutableProof(t *testing.T) {
 	cases := canonicalCases()
 	seen := map[string]bool{}
 	for _, q := range loadCanonicalQuestions(t) {
-		// Two tools, because two surfaces answer these questions. M07 names
-		// `run_report`, and the typed grammar now reaches its `stalled` filter
-		// too. So which surface a question is proved on is the corpus's claim
-		// to make, not a reach the grammar settles.
-		//
-		// The tool a question NAMES has to be the surface its proof drives, and
-		// that is checked below rather than assumed. Accepting the value alone
-		// would let a question declare one surface while its case exercised
-		// another — which is how a corpus comes to claim the agent can answer
-		// something only the web app can.
+		// The X questions are filters on a deal report and are proved, and held
+		// to the corpus, in compose/integration.
+		if strings.HasPrefix(q.ID, "X") {
+			continue
+		}
+		// The tool a question names must be the surface its proof drives.
+		// Otherwise a corpus could claim a reach the product does not have.
 		if _, known := questionSurfaces[q.Tool]; !known {
 			t.Errorf("%s names tool %q, which this suite does not drive — either the corpus "+
 				"or the case map is ahead of the other", q.ID, q.Tool)

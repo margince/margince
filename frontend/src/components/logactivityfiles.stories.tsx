@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, fireEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -73,7 +74,7 @@ export const RefusedAsDropped: Story = {
       new File(["MZ"], "setup.exe", { type: "application/x-msdownload" }),
     );
     fireEvent(
-      await canvas.findByLabelText("Attach files"),
+      await canvas.findByLabelText(englishCopy["log.files"]),
       new DragEvent("drop", { dataTransfer, bubbles: true, cancelable: true }),
     );
     await expect(

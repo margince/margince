@@ -43,12 +43,7 @@ func BumpDueByMailboxes(ctx context.Context, pool *pgxpool.Pool, provider string
 	if len(emails) == 0 {
 		return nil, nil
 	}
-	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; the push carries no tenant, so every workspace is probed under its own GUC.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL`)
-	if err != nil {
-		return nil, fmt.Errorf("capture: listing workspaces for the push walk: %w", err)
-	}
-	workspaces, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	workspaces, err := database.LiveWorkspaces(ctx, pool)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +53,7 @@ func BumpDueByMailboxes(ctx context.Context, pool *pgxpool.Pool, provider string
 	for _, wsID := range workspaces {
 		wsCtx := principal.WithWorkspaceID(ctx, wsID)
 		ws := ids.From[ids.WorkspaceKind](wsID)
-		err := database.WithWorkspaceTx(wsCtx, pool, func(tx pgx.Tx) error {
+		err := database.WithTx(wsCtx, pool, func(tx pgx.Tx) error {
 			matched, err := makeDueNowTx(ctx, tx,
 				`c.provider = @pushed_provider AND c.status IN ('connected','error') AND c.sync_cursor->>'email' = ANY(@emails)`,
 				pgx.NamedArgs{"pushed_provider": provider, "emails": emails})

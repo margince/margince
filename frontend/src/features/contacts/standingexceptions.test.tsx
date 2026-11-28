@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { StandingExceptions } from "./standingexceptions";
 
@@ -65,14 +66,20 @@ it("shows company, purpose and author, and requires a reason to revoke exactly t
   ).toBeTruthy();
   expect(screen.getByText(/Recorded by Alex/)).toBeTruthy();
   expect(screen.getByText(/It grants no marketing consent/)).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Revoke exception" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["consent.exceptionRevoke"],
+    }),
+  );
   const dialog = await screen.findByRole("dialog");
   const confirm = within(dialog).getByRole("button", {
-    name: "Revoke exception",
+    name: englishCopy["consent.exceptionRevoke"],
   });
   await user.click(confirm);
   expect(revoke).not.toHaveBeenCalled();
-  expect(within(dialog).getByText("This field is required.")).toBeTruthy();
+  expect(
+    within(dialog).getByText(englishCopy["record.fieldRequired"]),
+  ).toBeTruthy();
   expect(document.activeElement).toBe(within(dialog).getByRole("textbox"));
   await user.type(within(dialog).getByRole("textbox"), "Wrong context.");
   await user.click(confirm);
@@ -93,7 +100,11 @@ it("keeps historical company scope unknown and offers no action without authorit
   });
   mount();
   expect(await screen.findByText(/Sending company not recorded/)).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Revoke exception" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: englishCopy["consent.exceptionRevoke"],
+    }),
+  ).toBeNull();
 });
 
 it("retains the reason when revocation fails", async () => {
@@ -109,12 +120,16 @@ it("retains the reason when revocation fails", async () => {
   });
   mount();
   await user.click(
-    await screen.findByRole("button", { name: "Revoke exception" }),
+    await screen.findByRole("button", {
+      name: englishCopy["consent.exceptionRevoke"],
+    }),
   );
   const dialog = await screen.findByRole("dialog");
   await user.type(within(dialog).getByRole("textbox"), "Keep this reason.");
   await user.click(
-    within(dialog).getByRole("button", { name: "Revoke exception" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["consent.exceptionRevoke"],
+    }),
   );
   await screen.findByText("Permission changed.");
   expect(
@@ -155,7 +170,7 @@ it("does not attribute an erased origin to the colleague who saved a merged copy
   });
   mount();
   expect(
-    await screen.findByText("Original author and date unavailable."),
+    await screen.findByText(englishCopy["consent.exceptionUnknownOrigin"]),
   ).toBeTruthy();
   expect(screen.queryByText(/Recorded by Alex/)).toBeNull();
 });
@@ -171,6 +186,10 @@ it("distinguishes a known company with no name from a missing company scope", as
       }),
   });
   mount();
-  expect(await screen.findByText("Sending company name not set.")).toBeTruthy();
-  expect(screen.queryByText("Sending company not recorded.")).toBeNull();
+  expect(
+    await screen.findByText(englishCopy["consent.exceptionUnnamedCompany"]),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText(englishCopy["consent.exceptionUnknownCompany"]),
+  ).toBeNull();
 });

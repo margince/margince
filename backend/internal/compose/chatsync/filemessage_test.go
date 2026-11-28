@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/chatsummary"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 )
 
 func TestAMessageIsNamedBySeqMentionOrLinkInItsOwnChannelOnly(t *testing.T) {
@@ -25,9 +26,9 @@ func TestAMessageIsNamedBySeqMentionOrLinkInItsOwnChannelOnly(t *testing.T) {
 		{"latest", 0, false},
 		{"0", 0, false},
 	} {
-		got, ok := messageSeq(tc.ref, "acme")
+		got, ok := dispact.MessageSequence(tc.ref, "acme", true)
 		if ok != tc.ok || (ok && got != tc.want) {
-			t.Errorf("messageSeq(%q) = %d, %t; want %d, %t", tc.ref, got, ok, tc.want, tc.ok)
+			t.Errorf("MessageSequence(%q) = %d, %t; want %d, %t", tc.ref, got, ok, tc.want, tc.ok)
 		}
 	}
 }
@@ -46,5 +47,12 @@ func TestANoteListsDecisionsAndOpenQuestionsUnderItsSummary(t *testing.T) {
 	}
 	if plain := noteBody(chatsummary.Reply{Summary: "Short."}); plain != "Short." {
 		t.Errorf("a summary with no lists = %q, want it alone", plain)
+	}
+}
+
+func TestSingleMessageFilingKeepsTheSelectedReply(t *testing.T) {
+	seq, ok := dispact.MessageSequence("<m:#acme:40:42|reply>", "acme", false)
+	if !ok || seq != 42 {
+		t.Fatalf("selected reply became its root: %d %v", seq, ok)
 	}
 }

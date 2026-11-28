@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -32,10 +33,13 @@ import (
 // callback receives, proving the initiator and the completer are the same
 // browser (the signed state alone only proves the initiator).
 type connectState struct {
-	Workspace ids.UUID
-	User      ids.UUID
-	Provider  string
-	Nonce     string
+	SlackHistory       *chatwire.HistoryProfile
+	MessagingWorkspace string
+	MessengerRecord    *messengerReturnRecord
+	Workspace          ids.UUID
+	User               ids.UUID
+	Provider           string
+	Nonce              string
 	// Connection is the mailbox a reconnect repairs, then the row granted.
 	Connection ids.UUID
 	// Version names the state's own vintage, so a callback served by a newer
@@ -62,16 +66,19 @@ type connectState struct {
 // wireState is the JSON form actually signed — ids.UUID as strings, plus the
 // expiry, so the payload is self-describing and version-tolerant.
 type wireState struct {
-	Workspace    string `json:"ws"`
-	User         string `json:"u"`
-	Provider     string `json:"p"`
-	Nonce        string `json:"n"`
-	ReturnTo     string `json:"rt,omitempty"`
-	Then         string `json:"th,omitempty"`
-	Shared       bool   `json:"sh,omitempty"`
-	WindowMonths int    `json:"iw,omitempty"`
-	Version      int    `json:"v,omitempty"`
-	Exp          int64  `json:"exp"` // unix seconds
+	SlackHistory       *chatwire.HistoryProfile `json:"slack_history,omitempty"`
+	MessagingWorkspace string                   `json:"messaging_workspace,omitempty"`
+	MessengerRecord    *messengerReturnRecord   `json:"messenger_record,omitempty"`
+	Workspace          string                   `json:"ws"`
+	User               string                   `json:"u"`
+	Provider           string                   `json:"p"`
+	Nonce              string                   `json:"n"`
+	ReturnTo           string                   `json:"rt,omitempty"`
+	Then               string                   `json:"th,omitempty"`
+	Shared             bool                     `json:"sh,omitempty"`
+	WindowMonths       int                      `json:"iw,omitempty"`
+	Version            int                      `json:"v,omitempty"`
+	Exp                int64                    `json:"exp"` // unix seconds
 }
 
 // stateSigner mints and verifies signed state tokens with an HMAC key.
@@ -99,6 +106,7 @@ func (s stateSigner) usable() bool { return len(s.key) >= minStateKeyLen }
 // tuple until exp.
 func (s stateSigner) sign(st connectState, exp time.Time) string {
 	payload, _ := json.Marshal(wireState{ //nolint:errchkjson // string/int-only struct never errors
+		SlackHistory: st.SlackHistory, MessagingWorkspace: st.MessagingWorkspace, MessengerRecord: st.MessengerRecord,
 		Workspace:    st.Workspace.String(),
 		User:         st.User.String(),
 		Provider:     st.Provider,
@@ -148,6 +156,7 @@ func (s stateSigner) verify(token string, now time.Time) (connectState, error) {
 		return connectState{}, fmt.Errorf("connector state: bad user id: %w", err)
 	}
 	return connectState{
+		SlackHistory: w.SlackHistory, MessagingWorkspace: w.MessagingWorkspace, MessengerRecord: w.MessengerRecord,
 		Workspace: ws, User: user, Provider: w.Provider,
 		Nonce: w.Nonce, ReturnTo: w.ReturnTo, Version: w.Version,
 		Then: w.Then, SharedConsent: w.Shared, WindowMonths: w.WindowMonths,

@@ -87,7 +87,7 @@ func (e *Engine) Activate(ctx context.Context, taskID, stepName string, version 
 	}
 	ctx, cancel := context.WithTimeout(ctx, transactionLimit)
 	defer cancel()
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return e.activateTx(ctx, tx, task, step, version, actor, review)
 	})
 }

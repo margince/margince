@@ -97,7 +97,7 @@ func TestAScanReaderFindsAnOlderSignalBeforeTheTaskHasRun(t *testing.T) {
 	ctx := systemCtx(e)
 	reword := func(id ids.UUID) (reworded bool) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
 			reworded, err = signals.RewordScanSummaryTx(ctx, tx, signals.ScanSummaryReword{
 				Signal: id, From: "No reply for 15 days", To: "No reply for a while",
 			})
@@ -147,7 +147,7 @@ func TestANewScanFindingNamesItsChannelAndItsProducer(t *testing.T) {
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Quiet Co", nil)
 	ctx := systemCtx(e)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind: "ghosted_thread", CompanyID: company, Summary: "No reply", Severity: "warn", Fingerprint: "quiet-co",
 		}, time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC))

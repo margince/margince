@@ -326,6 +326,11 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 // on exactly the address book's argument: a password reset must not cost
 // somebody a mailbox connection they then have to re-consent at the provider.
 func (s *Service) revokeBorrowedAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID) error {
+	if s.memberGrantWithdrawal != nil {
+		if err := s.memberGrantWithdrawal(ctx, tx, userID); err != nil {
+			return err
+		}
+	}
 	if err := endCredentialAuthority(ctx, tx, userID, deactivatedUserRevokeReason); err != nil {
 		return err
 	}

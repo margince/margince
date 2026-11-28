@@ -39,7 +39,7 @@ const (
 func claimCount(t *testing.T, e *integration.SearchEnv, query string, args ...any) int {
 	t.Helper()
 	var n int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&n)
 	})
 	if err != nil {
@@ -51,7 +51,7 @@ func claimCount(t *testing.T, e *integration.SearchEnv, query string, args ...an
 func claimText(t *testing.T, e *integration.SearchEnv, query string) string {
 	t.Helper()
 	var out string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query).Scan(&out)
 	})
 	if err != nil {
@@ -62,7 +62,7 @@ func claimText(t *testing.T, e *integration.SearchEnv, query string) string {
 
 func claimExec(t *testing.T, e *integration.SearchEnv, query string, args ...any) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), query, args...)
 		return err
 	})
@@ -120,7 +120,7 @@ func claimMintFormerContact(t *testing.T, env captureEnv) ids.UUID {
 		t.Fatalf("%d live contacts for %s owned by the member, want 1: the fixture no longer exercises a minted contact", n, claimedFormer)
 	}
 	var id ids.UUID
-	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT c.id FROM contact c JOIN contact_email ce ON ce.contact_id = c.id WHERE ce.email = $1`,
 			claimedFormer).Scan(&id)
@@ -220,7 +220,7 @@ func TestATypedClaimOfACustomersAddressArchivesNothing(t *testing.T) {
 func readableBy(reader context.Context, t *testing.T, e *integration.SearchEnv) []bool {
 	t.Helper()
 	var ids_ []ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `SELECT id FROM activity WHERE kind = 'email' ORDER BY id`)
 		if err != nil {
 			return err
@@ -280,7 +280,7 @@ func TestTheHookLeavesAContactAColleagueOwns(t *testing.T) {
 	mine := claimMintFormerContact(t, env)
 	const colleaguesAddress = "colleagues-contact@previous-employer.example"
 	var theirs ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO contact (owner_id, full_name, source, captured_by, visibility)
 			VALUES ($1, 'Founder Former', 'gmail', 'connector:gmail', 'owner') RETURNING id`, e.Rep3).Scan(&theirs); err != nil {
@@ -297,7 +297,7 @@ func TestTheHookLeavesAContactAColleagueOwns(t *testing.T) {
 	hook := ownaddress.Retire(contacts.NewStore(e.DB()), slog.Default())
 	system := principal.SystemActing(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7()), "system:test")
 	run := func(address string) {
-		err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 			return hook(system, tx, capturemod.ClaimedAddress{ID: ids.NewV7(), User: e.Rep1, Address: address, Proven: true})
 		})
 		if err != nil {
@@ -616,7 +616,7 @@ func TestACaptureMintedContactIsRetractableByAVerdict(t *testing.T) {
 	e := env.e
 	contact := claimMintFormerContact(t, env)
 	var retracted bool
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		retracted, err = contacts.NewStore(e.DB()).RetractCaptureOnlyContactTx(principal.WithCorrelationID(e.Admin(), ids.NewV7()), tx, ids.From[ids.ContactKind](contact), e.Rep1)
 		return err

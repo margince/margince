@@ -28,7 +28,7 @@ func importedUnknownEmployment(t *testing.T, e *integration.Env, resolve bool) i
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var run string
 		err := tx.QueryRow(e.Admin(), `INSERT INTO provider_run (subject_kind,contact_id,provider,trigger,state,input_fingerprint,external_correlation_id,connection_version,connection_epoch,configuration_snapshot,requested_categories,completed_at)
  VALUES ('contact',@contact,'surfe','manual','completed',@fingerprint,gen_random_uuid(),1,1,'{}'::jsonb,ARRAY['professional_email'],now()) RETURNING id::text`, pgx.NamedArgs{"contact": subject, "fingerprint": ids.NewV7().String()}).Scan(&run)
@@ -87,7 +87,7 @@ func TestUnknownEmploymentRepairPreservesImportsAfterHumanEditsAndResolution(t *
 func TestUnknownEmploymentRepairPreservesResolvedImportsAfterClaimsAreDeleted(t *testing.T) {
 	e := integration.Setup(t)
 	id := importedUnknownEmployment(t, e, true)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := contacts.DeleteProviderClaims(e.Admin(), tx, "surfe"); err != nil {
 			return err
 		}

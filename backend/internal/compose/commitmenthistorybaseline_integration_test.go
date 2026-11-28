@@ -36,7 +36,7 @@ const beforeBaseline = CommitmentOutcome(activities.CommitmentBeforeBaseline)
 func connectProvider(t *testing.T, e *integration.Env, seat ids.UUID, provider string) {
 	t.Helper()
 	address := seatAddress(t, e, seat)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
 			VALUES ($1, $2, 'connected', 'vault:test', $3)
@@ -102,7 +102,7 @@ func dispatchFor(t *testing.T, e *integration.Env, source, seat ids.UUID) Commit
 		Seat: &seat, Summary: "Send pricing", Confidence: 0.95,
 	}
 	var outcome CommitmentOutcome
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		outcome, _, err = NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB())).DispatchTx(ctx, tx, c, ids.NewV7())
 		return err

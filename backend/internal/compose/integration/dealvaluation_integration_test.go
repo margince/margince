@@ -73,7 +73,7 @@ func (f valuationFixture) deal(t *testing.T, currency string, amount *int64, own
 func (f valuationFixture) totals(ctx context.Context, t *testing.T) deals.ProjectDealTotals {
 	t.Helper()
 	var totals deals.ProjectDealTotals
-	if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		totals, err = f.e.Deals.ProjectDealTotalsTx(ctx, tx, f.project)
 		return err

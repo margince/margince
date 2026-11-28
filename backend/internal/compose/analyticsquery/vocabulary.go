@@ -61,6 +61,7 @@ func DescribeSchema(schema Schema) string {
 		out.WriteString(strings.Join(entity.FieldNames(KindMeasure), ", "))
 		out.WriteString("\n")
 		describeCurrencyBasis(&out, entity)
+		describeDerivedFilters(&out, entity)
 		describeCustomFields(&out, entity)
 	}
 	return out.String()

@@ -19,6 +19,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/analyticswire"
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/reportdoc"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -66,6 +67,7 @@ func (h analyticsQueryHandlers) GetAnalyticsSchema(w http.ResponseWriter, r *htt
 			Name:         name,
 			GroupBy:      entity.FieldNames(analyticsquery.KindDimension),
 			Measures:     entity.FieldNames(analyticsquery.KindMeasure),
+			Filters:      analyticswire.FiltersOf(entity),
 			Money:        analyticsMoneyOf(entity),
 			CustomFields: analyticsCustomFieldsOf(entity),
 		})

@@ -4,6 +4,7 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import {
   aiJudgedProject360,
@@ -35,7 +36,7 @@ describe("a health reading the health job wrote", () => {
       ),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Undo the AI reading" }),
+      screen.getByRole("button", { name: englishCopy["projectHealth.undoAI"] }),
     ).toBeTruthy();
   });
 
@@ -43,7 +44,9 @@ describe("a health reading the health job wrote", () => {
     standing(deliveringProject360());
     expect(screen.queryByText("Automated by Project health check")).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Undo the AI reading" }),
+      screen.queryByRole("button", {
+        name: englishCopy["projectHealth.undoAI"],
+      }),
     ).toBeNull();
   });
 });
@@ -70,7 +73,9 @@ describe("a health reading a colleague recorded", () => {
     standing(reading("2026-08-12T09:00:00Z"));
     expect(screen.getByText("Assessed 12 Aug by Lena Fischer.")).toBeTruthy();
     expect(screen.getByText("The supplier slipped two weeks.")).toBeTruthy();
-    expect(screen.queryByText("From CRM records")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["standing.sources.records"]),
+    ).toBeNull();
   });
 
   it("names the year of a reading made in another year", () => {

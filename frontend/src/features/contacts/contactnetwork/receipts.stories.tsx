@@ -9,6 +9,7 @@ import { UTC_ZONE } from "../../../format/timezone";
 import { StoryProviders } from "../../../testing/story-utils";
 import { ReceiptList } from "./receipts";
 import "../contactnetwork.css";
+import { en as englishCopy } from "../../../i18n/en";
 
 // The messages a relationship was read from: a mail takes the email citation,
 // a meeting the plain line. A meeting logged for its date alone shows that
@@ -82,7 +83,7 @@ export const SentByMarginceForYou: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByText("Sent by Margince for you"),
+      await canvas.findByText(englishCopy["trust.relayForYou"]),
     ).toBeVisible();
     await expect(canvas.getByText("From privacy@kps.test")).toBeVisible();
   },

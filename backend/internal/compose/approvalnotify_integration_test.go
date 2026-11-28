@@ -221,7 +221,7 @@ func (a approvalNotifyEnv) deliver(t *testing.T, env kevents.Envelope) {
 func (a approvalNotifyEnv) read(t *testing.T, fn func(context.Context, pgx.Tx) error) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), a.e.WS)
-	if err := database.WithWorkspaceTx(ctx, a.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, a.e.Pool, func(tx pgx.Tx) error {
 		return fn(ctx, tx)
 	}); err != nil {
 		t.Fatalf("reading the fixture's tables: %v", err)

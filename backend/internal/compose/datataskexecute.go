@@ -70,7 +70,7 @@ func recountDataTasks(ctx context.Context, pool *pgxpool.Pool, catalog []datatas
 				continue
 			}
 			var left int64
-			err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 				var err error
 				left, _, err = step.Estimate(ctx, tx, dataTaskLeftoverCap)
 				return err

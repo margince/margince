@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { LeadManualSignals } from "./leadsignals";
 import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
@@ -92,7 +93,9 @@ async function show(writes: Write[], refuse?: (factor: string) => boolean) {
   );
   // The questions render only once the stored signals have settled — before
   // that the card cannot say what is already set.
-  await screen.findByRole("combobox", { name: "Website traffic?" });
+  await screen.findByRole("combobox", {
+    name: englishCopy["lead.signal.ask.web_traffic"],
+  });
 }
 
 function question(name: string): HTMLElement {
@@ -100,7 +103,7 @@ function question(name: string): HTMLElement {
 }
 
 function save(): HTMLElement {
-  return screen.getByRole("button", { name: "Add to score" });
+  return screen.getByRole("button", { name: englishCopy["lead.signalSave"] });
 }
 
 async function evidence(
@@ -337,7 +340,9 @@ describe("LeadManualSignals", () => {
       </Providers>,
     );
 
-    expect(await screen.findByText("No evidence recorded")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["lead.signalNoEvidence"]),
+    ).toBeTruthy();
   });
 
   it("says why a refused batch was refused and keeps the answers for a retry", async () => {
@@ -381,7 +386,9 @@ describe("LeadManualSignals", () => {
     // The answer the server took is retired; the one it refused is still there
     // to press save on again.
     await waitFor(() =>
-      expect(question("Website traffic?").textContent).not.toContain("Medium"),
+      expect(
+        question(englishCopy["lead.signal.ask.web_traffic"]).textContent,
+      ).not.toContain("Medium"),
     );
     expect(question("Budget?").textContent).toContain("Some budget");
 
@@ -407,7 +414,9 @@ describe("LeadManualSignals", () => {
 
     expect(await screen.findByText("This lead is closed.")).toBeTruthy();
     expect(
-      screen.queryByRole("combobox", { name: "Website traffic?" }),
+      screen.queryByRole("combobox", {
+        name: englishCopy["lead.signal.ask.web_traffic"],
+      }),
     ).toBeNull();
   });
 });

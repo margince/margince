@@ -6,6 +6,7 @@ import { userEvent, within } from "storybook/test";
 import { Panel } from "../../design-system/panel";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { SettingList } from "../../design-system/settingrow";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -53,7 +54,9 @@ export const Edited: Story = {
   render,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const field = await canvas.findByRole("textbox", { name: "Greeting name" });
+    const field = await canvas.findByRole("textbox", {
+      name: englishCopy["settings.greetingName"],
+    });
     await userEvent.type(field, "Ada");
   },
 };

@@ -134,16 +134,16 @@ describe("CompanyRail", () => {
     };
     renderRail({ view: view({ company: bare }) });
     expect(screen.queryByText("Industry")).toBeNull();
-    expect(screen.queryByText("Company size")).toBeNull();
+    expect(screen.queryByText(en["co.aside.size"])).toBeNull();
 
     await userEvent.click(
       screen.getByRole("button", { name: /^Show \d+ empty fields$/ }),
     );
     expect(screen.getByText("Industry")).toBeVisible();
-    expect(screen.getByText("Company size")).toBeVisible();
+    expect(screen.getByText(en["co.aside.size"])).toBeVisible();
     expect(screen.getByRole("region", { name: "Address" })).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Hide empty fields" }),
+      screen.getByRole("button", { name: en["record.details.hideEmpty"] }),
     ).toBeInTheDocument();
   });
 
@@ -438,7 +438,7 @@ describe("CompanyRail", () => {
       .closest<HTMLElement>("section");
     expect(contacts).not.toBeNull();
     expect(
-      contacts && within(contacts).getByText("Hidden for your role"),
+      contacts && within(contacts).getByText(en["co.section.restricted"]),
     ).toBeTruthy();
   });
 });

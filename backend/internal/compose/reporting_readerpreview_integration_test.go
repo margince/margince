@@ -43,7 +43,7 @@ func TestAReportPreviewedAsARoleReadsWhatThatRoleMay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
 		_, err := identity.SeedSystemRoles(f.writer, tx)
 		return err
 	}); err != nil {

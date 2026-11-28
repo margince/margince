@@ -74,7 +74,7 @@ func (s *IdempotencyRetentionSweeper) SweepWorkspace(ctx context.Context) error 
 	// promise with a short life that names who made it — so the same pass
 	// ends it rather than a second job ageing a second table.
 	var lapsed int64
-	if err := database.WithWorkspaceTx(wsCtx, s.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		lapsed, err = purgeLapsedBulkConfirmations(wsCtx, tx)
 		return err
@@ -89,7 +89,7 @@ func (s *IdempotencyRetentionSweeper) SweepWorkspace(ctx context.Context) error 
 
 func (s *IdempotencyRetentionSweeper) sweepWorkspace(ctx context.Context) (int64, error) {
 	var purged int64
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// idx_idempotency_key_created (migration 0033) is what keeps this cheap;
 		// the migration named a future cleanup pass as its reason to exist.
 		tag, err := tx.Exec(ctx, `

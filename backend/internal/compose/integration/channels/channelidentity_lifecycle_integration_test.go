@@ -68,7 +68,7 @@ func suppressed(t *testing.T, e *integration.Env, channelUserID string) bool {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var answer bool
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = storekit.ChannelIdentitySuppressed(ctx, tx, telegramProvider, channelUserID)
 		return err

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { TimelineFilters } from "../../design-system/recordtimeline";
+import { en as englishCopy } from "../../i18n/en";
 import type { TimelineFilter } from "../../lib/timelinefilter";
 import { useLeadHistoryDials } from "./leadhistorydials";
 
@@ -43,7 +44,7 @@ export const All: Story = {};
 export const CutsOpen: Story = {
   play: async ({ canvasElement }) => {
     const cuts = await within(canvasElement).findByRole("combobox", {
-      name: "Timeline filter",
+      name: englishCopy["chronology.label"],
     });
     await userEvent.click(cuts);
     const list = await screen.findByRole("listbox");

@@ -130,7 +130,9 @@ describe("StageExitCriteria", () => {
     const label = await screen.findByText("Economic buyer identified");
     const row = label.closest<HTMLElement>(".settingrow");
     if (!row) throw new Error("the criterion drew no row");
-    expect(within(row).getByText("Role identified")).toBeTruthy();
+    expect(
+      within(row).getByText(en["stage.criteria.kindRoleIdentified"]),
+    ).toBeTruthy();
     expect(row.textContent).not.toContain("economic_buyer");
   });
 
@@ -138,7 +140,7 @@ describe("StageExitCriteria", () => {
     vi.stubGlobal("fetch", criteriaStub({ criteria: [] }));
     render(<StageExitCriteria stageId="s1" stageName="Qualify" canEdit />);
 
-    const none = await screen.findByText("No exit criteria yet.");
+    const none = await screen.findByText(en["stage.criteria.none"]);
     expect(none.parentElement).toBe(
       screen.getByTestId("new-criterion-s1").parentElement,
     );

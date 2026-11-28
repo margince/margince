@@ -55,6 +55,10 @@ const fieldDelivery = "delivery"
 // up until the reader answers.
 const (
 	classAutomation = "automation"
+	// ClassWebsiteLead holds accepted website submissions addressed to their final owner.
+	ClassWebsiteLead = "website_lead"
+	// KindWebsiteLead announces one accepted website submission.
+	KindWebsiteLead = "website_lead"
 	classLeadSLA    = "lead_sla"
 	classCapture    = "capture"
 	classCoach      = "coach"
@@ -85,7 +89,7 @@ const (
 // screen reads them: the lanes that carry the most first, the housekeeping
 // last.
 var noticeClasses = []string{
-	classAutomation, classLeadSLA, ClassApprovalPending, classProjectHealth, classCapture, classCoach, classSystem,
+	classAutomation, classLeadSLA, ClassApprovalPending, ClassWebsiteLead, classProjectHealth, classCapture, classCoach, classSystem,
 }
 
 // classByKind places every kind a system flow raises.
@@ -107,6 +111,7 @@ const KindDealValueNetBasis = "deal_value_net_basis"
 const KindTaskTaken = "task_taken"
 
 var classByKind = map[string]string{
+	KindWebsiteLead:                ClassWebsiteLead,
 	"data_task_failed":             classSystem,
 	KindPrivacyReviewRequired:      classSystem,
 	KindOptOutReceiptMissed:        classSystem,
@@ -366,16 +371,11 @@ func checkPreference(class, delivery string) error {
 			Message: "delivery is off, in_app, email or digest",
 		}
 	}
-	if delivery == DeliveryEmail && class != ClassApprovalPending {
-		// Only the approval class has a sending leg: its notice stages a
-		// message in the transaction that writes it, and no other producer
-		// stages one at all. Accepting the word for a class nothing mails
-		// would record a choice the product silently does not keep — the
-		// reader would wait for mail that was never going to come, and the
-		// screen would show them "Email" as though it had.
+	if delivery == DeliveryEmail && class != ClassApprovalPending && class != ClassWebsiteLead {
+		// Immediate delivery exists for approvals and website submissions only.
 		return &values.ParseError{
 			Field: fieldDelivery, Code: "value_not_allowed",
-			Message: "only an approval waiting on you is mailed as it lands; " +
+			Message: "only approvals and new website leads can be mailed as they land; " +
 				"choose the daily digest to have this class reach you by mail",
 		}
 	}

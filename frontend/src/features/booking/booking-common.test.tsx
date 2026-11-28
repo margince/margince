@@ -16,6 +16,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { formatTimeOfDay } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { LocaleProvider, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { bookingProfile, bookingSlots } from "../../testing/book.testkit";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { useBookingTitle } from "./booking-common";
@@ -76,7 +77,7 @@ it.each([
   ["a paused page", { ...acme, paused: true }],
 ])("with %s, keeps a neutral head", (_case, brand) => {
   renderHook(() => useBookingTitle("Book a meeting", brand));
-  expect(document.title).toBe("Book a meeting");
+  expect(document.title).toBe(englishCopy["book.pageTitleGeneric"]);
   expect(icons()).toEqual(["data:,"]);
   expect(content('meta[property="og:image"]')).toBeUndefined();
   if (brand?.paused !== false)

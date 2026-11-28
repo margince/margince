@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SignatureHtml } from "../../components/signaturehtml";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { useToast } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { SignatureSettingRow } from "../settings/settingssignaturerow";
@@ -73,7 +74,9 @@ describe("a member under a workspace template", () => {
     render(<Row />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Edit signature" }),
+      await screen.findByRole("button", {
+        name: englishCopy["settings.signatureEdit"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(
@@ -109,7 +112,9 @@ describe("a member under a workspace template", () => {
     vi.stubGlobal("fetch", backend([], false));
     render(<Row />);
     await user.click(
-      await screen.findByRole("button", { name: "Edit signature" }),
+      await screen.findByRole("button", {
+        name: englishCopy["settings.signatureEdit"],
+      }),
     );
     expect(
       await screen.findByRole("textbox", { name: "Sign-off" }),
@@ -133,7 +138,9 @@ describe("the template card", () => {
     vi.stubGlobal("fetch", backend(calls, true));
     render(<TemplatePage />);
 
-    const box = await screen.findByRole("textbox", { name: "Template (HTML)" });
+    const box = await screen.findByRole("textbox", {
+      name: englishCopy["signatureTemplate.label"],
+    });
     await user.type(box, " Gradion");
     // The preview asks for the layout as typed, before it is saved.
     await waitFor(() =>
@@ -166,10 +173,14 @@ describe("the template card", () => {
     vi.stubGlobal("fetch", backend(calls, true));
     render(<TemplatePage />);
 
-    const box = await screen.findByRole("textbox", { name: "Template (HTML)" });
+    const box = await screen.findByRole("textbox", {
+      name: englishCopy["signatureTemplate.label"],
+    });
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
     await user.type(box, " Gradion");
-    expect(await screen.findByText("Unsaved changes")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["saveBar.unsaved"]),
+    ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Discard" }));
 
     expect((box as HTMLTextAreaElement).value).toBe(

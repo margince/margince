@@ -16,16 +16,17 @@ import (
 // RecordSourceField names the corrected column in the audit images and in the
 // event a module announces. recordSourceRunKey names the run in the evidence.
 const (
-	RecordSourceField  = "source"
-	recordSourceRunKey = "data_task_run"
+	RecordSourceField   = "source"
+	recordSourceRunKey  = "data_task_run"
+	sourceNormalizedKey = "source_normalized"
 )
 
 // RecordSourceCorrectionSQL tests that the audit row aliased alias is one a
 // source correction wrote. It moved no field a member typed, so a reader asking
 // whether somebody worked on the record leaves it out.
 func RecordSourceCorrectionSQL(alias string) string {
-	return "(coalesce(" + alias + ".evidence, '{}'::jsonb) ? '" + recordSourceRunKey + "' AND " +
-		alias + ".after - '" + RecordSourceField + "' = '{}'::jsonb)"
+	return "((coalesce(" + alias + ".evidence, '{}'::jsonb) ? '" + recordSourceRunKey + "' OR coalesce(" + alias + ".evidence,'{}'::jsonb) ? '" + sourceNormalizedKey + "') AND " +
+		alias + ".after - '" + RecordSourceField + "' - 'source_system' = '{}'::jsonb)"
 }
 
 // RecordSourceCorrection is one row a source correction moved, with the audit
@@ -67,15 +68,24 @@ func CorrectRecordSources(
 	if _, err := tx.Exec(ctx, update, rowIDs, sources); err != nil {
 		return nil, fmt.Errorf("store: correcting the source of %s rows: %w", entityType, err)
 	}
-	corrected := make([]RecordSourceCorrection, 0, len(found))
+
+	prepared := make([]auditRow, 0, len(found))
 	for _, row := range found {
-		auditID, err := AuditWithEvidence(ctx, tx, "update", entityType, row.ID,
+		entry, err := prepareAuditRow(ctx, entityType, row.ID,
 			map[string]any{RecordSourceField: row.Old}, map[string]any{RecordSourceField: row.New},
 			map[string]any{recordSourceRunKey: runID.String()})
 		if err != nil {
 			return nil, err
 		}
-		corrected = append(corrected, RecordSourceCorrection{ID: row.ID, AuditID: auditID, Source: row.New})
+		prepared = append(prepared, entry)
+	}
+	written, err := insertAuditRows(ctx, tx, "update", entityType, prepared)
+	if err != nil {
+		return nil, err
+	}
+	corrected := make([]RecordSourceCorrection, 0, len(found))
+	for index, row := range found {
+		corrected = append(corrected, RecordSourceCorrection{ID: row.ID, AuditID: written[index], Source: row.New})
 	}
 	return corrected, nil
 }

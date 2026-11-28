@@ -113,10 +113,7 @@ func Setup(t *testing.T) *Env {
 		AdminUser: ids.NewV7(),
 		Team1:     ids.NewV7(), Team2: ids.NewV7(),
 	}
-	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id) VALUES ($1)`, e.WS); err != nil {
-		t.Fatal(err)
-	}
+	seedCompany(ctx, t, owner, e.WS)
 	seedInstallationIdentity(ctx, t, owner)
 	// The boot seals these in RegisterExtensions, which no test here runs.
 	if err := corereach.Install(nil); err != nil {
@@ -452,7 +449,7 @@ func withFullSignalGrant(base principal.Permissions) principal.Permissions {
 func (e *Env) SeedWonDealLinkedTo(t *testing.T, activities ...ids.UUID) ids.UUID {
 	t.Helper()
 	pipeline, stage, deal := ids.NewV7(), ids.NewV7(), ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `INSERT INTO pipeline (id, name, is_default, position)
 			VALUES ($1, 'Floor fixture', false, 90)`, pipeline); err != nil {

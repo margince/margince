@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import {
   emptyPage,
@@ -162,7 +163,9 @@ describe("ListTable: query vocabulary", () => {
         vi.advanceTimersByTime(100);
       });
       fireEvent.click(
-        within(panel).getByRole("button", { name: "Show archived" }),
+        within(panel).getByRole("button", {
+          name: englishCopy["list.showArchived"],
+        }),
       );
 
       await act(async () => {
@@ -247,7 +250,9 @@ describe("ListTable: query vocabulary", () => {
       throw new Error("the applied filter's value trigger did not render");
     }
     await user.click(valueTrigger);
-    await user.click(screen.getByRole("radio", { name: "All statuses" }));
+    await user.click(
+      screen.getByRole("radio", { name: englishCopy["lead.filterStatusAll"] }),
+    );
 
     const lastCall = fetchPage.mock.calls.at(-1);
     expect(lastCall?.[0].filters).not.toHaveProperty("status");
@@ -281,7 +286,7 @@ describe("ListTable: pending, error and empty states", () => {
       .mockResolvedValue(emptyPage());
     render(<ListTableHarness fetchPage={fetchPage} />);
 
-    await screen.findByText("Could not load this view. Reload the page.");
+    await screen.findByText(englishCopy["common.error"]);
     expect(screen.getByText("missing scope contacts:read")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Retry" }));
@@ -301,10 +306,12 @@ describe("ListTable: pending, error and empty states", () => {
     try {
       render(<ListTableHarness fetchPage={fetchPage} />);
 
-      await screen.findByText("This list cannot be shown with these filters.");
+      await screen.findByText(englishCopy["table.dialsRefused"]);
       expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
 
-      await user.click(screen.getByRole("button", { name: "Clear filters" }));
+      await user.click(
+        screen.getByRole("button", { name: englishCopy["table.clearFilters"] }),
+      );
 
       await screen.findByRole("cell", { name: "No Contacts yet." });
       expect(fetchPage).toHaveBeenLastCalledWith(
@@ -360,7 +367,9 @@ describe("removing an applied filter", () => {
         name: "More actions for the Status filter",
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Delete filter" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["table.deleteFilter"] }),
+    );
 
     await waitFor(() =>
       expect(fetchPage.mock.calls.at(-1)?.[0].filters).not.toHaveProperty(

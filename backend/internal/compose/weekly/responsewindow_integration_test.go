@@ -31,7 +31,7 @@ func TestAResponseAfterTheWeekClosedDoesNotImproveThatWeek(t *testing.T) {
 	}
 	check := func(want int) {
 		t.Helper()
-		err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 			routed, answered, _, err := countWeekLeads(e.repCtx, tx, e.Rep1, start, end)
 			if err != nil {
 				return err
@@ -71,7 +71,7 @@ func TestImportedHistoryDoesNotCountAsThisWeeksMissedIntake(t *testing.T) {
 	}
 	at := lead.CreatedAt.Add(time.Minute)
 	e.WsExec(t, `UPDATE lead SET sla_breached_at = $2, first_response_at = $2 WHERE id = $1`, lead.Id, at)
-	err = database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		routed, answered, breached, err := countWeekLeads(e.repCtx, tx, e.Rep1, lead.CreatedAt.Add(-time.Hour), at.Add(time.Hour))
 		if err != nil {
 			return err

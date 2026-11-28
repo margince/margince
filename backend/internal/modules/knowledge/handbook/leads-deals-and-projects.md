@@ -322,7 +322,9 @@ Also called: close a project, finish delivery, reopen a project.
 To start delivery on a won deal in Margince, open the deal and press **Start delivery** in the box on its page.
 The box appears when the deal is won, names no project, and its company has one live project. It reads "This deal is won and names no project. Attach it to {project} and move the project into delivery?"
 
-Pressing it attaches the deal and moves the project to **Delivering**, then opens the project.
+Pressing it opens a review of the project owner, target date, open promises and missing information. An existing project channel stays linked; if there is none, the deal channel carries into the project. You can manage the project channel before confirming. When automatic CRM posts are enabled, the review also checks the channel audience and shows the content to be sent. A channel that only sends updates to CRM does not need this check, and starting delivery does not turn automatic posts on.
+
+Confirm with **Start delivery** to attach the deal, move the project to **Delivering** and open it.
 A deal already on a project needs nothing: winning it moves an Initiative or Pursuing project to Delivering by itself. Also called: hand over to delivery, kick off the project.
 
 ### Phases

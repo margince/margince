@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { replaceDial } from "../../lib/urlstate";
 import { meFixture } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
@@ -79,7 +80,7 @@ it("loads only the compact overview and leaves detail reads lazy", async () => {
   render(<SystemHealthPage />);
   expect(
     await screen.findByRole("heading", {
-      name: "Some checks have no result",
+      name: englishCopy["health.incomplete"],
     }),
   ).toBeInTheDocument();
   const paths = fetcher.mock.calls.map(([request]) =>
@@ -102,7 +103,9 @@ it("shows actionable findings and keeps supporting facts behind a click", async 
   stub(attentionReport);
   render(<SystemHealthPage />);
   expect(
-    await screen.findByRole("heading", { name: "Attention needed" }),
+    await screen.findByRole("heading", {
+      name: englishCopy["health.attention"],
+    }),
   ).toBeInTheDocument();
   expect(screen.queryByText(/Some evidence is missing/)).toBeNull();
   const panel = screen
@@ -113,13 +116,15 @@ it("shows actionable findings and keeps supporting facts behind a click", async 
   expect(panel).not.toBeNull();
   if (!panel) throw new Error("finding panel missing");
   expect(within(panel).getByText(/12 runs · Technical operator/)).toBeVisible();
-  await user.click(within(panel).getByText("Technical details"));
-  expect(within(panel).getByText(/12 runs · Technical operator/)).toBeVisible();
-  expect(within(panel).getByText("Needs fixing").closest(".badge")).toHaveClass(
-    "badge-danger",
+  await user.click(
+    within(panel).getByText(englishCopy["health.evidenceDetails"]),
   );
+  expect(within(panel).getByText(/12 runs · Technical operator/)).toBeVisible();
   expect(
-    within(panel).getByRole("button", { name: "Copy technical report" }),
+    within(panel).getByText(englishCopy["health.needsFix"]).closest(".badge"),
+  ).toHaveClass("badge-danger");
+  expect(
+    within(panel).getByRole("button", { name: englishCopy["health.copy"] }),
   ).toBeInTheDocument();
 });
 
@@ -127,7 +132,9 @@ it("opens configuration without requesting a health report", async () => {
   const fetcher = stub();
   render(<SystemHealthPage view="configuration" />);
   expect(
-    await screen.findByRole("heading", { name: "Background schedules" }),
+    await screen.findByRole("heading", {
+      name: englishCopy["operations.schedules.title"],
+    }),
   ).toBeInTheDocument();
   expect(
     fetcher.mock.calls.some(([r]) =>
@@ -141,9 +148,11 @@ it("copies safe evidence without sending a message", async () => {
   const clipboard = stubClipboard("accepts");
   const fetcher = stub(attentionReport);
   render(<SystemHealthPage />);
-  await user.click(await screen.findByText("Technical details"));
   await user.click(
-    screen.getByRole("button", { name: "Copy technical report" }),
+    await screen.findByText(englishCopy["health.evidenceDetails"]),
+  );
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["health.copy"] }),
   );
   await waitFor(() => expect(clipboard.written).toHaveLength(1));
   const copied = JSON.parse(clipboard.written[0]);
@@ -177,7 +186,7 @@ it("withholds source conditions and counts without permission", async () => {
   });
   render(<SystemHealthPage />);
   await screen.findByRole("heading", {
-    name: "Some checks have no result",
+    name: englishCopy["health.incomplete"],
   });
   expect(
     await screen.findByRole("heading", { name: "All checks" }),
@@ -202,15 +211,15 @@ it("leaves automatic retries out of the action list", async () => {
   });
   render(<SystemHealthPage />);
   await screen.findByRole("heading", {
-    name: "Some checks have no result",
+    name: englishCopy["health.incomplete"],
   });
   expect(
     screen.queryByRole("heading", {
-      name: "Failed work is waiting for another attempt",
+      name: englishCopy["health.code.queue_retrying"],
     }),
   ).toBeNull();
   expect(
-    screen.queryByRole("button", { name: "See problem and next step" }),
+    screen.queryByRole("button", { name: englishCopy["health.inspect"] }),
   ).toBeNull();
 });
 
@@ -249,7 +258,9 @@ it("names the missing check instead of a vague evidence status", async () => {
   expect(
     await screen.findByRole("heading", { name: "All checks" }),
   ).toBeVisible();
-  expect(screen.getAllByText("No restore test recorded")[0]).toBeVisible();
+  expect(
+    screen.getAllByText(englishCopy["health.code.recovery_missing"])[0],
+  ).toBeVisible();
   expect(screen.queryByText("Not enough evidence")).toBeNull();
 });
 
@@ -274,7 +285,7 @@ it("limits a partial capture check to the categories it actually read", async ()
   ).toBeVisible();
   expect(
     screen.getByText(/Mail capture/, { selector: ".disclosure-label" }),
-  ).toHaveTextContent("No capture action needed in checked categories");
+  ).toHaveTextContent(englishCopy["health.code.capture_checked"]);
   expect(screen.queryByText("Working normally")).toBeNull();
 });
 
@@ -306,13 +317,19 @@ it("shows what a successful refusal check established about connector activity",
 it("files the changes Home leaves out under For information, never Passing", async () => {
   stub(informationReport);
   render(<SystemHealthPage />);
-  const group = await screen.findByRole("list", { name: "For information" });
-  expect(within(group).getByText("Changes Home leaves out")).toBeVisible();
+  const group = await screen.findByRole("list", {
+    name: englishCopy["health.group.information"],
+  });
+  expect(
+    within(group).getByText(englishCopy["health.source.unplaced"]),
+  ).toBeVisible();
   expect(
     within(group).getByText("Information").closest(".badge"),
   ).not.toHaveClass("badge-success");
   const passing = screen.getByRole("list", { name: "Passing" });
-  expect(within(passing).queryByText("Changes Home leaves out")).toBeNull();
+  expect(
+    within(passing).queryByText(englishCopy["health.source.unplaced"]),
+  ).toBeNull();
   expect(screen.queryByText(/Problems? needing action/)).toBeNull();
   expect(screen.getByText("5 passing")).toBeVisible();
 
@@ -385,16 +402,20 @@ it("shows one actionable sender review instead of the duplicate mailbox summary"
   stub(report);
   render(<SystemHealthPage />);
   const group = await screen.findByRole("region", {
-    name: "Review contact suggestions",
+    name: englishCopy["health.code.capture_uncertain"],
   });
   expect(within(group).getByText(/2 records · Mailbox owner/)).toBeVisible();
   expect(screen.queryByText(/1 mailbox · Mailbox owner/)).toBeNull();
   expect(screen.getByText("Problem needing action: 1")).toBeVisible();
   await user.click(
-    within(group).getByRole("button", { name: "Review mailbox decisions" }),
+    within(group).getByRole("button", {
+      name: englishCopy["health.code.capture_owner_review"],
+    }),
   );
   expect(
-    await screen.findByRole("dialog", { name: "Mailbox decisions" }),
+    await screen.findByRole("dialog", {
+      name: englishCopy["health.mailReviewOwners"],
+    }),
   ).toBeVisible();
 });
 
@@ -404,7 +425,11 @@ it("records diagnostics category changes and clears the previous finding", async
     "#/settings/system-health/diagnostics?section=settings.jobs&finding=jobs%3Aqueue_overdue&kind=capture_classify&state=discarded";
   stub(attentionReport);
   render(<SystemHealthPage view="diagnostics" />);
-  await user.click(await screen.findByRole("button", { name: "Data updates" }));
+  await user.click(
+    await screen.findByRole("button", {
+      name: englishCopy["health.source.updates"],
+    }),
+  );
   await waitFor(() =>
     expect(window.location.hash).toContain("section=dataTasks.title"),
   );
@@ -430,7 +455,9 @@ it("makes a focused diagnostics filter visible and removable", async () => {
   render(<SystemHealthPage view="diagnostics" />);
   expect(await screen.findByText("Showing 1 of 2 problems")).toBeVisible();
   expect(screen.queryByRole("heading", { name: /failed runs/ })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Show all problems" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["health.showAllFindings"] }),
+  );
   expect(
     await screen.findByRole("heading", { name: /failed runs/ }),
   ).toBeVisible();
@@ -447,7 +474,9 @@ it("keeps the outgoing-link check discoverable under All checks", async () => {
     await screen.findByRole("heading", { name: "All checks" }),
   ).toBeVisible();
   expect(
-    screen.getByText("Reachable from this server").closest(".badge"),
+    screen
+      .getByText(englishCopy["connectors.originReachable"])
+      .closest(".badge"),
   ).not.toHaveClass("badge-success");
 });
 
@@ -463,7 +492,7 @@ it("explains which company-page details a failed lookup can leave outdated", asy
     ),
   ).toBeVisible();
   expect(
-    screen.getByRole("button", { name: "Inspect background work" }),
+    screen.getByRole("button", { name: englishCopy["health.inspectWork"] }),
   ).toBeVisible();
 });
 

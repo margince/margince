@@ -39,7 +39,7 @@ func TestOnlyADeclaredImporterReachesTheImportBirth(t *testing.T) {
 		t.Fatalf("a seat without the importer grant → %v, want permission denied: the live admin may not backdate a close", err)
 	}
 	objects := maps.Clone(AdminPerms.Objects)
-	objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	importer := e.As(e.AdminUser, nil, principal.Permissions{RoleKeys: AdminPerms.RoleKeys, Objects: objects, RowScope: principal.RowScopeAll})
 	if err := birth(importer); err != nil {
 		t.Fatalf("a declared importer → %v, want the closed deal born", err)

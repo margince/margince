@@ -73,7 +73,7 @@ func (w *notificationDigestWorker) readDigestLines(
 		return digestLines{}, nil
 	}
 	var nameable map[notices.Target]bool
-	if err := database.WithWorkspaceTx(seatCtx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(seatCtx, w.pool, func(tx pgx.Tx) error {
 		var txErr error
 		nameable, txErr = nameableTargets(seatCtx, tx, held)
 		return txErr

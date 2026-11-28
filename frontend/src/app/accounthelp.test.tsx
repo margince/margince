@@ -20,6 +20,7 @@ import { meFixture } from "../testing/mefixture";
 // A seat that may book, so the menu carries its booking link.
 const BOOKER = { allow: { activity: ["read", "create"] } } as const;
 
+import { en as englishCopy } from "../i18n/en";
 import { AccountMenu } from "./account";
 
 // The bundle's releases are compiled in, and every local build leaves them
@@ -73,7 +74,8 @@ function renderMenu() {
 
 const trigger = () => screen.getByRole("button", { name: "TU Account" });
 const row = (name: string | RegExp) => screen.getByRole("menuitem", { name });
-const helpMenu = () => screen.getByRole("menu", { name: "Help and feedback" });
+const helpMenu = () =>
+  screen.getByRole("menu", { name: englishCopy["shell.helpMenu"] });
 const helpItem = (name: string | RegExp) =>
   within(helpMenu()).getByRole("menuitem", { name });
 
@@ -85,7 +87,7 @@ async function openHelpByKeyboard(user: UserEvent) {
   for (let at = 0; at < 4; at++) {
     await user.keyboard("{ArrowDown}");
   }
-  expect(document.activeElement).toBe(row("Help and feedback"));
+  expect(document.activeElement).toBe(row(englishCopy["shell.helpMenu"]));
   await user.keyboard("{ArrowRight}");
 }
 
@@ -111,11 +113,11 @@ describe("Help and feedback", () => {
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(helpItem(/^Request a feature/));
     await user.keyboard("{End}");
-    expect(document.activeElement).toBe(helpItem("About Margince"));
+    expect(document.activeElement).toBe(helpItem(englishCopy["about.title"]));
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(helpItem(/^Report a problem/));
     await user.keyboard("{ArrowUp}");
-    expect(document.activeElement).toBe(helpItem("About Margince"));
+    expect(document.activeElement).toBe(helpItem(englishCopy["about.title"]));
     await user.keyboard("{Home}");
     expect(document.activeElement).toBe(helpItem(/^Report a problem/));
     // The walk stayed inside: the account menu's own tabstop did not move.
@@ -129,18 +131,18 @@ describe("Help and feedback", () => {
 
     await user.keyboard("{ArrowLeft}");
     expect(
-      screen.queryByRole("menu", { name: "Help and feedback" }),
+      screen.queryByRole("menu", { name: englishCopy["shell.helpMenu"] }),
     ).toBeNull();
-    expect(document.activeElement).toBe(row("Help and feedback"));
+    expect(document.activeElement).toBe(row(englishCopy["shell.helpMenu"]));
 
     await user.keyboard("{Enter}");
     expect(document.activeElement).toBe(helpItem(/^Report a problem/));
 
     await user.keyboard("{Escape}");
     expect(
-      screen.queryByRole("menu", { name: "Help and feedback" }),
+      screen.queryByRole("menu", { name: englishCopy["shell.helpMenu"] }),
     ).toBeNull();
-    expect(document.activeElement).toBe(row("Help and feedback"));
+    expect(document.activeElement).toBe(row(englishCopy["shell.helpMenu"]));
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).toBeNull();
@@ -242,18 +244,22 @@ describe("Help and feedback", () => {
     renderMenu();
     await openHelpByKeyboard(user);
     await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}");
-    expect(document.activeElement).toBe(helpItem("Keyboard shortcuts"));
+    expect(document.activeElement).toBe(
+      helpItem(englishCopy["shell.help.shortcuts"]),
+    );
 
     await user.keyboard("{Enter}");
     const dialog = await screen.findByRole("dialog", {
-      name: "Keyboard shortcuts",
+      name: englishCopy["shell.help.shortcuts"],
     });
     expect(screen.queryByRole("menu")).toBeNull();
     expect(within(dialog).getByText("Open search")).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
     expect(
-      screen.queryByRole("dialog", { name: "Keyboard shortcuts" }),
+      screen.queryByRole("dialog", {
+        name: englishCopy["shell.help.shortcuts"],
+      }),
     ).toBeNull();
     expect(document.activeElement).toBe(trigger());
   });
@@ -270,7 +276,9 @@ describe("the shortcuts dialog on ?", () => {
     page.focus();
 
     await user.keyboard("?");
-    await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
+    await screen.findByRole("dialog", {
+      name: englishCopy["shell.help.shortcuts"],
+    });
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     await user.keyboard("{Escape}");
     expect(document.activeElement).toBe(page);
@@ -285,7 +293,9 @@ describe("About Margince at the foot of Help and feedback", () => {
     const about = helpItem("About Margince");
     expect(about).toHaveAttribute("aria-haspopup", "dialog");
     expect(within(helpMenu()).getAllByRole("menuitem").at(-1)).toBe(about);
-    expect(about.previousElementSibling).toBe(helpItem("Keyboard shortcuts"));
+    expect(about.previousElementSibling).toBe(
+      helpItem(englishCopy["shell.help.shortcuts"]),
+    );
     expect(helpMenu().querySelector("hr")).toBeNull();
   });
 
@@ -298,12 +308,12 @@ describe("About Margince at the foot of Help and feedback", () => {
         .getAllByRole("menuitem")
         .map((item) => item.textContent?.replace(" (Opens in a new tab)", "")),
     ).toEqual([
-      "Report a problem",
-      "Request a feature",
-      "Help and resources",
-      "Release notes",
-      "Keyboard shortcuts",
-      "About Margince",
+      englishCopy["shell.help.report"],
+      englishCopy["shell.help.request"],
+      englishCopy["shell.help.resources"],
+      englishCopy["shell.help.releaseNotes"],
+      englishCopy["shell.help.shortcuts"],
+      englishCopy["about.title"],
     ]);
   });
 
@@ -331,11 +341,11 @@ describe("About Margince at the foot of Help and feedback", () => {
     renderMenu();
     await openHelpByKeyboard(user);
     await user.keyboard("{End}");
-    expect(document.activeElement).toBe(helpItem("About Margince"));
+    expect(document.activeElement).toBe(helpItem(englishCopy["about.title"]));
 
     await user.keyboard("{Enter}");
     const dialog = await screen.findByRole("dialog", {
-      name: "About Margince",
+      name: englishCopy["about.title"],
     });
     expect(screen.queryByRole("menu")).toBeNull();
     expect(document.activeElement).toBe(
@@ -343,7 +353,9 @@ describe("About Margince at the foot of Help and feedback", () => {
     );
 
     await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog", { name: "About Margince" })).toBeNull();
+    expect(
+      screen.queryByRole("dialog", { name: englishCopy["about.title"] }),
+    ).toBeNull();
     expect(document.activeElement).toBe(trigger());
   });
 
@@ -353,7 +365,7 @@ describe("About Margince at the foot of Help and feedback", () => {
     await openHelp(user);
     await user.click(helpItem("About Margince"));
     const dialog = await screen.findByRole("dialog", {
-      name: "About Margince",
+      name: englishCopy["about.title"],
     });
     expect(screen.queryByRole("menu")).toBeNull();
     expect(

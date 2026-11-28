@@ -85,7 +85,7 @@ func progressFor(ctx context.Context, t *testing.T, e *Engine) Progress {
 func systemActions(ctx context.Context, t *testing.T, pool *pgxpool.Pool, action string) int {
 	t.Helper()
 	var count int
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT count(*) FROM system_log WHERE action=@action`, pgx.NamedArgs{"action": action}).Scan(&count)
 	}); err != nil {
 		t.Fatal(err)
@@ -247,7 +247,7 @@ func TestConcurrentSeedingAndUnknownRowsPreserveProgress(t *testing.T) {
 	if got := progressFor(ctx, t, e); got.RunID != before.RunID || got.Version != before.Version {
 		t.Fatal("reconciliation replaced existing progress")
 	}
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `INSERT INTO data_task_run(task_id,step,run_id,task_version,batch_limit,first_release,status)
  VALUES ('core/1_unknown','first',@run,99,1,'future','paused')`, pgx.NamedArgs{"run": ids.NewV7()})
 		return err
@@ -262,7 +262,7 @@ func TestConcurrentSeedingAndUnknownRowsPreserveProgress(t *testing.T) {
 	}
 	var version int
 	var status string
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT task_version,status FROM data_task_run WHERE task_id='core/1_unknown'`).Scan(&version, &status)
 	}); err != nil {
 		t.Fatal(err)

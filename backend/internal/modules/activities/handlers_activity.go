@@ -38,6 +38,7 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		id := ids.UUID(*params.WebsiteFormId)
 		in.WebsiteFormID = &id
 	}
+	in.ChatProvider = (*string)(params.ChatProvider)
 	in.ChannelProvider = params.ChannelProvider
 	if params.CallOutcome != nil {
 		outcome := string(*params.CallOutcome)
@@ -88,8 +89,8 @@ func (h Handlers) LogActivity(w http.ResponseWriter, r *http.Request, _ crmcontr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// A declared importer — a HUMAN holding import_run:create — may stamp the
-	// reserved mirror: namespace, so its rows replay idempotently and rank as
+	// A declared importer (auth.DeclaredImporter) may stamp the reserved
+	// mirror: namespace, so its rows replay idempotently and rank as
 	// captured history rather than as first-party testimony. Everyone else gets
 	// the client door, an agent carrying that human's own grants included.
 	mapInput := LogActivityInputFrom

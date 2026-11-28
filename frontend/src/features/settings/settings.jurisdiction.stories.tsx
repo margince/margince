@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -189,10 +190,14 @@ export const ChangeDialog: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: "Change jurisdiction" }),
+      await body.findByRole("button", {
+        name: englishCopy["jurisdiction.change.label"],
+      }),
     );
     await userEvent.click(
-      await body.findByRole("combobox", { name: "Jurisdiction" }),
+      await body.findByRole("combobox", {
+        name: englishCopy["jurisdiction.card.title"],
+      }),
     );
     await userEvent.click(await body.findByRole("option", { name: "Vietnam" }));
     await body.findByText(/becomes no floor/);

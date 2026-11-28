@@ -49,7 +49,7 @@ func (s *Service) withholdQuotedWords(
 		return nil
 	}
 	var readable map[ids.UUID]bool
-	if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var readErr error
 		readable, readErr = activities.ReadableActivityContent(ctx, tx, cited)
 		return readErr

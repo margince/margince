@@ -79,7 +79,7 @@ func TestAnInstallationThatNeverNamedALanguageStillGetsAPrompt(t *testing.T) {
 	e := Setup(t)
 	ctx := e.Admin()
 
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`DELETE FROM setting WHERE key = $1`, identity.BaseLanguage.Key())
 		return err

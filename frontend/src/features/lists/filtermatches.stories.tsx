@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { useFilterPreview, type VocabularyField } from "../../lib/filterdata";
 import { newGroup, newLeaf } from "../../lib/segmentpredicate";
 import {
@@ -150,7 +151,9 @@ export const NextPageComing: Story = {
     const canvas = within(canvasElement);
     const page = within(canvasElement.ownerDocument.body);
     await user.click(
-      await canvas.findByRole("combobox", { name: "Rows per page" }),
+      await canvas.findByRole("combobox", {
+        name: englishCopy["table.rowsPerPage"],
+      }),
     );
     await user.click(await page.findByRole("option", { name: "100 per page" }));
     await user.click(await canvas.findByRole("button", { name: "Next" }));

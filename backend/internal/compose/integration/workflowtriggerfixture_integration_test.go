@@ -36,7 +36,7 @@ const leadCreatedEventType = "lead.created"
 // not a hand-picked single instance.
 func seedAllStarterAutomations(t *testing.T, e *Env) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return automation.SeedStarterAutomationsTx(context.Background(), tx)
 	})
 	if err != nil {

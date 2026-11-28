@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { formatDate } from "../format/format";
 import { UTC_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { largestStageTotal } from "./boardtotals";
 import { type BoardMoneyColumn, PipelineBoard } from "./pipelineboard";
 
@@ -113,7 +114,7 @@ describe("the stage totals at the head of a board column", () => {
       "€1,062,548.00 open, €106,254.80 weighted by each deal’s probability.",
     );
     expect(tip).not.toContain("10%");
-    expect(tip).toContain("Partial total: it leaves out these deals.");
+    expect(tip).toContain(englishCopy["coverage.partialTip"]);
     expect(tip).toContain("6 deals have no exchange rate (JPY).");
     expect(tip).toContain(
       `Converted at exchange rates as of ${formatDate("2026-11-03T08:00:00Z", "en", UTC_ZONE)}.`,

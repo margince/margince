@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -151,11 +152,15 @@ it("renders captured editions without requesting the current live evaluation", a
       <ReportingReportDetail reportId="report" editionId="edition-september" />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Sales won over time" });
+  await screen.findByRole("heading", {
+    name: englishCopy["reporting.bookings_trend"],
+  });
   expect(
-    await screen.findByRole("button", { name: "Compare snapshots" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.compare"],
+    }),
   ).toBeEnabled();
-  await user.click(screen.getByText("History and schedules"));
+  await user.click(screen.getByText(englishCopy["reporting.history"]));
   expect(
     screen.getByRole("button", { name: "Monthly · Revision 3" }),
   ).toBeVisible();
@@ -185,10 +190,14 @@ it("duplicates a shared report into a private definition", async () => {
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Report actions" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.actions"],
+    }),
   );
   await user.click(
-    await screen.findByRole("button", { name: "Duplicate privately" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.duplicate"],
+    }),
   );
   await waitFor(() =>
     expect(duplicate).toHaveBeenCalledWith(
@@ -250,7 +259,9 @@ it("saves edited layout order, metric selection and team audience", async () => 
     "Selected team",
   );
   await user.click(
-    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+    screen.getByText(englishCopy["reporting.blocks"], {
+      selector: ".disclosure-label",
+    }),
   );
   (
     await screen.findByRole("button", {
@@ -402,7 +413,9 @@ it.each([
     });
     expect(banner).toHaveTextContent(message);
     expect(
-      screen.queryByRole("heading", { name: "Sales won over time" }),
+      screen.queryByRole("heading", {
+        name: englishCopy["reporting.bookings_trend"],
+      }),
     ).not.toBeInTheDocument();
   },
 );
@@ -426,13 +439,13 @@ it("clears capture feedback when publication finishes before the execution refet
     </StoryProviders>,
   );
   const capture = await screen.findByRole("button", {
-    name: "Save snapshot",
+    name: englishCopy["reporting.freeze"],
   });
   await user.click(capture);
   await waitFor(() => expect(freeze).toHaveBeenCalledOnce());
   await waitFor(() => expect(capture).toBeEnabled());
   expect(
-    screen.queryByText("Snapshot queued. It will appear here when ready."),
+    screen.queryByText(englishCopy["reporting.capturePending"]),
   ).not.toBeInTheDocument();
 });
 
@@ -455,7 +468,9 @@ it("recovers capture after retrying unavailable execution status", async () => {
     </StoryProviders>,
   );
   await screen.findByRole("alert");
-  const capture = screen.getByRole("button", { name: "Save snapshot" });
+  const capture = screen.getByRole("button", {
+    name: englishCopy["reporting.freeze"],
+  });
   expect(capture).toBeDisabled();
   unavailable = false;
   await user.click(screen.getByRole("button", { name: "Retry" }));
@@ -494,7 +509,7 @@ it("selects an adjacent comparison when older history supplies the first pair", 
     screen.queryByRole("cell", { name: "Sales won" }),
   ).not.toBeInTheDocument();
   await user.click(
-    screen.getByRole("button", { name: "Load older snapshots" }),
+    screen.getByRole("button", { name: englishCopy["reporting.loadOlder"] }),
   );
   expect(await screen.findByRole("cell", { name: "Sales won" })).toBeVisible();
 });

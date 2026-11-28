@@ -56,7 +56,7 @@ func TestABootSetBindingIsNeitherSeededNorReportedDiscarded(t *testing.T) {
 	bindForTest(t, bootBinding)
 
 	var discarded []string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return seedRoutingBinding(ctx, tx, declaredFromFile(t), &discarded)
 	}); err != nil {
 		t.Fatalf("seeding under a boot-set binding: %v", err)

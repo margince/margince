@@ -51,7 +51,7 @@ func UnplacedBreakdown(changes []UnplacedChange) (int, []crmcontracts.HealthUnpl
 // UnplacedChanges is the breakdown System health reads, outside any receipt.
 func (s *Service) UnplacedChanges(ctx context.Context, since time.Time) ([]UnplacedChange, error) {
 	var changes []UnplacedChange
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		changes, err = unplacedChangesSince(ctx, tx, since)
 		return err

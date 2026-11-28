@@ -29,7 +29,7 @@ import (
 // judged to be the mailbox owner's own life.
 func seedPersonalThread(t *testing.T, e *integration.SearchEnv, user ids.UUID, threadKey string, seen []string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		// The capture pass opens the row; the classifier answers it. Upsert so
 		// the fixture models the answer rather than racing the pass that asks.
 		_, err := tx.Exec(context.Background(), `
@@ -133,7 +133,7 @@ func TestAThreadHeldForBusinessReasonsStillMintsItsContact(t *testing.T) {
 
 	syncSent(t, map[string]bool{"leg1@myco.example": true},
 		email(captureOwner, "", counsel, "leg1@myco.example", ""))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, seen_addresses, resolved_at)
 			VALUES ($1, $2, 'held', 'legal', $3, now())
@@ -204,7 +204,7 @@ func TestAStrangerCannotBorrowSomebodyElsesPrivateThread(t *testing.T) {
 func readPrivacyOfCapture(t *testing.T, e *integration.SearchEnv, sourceID string) (bool, error) {
 	t.Helper()
 	var private bool
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT EXISTS (
 			  SELECT 1 FROM capture_trace

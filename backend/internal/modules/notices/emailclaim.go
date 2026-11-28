@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -48,7 +49,9 @@ const maxMailErrorRunes = 500
 // one. The sender needs the seat in order to resolve an address for it, which
 // is a different question from anything the centre displays.
 type EmailAttempt struct {
-	ApprovalID *ids.ApprovalID
+	// WebsiteActivityID is the accepted form note this notice describes.
+	WebsiteActivityID *ids.ActivityID
+	ApprovalID        *ids.ApprovalID
 	// TeamRequestPage is the team link a team request names.
 	TeamRequestPage *ids.UUID
 	Notice          Notice
@@ -125,6 +128,11 @@ func scanClaimedNotice(row pgx.Row) (EmailAttempt, time.Time, error) {
 	}
 	if page, ok := pageOfTeamRequestKey(attempt.Notice.Kind, noticeKey); ok {
 		attempt.TeamRequestPage = &page
+	}
+	if attempt.Notice.Kind == KindWebsiteLead && strings.HasPrefix(noticeKey, "website_lead:") {
+		if source, err := ids.Parse(strings.TrimPrefix(noticeKey, "website_lead:")); err == nil {
+			attempt.WebsiteActivityID = new(ids.From[ids.ActivityKind](source))
+		}
 	}
 	attempt.Notice.ID = id
 	attempt.Recipient = ids.From[ids.UserKind](recipient)

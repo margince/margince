@@ -51,7 +51,7 @@ type offerMoneyImage struct {
 func latestOfferUpdateAudit(t *testing.T, e *Env, offerID ids.OfferID) (before, after *offerMoneyImage, evidence map[string]any) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT before, after, evidence FROM audit_log
 			 WHERE entity_type = 'offer' AND entity_id = $1 AND action = 'update'

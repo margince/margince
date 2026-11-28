@@ -170,7 +170,7 @@ func keptYearCount(ctx context.Context, t *testing.T, e *Env, zone string) strin
 		Filters:  []analyticsquery.Filter{{Field: "period_year", Op: analyticsquery.OpEq, Value: "2026", Basis: &kept}},
 	}
 	var answer compose.AnalyticsAnswer
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = compose.RunAnalyticsQuery(ctx, tx, q, analyticsquery.Floor(1))
 		return err

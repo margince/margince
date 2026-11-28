@@ -98,7 +98,7 @@ func (b territoryBook) ask(t *testing.T, q analyticsquery.Query, measure string)
 	t.Helper()
 	ctx := b.e.Admin()
 	var answer AnalyticsAnswer
-	if err := database.WithWorkspaceTx(ctx, b.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, b.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = RunAnalyticsQuery(ctx, tx, q, analyticsquery.DefaultFloor)
 		return err

@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { useVoiceIntake } from "./use-voice-intake";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
 
@@ -190,9 +191,13 @@ describe("handing a file to the Settings voice card", () => {
     const input = fileInput();
     expect(input.accept).toBe(".txt,.md,.vtt,.srt,.json,.pdf,.docx");
     expect(input.multiple).toBe(true);
-    expect(screen.getByLabelText("Add writing samples")).toBe(input);
+    expect(screen.getByLabelText(englishCopy["settings.voice.addSource"])).toBe(
+      input,
+    );
     // The zone says what teaches the voice, beside the control, every time.
-    expect(screen.getByText("Best samples")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["settings.voice.worksTitle"]),
+    ).toBeTruthy();
     expect(screen.getByText(/Sent emails saved as/)).toBeTruthy();
     expect(screen.getByText(/Leave out text others wrote/)).toBeTruthy();
   });
@@ -283,7 +288,7 @@ describe("handing a file to the Settings voice card", () => {
         code: "validation_error",
         title: "Unprocessable",
         detail: "That source is not eligible.",
-        details: { errors: [{ field: "content", code: "brand_new_rule" }] },
+        details: { errors: [{ field: "content", code: "brand_new_rule" }] }, // problem-code:unknown-field proves the fallback for a code from a newer server
       },
     });
     render(<Intake profileId="vp-1" onChanged={() => {}} />);
@@ -330,7 +335,9 @@ describe("handing a file to the Settings voice card", () => {
     await screen.findByText(/Which speaker are you/);
     await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
     await userEvent.click(
-      screen.getByRole("button", { name: "Use this speaker" }),
+      screen.getByRole("button", {
+        name: englishCopy["settings.voice.speakerConfirm"],
+      }),
     );
 
     await waitFor(() => expect(bodies).toHaveLength(1));
@@ -358,7 +365,9 @@ describe("handing a file to the Settings voice card", () => {
 
     await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
     await userEvent.click(
-      screen.getByRole("button", { name: "Use this speaker" }),
+      screen.getByRole("button", {
+        name: englishCopy["settings.voice.speakerConfirm"],
+      }),
     );
 
     // The next question is a question, not a pre-filled answer.
@@ -371,7 +380,9 @@ describe("handing a file to the Settings voice card", () => {
     });
     expect(
       screen
-        .getByRole("button", { name: "Use this speaker" })
+        .getByRole("button", {
+          name: englishCopy["settings.voice.speakerConfirm"],
+        })
         .hasAttribute("disabled"),
     ).toBe(true);
     // Only the answered file was written.
@@ -394,7 +405,9 @@ describe("handing a file to the Settings voice card", () => {
     expect(screen.getByText(/“standup\.vtt”/)).toBeTruthy();
     await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
     await userEvent.click(
-      screen.getByRole("button", { name: "Use this speaker" }),
+      screen.getByRole("button", {
+        name: englishCopy["settings.voice.speakerConfirm"],
+      }),
     );
     expect(await screen.findByText(/“two\.vtt”/)).toBeTruthy();
     expect(bodies).toHaveLength(1);
@@ -407,7 +420,9 @@ describe("handing a file to the Settings voice card", () => {
     await userEvent.upload(fileInput(), fileOf("standup.vtt", "Lars: hi."));
     await screen.findByText(/Which speaker are you/);
     await userEvent.click(
-      screen.getByRole("button", { name: "Skip this file" }),
+      screen.getByRole("button", {
+        name: englishCopy["settings.voice.speakerDismiss"],
+      }),
     );
 
     expect(
@@ -462,7 +477,7 @@ describe("handing a file to the Settings voice card", () => {
         code: "validation_error",
         title: "Unprocessable",
         detail: "That source is not eligible.",
-        details: { errors: [{ field: "content", code: "brand_new_rule" }] },
+        details: { errors: [{ field: "content", code: "brand_new_rule" }] }, // problem-code:unknown-field proves the fallback for a code from a newer server
       },
     });
     render(<Intake profileId="vp-1" onChanged={() => {}} />);
@@ -633,7 +648,9 @@ describe("adding many files at once", () => {
       await screen.findByText(/Which speaker are you/);
       await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
       await userEvent.click(
-        screen.getByRole("button", { name: "Use this speaker" }),
+        screen.getByRole("button", {
+          name: englishCopy["settings.voice.speakerConfirm"],
+        }),
       );
     }
     await waitFor(() => {

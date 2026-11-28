@@ -12,7 +12,7 @@
 // activities — the composition layer's charter — and it owns no table.
 //
 // One transaction, one instant. Every section reads inside a single
-// database.WithWorkspaceTx and the response carries the as_of stamp of
+// database.WithTx and the response carries the as_of stamp of
 // that read. Every module store this package calls exposes a
 // transaction-taking variant of its read; the custom-field catalogs are
 // the one exception and are read above the transaction, on their own

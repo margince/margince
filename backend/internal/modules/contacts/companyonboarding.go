@@ -6,11 +6,11 @@ package contacts
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -42,9 +42,8 @@ func (s *Store) OnboardingCompanyState(ctx context.Context, tx pgx.Tx) (bool, bo
 	return true, company.MinimumComplete, nil
 }
 
+// lockCompanyState makes a reader of the company's onboarding state and a writer
+// of its anchor company take turns for the rest of the transaction.
 func lockCompanyState(ctx context.Context, tx pgx.Tx) error {
-	if _, err := tx.Exec(ctx, `SELECT id FROM workspace WHERE id = $1 FOR UPDATE`, workspaceID(ctx)); err != nil {
-		return fmt.Errorf("lock company state: %w", err)
-	}
-	return nil
+	return storekit.LockWriteIdentity(ctx, tx, "company_state", "anchor")
 }

@@ -101,7 +101,7 @@ func TestAProviderRunEnrichesAContactCapturedPrivatelyByAColleague(t *testing.T)
 	}
 
 	var claims int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM contact_provider_claim WHERE contact_id = $1`,
 			contact).Scan(&claims)
@@ -110,7 +110,7 @@ func TestAProviderRunEnrichesAContactCapturedPrivatelyByAColleague(t *testing.T)
 	}
 	if claims == 0 {
 		var st, unwritten, skip string
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
 				`SELECT state, coalesce(claims_unwritten::text, '-'), coalesce(skip_reason, '-')
 				   FROM provider_run WHERE id = $1`, run.ID).Scan(&st, &unwritten, &skip)
@@ -121,7 +121,7 @@ func TestAProviderRunEnrichesAContactCapturedPrivatelyByAColleague(t *testing.T)
 	}
 
 	var state string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT state FROM provider_run WHERE id = $1`, run.ID).Scan(&state)
 	}); err != nil {

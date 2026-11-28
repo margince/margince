@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { useT } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   meRoute,
@@ -80,7 +81,7 @@ export const NothingOwned: Story = {
     const showAll = await canvas.findByRole("button", { name: "Show all" });
     await expect(canvas.getByText("No leads owned by you.")).toBeVisible();
     await expect(
-      canvas.queryByRole("button", { name: "Clear filters" }),
+      canvas.queryByRole("button", { name: englishCopy["table.clearFilters"] }),
     ).toBeNull();
     await userEvent.click(showAll);
     await expect(canvas.getByRole("heading", { name: "Leads" })).toHaveFocus();

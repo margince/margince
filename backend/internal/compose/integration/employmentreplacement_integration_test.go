@@ -73,7 +73,7 @@ func TestANewerDatedRoleRetiresTheUndatedRoleAndUndoRestoresIt(t *testing.T) {
 			}
 			var audit ids.UUID
 			var version int64
-			err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				if err := tx.QueryRow(e.Admin(), `SELECT id FROM audit_log WHERE entity_type='relationship' AND entity_id=@id AND action='update' ORDER BY occurred_at DESC,id DESC LIMIT 1`, pgx.NamedArgs{"id": old.ID}).Scan(&audit); err != nil {
 					return err
 				}

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -167,7 +168,7 @@ export const RowMenu: Story = {
       await body.findByRole("button", { name: "Actions for Ceiling" }),
     );
     await expect(
-      await body.findByRole("button", { name: "Archive field" }),
+      await body.findByRole("button", { name: englishCopy["cf.archive"] }),
     ).toBeVisible();
   },
 };

@@ -14,6 +14,7 @@ import {
 } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { leadKey } from "../../lib/leadkeys";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { replaceDial } from "../../lib/urlstate";
@@ -245,7 +246,7 @@ describe("LeadScreen — disqualify (P-3)", () => {
     await pickOption(user, screen.getByLabelText("Reason *"), "Bad timing");
     expect(screen.queryByRole("option", { name: "Retired" })).toBeNull();
     await user.type(
-      screen.getByLabelText("Note (optional)"),
+      screen.getByLabelText(englishCopy["lead.disqualify.note"]),
       "Call back in Q4",
     );
     await user.click(dialog.getByRole("button", { name: "Disqualify" }));
@@ -276,17 +277,19 @@ describe("LeadScreen — arriving to log a call", () => {
     window.location.hash = "#/leads/l-1";
     render(<LeadScreen id="l-1" />);
 
-    await screen.findByRole("button", { name: "Log activity" });
+    await screen.findByRole("button", { name: englishCopy["log.title"] });
     expect(screen.queryByLabelText("Type")).toBeNull();
 
     await waitFor(() =>
       expect(
         screen
-          .getByRole("button", { name: "Log activity" })
+          .getByRole("button", { name: englishCopy["log.title"] })
           .hasAttribute("disabled"),
       ).toBe(false),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Log activity" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: englishCopy["log.title"] }),
+    );
     await waitFor(() =>
       expect(screen.getByLabelText("Type").textContent).toContain("Note"),
     );
@@ -314,7 +317,7 @@ describe("LeadScreen — arriving to log a call", () => {
     window.location.hash = "#/leads/l-1";
     render(<LeadScreen id="l-1" />);
 
-    await screen.findByRole("button", { name: "Log activity" });
+    await screen.findByRole("button", { name: englishCopy["log.title"] });
     expect(screen.queryByLabelText("Type")).toBeNull();
 
     // What a second link does: the hash moves under a mounted screen. The
@@ -406,14 +409,16 @@ describe("LeadScreen — score explain + override (P-10)", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Override score" }),
+        screen.getByRole("button", { name: englishCopy["lead.overrideScore"] }),
       ).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Override score" }),
+      screen.getByRole("button", { name: englishCopy["lead.overrideScore"] }),
     );
 
-    const submit = screen.getByRole("button", { name: "Save override" });
+    const submit = screen.getByRole("button", {
+      name: englishCopy["lead.saveOverride"],
+    });
     expect((submit as HTMLButtonElement).disabled).toBe(true);
 
     const scoreInput = screen.getByRole("spinbutton", { name: "Score" });
@@ -445,14 +450,16 @@ describe("LeadScreen — score explain + override (P-10)", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Override score" }),
+        screen.getByRole("button", { name: englishCopy["lead.overrideScore"] }),
       ).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Override score" }),
+      screen.getByRole("button", { name: englishCopy["lead.overrideScore"] }),
     );
 
-    const submit = screen.getByRole("button", { name: "Save override" });
+    const submit = screen.getByRole("button", {
+      name: englishCopy["lead.saveOverride"],
+    });
     const scoreInput = screen.getByRole("spinbutton", { name: "Score" });
     const reasonInput = screen.getByLabelText("Reason");
     await userEvent.type(reasonInput, "Strong buying signal");
@@ -499,7 +506,9 @@ describe("LeadScreen — score explain + override (P-10)", () => {
       expect(screen.getByText(/Strong buying signal/)).toBeTruthy(),
     );
     expect(screen.getByText(/72/)).toBeTruthy();
-    const clear = screen.getByRole("button", { name: "Clear override" });
+    const clear = screen.getByRole("button", {
+      name: englishCopy["lead.clearOverride"],
+    });
     await userEvent.click(clear);
 
     await waitFor(() => expect(patchBody).toBeTruthy());
@@ -616,7 +625,9 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     render(<LeadScreen id="l-1" />);
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Clear override" }),
+      await screen.findByRole("button", {
+        name: englishCopy["lead.clearOverride"],
+      }),
     );
 
     await user.click(screen.getByRole("button", { name: "Edit Ownership" }));
@@ -791,7 +802,9 @@ describe("LeadScreen — History tab", () => {
     await userEvent.click(screen.getByRole("button", { name: /history/i }));
     await pickOption(
       userEvent.setup(),
-      await screen.findByRole("combobox", { name: "Timeline filter" }),
+      await screen.findByRole("combobox", {
+        name: englishCopy["chronology.label"],
+      }),
       "Changes",
     );
 
@@ -823,7 +836,7 @@ describe("LeadScreen — History tab", () => {
     // time beneath the ladder and the call.
     expect(document.querySelector(".record-timeline")).toBeNull();
     expect(
-      screen.queryByRole("combobox", { name: "Timeline filter" }),
+      screen.queryByRole("combobox", { name: englishCopy["chronology.label"] }),
     ).toBeNull();
   });
 });
@@ -902,7 +915,7 @@ describe("LeadScreen — arriving to qualify", () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1?action=qualify";
     render(<LeadScreen id="l-1" />);
-    await screen.findByText("Evidence note (optional)");
+    await screen.findByText(englishCopy["lead.evidenceNote"]);
     const dialog = screen.getByRole("dialog", { name: /^Qualify / });
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Close" }),

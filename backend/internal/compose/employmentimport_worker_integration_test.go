@@ -28,7 +28,7 @@ func TestEmploymentWorkerReconcilesRetainedClaimsWithoutVendorAccess(t *testing.
 		t.Fatal(err)
 	}
 	contact := ids.From[ids.ContactKind](ids.UUID(created.Id))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		args := []any{contact}
 		var run string
 		if err := tx.QueryRow(e.Admin(), storekit.SQLf(`INSERT INTO provider_run(subject_kind,contact_id,provider,trigger,state,input_fingerprint,external_correlation_id,connection_version,connection_epoch,configuration_snapshot,requested_categories,completed_at)

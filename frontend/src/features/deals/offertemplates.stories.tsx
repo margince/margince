@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   emptyPage,
@@ -81,7 +82,7 @@ export const RowMenu: Story = {
       await canvas.findByRole("button", { name: "Actions for Standard DE" }),
     );
     await within(document.body).findByRole("button", {
-      name: "Archive template",
+      name: englishCopy["template.archive"],
     });
   },
 };
@@ -100,7 +101,9 @@ export const NewTemplateLanguage: Story = {
     await pressHeadVerb(canvasElement, "New template");
     const form = within(await within(document.body).findByRole("dialog"));
     await userEvent.click(form.getByRole("combobox", { name: /^Language/ }));
-    await within(document.body).findByRole("option", { name: "English (US)" });
+    await within(document.body).findByRole("option", {
+      name: englishCopy["template.localeEN"],
+    });
   },
 };
 // No rows: one line under the intro, with no headings, dials or count.
@@ -152,7 +155,7 @@ export const ListPhone: Story = {
     const canvas = within(canvasElement);
     await canvas.findByRole("button", { name: "Actions for Standard DE" });
     await expect(
-      canvas.getByRole("button", { name: "New template" }),
+      canvas.getByRole("button", { name: englishCopy["template.new"] }),
     ).toBeVisible();
   },
 };

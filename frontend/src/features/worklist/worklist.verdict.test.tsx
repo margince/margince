@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { day, renderWorklist, row, stub } from "../../testing/worklist.testkit";
 
 // The standing line on a deal row.
@@ -139,6 +140,8 @@ describe("the standing beside the step", () => {
     renderWorklist();
 
     expect(await screen.findByText("Quiet since June.")).toBeTruthy();
-    expect(screen.getByText("Earlier assessment")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["worklist.verdict.believes"]),
+    ).toBeTruthy();
   });
 });

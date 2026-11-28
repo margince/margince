@@ -68,7 +68,7 @@ func (e *mergeEnv) capturedLead(t *testing.T, source, sourceID, name, email stri
 func (e *mergeEnv) pendingMerges(t *testing.T, leadID ids.UUID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM approval WHERE kind = 'merge_records'
 			   AND target_entity_id = $1 AND status = 'pending'`, leadID).Scan(&n)
@@ -82,7 +82,7 @@ func (e *mergeEnv) pendingMerges(t *testing.T, leadID ids.UUID) int {
 func (e *mergeEnv) rejectMerge(t *testing.T, leadID ids.UUID) {
 	t.Helper()
 	var approvalID ids.ApprovalID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM approval WHERE kind = 'merge_records'
 			   AND target_entity_id = $1 AND status = 'pending'`, leadID).Scan(&approvalID)

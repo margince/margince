@@ -123,7 +123,7 @@ describe("a capped list", () => {
     }));
 
     render(panel(vi.fn()));
-    await screen.findByText("Logged a call");
+    await screen.findByText(en["magic.action.create_activity_call"]);
 
     expect(screen.getByText(en["worklist.handled.truncated"])).toBeTruthy();
     expect(

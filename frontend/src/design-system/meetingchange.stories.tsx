@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-
+import { en as englishCopy } from "../i18n/en";
 import type { CalendarChange } from "../lib/calendarchange";
 import { StoryProviders } from "../testing/story-utils";
 import { Card } from "./atoms";
@@ -51,8 +51,12 @@ export const Moved: Story = {
   args: { change: MOVED },
   play: async ({ canvasElement }) => {
     const box = within(canvasElement);
-    await expect(box.getByText("Meeting changed")).toBeVisible();
-    await expect(box.getByText("Microsoft Teams")).toBeVisible();
+    await expect(
+      box.getByText(englishCopy["meetingChange.badge.updated"]),
+    ).toBeVisible();
+    await expect(
+      box.getByText(englishCopy["webhooks.body.preset.teams"]),
+    ).toBeVisible();
     await expect(box.getByText("Added Ben Ito")).toBeVisible();
   },
 };

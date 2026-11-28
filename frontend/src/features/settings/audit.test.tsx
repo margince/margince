@@ -46,7 +46,7 @@ const wrap = (ui: React.ReactNode, zone = "Europe/Berlin") =>
 describe("humanizeToken", () => {
   it("de-underscores an enum data value into a readable phrase", () => {
     expect(humanizeToken("advance_stage")).toBe("advance stage");
-    expect(humanizeToken("custom_field")).toBe("custom field");
+    expect(humanizeToken("custom_field")).toBe(en["import.guide.custom"]);
     expect(humanizeToken("create")).toBe("create");
   });
 });
@@ -85,7 +85,7 @@ describe("ActorTag", () => {
         meUserId={ME}
       />,
     );
-    expect(screen.getByText("Unknown member")).toBeTruthy();
+    expect(screen.getByText(en["audit.unknownMember"])).toBeTruthy();
     expect(screen.queryByText(/u-gone/)).toBeNull();
   });
 
@@ -117,7 +117,9 @@ describe("ActorTag", () => {
     );
     // Revoked, archived, or scrubbed by a subject erasure: absent is honest
     // where an invented name is not.
-    expect(screen.getByText("Deal Room participant")).toBeTruthy();
+    expect(
+      screen.getByText(en["audit.kind.deal_room_participant"]),
+    ).toBeTruthy();
     expect(screen.queryByText(/p-gone/)).toBeNull();
   });
 
@@ -134,7 +136,7 @@ describe("ActorTag", () => {
       />,
     );
     expect(screen.getByText("Lars Vogt")).toBeTruthy();
-    expect(screen.getByText("via an agent")).toBeTruthy();
+    expect(screen.getByText(en["audit.viaAgent"])).toBeTruthy();
     // The passport uuid was the prominent half before PD-002. It is now not
     // shown at all: a contact is answerable for the change, and the tool is a
     // qualifier on them.
@@ -154,7 +156,7 @@ describe("ActorTag", () => {
       />,
     );
     expect(screen.getByText("You")).toBeTruthy();
-    expect(screen.getByText("via an agent")).toBeTruthy();
+    expect(screen.getByText(en["audit.viaAgent"])).toBeTruthy();
   });
 
   it("calls a presented-but-unresolved grant a gap, rather than falling back to 'System'", () => {
@@ -170,7 +172,7 @@ describe("ActorTag", () => {
         meUserId={ME}
       />,
     );
-    expect(screen.getByText("No human authority recorded")).toBeTruthy();
+    expect(screen.getByText(en["audit.noHumanAuthority"])).toBeTruthy();
     // The identifier is what is left to show, so it IS shown — but as the
     // subordinate half, not the label.
     expect(screen.getByText("agent:p1")).toBeTruthy();
@@ -190,9 +192,9 @@ describe("ActorTag", () => {
         meUserId={ME}
       />,
     );
-    expect(screen.getByText("Unknown member")).toBeTruthy();
-    expect(screen.getByText("via an agent")).toBeTruthy();
-    expect(screen.queryByText("No human authority recorded")).toBeNull();
+    expect(screen.getByText(en["audit.unknownMember"])).toBeTruthy();
+    expect(screen.getByText(en["audit.viaAgent"])).toBeTruthy();
+    expect(screen.queryByText(en["audit.noHumanAuthority"])).toBeNull();
     expect(screen.queryByText(/u-gone/)).toBeNull();
   });
 
@@ -213,7 +215,7 @@ describe("ActorTag", () => {
     // There is no human to name and nothing failed, so reporting a missing
     // authority would report a defect that does not exist.
     expect(screen.getByText("agent:extension_tick")).toBeTruthy();
-    expect(screen.queryByText("No human authority recorded")).toBeNull();
+    expect(screen.queryByText(en["audit.noHumanAuthority"])).toBeNull();
     expect(screen.queryByText("System")).toBeNull();
   });
 
@@ -243,7 +245,7 @@ describe("ActorTag", () => {
       />,
     );
     expect(screen.getByText("Lars Vogt")).toBeTruthy();
-    expect(screen.getByText("via a connector")).toBeTruthy();
+    expect(screen.getByText(en["audit.viaConnector"])).toBeTruthy();
   });
 
   it("shows a bare connector's own name — no granting human is not a gap there", () => {
@@ -257,7 +259,7 @@ describe("ActorTag", () => {
       />,
     );
     expect(screen.getByText("connector:finance")).toBeTruthy();
-    expect(screen.queryByText("No human authority recorded")).toBeNull();
+    expect(screen.queryByText(en["audit.noHumanAuthority"])).toBeNull();
   });
 
   it("reads 'System' for a system actor", () => {
@@ -306,7 +308,7 @@ describe("AuditEntryLine", () => {
     );
     expect(screen.getByText("You")).toBeTruthy();
     expect(screen.getByText("Created")).toBeTruthy();
-    expect(screen.getByText("Custom field")).toBeTruthy();
+    expect(screen.getByText(en["audit.kind.customField"])).toBeTruthy();
     // the opaque uuids never reach the reader
     expect(screen.queryByText(/cf-1/)).toBeNull();
     expect(screen.queryByText(new RegExp(ME))).toBeNull();

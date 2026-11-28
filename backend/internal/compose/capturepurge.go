@@ -126,7 +126,7 @@ func (p *CapturePurger) plan(ctx context.Context, exclusionID, seat ids.UUID, pr
 	}
 	var subject capture.PurgeSubject
 	var policy privacy.FloorPolicy
-	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		floor, resolved, err := purgeFloorTx(ctx, tx)
 		if err != nil {
 			return err
@@ -199,7 +199,7 @@ func (p *CapturePurger) cascade(ctx context.Context, seat ids.UUID, rule capture
 // mail explains them, capture made them for this seat, and nobody worked on
 // them since. A contact somebody typed in is not this mailbox's to erase.
 func (p *CapturePurger) purgeableContacts(ctx context.Context, seat ids.UUID, rule capture.Exclusion) (minted []ids.UUID, err error) {
-	err = database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		minted, err = purgeableContactsTx(ctx, tx, seat, rule)
 		return err
 	})
@@ -282,7 +282,7 @@ func (p *CapturePurger) carryOut(
 	// was told is gone, that nothing would ever collect.
 	if reason == privacy.PurgeWorkspaceRule {
 		for _, id := range subject.SoleImports {
-			if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 				return capture.ReleaseEveryImportTx(ctx, tx, id)
 			}); err != nil {
 				return anonymised, err
@@ -290,7 +290,7 @@ func (p *CapturePurger) carryOut(
 		}
 	}
 	for _, id := range subject.SharedImports {
-		if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 			if err := capture.ReleaseImportTx(ctx, tx, id, seat); err != nil {
 				return err
 			}
@@ -352,7 +352,7 @@ const personalSweepActor = "system:capture-personal-purge"
 func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.PersonalPurgeWindows) (int, error) {
 	ctx = principal.SystemActing(ctx, personalSweepActor)
 	var seats []ids.UUID
-	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
 		seats, err = capture.SeatsWithPersonalMailDueTx(ctx, tx, windows, personalSweepBatch)
 		return err
@@ -398,7 +398,7 @@ func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.P
 func (p *CapturePurger) purgeableRule(ctx context.Context, id, user ids.UUID) (capture.Exclusion, bool, error) {
 	var rule capture.Exclusion
 	var scope string
-	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT id, kind, value, scope FROM capture_exclusion
 			 WHERE id = $1 AND (scope = $3 OR (scope = $4 AND user_id = $2))`,

@@ -244,7 +244,7 @@ gate holds each one. **A prompt change moves both**:
 ```bash
 cd backend
 go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
-go test ./internal/compose/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts
+go test ./internal/compose/aitasks/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts
 ```
 
 Users miss the second one. The page

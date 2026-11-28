@@ -74,7 +74,7 @@ func (h installationSettingsHandlers) GetFiscalYearImpact(w http.ResponseWriter,
 		return
 	}
 	var out crmcontracts.InstallationFiscalYearImpact
-	if err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = fiscalYearImpact(ctx, tx)
 		return err

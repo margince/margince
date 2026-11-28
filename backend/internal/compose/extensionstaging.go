@@ -131,7 +131,7 @@ func (t extensionTool) subjectRowExists(ctx context.Context, id ids.UUID) error 
 		return errors.New("compose: no pool is bound for the extension runtime, so a staged row could not be " +
 			"proven to exist — and an approval against an unprovable row is one nobody can release")
 	}
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		// The approvals module's own probe, asked one frame earlier. Writing a
 		// second query here is how a staging check and the inbox that later
 		// reads it come to disagree about what "still exists" means.

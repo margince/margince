@@ -37,7 +37,7 @@ func TestAnOfferIsNotMintedUnderARepeatableReadSnapshot(t *testing.T) {
 	deal := offerNumberDeal(t, e)
 	input := CreateOfferInput{Currency: "EUR", Source: "manual"}
 
-	err := database.WithWorkspaceSnapshot(e.passport(), e.pool, func(ctx context.Context) error {
+	err := database.WithSnapshot(e.passport(), e.pool, func(ctx context.Context) error {
 		_, err := e.provider.store.CreateOffer(ctx, deal, input)
 		return err
 	})
@@ -68,7 +68,7 @@ func TestAnOfferRevisionIsNotMintedUnderARepeatableReadSnapshot(t *testing.T) {
 		t.Fatalf("sending the offer: %v", err)
 	}
 
-	err = database.WithWorkspaceSnapshot(e.passport(), e.pool, func(ctx context.Context) error {
+	err = database.WithSnapshot(e.passport(), e.pool, func(ctx context.Context) error {
 		_, err := e.provider.store.RegenerateOffer(ctx, offer)
 		return err
 	})

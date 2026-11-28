@@ -80,7 +80,7 @@ func liftVendorMarkTx(
 func (e *CounterpartyVerdictEngine) LiftVendorMarksWorkspace(ctx context.Context) error {
 	return e.inWorkspace(ctx, func(wsCtx context.Context, ws ids.UUID) error {
 		var page []capture.MarkedContact
-		if err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 			var err error
 			page, err = capture.MarkedContactsWithMailTx(wsCtx, tx, contacts.CaptureVerdictActor,
 				e.markLift.get(ws), markLiftPage)
@@ -90,7 +90,7 @@ func (e *CounterpartyVerdictEngine) LiftVendorMarksWorkspace(ctx context.Context
 		}
 		var failed []error
 		for _, c := range page {
-			if err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 				return liftVendorMarkTx(wsCtx, tx, e.contacts, ids.From[ids.ContactKind](c.ContactID), c.Email)
 			}); err != nil {
 				failed = append(failed, fmt.Errorf("verdict: clearing the mark on contact %s: %w", c.ContactID, err))

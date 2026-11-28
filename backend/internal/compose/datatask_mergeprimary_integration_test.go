@@ -103,7 +103,7 @@ func TestTheMergePrimaryTaskRestoresBothMergesAndReplaysSafely(t *testing.T) {
 		}
 	}
 	audits := e.WsCount(t, `SELECT count(*) FROM audit_log`)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		if err == nil && out.Changed != 0 {
 			t.Errorf("replay changed %d contacts", out.Changed)
@@ -169,7 +169,7 @@ func TestTheMergePrimaryTaskBoundsPagingAndRollsBackWithItsProgress(t *testing.T
 	if err != nil || count != 1 || !more {
 		t.Fatalf("estimate %d, %v, %v", count, more, err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		page, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 1, RunID: ids.NewV7()})
 		if err == nil && (page.Done || len(page.Cursor) == 0 || page.Changed != 1) {
 			t.Errorf("first page: %+v", page)

@@ -90,14 +90,20 @@ export function companyReferenceQuery(id: string) {
 }
 
 /** What one answer says about an id: its name, and whether it held the record. */
-export type NameAnswer = Readonly<{ name: string | null; found: boolean }>;
+export type NameAnswer = Readonly<{
+  name: string | null;
+  found: boolean;
+  archived?: boolean;
+}>;
 
 // A cached string is a name written straight into the cache.
 function answerOf(value: EntityReference | string | null): NameAnswer {
   if (value === null) {
     return { name: null, found: false };
   }
-  return { name: typeof value === "string" ? value : value.name, found: true };
+  return typeof value === "string"
+    ? { name: value, found: true }
+    : { name: value.name, found: true, archived: value.archived };
 }
 
 function nameReadQuery(
@@ -119,24 +125,14 @@ export function entityNameObserverQuery(
   };
 }
 
-/** A reference as a label shows it: its name, and whether it is archived. */
-export type ReferenceLabel = Readonly<{
-  name: string | null;
-  archived: boolean;
-}>;
-
-// A name written straight into the cache carries no archive state, so it reads
-// as live until the reference read answers.
-export function entityLabelObserverQuery(
+export function entityReferenceObserverQuery(
   kind: EntityKind,
   id: string,
-): UseQueryOptions<EntityReference | string | null, Error, ReferenceLabel> {
+): UseQueryOptions<EntityReference | string | null, Error, NameAnswer> {
   return {
     ...nameReadQuery(kind, id),
-    select: (value) => ({
-      name: answerOf(value).name,
-      archived: typeof value === "object" && value !== null && value.archived,
-    }),
+    select: answerOf,
+    staleTime: (query) => (typeof query.state.data === "string" ? 0 : 60_000),
   };
 }
 

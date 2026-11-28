@@ -96,7 +96,7 @@ func clearSender(t *testing.T, e *integration.SearchEnv, email string) {
 // test the classifier instead.
 func settleSender(t *testing.T, e *integration.SearchEnv, email, status, kind string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		// The ledger row names the message that first asked about this sender,
 		// so one has to exist for it to point at.
 		asked := ids.NewV7()

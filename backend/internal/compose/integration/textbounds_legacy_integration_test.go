@@ -81,7 +81,7 @@ func TestATranslationUpsertKeepsItsUnchangedEarlierLongName(t *testing.T) {
 	apply := withoutTextGuards(ctx, t)
 	earlier := strings.Repeat("界", values.TextLabelCharacters+1)
 	// The fixture models a value written before the narrower label bound existed.
-	if err := database.WithWorkspaceTx(ctx, SchemaPool(t), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, SchemaPool(t), func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE product_translation SET name = @name WHERE product_id = @id AND language = 'de'`, pgx.NamedArgs{"name": earlier, "id": id})
 		return err
 	}); err != nil {

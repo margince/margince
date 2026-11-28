@@ -118,14 +118,16 @@ func NothingToJudge(summary string) (Result, error) {
 // ordered list is the §6 replayable record — RUNNER-AC-4 requires it to
 // reconstruct model identity WITHOUT re-calling the model.
 type Step struct {
-	Tool        string
-	Args        json.RawMessage
-	Observation string
-	ModelID     string
-	Tier        string
-	TokensIn    int
-	TokensOut   int
-	Admission   string // "executed" | AdmissionRefused | "staged" | "rejected"
+	// TerminalRefusal is the runner's own permanent-refusal decision.
+	TerminalRefusal bool `json:"terminal_refusal,omitempty"`
+	Tool            string
+	Args            json.RawMessage
+	Observation     string
+	ModelID         string
+	Tier            string
+	TokensIn        int
+	TokensOut       int
+	Admission       string // "executed" | AdmissionRefused | "staged" | "rejected"
 }
 
 // Pending snapshots a run suspended on a 🟡 staging: the approval to
