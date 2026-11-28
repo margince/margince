@@ -52,7 +52,7 @@ func (w *timeScanWorker) scanWorkspace(ctx context.Context, workspace ids.UUID) 
 	// Built per WORKSPACE: this is a fleet pass, so the scanner's engine binds
 	// the workspace this turn is for rather than whatever an installation
 	// resolver would answer (ADR-0091 §9 step 3).
-	db := database.New(w.pool)
+	db := database.ForInstallation(w.pool)
 	scanner := NewTimeScanner(db, w.log)
 	if err := scanner.ScanWorkspace(wsCtx, workspace); err != nil {
 		return err

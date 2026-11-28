@@ -267,7 +267,7 @@ func (w *technicalBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.
 	// not looked at lately — so it names itself rather than borrowing a
 	// principal, and company:read is gated like any other read.
 	wsCtx := technicalBackfillActor(principal.WithWorkspaceID(ctx, ws))
-	store := contacts.NewStore(database.New(w.pool))
+	store := contacts.NewStore(database.ForInstallation(w.pool))
 	due, err := store.ListTechnicalDue(wsCtx, contacts.TechnicalBackfillBatch, time.Now().UTC())
 	if err != nil {
 		return 0, err

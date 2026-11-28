@@ -87,7 +87,7 @@ func TestACompanyClockDropsAnEmployeeWhoseDepartureDayArrivedWithoutAWrite(t *te
 	a := newAccount(t)
 	a.endYesterday(t, nil)
 	ctx := principal.SystemActing(a.e.Admin(), "system:clock-refold-test")
-	db := database.New(a.e.Pool)
+	db := database.ForInstallation(a.e.Pool)
 	now := clocktest.Now(t)
 
 	if n, err := RefoldEnded(ctx, db, now.Add(-time.Hour), now); err != nil || n != 0 {

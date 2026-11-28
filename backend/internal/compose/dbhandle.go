@@ -18,11 +18,11 @@ import (
 // (ADR-0091 §9 step 3): the handle a store uses instead of asking every caller
 // to have put a workspace in ctx first.
 //
-// The handle resolves the company itself (database.New) and keeps the first
+// The handle resolves the company itself (database.ForInstallation) and keeps the first
 // answer, so the lookup happens once per handle. A second handle never sees a
 // stale answer from the first.
 func InstallationDB(pool *pgxpool.Pool) *database.DB {
-	return database.New(pool)
+	return database.ForInstallation(pool)
 }
 
 // ProjectsStore builds this module's store over the installation's workspace,

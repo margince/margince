@@ -16,12 +16,12 @@ import (
 // looked at at least this many production files.
 const pinnedWorkspaceFloor = 1000
 
-// testSupportDirs hold the fixtures that seed a second workspace on purpose.
+// testSupportDirs hold the fixtures that seed a second workspace.
 // They are the only non-test code allowed to pin a handle to a workspace.
 var testSupportDirs = []string{"/integration/", "/capturetest/", "/apptest/", "/testdb/"}
 
 // TestNoProductionCodePinsADatabaseHandleToAWorkspace holds the resolver in
-// one place. A production handle comes from database.New, which finds the
+// one place. A production handle comes from database.ForInstallation, which finds the
 // installation's one workspace itself, or from database.NewAcrossWorkspaces,
 // which needs none. database.BindTo names a workspace by hand, so a caller
 // outside the test fixtures would be a second decision about which workspace a
@@ -43,7 +43,7 @@ func TestNoProductionCodePinsADatabaseHandleToAWorkspace(t *testing.T) {
 					return true
 				}
 				if name := qualifiedCall(call); name == "database.BindTo" {
-					t.Errorf("%s: production code calls database.BindTo. Use database.New, or database.NewAcrossWorkspaces for a pass that must reach an archived workspace.",
+					t.Errorf("%s: production code calls database.BindTo. Use database.ForInstallation, or database.NewAcrossWorkspaces for a pass that must reach an archived workspace.",
 						fset.Position(call.Pos()))
 				}
 				return true

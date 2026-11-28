@@ -62,7 +62,7 @@ func runAuthzDisagreement(ctx context.Context, pool *pgxpool.Pool, args []string
 	ctx = principal.WithWorkspaceID(ctx, wsID)
 	ctx = principal.SystemActing(ctx, "system:authz_disagreement")
 
-	store := consent.NewStore(database.New(pool))
+	store := consent.NewStore(database.ForInstallation(pool))
 	report, err := store.DisagreementReport(ctx)
 	if err != nil {
 		return err

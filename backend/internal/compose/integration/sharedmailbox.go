@@ -68,7 +68,7 @@ func SharedMailboxRegistry(t *testing.T, pool *pgxpool.Pool, provider string) *c
 	if err != nil {
 		t.Fatalf("building the local vault: %v", err)
 	}
-	registry := capture.NewRegistry(database.New(pool), nil, nil, vault)
+	registry := capture.NewRegistry(database.ForInstallation(pool), nil, nil, vault)
 	registry.Register(unsyncedMailbox{name: provider})
 	return registry
 }

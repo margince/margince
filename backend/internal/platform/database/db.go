@@ -19,10 +19,10 @@ import (
 // never passes or binds one.
 //
 // No table carries workspace_id and no policy reads one, so a transaction is not
-// scoped by it. What Tx checks is that the installation has a company at all:
-// a handle on a host that has not bootstrapped refuses before any SQL runs.
-// A handle from NewAcrossWorkspaces skips that check, for the privacy passes
-// that must still reach an archived company's rows when no company is live.
+// scoped by it. What Tx checks is that the installation has a company at all.
+// A handle on a host that has not bootstrapped refuses before any SQL runs.
+// A handle from NewAcrossWorkspaces skips that check. The privacy passes use
+// it, because they must reach an archived company's rows when none is live.
 //
 // The resolution caches its first success, so a process looks the company up
 // once per handle. A failure is never cached, because the worker polls until
@@ -74,9 +74,10 @@ func (d *DB) Budget() time.Duration {
 	return d.budget
 }
 
-// New returns a handle that resolves the installation's workspace through the
-// database.
-func New(pool *pgxpool.Pool) *DB {
+// ForInstallation returns a handle that resolves the installation's workspace
+// through the database. A callee named New would collide with the by-name call
+// graph the object-gate censuses in backend/gates walk, so this one is not.
+func ForInstallation(pool *pgxpool.Pool) *DB {
 	var cached atomic.Pointer[ids.WorkspaceID]
 	return &DB{pool: pool, workspace: func(ctx context.Context) (ids.WorkspaceID, error) {
 		if ws := cached.Load(); ws != nil {
@@ -101,8 +102,9 @@ func NewAcrossWorkspaces(pool *pgxpool.Pool) *DB {
 }
 
 // BindTo returns a handle pinned to one workspace. Test setup uses it for a
-// suite that seeds a second workspace on purpose; the gate
-// TestNoProductionCodePinsAWorkspace keeps production code on New.
+// suite that seeds a second workspace. The gate
+// TestNoProductionCodePinsADatabaseHandleToAWorkspace keeps production code on
+// ForInstallation.
 func BindTo(pool *pgxpool.Pool, ws ids.WorkspaceID) *DB {
 	return &DB{pool: pool, workspace: func(context.Context) (ids.WorkspaceID, error) { return ws, nil }}
 }

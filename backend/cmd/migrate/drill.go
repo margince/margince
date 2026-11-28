@@ -90,7 +90,7 @@ func withDrillLedger(ctx context.Context, dsn string,
 		return err
 	}
 	defer pool.Close()
-	db := database.New(pool)
+	db := database.ForInstallation(pool)
 	return fn(principal.SystemActing(ctx, drillActor), continuity.NewStore(db))
 }
 
