@@ -236,7 +236,7 @@ func TestPublishedWordingCannotBeDeleted(t *testing.T) {
 	}
 }
 
-// TestAPublishedVersionsScopeIsFrozenToo — who and what a version applied to
+// TestAPublishedVersionsScopeIsFrozenToo: who and what a version applied to
 // is evidence as much as what it said.
 func TestAPublishedVersionsScopeIsFrozenToo(t *testing.T) {
 	e := setupChannelConsent(t)
