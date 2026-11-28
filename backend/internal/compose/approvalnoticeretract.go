@@ -25,7 +25,7 @@ package compose
 // consumer to re-derive who that was from a payload that does not say.
 //
 // Idempotency is the retraction's own predicate: Retract matches only rows not
-// already retracted, so a redelivered verdict moves no instant. events.Dedupe
+// already retracted, so a redelivered verdict moves no instant. The subscriber's dedupe
 // sits in front of that as a cache, never as the guarantee.
 
 import (

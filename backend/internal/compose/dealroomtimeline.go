@@ -21,11 +21,11 @@ package compose
 // retitled after the fact; the payload carries what was true at the moment
 // being recorded, which is what a timeline entry means.
 //
-// Replay is handled by the activity writer, not here: the note is keyed on
+// Replay is handled by the activity writer, not here. The note is keyed on
 // (source_system, source_id) = (deal_room, the event id), and LogActivity is
-// idempotent on that pair, so a redelivered event returns the existing note
-// instead of writing a second one. The events.Dedupe wrapper in front is a
-// cache, never the guarantee — it marks AFTER the effect runs, so a crash in
+// idempotent on that pair. A redelivered event returns the existing note
+// instead of writing a second one. The subscriber's dedupe in front is a
+// cache, never the guarantee. It marks after the effect runs, so a crash in
 // that window replays.
 
 import (

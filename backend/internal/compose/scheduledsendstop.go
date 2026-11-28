@@ -11,7 +11,7 @@ package compose
 // the other.
 //
 // Idempotency is the hold's own predicate: only a row still `scheduled` is
-// held, so a redelivered stop holds nothing twice and raises no second card. events.Dedupe sits in front
+// held, so a redelivered stop holds nothing twice and raises no second card. The subscriber's dedupe sits in front
 // of that as a cache, never as the guarantee. The fire path still asks the
 // engine again when a message comes due, so a missed event is caught there.
 

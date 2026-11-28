@@ -6,8 +6,8 @@ package compose
 // The core's half of extension.Subscription: which consumer group one unit's
 // listener gets, and what happens when an event lands on it.
 //
-// The consuming machinery is the product's own — a consumer group per listener,
-// XREADGROUP, the reclaim pass, Dedupe around the handler — so nothing here
+// The consuming machinery is the product's own (a consumer group per listener,
+// XREADGROUP, the reclaim pass, dedupe around the handler), so nothing here
 // re-implements delivery. What this file owns is the translation: an envelope
 // becomes a published Delivery, and the context it runs on is bound to an
 // invocation that has nobody behind it.

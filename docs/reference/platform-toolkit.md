@@ -56,8 +56,9 @@ It writes the design-system tokens in as values, and `backend/gates/emaildesign_
 Outbox relay, a reader for each consumer group, and dedupe. It never starts an event. (More:
 [write-backbone.md](../explanation/write-backbone.md).)
 - `NewRelay(pool, rdb, log)`, `OutboxBacklog(ctx, pool)`, `PublishedTotal()`.
-- `NewSubscriber(rdb, group, handler, log)`; `type Handler func(ctx, env) error`.
-- `Dedupe(rdb, group, next)` (`DedupeTTL = 96h`), `ForWorkspace(wsID, next)`, `NewClient(ctx, addr)`.
+- `NewSubscriber(rdb, group, handler, log)`; `type Handler func(ctx, env) error`. It runs the handler
+  behind the group's dedupe (`DedupeTTL = 96h`), and `WithBatch(h)` does the same for a batch handler.
+- `NewClient(ctx, addr, password)`.
 - **Use it when:** you read domain events or connect the relay.
 
 ### `platform/httperr`: the one place an error becomes HTTP

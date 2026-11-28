@@ -33,7 +33,7 @@ HTTP request / agent run / bus consumer
                           ── UPDATE event_outbox SET published_at = now()
                           ▼
    consumer groups (cg:context-graph, cg:overnight-agent, …)
-                          └─ each handler wrapped in events.Dedupe(event_id)
+                          └─ events.NewSubscriber runs each handler behind dedupe(event_id)
 ```
 
 **Why three rows, one transaction.** The domain change, the proof it happened, and the event that
@@ -319,10 +319,12 @@ Effects are a **closed** set of actions
 seam from growing into a builder that can do anything. `compose.NewWorkflowEngine` adds the shipped
 starter workflows plus the system ones (lead routes and scores).
 
-Every handler runs inside `events.Dedupe`:
+`events.NewSubscriber` runs every handler inside the package's `dedupe`, and `WithBatch` runs every
+batch handler inside `dedupeBatch`. Code outside the package cannot call either one, so every
+subscriber has them:
 
 ```go
-func Dedupe(rdb, group, next) Handler   // key = "gw:dedupe:<group>:<event_id>", TTL 96h
+func dedupe(rdb, group, next) Handler   // key = "gw:dedupe:<group>:<event_id>", TTL 96h
 ```
 
 The order is **run, then mark**. Say the mark goes in *before* the effect, and a crash comes between
@@ -330,14 +332,14 @@ them. The mark would stay as a claim with no effect: the next delivery would be 
 event would never come. Marking *after* means a crash can only lead to a second run.
 
 The layer that really decides takes that second run and does nothing. Effects write by a key the
-data already has (`uq_activity_source` and others of the same kind). `Dedupe` only saves work over
+data already has (`uq_activity_source` and others of the same kind). `dedupe` only saves work over
 that layer, and never stands in for it. The `96h` TTL is set above how long the stream is expected
 to keep events. The stream is capped by a count (`MAXLEN ~`), not by a time, so at a low write
 rate an event can stay longer. A consumer that takes it back after its dedupe entry timed out runs the
 handler again, and the key layer makes that run do nothing.
 
 A group may declare the event types its handler acts on (`Group.Types`). The subscriber acks every
-other entry before `Dedupe` runs, in one `XACK` for each read, so such an entry leaves no mark. The
+other entry before `dedupe` runs, in one `XACK` for each read, so such an entry leaves no mark. The
 handler tests its input against the same set. `TestEveryHandlerIgnoresTheTypesItsGroupLeavesOut` in
 `backend/gates/consumergrouptypes_test.go` feeds each handler every type its group leaves out. A
 group with no list gets every type on its streams.
