@@ -382,18 +382,23 @@ type filteredLane struct {
 // filteredLanes reads the merge gate for jobs guarded by a classifier scope. A
 // job that delegates to a reusable lane workflow carries no steps of its own, so
 // the callee's steps are read as the job's.
-func filteredLanes(t *testing.T, workflow workflowFile) []filteredLane {
+// filteredLanes takes the scopes read from the same workflow, so a job guarded
+// only by an output that filters no path is left out.
+func filteredLanes(t *testing.T, workflow workflowFile, scopes map[string][]string) []filteredLane {
 	t.Helper()
 	targets, vars := parseRecipes(t, rootMakefile)
 	var lanes []filteredLane
 	for name, job := range workflow.Jobs {
-		guarded := scopeGuard.FindAllStringSubmatch(job.If, -1)
-		if guarded == nil {
-			continue
-		}
 		lane := filteredLane{name: name}
-		for _, match := range guarded {
-			lane.scopes = append(lane.scopes, match[1])
+		// An output the classifier derives from the event alone, such as
+		// full_lane, filters no path, so a job it alone guards skips no edit.
+		for _, match := range scopeGuard.FindAllStringSubmatch(job.If, -1) {
+			if _, ok := scopes[match[1]]; ok {
+				lane.scopes = append(lane.scopes, match[1])
+			}
+		}
+		if lane.scopes == nil {
+			continue
 		}
 		commands := jobCommands(t, workflow, job.Uses, name)
 		inputs := map[string]bool{}
@@ -491,7 +496,7 @@ func TestEveryFilteredLaneRunsOnAChangeToTheScriptsItExecutes(t *testing.T) {
 	t.Parallel()
 	workflow := readWorkflow(t, classifierWorkflow)
 	scopes := filterScopes(t, workflow)
-	lanes := filteredLanes(t, workflow)
+	lanes := filteredLanes(t, workflow, scopes)
 
 	// A classifier that stopped being recognised, or a workflow whose jobs
 	// stopped being guarded, would leave nothing to judge and report a pass.
@@ -517,7 +522,7 @@ func TestEveryFilteredLaneRunsOnAChangeToTheScriptsItExecutes(t *testing.T) {
 func TestAScriptReachedOnlyThroughMakeIsStillALaneInput(t *testing.T) {
 	t.Parallel()
 	workflow := readWorkflow(t, classifierWorkflow)
-	lanes := filteredLanes(t, workflow)
+	lanes := filteredLanes(t, workflow, filterScopes(t, workflow))
 
 	// The defect this gate was written for was reached through `make`, not named
 	// in the workflow: live-boot's steps say `make seed-dev` and the seeder's
@@ -564,7 +569,7 @@ func TestTheCensusFailsOnAScopeThatOmitsAScriptItsLaneRuns(t *testing.T) {
 	t.Parallel()
 	workflow := readWorkflow(t, classifierWorkflow)
 	scopes := filterScopes(t, workflow)
-	lanes := filteredLanes(t, workflow)
+	lanes := filteredLanes(t, workflow, scopes)
 
 	// The gate's own falsification, and the defect it shipped against: take the
 	// live classifier, drop the scripts from one scope, and the lane that runs

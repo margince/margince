@@ -144,7 +144,7 @@ func TestTheReleaseLaneRunsOnAChangeToWhatItTests(t *testing.T) {
 	workflow := readWorkflow(t, classifierWorkflow)
 	scopes := filterScopes(t, workflow)
 	var runners []filteredLane
-	for _, lane := range filteredLanes(t, workflow) {
+	for _, lane := range filteredLanes(t, workflow, scopes) {
 		commands := jobCommands(t, workflow, workflow.Jobs[lane.name].Uses, lane.name)
 		if strings.Contains(strings.Join(commands, "\n"), releaseLaneMake) {
 			runners = append(runners, lane)

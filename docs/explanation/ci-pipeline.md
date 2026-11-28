@@ -378,7 +378,7 @@ dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
-| `plain` | `cache-warm.yml` job `plain`, its `runner` part | `integration unit coverage`, `live-boot`, `vuln`, and the [CI image](ci-image.md) jobs when they run on the runner |
+| `plain` | `cache-warm.yml` job `plain`, its `runner` part | `live-boot`, `vuln`, and the [CI image](ci-image.md) jobs when they run on the runner |
 | `plain-in-image` | `cache-warm.yml` job `plain`, its `image` part | `deterministic-gates` |
 | `lint`, `lint-in-image` | `lint-cache.yml`, after each push to `main` or `develop`: it compiles, and runs no test | `backend-lint` |
 | `integration` | `cache-warm.yml` job `integration`, on `main` only | `integration build`, and every shard for the tools it runs with `go run` |
@@ -492,9 +492,10 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md). `determ
   into `extensions/`, then runs the composed build, the tests of `cmd/` and every unit's own tests. Its
   coverage profile goes to `sonarcloud`, because the shard profiles cannot reach a unit's module.
 - **`INTEGRATION_JOBS=8`**, twice the cores of a runner: the tests wait on Postgres, and 16 ran out of memory.
-- **`integration unit coverage`** exists because the shards run only the integration packages, and
-  SonarCloud would see the rest at a false 0% for new code. It skips `backend/gates`, which has no code
-  of its own: the tests of the code it reaches cover nearly all of it.
+- **`deterministic-gates (unit)` and `deterministic-gates (solo)` measure coverage** when the integration
+  lane runs, since the shards run only the integration packages. Go caches no run with `-shuffle`, so
+  this costs one pass over the tests, where a separate job ran every package again. A local run
+  measures nothing, so its test cache still works.
 - **A fan-in turns red, not skipped**, when a job in its lane fails. The aggregate reads a skip as "this
   part was out of scope". The `frontend` fan-in checks its jobs before the merge half. So a red shard
   ends the job, and does not hand the merge a partial set of blob reports.
@@ -550,9 +551,10 @@ exceptions above. `make check-backend` runs it too, so a laptop `make check` get
 
 ## Coverage → SonarCloud
 
-The `sonarcloud` job runs **last** and runs no suite again. It fetches the coverage that `integration`,
-`deterministic-gates (unit)` and `frontend` already made. Those are `coverage.out` (from each shard and
-unit pod), `coverage-extensions.out`, and two lcov reports: the core frontend and the unit screens
+The `sonarcloud` job runs **last** and runs no suite again. It fetches the coverage that the integration
+shards, `deterministic-gates (unit)`, `deterministic-gates (solo)` and `frontend` already made. It merges
+the pods of the shards and of those two jobs into `coverage.out` (`scripts/merge-go-coverage.sh`). Next
+to it come `coverage-extensions.out` and two lcov reports: the core frontend and the unit screens
 (`frontend/coverage-ext`). It then runs only the scanner, with no second stack and no second test run.
 
 Those pod files are uploaded through
@@ -560,8 +562,8 @@ Those pod files are uploaded through
 Every workflow in this repository uses it in place of `actions/upload-artifact`
 (`backend/gates/artifactuploadretry_test.go` holds it).
 
-- Without it, one short failure from the artifact service of GitHub costs a whole lane. The fan-in
-  cannot merge a pod that a shard is missing, so `ci` reports its failure. Then the check at push time
+- Without it, one short failure from the artifact service of GitHub costs a whole lane. The merge
+  cannot use a pod that a shard is missing, so `ci` reports its failure. Then the check at push time
   files a red `main` issue against a tree whose tests all passed.
 - The wrapper tries twice. The second attempt does not let a failure pass, so a missing pod still fails,
   and does not reach the scanner as a false 0%.
@@ -610,7 +612,7 @@ Wiring details:
 
 - `permissions: contents: read` at the workflow root (the least rights). Only `ci-image` may push, and only the [CI image](ci-image.md).
 - `persist-credentials: false` on the checkout of each job that runs code a PR wrote (the `integration`
-  shards, the unit coverage pass and fan-in, `live-boot`, `frontend`, `uat`). So a PR with bad code running
+  shards and fan-in, `live-boot`, `frontend`, `uat`). So a PR with bad code running
   `make test-integration` / `make frontend-e2e` cannot read the stored `GITHUB_TOKEN`.
   - The gate jobs scoped to the diff (`deterministic-gates`, `craftsmanship`, `craft-residue`) keep the
     token, because they diff against `origin/main` and need it to fetch.
