@@ -282,5 +282,20 @@ func insertEvidence(
 	if err != nil {
 		return id, false, fmt.Errorf("insert stage evidence: %w", err)
 	}
-	return id, true, nil
+	return id, true, markContradictedEvidence(ctx, tx, in, id)
+}
+
+// markContradictedEvidence points each live reading of the criterion that
+// disagrees with the new one at it, so the criterion reads as contradicted.
+// It rides the new reading's create audit and event: it is that reading's
+// effect on the ledger, not a decision of its own.
+func markContradictedEvidence(ctx context.Context, tx pgx.Tx, in EvidenceInput, newID ids.UUID) error {
+	if _, err := tx.Exec(ctx, `
+		UPDATE deal_stage_evidence SET contradicted_by = $4
+		 WHERE deal_id = $1 AND criterion_id = $2 AND met <> $3 AND id <> $4
+		   AND refuted_at IS NULL AND contradicted_by IS NULL`,
+		in.DealID, in.CriterionID, in.Met, newID); err != nil {
+		return fmt.Errorf("mark the readings the new stage evidence contradicts: %w", err)
+	}
+	return nil
 }
