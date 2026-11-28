@@ -7,7 +7,9 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -83,5 +85,28 @@ func TestAHandleAcrossWorkspacesNamesNoWorkspace(t *testing.T) {
 	t.Parallel()
 	if _, err := NewAcrossWorkspaces(nil).Workspace(context.Background()); !errors.Is(err, ErrNoWorkspace) {
 		t.Fatalf("Workspace on an across-workspaces handle = %v, want ErrNoWorkspace", err)
+	}
+}
+
+// An older successful check that finishes after a newer failure must leave the
+// handle unproven, and an older success must not displace a newer one.
+func TestAnOlderProofNeverOverwritesANewerCheck(t *testing.T) {
+	t.Parallel()
+	var proof atomic.Int64
+	stampProof(&proof, 100)
+	stampProof(&proof, -200)
+	stampProof(&proof, 150)
+	if got := proof.Load(); got != -200 {
+		t.Fatalf("an older success after a newer failure left the stamp at %d, want -200", got)
+	}
+	stampProof(&proof, 300)
+	stampProof(&proof, 250)
+	if got := proof.Load(); got != 300 {
+		t.Fatalf("an older success displaced a newer one: stamp %d, want 300", got)
+	}
+	db := &DB{installation: true, provenAt: &proof, recheck: time.Hour}
+	proof.Store(-time.Now().UnixNano())
+	if db.recentlyProven() {
+		t.Fatal("a handle whose last check failed counted as proven")
 	}
 }

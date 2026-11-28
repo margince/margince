@@ -38,8 +38,9 @@ type DB struct {
 	// on a handle nobody bounded — see Bounded.
 	budget   time.Duration
 	admitted bool
-	// provenAt is the unix-nano time of the last in-transaction proof that a
-	// company is live, or zero after a failed one. Copies of a handle share it.
+	// provenAt stamps the newest in-transaction check of the company, as unix
+	// nanoseconds: positive for a live company, negative for none. Copies of a
+	// handle share it. See stampProof.
 	provenAt *atomic.Int64
 	recheck  time.Duration
 }
@@ -216,14 +217,20 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 			return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
 		}
 	}
+	_, joined := snapshotOf(ctx)
 	if d.installation && !d.recentlyProven() {
 		body := fn
 		fn = func(tx pgx.Tx) error {
+			started := time.Now().UnixNano()
 			if _, err := InstallationWorkspaceTx(ctx, tx); err != nil {
-				d.provenAt.Store(0)
+				stampProof(d.provenAt, -time.Now().UnixNano())
 				return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
 			}
-			d.provenAt.Store(time.Now().UnixNano())
+			// A joined snapshot can be older than this check, so its answer
+			// would stamp a moment it does not describe.
+			if !joined {
+				stampProof(d.provenAt, started)
+			}
 			return body(tx)
 		}
 	}
@@ -253,7 +260,30 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 
 func (d *DB) recentlyProven() bool {
 	at := d.provenAt.Load()
-	return at != 0 && time.Since(time.Unix(0, at)) < d.recheck
+	return at > 0 && time.Since(time.Unix(0, at)) < d.recheck
+}
+
+// stampProof records a check taken at |stamp|, negative for a failure. It only
+// moves the stamp forward, so a slow transaction that proved the company live
+// cannot overwrite a newer failure or a newer success.
+func stampProof(proof *atomic.Int64, stamp int64) {
+	at := stamp
+	if at < 0 {
+		at = -at
+	}
+	for {
+		current := proof.Load()
+		known := current
+		if known < 0 {
+			known = -known
+		}
+		if known >= at {
+			return
+		}
+		if proof.CompareAndSwap(current, stamp) {
+			return
+		}
+	}
 }
 
 // WithReadAdmission opts expensive reads into the pool's shared allowance.
