@@ -26,9 +26,33 @@ var ErrNotBootstrapped = errors.New("database: installation not bootstrapped; no
 
 // InstallationWorkspace is LiveWorkspace for the caller that needs a company
 // to exist: no live row is ErrNotBootstrapped. It is the one lookup behind
-// every handle's Workspace.
+// every handle's Workspace. Nothing caches its answer, so an archived or
+// replaced company is seen on the next call.
 func InstallationWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, error) {
-	ws, ok, err := LiveWorkspace(ctx, pool)
+	// pool-exempt: installation lookup. This reads the live workspace before any transaction exists.
+	return installationFrom(ctx, pool)
+}
+
+// InstallationWorkspaceTx is InstallationWorkspace on the caller's transaction,
+// so the answer and the statements that follow it see one snapshot.
+func InstallationWorkspaceTx(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
+	return installationFrom(ctx, tx)
+}
+
+// LiveWorkspace returns the installation's one live workspace, or ok=false
+// when no company exists yet. It is the single read a pass over the
+// installation starts from.
+func LiveWorkspace(ctx context.Context, pool *pgxpool.Pool) (ws ids.UUID, ok bool, err error) {
+	// pool-exempt: installation lookup. This reads the live workspace before any transaction exists.
+	return liveFrom(ctx, pool)
+}
+
+type liveQuerier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+}
+
+func installationFrom(ctx context.Context, q liveQuerier) (ids.UUID, error) {
+	ws, ok, err := liveFrom(ctx, q)
 	if err != nil {
 		return ids.UUID{}, err
 	}
@@ -38,12 +62,8 @@ func InstallationWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, e
 	return ws, nil
 }
 
-// LiveWorkspace returns the installation's one live workspace, or ok=false
-// when no company exists yet. It is the single read a pass over the
-// installation starts from.
-func LiveWorkspace(ctx context.Context, pool *pgxpool.Pool) (ws ids.UUID, ok bool, err error) {
-	// pool-exempt: installation lookup. This reads the live workspace before any transaction exists.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL ORDER BY created_at LIMIT 2`)
+func liveFrom(ctx context.Context, q liveQuerier) (ids.UUID, bool, error) {
+	rows, err := q.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL ORDER BY created_at LIMIT 2`)
 	if err != nil {
 		return ids.UUID{}, false, fmt.Errorf("database: reading the live workspace: %w", err)
 	}

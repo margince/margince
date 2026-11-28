@@ -925,3 +925,22 @@ func TestARateLimitedQuestionWaitsAsLongAsTheProviderSaid(t *testing.T) {
 		t.Fatalf("next try later than the provider said and attempts = %s, want true/1", got)
 	}
 }
+
+// A due question is not sent once the company is archived. The clarification
+// sweep sends messages, so it needs a live installation like any other pass.
+func TestAnArchivedCompanysDueClarificationsSendNothing(t *testing.T) {
+	eachClarifyNetwork(t, func(t *testing.T, c *clarifyCase) {
+		a := c.forward("f1", "price for 20 seats?")
+		c.settle(a)
+		if _, err := c.e.Owner.Exec(context.Background(), `UPDATE workspace SET archived_at = now() WHERE id = $1`, c.e.WS); err != nil {
+			t.Fatal(err)
+		}
+		err := c.n.sweep(c.e, c.n.vault).Workspace(context.Background(), c.e.WS)
+		if !errors.Is(err, database.ErrNotBootstrapped) {
+			t.Fatalf("sweep with no live company = %v, want ErrNotBootstrapped", err)
+		}
+		if got, calls := c.n.provider2.messages(), c.n.provider2.callCount(); len(got) != 0 || calls != 0 {
+			t.Fatalf("a question went out for an archived company: %v (%d calls)", got, calls)
+		}
+	})
+}

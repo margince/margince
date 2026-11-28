@@ -92,7 +92,6 @@ func setupDirectoryEnv(t *testing.T, slug string) *directoryEnv {
 	e.vault = &memorySealer{sealed: map[string]string{}}
 	e.cred = testDirectoryCredential(t)
 	e.google.known = []string{e.cred.AdminSubject, "sub-" + e.slug}
-	e.svc.installation.Store(&e.ws)
 	e.svc.WithGoogleDirectory(unlockedConfig(t, e.pool).WithSealer(e.vault.sealer()))
 	e.svc.directory.reader = e.google.reader(t)
 	e.svc.WithGroupRoleMap(func(context.Context, pgx.Tx) (map[string]string, error) {

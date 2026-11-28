@@ -6,7 +6,6 @@ package database
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,16 +19,18 @@ import (
 //
 // No table carries workspace_id and no policy reads one, so a transaction is not
 // scoped by it. What Tx checks is that the installation has a company at all.
-// A handle on a host that has not bootstrapped refuses before any SQL runs.
-// A handle from NewAcrossWorkspaces skips that check. The privacy passes use
-// it, because they must reach an archived company's rows when none is live.
+// A handle on a host with no live company refuses before the body runs.
+// A handle from NewAcrossWorkspaces skips that check, for cleanup that sends
+// nothing out.
 //
-// The resolution caches its first success, so a process looks the company up
-// once per handle. A failure is never cached, because the worker polls until
-// the API bootstraps.
+// The lookup runs fresh inside every transaction and nothing caches it, so an
+// archived or replaced company is seen on the next call. The cost is one
+// indexed statement on a one-row table.
 type DB struct {
 	pool *pgxpool.Pool
-	// workspace is nil on a handle from NewAcrossWorkspaces.
+	// installation is true on a ForInstallation handle.
+	installation bool
+	// workspace pins the answer on a BindTo handle and is nil on the others.
 	workspace func(context.Context) (ids.WorkspaceID, error)
 	// budget bounds every statement this handle's transactions run, and is zero
 	// on a handle nobody bounded — see Bounded.
@@ -74,29 +75,18 @@ func (d *DB) Budget() time.Duration {
 	return d.budget
 }
 
-// ForInstallation returns a handle that resolves the installation's workspace
-// through the database. A callee named New would collide with the by-name call
-// graph the object-gate censuses in backend/gates walk, so this one is not.
+// ForInstallation returns a handle that looks the installation's live workspace
+// up in the database on every use. The name is not New because the object-gate
+// censuses in backend/gates resolve calls by name, and a callee named New
+// collides there.
 func ForInstallation(pool *pgxpool.Pool) *DB {
-	var cached atomic.Pointer[ids.WorkspaceID]
-	return &DB{pool: pool, workspace: func(ctx context.Context) (ids.WorkspaceID, error) {
-		if ws := cached.Load(); ws != nil {
-			return *ws, nil
-		}
-		live, err := InstallationWorkspace(ctx, pool)
-		if err != nil {
-			return ids.WorkspaceID{}, err
-		}
-		ws := ids.From[ids.WorkspaceKind](live)
-		cached.Store(&ws)
-		return ws, nil
-	}}
+	return &DB{pool: pool, installation: true}
 }
 
 // NewAcrossWorkspaces returns a handle whose transactions need no live
-// workspace. A privacy cleanup uses it: archiving a company does not un-store
-// its data, so the retention floor still binds there. Workspace answers
-// ErrNoWorkspace on this handle.
+// workspace. Only cleanup that sends nothing out may use it.
+// Archiving a company does not un-store its data, so the retention floor binds.
+// Workspace answers ErrNoWorkspace on this handle.
 func NewAcrossWorkspaces(pool *pgxpool.Pool) *DB {
 	return &DB{pool: pool}
 }
@@ -125,10 +115,14 @@ func (d *DB) Workspace(ctx context.Context) (ids.WorkspaceID, error) {
 			"construct this store through compose, which binds the installation's pool",
 			ErrNoWorkspace)
 	}
-	if d.workspace == nil {
-		return ids.WorkspaceID{}, fmt.Errorf("%w: this handle spans every workspace and names none", ErrNoWorkspace)
+	switch {
+	case d.installation:
+		live, err := InstallationWorkspace(ctx, d.pool)
+		return ids.From[ids.WorkspaceKind](live), err
+	case d.workspace != nil:
+		return d.workspace(ctx)
 	}
-	return d.workspace(ctx)
+	return ids.WorkspaceID{}, fmt.Errorf("%w: this handle spans every workspace and names none", ErrNoWorkspace)
 }
 
 // Pool exposes the underlying pool for the paths that do not run a
@@ -197,6 +191,15 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 	if d.workspace != nil {
 		if _, err := d.workspace(ctx); err != nil {
 			return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
+		}
+	}
+	if d.installation {
+		body := fn
+		fn = func(tx pgx.Tx) error {
+			if _, err := InstallationWorkspaceTx(ctx, tx); err != nil {
+				return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
+			}
+			return body(tx)
 		}
 	}
 	// The ambient snapshot, joined here for the reason WithTx joins it. Most

@@ -127,26 +127,15 @@ func (s *Service) BootstrapInstallation(ctx context.Context, create func() (Inst
 	if err != nil {
 		return ids.WorkspaceID{}, false, nil, err
 	}
-	s.installation.Store(&wsID)
 	return wsID, created, discarded, nil
 }
 
-// InstallationWorkspace resolves the singleton company for a
-// request, cached after the first successful lookup — the resolution the
-// per-request slug used to provide. Pre-bootstrap lookups return
-// ErrNotBootstrapped (never cached: the worker polls this until the API
-// bootstraps, then binds).
+// InstallationWorkspace resolves the singleton company on every call, through
+// the one lookup the database handle owns. Nothing caches it: an archived
+// company answers ErrNotBootstrapped at once, and a replacement answers its own
+// id. The worker polls this until the API has bootstrapped.
 func (s *Service) InstallationWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
-	if cached := s.installation.Load(); cached != nil {
-		return *cached, nil
-	}
-	live, err := database.InstallationWorkspace(ctx, s.db.Pool())
-	if err != nil {
-		return ids.WorkspaceID{}, err
-	}
-	wsID := ids.From[ids.WorkspaceKind](live)
-	s.installation.Store(&wsID)
-	return wsID, nil
+	return s.db.Workspace(ctx)
 }
 
 // activeWorkspaces lists un-archived workspace ids. LIMIT 3: the caller
