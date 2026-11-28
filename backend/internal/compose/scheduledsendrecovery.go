@@ -69,10 +69,8 @@ func newScheduledSendRecoveryWorker(idsvc *identity.Service, store *activities.S
 }
 
 func (w *scheduledSendRecoveryWorker) Work(ctx context.Context, _ *river.Job[ScheduledSendRecoveryArgs]) error {
-	// The installation's own workspace, on the context rather than left to the
-	// store's handle to resolve, so this pass and the rows it writes agree on
-	// which workspace it is acting in. the job middleware is the spelling every
-	// other tenant-less pass uses.
+	// The job middleware has bound the installation's workspace, so this pass
+	// and the rows it writes agree on which workspace it acts in.
 	ctx = sendWorkerScope(ctx)
 
 	overdue, err := w.store.OverdueScheduledSends(ctx, recoveryGrace, recoveryBatch)

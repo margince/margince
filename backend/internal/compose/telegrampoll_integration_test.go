@@ -394,9 +394,9 @@ func suppressChannelAccount(t *testing.T, e *integration.Env, account string) {
 }
 
 // A poll queued before the upgrade has a different unique key from a new one,
-// so two polls for one bot can both be queued. The per-connection lock is what
-// keeps getUpdates to one consumer: a poll that finds it held does not call
-// Telegram, and the same poll runs once the lock is free.
+// so two polls for one bot can both be queued. The per-connection lock keeps
+// getUpdates to one consumer. A poll that finds it held does not call Telegram.
+// The same poll runs once the lock is free.
 func TestAPollSkipsABotWhoseLockAnotherPollHolds(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)

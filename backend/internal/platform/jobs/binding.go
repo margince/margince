@@ -11,8 +11,8 @@ import (
 )
 
 // BindWorkspace binds the installation's workspace onto the context one job
-// runs under. It receives the job row so a kind that owes work to workspaces
-// no company is live in (the cleanups that reach archived data) can opt out.
+// runs under. It receives the job row so a kind that owes work to archived
+// workspaces, where no company is live, can opt out.
 type BindWorkspace func(ctx context.Context, job *rivertype.JobRow) (context.Context, error)
 
 // workerBinding is the River worker middleware that runs the binding.

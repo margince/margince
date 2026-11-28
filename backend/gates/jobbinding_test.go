@@ -53,7 +53,7 @@ func TestNoWorkerBindsItsOwnWorkspace(t *testing.T) {
 }
 
 // TestEveryWorkerClientRunsTheBindingMiddleware holds the other end. River
-// works jobs only on a client built with a Workers bundle, and the binding is a
+// works jobs only on a client built with a Workers bundle. The binding is a
 // worker middleware, so it must be installed wherever such a client is built.
 //
 //   - River's client is constructed in exactly one file, which installs the

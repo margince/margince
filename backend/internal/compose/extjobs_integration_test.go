@@ -6,10 +6,10 @@
 package compose
 
 // The extension job seam, exercised end to end over a real migrated Postgres
-// and a real River runner: a composed declaration becomes a cadenced
-// dispatcher and a child, the tick runs pinned to the installation's workspace
-// under the authority of the job, and the two shapes this seam must never run
-// are refused at boot.
+// and a real River runner. A composed declaration becomes a cadenced dispatcher
+// and a child. The tick runs pinned to the installation's workspace under the
+// authority of the job. The two shapes this seam must never run are refused at
+// boot.
 
 import (
 	"bytes"
@@ -194,9 +194,9 @@ func awaitRows(t *testing.T, pool *pgxpool.Pool, kind string, want int) int {
 }
 
 // TestDispatcherEnqueuesOneChildForTheInstallation: enablement is directory
-// presence and therefore global, so the tick has no per-tenant switch to
-// consult. An installation holds one company, so the dispatcher queues exactly
-// one child, and that child's args name no workspace.
+// presence, so the tick has no per-tenant switch to consult. An installation
+// holds one company. The dispatcher queues one child, and its args name no
+// workspace.
 func TestDispatcherEnqueuesOneChildForTheInstallation(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
@@ -313,9 +313,8 @@ func TestChildrenUseByArgsUniqueness(t *testing.T) {
 
 // TestHandlerSeesAPinnedWorkspace: the runner binds the installation's
 // workspace before the handler is entered, so a unit's tick can never see a
-// global scope. It matters more for a job than for a served tool: a tool call
-// arrives on a request whose tenant authentication already resolved, and a tick
-// has no caller at all.
+// global scope. A tool call arrives on a request whose tenant authentication
+// already resolved. A tick has no caller at all.
 func TestHandlerSeesAPinnedWorkspace(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)

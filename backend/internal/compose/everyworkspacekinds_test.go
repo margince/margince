@@ -12,8 +12,8 @@ import (
 )
 
 // The binding middleware leaves a kind unbound only if its worker reads every
-// workspace row itself, and a worker that does so must be on the list. A kind on
-// the list whose worker does not would run with no workspace bound.
+// workspace row itself. A worker that does so must be on the list. A listed kind
+// whose worker does not would run with no workspace bound.
 func TestEveryWorkspaceKindsRunTheEveryWorkspacePass(t *testing.T) {
 	t.Parallel()
 	for kind := range everyWorkspaceKinds {
