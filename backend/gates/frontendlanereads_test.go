@@ -429,7 +429,7 @@ func (q *laneQueue) drain(t *testing.T, ts *tsReader, census *laneCensus) (shell
 func uncoveredReads(reads []laneRead, scope []string) []laneRead {
 	var missing []laneRead
 	for _, read := range reads {
-		if !covered(scope, read.path) {
+		if !scopeClaims(read.path, scope) {
 			missing = append(missing, read)
 		}
 	}
