@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -77,7 +78,7 @@ func parseRawRef(raw string) rawAttribution {
 		return rawAttribution{}
 	}
 	if at := strings.LastIndex(payload, "@"); at > 0 && !strings.Contains(payload, " ") && at < len(payload)-1 {
-		email := strings.ToLower(payload)
+		email := correspondence.Fold(payload)
 		return rawAttribution{Email: email, Domain: registrableHost(email[strings.LastIndex(email, "@")+1:])}
 	}
 	if strings.HasPrefix(payload, "http://") || strings.HasPrefix(payload, "https://") {

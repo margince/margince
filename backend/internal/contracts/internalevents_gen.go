@@ -230,6 +230,12 @@ type InternalEventExistingCustomerNoticeCreated struct {
 // InternalEventExistingCustomerNoticeWithdrawn An administrator withdrew a collection-notice declaration.
 type InternalEventExistingCustomerNoticeWithdrawn struct{}
 
+// InternalEventIdentifierSpellingChanged A stored identifier was given its canonical spelling; no identity, ownership or consent changed.
+type InternalEventIdentifierSpellingChanged struct {
+	// Column The email
+	Column string `json:"column"`
+}
+
 // InternalEventInstructionWordingCorrected The original approver attested that a wording correction preserves meaning.
 type InternalEventInstructionWordingCorrected struct{}
 
@@ -392,6 +398,12 @@ func (InternalEventExistingCustomerNoticeWithdrawn) EventType() string {
 func (InternalEventExistingCustomerNoticeWithdrawn) EntityType() string {
 	return "existing_customer_notice"
 }
+
+func (InternalEventIdentifierSpellingChanged) EventType() string {
+	return "identifier.spelling_changed"
+}
+
+func (InternalEventIdentifierSpellingChanged) EntityType() string { return "dynamic" }
 
 func (InternalEventInstructionWordingCorrected) EventType() string {
 	return "communication_instruction.updated"

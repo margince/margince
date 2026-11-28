@@ -62,7 +62,7 @@ var labels = map[string]langcopy.Phrase{
 	"legal_name":              {En: "Legal name", De: "Rechtlicher Name", Vi: "Tên pháp lý"},
 	"linkedin_url":            {En: "LinkedIn page", De: "LinkedIn-Seite", Vi: "Trang LinkedIn"},
 	"links":                   {En: "Linked records", De: "Verknüpfte Datensätze", Vi: "Hồ sơ liên kết"},
-	"lost_reason":             {En: "Lost reason", De: "Verlustgrund", Vi: "Lý do thua"},
+	"lost_reason":             {En: "Lost reason", De: "Verlustgrund", Vi: "Lý do thất bại"},
 	"meeting_status":          {En: "Meeting status", De: "Besprechungsstatus", Vi: "Trạng thái cuộc họp"},
 	"occurred_at":             {En: "Date and time", De: "Datum und Uhrzeit", Vi: "Ngày giờ"},
 	"owner_email":             {En: "Owner (email)", De: "Verantwortlich (E-Mail)", Vi: "Người chịu trách nhiệm (email)"},

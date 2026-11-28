@@ -43,3 +43,9 @@ func dropHidden(r rune) rune {
 	}
 	return r
 }
+
+// LegacyIdentifierKey keeps the pre-canonical spelling readable for suppression
+// hashes and old-row lookups. New writes use IdentifierText through their fold.
+func LegacyIdentifierKey(raw string) string {
+	return strings.ToLower(strings.TrimSpace(raw))
+}

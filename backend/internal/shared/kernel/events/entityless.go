@@ -26,6 +26,8 @@ package events
 // link (audit_log OR system_log) so the outcome stays attributable — Validate
 // enforces the trace, only the entity is relaxed.
 var pipelineEventTypes = map[string]struct{}{
+	// Spelling repairs are internal housekeeping, not identity-change subscriptions.
+	"identifier.spelling_changed": {},
 	// Staffing changes remain private to the readers of their parent records.
 	"sdr_handoff.created":        {},
 	"sdr_handoff.updated":        {},

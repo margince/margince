@@ -38,6 +38,13 @@ func maskExclusionClauses(ctx context.Context, spec reportSpec, arg func(any) in
 	if err != nil {
 		return nil, false, err
 	}
+	if spec.extensionJoin != nil {
+		joined, err := spec.extensionJoin.Masks(ctx, arg)
+		if err != nil {
+			return nil, false, err
+		}
+		clauses = append(clauses, joined...)
+	}
 	return clauses, len(clauses) > 0, nil
 }
 
