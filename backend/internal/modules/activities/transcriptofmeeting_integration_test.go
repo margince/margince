@@ -10,8 +10,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -159,10 +163,33 @@ func TestATranscriptCanRecordAHeldMeetingWithoutCountingItTwice(t *testing.T) {
 	if count := heldMeetingsOnDeal(t, e, deal); count != 1 {
 		t.Errorf("held count = %d, want 1", count)
 	}
-	kind := "meeting"
-	rows, _, err := meetingStore(e).ListActivities(meetingCtx(e), ListActivitiesInput{Kind: &kind, SourceActivityID: &meeting})
-	if err != nil || len(rows) != 2 {
-		t.Fatalf("linked transcripts = %d, %v; want 2", len(rows), err)
+	handlers := Handlers{store: meetingStore(e)}
+	for _, query := range []struct {
+		name  string
+		kinds *[]crmcontracts.ListActivitiesParamsKind
+		want  int
+	}{
+		{"default tasks", nil, 0},
+		{"transcripts", new([]crmcontracts.ListActivitiesParamsKind{crmcontracts.ListActivitiesParamsKindMeeting}), 2},
+		{"transcripts and tasks", new([]crmcontracts.ListActivitiesParamsKind{crmcontracts.ListActivitiesParamsKindMeeting, crmcontracts.ListActivitiesParamsKindTask}), 2},
+	} {
+		t.Run(query.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/v1/activities", nil).WithContext(meetingCtx(e))
+			handlers.ListActivities(rec, request, crmcontracts.ListActivitiesParams{
+				Kind: query.kinds, SourceActivityId: new(openapi_types.UUID(meeting.UUID)),
+			})
+			if rec.Code != http.StatusOK {
+				t.Fatalf("list status %d: %s", rec.Code, rec.Body.String())
+			}
+			var page crmcontracts.ActivityListResponse
+			if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+				t.Fatal(err)
+			}
+			if len(page.Data) != query.want {
+				t.Fatalf("linked rows = %d, want %d", len(page.Data), query.want)
+			}
+		})
 	}
 }
 
