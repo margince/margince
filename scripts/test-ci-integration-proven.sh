@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# test-ci-integration-proven.sh — prove the merge queue skips the integration
-# lane only on a tree a run of the entry's own pull request head passed.
+# test-ci-integration-proven.sh — prove the integration lane is skipped only on
+# a tree a run of the entry's own pull request head passed (the merge queue), or
+# that an earlier attempt of the same run passed (a pull request re-run).
 #
 # The case that matters is a wrong `proven=true`: the queue would then merge a
 # tree no shard ever ran. Each refusal below is one way the proof can be forged
@@ -29,6 +30,11 @@ case "$endpoint" in
 */git/commits/*) body="$STUB_COMMIT" ;;
 */pulls/*) body="$STUB_PULL" ;;
 */actions/artifacts\?*) body="$STUB_ARTIFACTS" ;;
+*/attempts/*/jobs\?*)
+	[[ "$endpoint" =~ /attempts/([0-9]+)/jobs ]]
+	attempt_var="STUB_ATTEMPT_${BASH_REMATCH[1]}"
+	body="${!attempt_var:?unexpected read of attempt ${BASH_REMATCH[1]}}"
+	;;
 */jobs\?*) body="$STUB_JOBS" ;;
 */actions/runs/*) body="$STUB_RUN" ;;
 *) echo "unexpected gh call: $endpoint" >&2; exit 1 ;;
@@ -60,7 +66,7 @@ expect() {
 		STUB_ARTIFACTS="$(artifacts "$(artifact false 7 "$pr_head")")" \
 		STUB_RUN='{"path":".github/workflows/ci.yml"}' STUB_JOBS="$green_lane" \
 		REPO=owner/repo MERGE_GROUP_SHA=4444 MERGE_GROUP_REF="$ref" \
-		"$@" "$root/scripts/ci-integration-proven.sh" 2>/dev/null)"
+		"$@" "$root/scripts/ci-integration-proven.sh" 2>/dev/null)" || got="exit $?"
 	if [[ "$got" == "$want" ]]; then
 		echo "ok: $name"
 	else
@@ -95,8 +101,22 @@ expect "a failed job read runs the lane" proven=false STUB_JOBS=FAIL
 expect "a ref without a pull request runs the lane" proven=false \
 	MERGE_GROUP_REF=refs/heads/gh-readonly-queue/main/unexpected
 
+# A pull request re-run: the proof is an earlier attempt of the same run.
+rerun=(MERGE_GROUP_SHA= RUN_ID=9)
+skipped_lane="$(jobs "$(job 'integration / integration build' '"skipped"')")"
+red_lane="$(jobs "$(job 'integration / integration shard (2/8)' '"failure"')")"
+expect "a re-run whose first attempt passed the lane skips it" proven=true \
+	"${rerun[@]}" RUN_ATTEMPT=2 STUB_ATTEMPT_1="$green_lane"
+expect "a re-run whose first attempt failed the lane runs it" proven=false \
+	"${rerun[@]}" RUN_ATTEMPT=2 STUB_ATTEMPT_1="$red_lane"
+expect "an attempt that skipped the lane proves nothing, an older green one does" proven=true \
+	"${rerun[@]}" RUN_ATTEMPT=3 STUB_ATTEMPT_2="$skipped_lane" STUB_ATTEMPT_1="$green_lane"
+expect "a first attempt has nothing earlier to reuse" proven=false "${rerun[@]}" RUN_ATTEMPT=1
+expect "a failed attempt read runs the lane" proven=false \
+	"${rerun[@]}" RUN_ATTEMPT=2 STUB_ATTEMPT_1=FAIL
+
 if [[ "$failures" -ne 0 ]]; then
 	echo "FAIL: $failures case(s) failed" >&2
 	exit 1
 fi
-echo "OK: ci-integration-proven skips the lane only on a proven tree"
+echo "OK: ci-integration-proven skips the lane only on a proven tree or a passed earlier attempt"

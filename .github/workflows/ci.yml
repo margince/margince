@@ -138,8 +138,9 @@ jobs:
       # each night on develop's tip, before develop is merged into main: see
       # docs/how-to/land-through-develop.md.
       full_lane: ${{ github.event_name != 'pull_request' || github.base_ref != 'develop' }}
-      # On the merge queue: a run of the entry's pull request already passed the
-      # integration lane on this exact tree, so the lane is skipped.
+      # On the merge queue, a run of the entry's pull request already passed the
+      # integration lane on this exact tree; on a pull request re-run, an earlier
+      # attempt of this run did. Either way the lane is skipped.
       integration_proven: ${{ steps.proven.outputs.proven == 'true' }}
       # backend_db && full_lane && !integration_proven, spelled from the steps
       # because an output cannot read another. The integration lane runs on it,
@@ -404,17 +405,19 @@ jobs:
               # dependency PR.
               - '.github/workflows/**'
               - '.github/actions/**'
-      # Reads the API only. Each queue group starts a full lane, and a dozen
-      # integration runners per group is what kept the `ci` verdict waiting.
+      # Reads the API only. A queue group or a "Re-run all jobs" otherwise starts
+      # a full lane on a tree one already passed.
       - name: An earlier run passed integration on this tree
         id: proven
-        if: github.event_name == 'merge_group'
+        if: github.event_name == 'merge_group' || (github.event_name == 'pull_request' && github.run_attempt != '1')
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           MERGE_GROUP_SHA: ${{ github.event.merge_group.head_sha }}
           MERGE_GROUP_REF: ${{ github.event.merge_group.head_ref }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: ./scripts/ci-integration-proven.sh >> "$GITHUB_OUTPUT"
 
   # The image the toolchain jobs run in, named by digest. Beside `changes`, not
@@ -1100,26 +1103,28 @@ jobs:
       # and the unit legs' of deterministic-gates. This is the first job that
       # needs both, since a job of the integration lane cannot wait for one of
       # this workflow's. A green lane implies the unit legs ran instrumented
-      # (`integration_runs`), so a missing pod set fails the merge.
+      # (`integration_runs`), so a missing pod set fails the merge. A lane an
+      # earlier attempt proved left its pods, and the legs', in that attempt's
+      # artifacts, which this run still lists.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        if: ${{ env.SONAR_TOKEN != '' && needs.integration.result == 'success' }}
+        if: ${{ env.SONAR_TOKEN != '' && (needs.integration.result == 'success' || needs.changes.outputs.integration_proven == 'true') }}
         with:
           go-version-file: backend/go.mod
           cache: false
       - name: Download the integration shards' coverage pods
-        if: ${{ env.SONAR_TOKEN != '' && needs.integration.result == 'success' }}
+        if: ${{ env.SONAR_TOKEN != '' && (needs.integration.result == 'success' || needs.changes.outputs.integration_proven == 'true') }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: integration-shard-*
           path: ${{ runner.temp }}/go-coverage
       - name: Download the unit legs' coverage pods
-        if: ${{ env.SONAR_TOKEN != '' && needs.integration.result == 'success' }}
+        if: ${{ env.SONAR_TOKEN != '' && (needs.integration.result == 'success' || needs.changes.outputs.integration_proven == 'true') }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: unit-covdata-*
           path: ${{ runner.temp }}/go-coverage
       - name: Merge Go coverage
-        if: ${{ env.SONAR_TOKEN != '' && needs.integration.result == 'success' }}
+        if: ${{ env.SONAR_TOKEN != '' && (needs.integration.result == 'success' || needs.changes.outputs.integration_proven == 'true') }}
         run: ./scripts/merge-go-coverage.sh "$RUNNER_TEMP/go-coverage" backend/coverage.out
       - name: Download extension coverage
         if: ${{ env.SONAR_TOKEN != '' && needs.deterministic-gates.result == 'success' }}
