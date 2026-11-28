@@ -193,6 +193,7 @@ func wireVoiceBuild(build VoiceBuild) crmcontracts.VoiceBuild {
 		DeferralReason: providerwait.Reason(build.Status, build.StatusCode, build.StatusDetail),
 		Version:        int(build.Version), CreatedAt: build.CreatedAt, StartedAt: build.StartedAt,
 		CompletedAt: build.CompletedAt, UpdatedAt: build.UpdatedAt,
+		ArchivedAt: build.ArchivedAt,
 	}
 }
 
@@ -215,7 +216,7 @@ func wireVoiceVersion(version VoiceProfileVersion) (crmcontracts.VoiceProfileVer
 		ActivationPolicyVersion: version.ActivationPolicyVersion, Evaluation: evaluation,
 		ReviewReasons: version.ReviewReasons, Source: version.Source, CapturedBy: &version.CapturedBy,
 		Version: int(version.Version), CreatedAt: version.CreatedAt,
-		UpdatedAt:   version.UpdatedAt,
+		UpdatedAt: version.UpdatedAt, ArchivedAt: version.ArchivedAt,
 		ActivatedAt: version.ActivatedAt,
 	}, nil
 }
@@ -231,7 +232,7 @@ func wireVoiceDelta(delta VoiceProfileDelta) crmcontracts.VoiceProfileDelta {
 		SignatureSetJaccard: float64To32(delta.SignatureSetJaccard),
 		AvoidRulesAdded:     delta.AvoidRulesAdded, AvoidRulesRemoved: delta.AvoidRulesRemoved,
 		RegisterRulesRemoved: delta.RegisterRulesRemoved, CreatedAt: delta.CreatedAt,
-		UpdatedAt: delta.UpdatedAt,
+		UpdatedAt: delta.UpdatedAt, ArchivedAt: delta.ArchivedAt,
 	}
 }
 

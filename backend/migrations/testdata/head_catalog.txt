@@ -12428,6 +12428,7 @@ public.vault_secret.text_bound_update CREATE TRIGGER text_bound_update AFTER UPD
 public.vault_secret.vault_secret_pkey PRIMARY KEY (ref)
 public.vault_secret_pkey CREATE UNIQUE INDEX vault_secret_pkey ON public.vault_secret USING btree (ref)
 public.voice_build acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.voice_build.archived_at timestamp with time zone gen=- def=-
 public.voice_build.attempt integer NOT NULL gen=- def=1
 public.voice_build.attempt_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_build.candidate_action text NOT NULL gen=- def='none'::text
@@ -12464,10 +12465,10 @@ public.voice_build.voice_build_status_check CHECK ((status = ANY (ARRAY['queued'
 public.voice_build.voice_build_status_code_check CHECK ((status_code = ANY (ARRAY['budget_deferred'::text, 'model_unavailable'::text, 'invalid_output'::text, 'quality_regression'::text, 'material_drift'::text, 'internal'::text])))
 public.voice_build.voice_build_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.voice_build.voice_profile_id uuid NOT NULL gen=- def=-
-public.voice_build_deferred_due CREATE INDEX voice_build_deferred_due ON public.voice_build USING btree (next_attempt_at, id) WHERE (status = 'deferred'::text)
+public.voice_build_deferred_due CREATE INDEX voice_build_deferred_due ON public.voice_build USING btree (next_attempt_at, id) WHERE ((status = 'deferred'::text) AND (archived_at IS NULL))
 public.voice_build_one_active CREATE UNIQUE INDEX voice_build_one_active ON public.voice_build USING btree (voice_profile_id) WHERE (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text]))
 public.voice_build_pkey CREATE UNIQUE INDEX voice_build_pkey ON public.voice_build USING btree (id)
-public.voice_build_poll CREATE INDEX voice_build_poll ON public.voice_build USING btree (voice_profile_id, created_at DESC, id DESC)
+public.voice_build_poll CREATE INDEX voice_build_poll ON public.voice_build USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.voice_build_profile_version_ix CREATE INDEX voice_build_profile_version_ix ON public.voice_build USING btree (voice_profile_id, result_version)
 public.voice_build_requester_fk CREATE INDEX voice_build_requester_fk ON public.voice_build USING btree (requested_by) WHERE (requested_by IS NOT NULL)
 public.voice_corpus_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -12568,6 +12569,7 @@ public.voice_profile.voice_profile_version_js_safe CHECK (((version >= '-9007199
 public.voice_profile.voice_profile_version_nonnegative CHECK ((profile_version >= 0))
 public.voice_profile_delta acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.voice_profile_delta.activation_outcome text NOT NULL gen=- def=-
+public.voice_profile_delta.archived_at timestamp with time zone gen=- def=-
 public.voice_profile_delta.classification text NOT NULL gen=- def=-
 public.voice_profile_delta.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_profile_delta.delta_json jsonb NOT NULL gen=- def=-
@@ -12588,13 +12590,14 @@ public.voice_profile_delta.voice_profile_delta_to_fkey FOREIGN KEY (voice_profil
 public.voice_profile_delta.voice_profile_delta_to_version_check CHECK ((to_version >= 1))
 public.voice_profile_delta.voice_profile_id uuid NOT NULL gen=- def=-
 public.voice_profile_delta_from_version_ix CREATE INDEX voice_profile_delta_from_version_ix ON public.voice_profile_delta USING btree (voice_profile_id, from_version)
-public.voice_profile_delta_history CREATE INDEX voice_profile_delta_history ON public.voice_profile_delta USING btree (voice_profile_id, created_at DESC, id DESC)
+public.voice_profile_delta_history CREATE INDEX voice_profile_delta_history ON public.voice_profile_delta USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.voice_profile_delta_pkey CREATE UNIQUE INDEX voice_profile_delta_pkey ON public.voice_profile_delta USING btree (id)
 public.voice_profile_owner_fk CREATE INDEX voice_profile_owner_fk ON public.voice_profile USING btree (owner_id) WHERE (owner_id IS NOT NULL)
 public.voice_profile_pkey CREATE UNIQUE INDEX voice_profile_pkey ON public.voice_profile USING btree (id)
 public.voice_profile_version acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.voice_profile_version.activated_at timestamp with time zone gen=- def=-
 public.voice_profile_version.activation_policy_version text NOT NULL gen=- def=-
+public.voice_profile_version.archived_at timestamp with time zone gen=- def=-
 public.voice_profile_version.builder_version text NOT NULL gen=- def=-
 public.voice_profile_version.captured_by text NOT NULL gen=- def=-
 public.voice_profile_version.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -12628,7 +12631,7 @@ public.voice_profile_version.voice_profile_version_reason_check CHECK ((reason =
 public.voice_profile_version.voice_profile_version_source_count_check CHECK ((source_count >= 0))
 public.voice_profile_version.voice_profile_version_status_check CHECK ((status = ANY (ARRAY['candidate'::text, 'active'::text, 'superseded'::text, 'rejected'::text])))
 public.voice_profile_version.voice_profile_version_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.voice_profile_version_history CREATE INDEX voice_profile_version_history ON public.voice_profile_version USING btree (voice_profile_id, created_at DESC, id DESC)
+public.voice_profile_version_history CREATE INDEX voice_profile_version_history ON public.voice_profile_version USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.voice_profile_version_one_active CREATE UNIQUE INDEX voice_profile_version_one_active ON public.voice_profile_version USING btree (voice_profile_id) WHERE (status = 'active'::text)
 public.voice_profile_version_pkey CREATE UNIQUE INDEX voice_profile_version_pkey ON public.voice_profile_version USING btree (id)
 public.voice_profile_version_predecessor_ix CREATE INDEX voice_profile_version_predecessor_ix ON public.voice_profile_version USING btree (voice_profile_id, predecessor_version)

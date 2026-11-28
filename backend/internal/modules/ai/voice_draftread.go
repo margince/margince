@@ -64,7 +64,7 @@ func (s *VoiceStore) ActiveVoiceForActor(ctx context.Context) (VoiceProfile, Voi
 		}
 		v, err := scanVoiceVersion(tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT %s FROM voice_profile_version
-			WHERE voice_profile_id = $1 AND status = 'active'
+			WHERE voice_profile_id = $1 AND status = 'active' AND archived_at IS NULL
 			ORDER BY profile_version DESC LIMIT 1`, voiceVersionColumns), p.ID))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil

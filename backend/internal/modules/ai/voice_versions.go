@@ -49,6 +49,7 @@ type VoiceProfileVersion struct {
 	Version                 int64
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
+	ArchivedAt              *time.Time
 	ActivatedAt             *time.Time
 }
 
@@ -59,7 +60,7 @@ type VoiceProfileVersionPage struct {
 	HasMore    bool
 }
 
-const voiceVersionColumns = `id, voice_profile_id, profile_version, status, voice_profile_md, profile_json, stats_json, source_hash, source_count, reason, predecessor_version, model_provider, model_name, builder_version, activation_policy_version, evaluation_json, review_reasons, source, captured_by, version, created_at, updated_at, activated_at`
+const voiceVersionColumns = `id, voice_profile_id, profile_version, status, voice_profile_md, profile_json, stats_json, source_hash, source_count, reason, predecessor_version, model_provider, model_name, builder_version, activation_policy_version, evaluation_json, review_reasons, source, captured_by, version, created_at, updated_at, archived_at, activated_at`
 
 func scanVoiceVersion(row pgx.Row) (VoiceProfileVersion, error) {
 	var (
@@ -71,7 +72,7 @@ func scanVoiceVersion(row pgx.Row) (VoiceProfileVersion, error) {
 		&version.SourceCount, &version.Reason, &version.PredecessorVersion, &version.ModelProvider,
 		&version.ModelName, &version.BuilderVersion, &version.ActivationPolicyVersion, &evalJSON,
 		&version.ReviewReasons, &version.Source, &version.CapturedBy, &version.Version,
-		&version.CreatedAt, &version.UpdatedAt, &version.ActivatedAt)
+		&version.CreatedAt, &version.UpdatedAt, &version.ArchivedAt, &version.ActivatedAt)
 	if err != nil {
 		return VoiceProfileVersion{}, err
 	}
@@ -94,7 +95,7 @@ func (s *VoiceStore) ListVersions(ctx context.Context, profileID ids.UUID, curso
 	}
 	n := storekit.ClampLimit(limit)
 	args := []any{profileID}
-	where := "voice_profile_id = $1"
+	where := "voice_profile_id = $1 AND archived_at IS NULL"
 	if cursor != nil && *cursor != "" {
 		decoded, err := storekit.DecodeCursor("voice_versions", *cursor)
 		if err != nil {
@@ -196,7 +197,8 @@ func (s *VoiceStore) transitionVoiceVersion(ctx context.Context, tx pgx.Tx, prof
 func loadCandidateVoiceVersion(ctx context.Context, tx pgx.Tx, profileID ids.UUID, profileVersion int) (VoiceProfileVersion, error) {
 	candidate, err := scanVoiceVersion(tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT %s FROM voice_profile_version
-			WHERE voice_profile_id = $1 AND profile_version = $2 AND status = 'candidate'`, voiceVersionColumns), profileID, profileVersion))
+			WHERE voice_profile_id = $1 AND profile_version = $2 AND status = 'candidate'
+			  AND archived_at IS NULL`, voiceVersionColumns), profileID, profileVersion))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return VoiceProfileVersion{}, apperrors.ErrNotFound
 	}
@@ -277,7 +279,7 @@ func (s *VoiceStore) RollbackVersion(ctx context.Context, profileID ids.UUID, so
 		source, err := scanVoiceVersion(tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT %s FROM voice_profile_version
 			WHERE voice_profile_id = $1 AND profile_version = $2
-			  AND status IN ('active','superseded')`, voiceVersionColumns), profileID, sourceVersion))
+			  AND status IN ('active','superseded') AND archived_at IS NULL`, voiceVersionColumns), profileID, sourceVersion))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

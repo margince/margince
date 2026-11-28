@@ -43,6 +43,7 @@ type VoiceBuild struct {
 	StartedAt       *time.Time
 	CompletedAt     *time.Time
 	UpdatedAt       time.Time
+	ArchivedAt      *time.Time
 	// Attempt is which claim of this build is current, and AttemptAt when it
 	// became current. A build deferred for a budget window and re-claimed, or
 	// reclaimed from a dead worker, is the same build on a new attempt — and
@@ -58,14 +59,14 @@ type CreateVoiceBuildInput struct {
 	Reason string
 }
 
-const voiceBuildColumns = `id, voice_profile_id, requested_by, reason, status, stage, source_hash, source_count, result_version, candidate_action, status_code, status_detail, next_attempt_at, version, created_at, started_at, completed_at, updated_at, attempt, attempt_at`
+const voiceBuildColumns = `id, voice_profile_id, requested_by, reason, status, stage, source_hash, source_count, result_version, candidate_action, status_code, status_detail, next_attempt_at, version, created_at, started_at, completed_at, updated_at, archived_at, attempt, attempt_at`
 
 func scanVoiceBuild(row pgx.Row) (VoiceBuild, error) {
 	var build VoiceBuild
 	err := row.Scan(&build.ID, &build.ProfileID, &build.RequestedBy, &build.Reason, &build.Status, &build.Stage,
 		&build.SourceHash, &build.SourceCount, &build.ResultVersion, &build.CandidateAction,
 		&build.StatusCode, &build.StatusDetail, &build.NextAttemptAt, &build.Version,
-		&build.CreatedAt, &build.StartedAt, &build.CompletedAt, &build.UpdatedAt,
+		&build.CreatedAt, &build.StartedAt, &build.CompletedAt, &build.UpdatedAt, &build.ArchivedAt,
 		&build.Attempt, &build.AttemptAt)
 	return build, err
 }
@@ -78,6 +79,7 @@ func activeVoiceBuild(ctx context.Context, tx pgx.Tx, profileID ids.UUID) (Voice
 	return scanVoiceBuild(tx.QueryRow(ctx, storekit.SQLf(`
 		SELECT %s FROM voice_build
 		WHERE voice_profile_id = $1 AND status IN ('queued','deferred','running')
+		  AND archived_at IS NULL
 		ORDER BY created_at DESC, id DESC LIMIT 1`, voiceBuildColumns), profileID))
 }
 
@@ -171,7 +173,7 @@ func (s *VoiceStore) GetBuild(ctx context.Context, profileID, buildID ids.UUID) 
 		var err error
 		build, err = scanVoiceBuild(tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT %s FROM voice_build
-			WHERE id = $1 AND voice_profile_id = $2`, voiceBuildColumns), buildID, profileID))
+			WHERE id = $1 AND voice_profile_id = $2 AND archived_at IS NULL`, voiceBuildColumns), buildID, profileID))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

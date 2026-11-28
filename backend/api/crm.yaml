@@ -83369,7 +83369,7 @@ components:
         started_at: { type: [string, 'null'], format: date-time }
         completed_at: { type: [string, 'null'], format: date-time }
         updated_at: { type: string, format: date-time }
-        archived_at: { type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.' }
+        archived_at: { type: [string, 'null'], format: date-time }
 
     VoiceReviewReason:
       type: object
@@ -83465,7 +83465,7 @@ components:
         version: { type: integer, minimum: 1, description: Row concurrency version; distinct from the immutable artifact's profile_version. }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
-        archived_at: { type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.' }
+        archived_at: { type: [string, 'null'], format: date-time }
         activated_at: { type: [string, 'null'], format: date-time }
 
     VoiceProfileDelta:
@@ -83505,7 +83505,7 @@ components:
         register_rules_removed: { type: integer, minimum: 0 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
-        archived_at: { type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.' }
+        archived_at: { type: [string, 'null'], format: date-time }
 
     VoiceLearningTransformation:
       type: object

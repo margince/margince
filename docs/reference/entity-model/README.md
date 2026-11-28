@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 367 |
-| Columns | 4478 |
+| Columns | 4481 |
 | Foreign keys | 642 |
 | Owning areas | 40 |
 
@@ -483,12 +483,12 @@ erDiagram
 | [`user_mfa`](identity.md#user_mfa) | identity | 5 | 1 |
 | [`user_record_view`](compose.md#user_record_view) | compose | 8 | 0 |
 | [`vault_secret`](platform.md#vault_secret) | platform | 3 | 0 |
-| [`voice_build`](ai.md#voice_build) | ai | 20 | 0 |
+| [`voice_build`](ai.md#voice_build) | ai | 21 | 0 |
 | [`voice_corpus_source`](ai.md#voice_corpus_source) | ai | 23 | 0 |
 | [`voice_learning_signal`](ai.md#voice_learning_signal) | ai | 15 | 0 |
 | [`voice_profile`](ai.md#voice_profile) | ai | 16 | 5 |
-| [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 9 | 0 |
-| [`voice_profile_version`](ai.md#voice_profile_version) | ai | 23 | 5 |
+| [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 10 | 0 |
+| [`voice_profile_version`](ai.md#voice_profile_version) | ai | 24 | 5 |
 | [`web_form`](webforms.md#web_form) | webforms | 26 | 1 |
 | [`web_form_last_post`](webforms.md#web_form_last_post) | webforms | 2 | 0 |
 | [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 19 | 0 |

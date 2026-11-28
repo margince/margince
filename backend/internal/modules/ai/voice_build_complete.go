@@ -77,7 +77,7 @@ func (s *VoiceStore) CompleteBuild(ctx context.Context, buildID ids.UUID, claime
 		// completing build.
 		peek, err := scanVoiceBuild(tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT %s FROM voice_build
-			WHERE id = $1 AND status = 'running' AND started_at = $2`,
+			WHERE id = $1 AND status = 'running' AND started_at = $2 AND archived_at IS NULL`,
 			voiceBuildColumns), buildID, claimedAt.UTC()))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
@@ -90,7 +90,7 @@ func (s *VoiceStore) CompleteBuild(ctx context.Context, buildID ids.UUID, claime
 		}
 		build, err := scanVoiceBuild(tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT %s FROM voice_build
-			WHERE id = $1 AND status = 'running' AND started_at = $2
+			WHERE id = $1 AND status = 'running' AND started_at = $2 AND archived_at IS NULL
 			FOR UPDATE`,
 			voiceBuildColumns), buildID, claimedAt.UTC()))
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -274,7 +274,7 @@ func (s *VoiceStore) ActiveVersion(ctx context.Context, profileID ids.UUID) (Voi
 		var err error
 		version, err = scanVoiceVersion(tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT %s FROM voice_profile_version
-			WHERE voice_profile_id = $1 AND status = 'active'
+			WHERE voice_profile_id = $1 AND status = 'active' AND archived_at IS NULL
 			ORDER BY profile_version DESC LIMIT 1`, voiceVersionColumns), profileID))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
@@ -312,9 +312,10 @@ func (s *VoiceStore) DueDeferredBuilds(ctx context.Context) ([]VoiceBuildRef, er
 		now := s.now().UTC()
 		wsRows, err := tx.Query(ctx, `
 			SELECT id, voice_profile_id, requested_by FROM voice_build
-			WHERE (status = 'deferred' AND next_attempt_at <= $1)
-			   OR (status = 'queued' AND created_at <= $2)
-			   OR status = 'running'`, now, now.Add(-staleQueuedAge))
+			WHERE archived_at IS NULL
+			  AND ((status = 'deferred' AND next_attempt_at <= $1)
+			       OR (status = 'queued' AND created_at <= $2)
+			       OR status = 'running')`, now, now.Add(-staleQueuedAge))
 		if err != nil {
 			return err
 		}

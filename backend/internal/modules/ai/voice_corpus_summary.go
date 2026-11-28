@@ -131,7 +131,7 @@ func pendingCandidateVersion(ctx context.Context, tx pgx.Tx, profileID ids.UUID)
 	err := tx.QueryRow(ctx, `
 		SELECT profile_version
 		FROM voice_profile_version
-		WHERE voice_profile_id = $1 AND status = 'candidate'
+		WHERE voice_profile_id = $1 AND status = 'candidate' AND archived_at IS NULL
 		ORDER BY profile_version DESC LIMIT 1`, profileID).Scan(&candidate)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
@@ -143,12 +143,12 @@ func pendingCandidateVersion(ctx context.Context, tx pgx.Tx, profileID ids.UUID)
 	}
 }
 
-// latestVoiceBuild is the profile's newest build in any status,
+// latestVoiceBuild is the profile's newest non-archived build in any status,
 // or nil. A build that outlived the page that started it is still found here.
 func latestVoiceBuild(ctx context.Context, tx pgx.Tx, profileID ids.UUID) (*VoiceBuild, error) {
 	build, err := scanVoiceBuild(tx.QueryRow(ctx, storekit.SQLf(`
 		SELECT %s FROM voice_build
-		WHERE voice_profile_id = $1
+		WHERE voice_profile_id = $1 AND archived_at IS NULL
 		ORDER BY created_at DESC, id DESC LIMIT 1`, voiceBuildColumns), profileID))
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):

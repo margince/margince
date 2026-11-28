@@ -60826,11 +60826,7 @@ export interface components {
             completed_at: string | null;
             /** Format: date-time */
             updated_at: string;
-            /**
-             * Format: date-time
-             * @deprecated
-             * @description Never set; always null. Kept so existing clients keep compiling.
-             */
+            /** Format: date-time */
             archived_at: string | null;
         };
         VoiceReviewReason: {
@@ -60894,11 +60890,7 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
-            /**
-             * Format: date-time
-             * @deprecated
-             * @description Never set; always null. Kept so existing clients keep compiling.
-             */
+            /** Format: date-time */
             archived_at: string | null;
             /** Format: date-time */
             activated_at: string | null;
@@ -60926,11 +60918,7 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
-            /**
-             * Format: date-time
-             * @deprecated
-             * @description Never set; always null. Kept so existing clients keep compiling.
-             */
+            /** Format: date-time */
             archived_at: string | null;
         };
         VoiceLearningTransformation: {

@@ -40,6 +40,7 @@ type VoiceProfileDelta struct {
 	RegisterRulesRemoved int
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
+	ArchivedAt           *time.Time
 }
 
 // VoiceProfileDeltaPage is one keyset-paginated slice of profile history.
@@ -56,7 +57,7 @@ func scanVoiceDelta(row pgx.Row) (VoiceProfileDelta, error) {
 	)
 	err := row.Scan(&delta.ID, &delta.ProfileID, &delta.FromVersion, &delta.ToVersion,
 		&delta.Classification, &delta.ActivationOutcome, &raw, &delta.CreatedAt,
-		&delta.UpdatedAt)
+		&delta.UpdatedAt, &delta.ArchivedAt)
 	if err != nil {
 		return VoiceProfileDelta{}, err
 	}
@@ -91,7 +92,7 @@ func (s *VoiceStore) ListDeltas(ctx context.Context, profileID ids.UUID, cursor 
 	}
 	n := storekit.ClampLimit(limit)
 	args := []any{profileID}
-	where := "voice_profile_id = $1"
+	where := "voice_profile_id = $1 AND archived_at IS NULL"
 	if cursor != nil && *cursor != "" {
 		decoded, err := storekit.DecodeCursor("voice_history", *cursor)
 		if err != nil {
@@ -107,7 +108,7 @@ func (s *VoiceStore) ListDeltas(ctx context.Context, profileID ids.UUID, cursor 
 		}
 		rows, err := tx.Query(ctx, storekit.SQLf(`
 			SELECT id, voice_profile_id, from_version, to_version, classification,
-			       activation_outcome, delta_json, created_at, updated_at
+			       activation_outcome, delta_json, created_at, updated_at, archived_at
 			FROM voice_profile_delta WHERE %s
 			ORDER BY created_at DESC, id DESC LIMIT %d`, where, n+1), args...)
 		if err != nil {

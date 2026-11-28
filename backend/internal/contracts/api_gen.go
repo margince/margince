@@ -75060,8 +75060,6 @@ type VacuumRecommendations struct {
 
 // VoiceBuild defines model for VoiceBuild.
 type VoiceBuild struct {
-	// ArchivedAt Never set; always null. Kept so existing clients keep compiling.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ArchivedAt      *time.Time                `json:"archived_at"`
 	CandidateAction VoiceBuildCandidateAction `json:"candidate_action"`
 	CompletedAt     *time.Time                `json:"completed_at"`
@@ -75262,26 +75260,23 @@ type VoiceProfileStatus string
 
 // VoiceProfileDelta defines model for VoiceProfileDelta.
 type VoiceProfileDelta struct {
-	ActivationOutcome VoiceProfileDeltaActivationOutcome `json:"activation_outcome"`
-
-	// ArchivedAt Never set; always null. Kept so existing clients keep compiling.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	ArchivedAt           *time.Time                      `json:"archived_at"`
-	AvoidRulesAdded      int                             `json:"avoid_rules_added" minimum:"0"`
-	AvoidRulesRemoved    int                             `json:"avoid_rules_removed" minimum:"0"`
-	Classification       VoiceProfileDeltaClassification `json:"classification"`
-	CreatedAt            time.Time                       `json:"created_at"`
-	FromVersion          *int                            `json:"from_version" minimum:"1"`
-	Id                   openapi_types.UUID              `json:"id"`
-	IdentityWordJaccard  *float32                        `json:"identity_word_jaccard" maximum:"1" minimum:"0"`
-	ProfileId            openapi_types.UUID              `json:"profile_id"`
-	RegisterRulesRemoved int                             `json:"register_rules_removed" minimum:"0"`
-	SignatureSetJaccard  *float32                        `json:"signature_set_jaccard" maximum:"1" minimum:"0"`
-	SourcesAdded         int                             `json:"sources_added" minimum:"0"`
-	SourcesExcluded      int                             `json:"sources_excluded" minimum:"0"`
-	ToVersion            int                             `json:"to_version" minimum:"1"`
-	UpdatedAt            time.Time                       `json:"updated_at"`
-	WordsAdded           int                             `json:"words_added"`
+	ActivationOutcome    VoiceProfileDeltaActivationOutcome `json:"activation_outcome"`
+	ArchivedAt           *time.Time                         `json:"archived_at"`
+	AvoidRulesAdded      int                                `json:"avoid_rules_added" minimum:"0"`
+	AvoidRulesRemoved    int                                `json:"avoid_rules_removed" minimum:"0"`
+	Classification       VoiceProfileDeltaClassification    `json:"classification"`
+	CreatedAt            time.Time                          `json:"created_at"`
+	FromVersion          *int                               `json:"from_version" minimum:"1"`
+	Id                   openapi_types.UUID                 `json:"id"`
+	IdentityWordJaccard  *float32                           `json:"identity_word_jaccard" maximum:"1" minimum:"0"`
+	ProfileId            openapi_types.UUID                 `json:"profile_id"`
+	RegisterRulesRemoved int                                `json:"register_rules_removed" minimum:"0"`
+	SignatureSetJaccard  *float32                           `json:"signature_set_jaccard" maximum:"1" minimum:"0"`
+	SourcesAdded         int                                `json:"sources_added" minimum:"0"`
+	SourcesExcluded      int                                `json:"sources_excluded" minimum:"0"`
+	ToVersion            int                                `json:"to_version" minimum:"1"`
+	UpdatedAt            time.Time                          `json:"updated_at"`
+	WordsAdded           int                                `json:"words_added"`
 }
 
 // VoiceProfileDeltaActivationOutcome defines model for VoiceProfileDelta.ActivationOutcome.
@@ -75321,31 +75316,28 @@ type VoiceProfileEvaluationRepeatsPerPrompt int
 
 // VoiceProfileVersion defines model for VoiceProfileVersion.
 type VoiceProfileVersion struct {
-	ActivatedAt             *time.Time `json:"activated_at"`
-	ActivationPolicyVersion string     `json:"activation_policy_version"`
-
-	// ArchivedAt Never set; always null. Kept so existing clients keep compiling.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	ArchivedAt         *time.Time                `json:"archived_at"`
-	BuilderVersion     string                    `json:"builder_version"`
-	CapturedBy         *string                   `json:"captured_by,omitempty"`
-	CreatedAt          time.Time                 `json:"created_at"`
-	Evaluation         VoiceProfileEvaluation    `json:"evaluation"`
-	Id                 openapi_types.UUID        `json:"id"`
-	ModelName          string                    `json:"model_name"`
-	ModelProvider      string                    `json:"model_provider"`
-	PredecessorVersion *int                      `json:"predecessor_version" minimum:"1"`
-	ProfileId          openapi_types.UUID        `json:"profile_id"`
-	ProfileJson        map[string]interface{}    `json:"profile_json"`
-	ProfileVersion     int                       `json:"profile_version" minimum:"1"`
-	Reason             VoiceProfileVersionReason `json:"reason"`
-	ReviewReasons      []string                  `json:"review_reasons"`
-	Source             string                    `json:"source"`
-	SourceCount        int                       `json:"source_count" minimum:"0"`
-	SourceHash         string                    `json:"source_hash"`
-	StatsJson          map[string]interface{}    `json:"stats_json"`
-	Status             VoiceProfileVersionStatus `json:"status"`
-	UpdatedAt          time.Time                 `json:"updated_at"`
+	ActivatedAt             *time.Time                `json:"activated_at"`
+	ActivationPolicyVersion string                    `json:"activation_policy_version"`
+	ArchivedAt              *time.Time                `json:"archived_at"`
+	BuilderVersion          string                    `json:"builder_version"`
+	CapturedBy              *string                   `json:"captured_by,omitempty"`
+	CreatedAt               time.Time                 `json:"created_at"`
+	Evaluation              VoiceProfileEvaluation    `json:"evaluation"`
+	Id                      openapi_types.UUID        `json:"id"`
+	ModelName               string                    `json:"model_name"`
+	ModelProvider           string                    `json:"model_provider"`
+	PredecessorVersion      *int                      `json:"predecessor_version" minimum:"1"`
+	ProfileId               openapi_types.UUID        `json:"profile_id"`
+	ProfileJson             map[string]interface{}    `json:"profile_json"`
+	ProfileVersion          int                       `json:"profile_version" minimum:"1"`
+	Reason                  VoiceProfileVersionReason `json:"reason"`
+	ReviewReasons           []string                  `json:"review_reasons"`
+	Source                  string                    `json:"source"`
+	SourceCount             int                       `json:"source_count" minimum:"0"`
+	SourceHash              string                    `json:"source_hash"`
+	StatsJson               map[string]interface{}    `json:"stats_json"`
+	Status                  VoiceProfileVersionStatus `json:"status"`
+	UpdatedAt               time.Time                 `json:"updated_at"`
 
 	// Version Row concurrency version; distinct from the immutable artifact's profile_version.
 	Version        int    `json:"version" minimum:"1"`
