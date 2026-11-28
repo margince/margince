@@ -369,3 +369,5 @@
 
 1795846282_agent_notes_never_move_activity_clocks.up.sql | * | replaces clock functions and update-trigger declarations; changes no stored row, which the versioned bounded clock repair handles
 1795846282_agent_notes_never_move_activity_clocks.down.sql | * | restores the previous clock functions and update triggers without rewriting stored rows
+
+1795847790_proof_history_parent_keys_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
