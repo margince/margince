@@ -83,7 +83,7 @@ func updatePayment(
 	// read-modify-write begins. Taken again here so the guard travels with the
 	// statement it protects rather than depending on a caller remembering to
 	// take it — the same reason updateInvoice takes it twice.
-	if _, err := storekit.LockRow(ctx, tx, entityPayment, id, storekit.IncludeArchived); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, entityPayment, id, storekit.NoArchiveColumn); err != nil {
 		return err
 	}
 	after := paymentImageOf(args, hash)

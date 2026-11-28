@@ -219,7 +219,7 @@ func judgeActivityAuthor(ctx context.Context, tx pgx.Tx, activityID ids.UUID, do
 // the audit row and the deal event every evidence change carries. It writes
 // nothing when the row changed or was refuted since the page was read.
 func correctEvidenceAuthor(ctx context.Context, tx pgx.Tx, ev activityEvidence, side AuthorSide) (bool, error) {
-	lock, err := storekit.LockRow(ctx, tx, evidenceEntity, ev.ID, storekit.IncludeArchived)
+	lock, err := storekit.LockRow(ctx, tx, evidenceEntity, ev.ID, storekit.NoArchiveColumn)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return false, nil
 	}

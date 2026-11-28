@@ -156,7 +156,7 @@ func meetingProvesHeld(ctx context.Context, tx pgx.Tx, activityID ids.UUID, part
 // row and the deal event every evidence change carries. It writes nothing
 // when the row changed or was refuted since the page was read.
 func setMeetingClaimMet(ctx context.Context, tx pgx.Tx, claim meetingClaim, met bool) (bool, error) {
-	lock, err := storekit.LockRow(ctx, tx, evidenceEntity, claim.ID, storekit.IncludeArchived)
+	lock, err := storekit.LockRow(ctx, tx, evidenceEntity, claim.ID, storekit.NoArchiveColumn)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return false, nil
 	}
